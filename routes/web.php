@@ -128,10 +128,17 @@ Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->
  * Can only be accessed when logged in
  * Dashboard overview page (all users)
  */
-Route::redirect('dashboard', 'dashboard/overview');
-Route::get('dashboard/overview', function () {
-    return view('dashboard');
-})->middleware('auth')->name('dashboard');
+Route::middleware('auth')->group(function () {
+    Route::redirect('dashboard', 'dashboard/overview');
+    Route::get('dashboard/overview', function () {
+        return view('dashboard');
+    })->middleware('auth')->name('dashboard');
+    Route::post('profile/update', function (Request $request) {
+        $user = Auth::user();
+        $user->update($request->only('name', 'username'));
+        return redirect()->back()->with('success', 'Profile updated successfully');
+    })->name('profile.update');
+});
 
 /**
  * Can only be accessed when logged in

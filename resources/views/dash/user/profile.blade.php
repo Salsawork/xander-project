@@ -15,100 +15,35 @@
                             width="80" />
                         <div>
                             <h2 class="text-white font-bold text-lg">
-                                Alex Murphy
+                                {{ auth()->user()->name ?? 'Jhon Doe' }}
                             </h2>
                             <p class="text-gray-300 text-sm">
-                                AlexMurph0482@gmail.com
-                            </p>
-                            <p class="text-gray-300 text-sm">
-                                081234567898
+                                {{ auth()->user()->username ?? 'jhon doe' }}
                             </p>
                         </div>
                     </div>
-                    <form aria-label="Edit profile form" class="flex flex-col md:flex-row md:space-x-8">
+                    <form aria-label="Edit profile form" class="flex flex-col md:flex-row md:space-x-8" method="post" action="{{ route('profile.update') }}">
+                        @csrf
                         <div class="flex flex-col space-y-4 md:w-1/2">
                             <div>
                                 <label class="block text-gray-400 text-xs mb-1" for="firstName">
-                                    First Name
+                                    Name
                                 </label>
                                 <input
                                     class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                    id="firstName" type="text" value="Alex" />
-                            </div>
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1" for="gender">
-                                    Gender
-                                </label>
-                                <div class="flex items-center space-x-4 text-gray-300 text-sm">
-                                    <label class="flex items-center space-x-2 cursor-pointer">
-                                        <input checked=""
-                                            class="form-radio text-blue-600 bg-gray-800 border-gray-600 focus:ring-blue-600"
-                                            name="gender" type="radio" value="male" />
-                                        <span>
-                                            Male
-                                        </span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            class="form-radio text-blue-600 bg-gray-800 border-gray-600 focus:ring-blue-600"
-                                            name="gender" type="radio" value="female" />
-                                        <span>
-                                            Female
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1" for="dob">
-                                    Date of Birth
-                                </label>
-                                <input
-                                    class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                    id="dob" type="text" value="20 March 2003" />
-                            </div>
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1" for="lastName">
-                                    Last Name
-                                </label>
-                                <input
-                                    class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                    id="lastName" type="text" value="Murphy" />
+                                    name="name"
+                                    id="firstName" type="text" value="{{ auth()->user()->name ?? 'Jhon Doe' }}" />
                             </div>
                         </div>
-                        <div class="border-l border-gray-700 pl-8 mt-6 md:mt-0 md:w-1/2 space-y-4">
+                        <div class="pl-8 mt-6 md:mt-0 md:w-1/2 space-y-4">
                             <div>
-                                <label class="block text-gray-400 text-xs mb-1" for="address">
-                                    Address
+                                <label class="block text-gray-400 text-xs mb-1" for="gender">
+                                    Username/Email/Phone
                                 </label>
                                 <input
                                     class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                    id="address" type="text" value="789 Greenway Street, Apt 4B" />
-                            </div>
-                            <div class="flex space-x-4">
-                                <div class="flex-1">
-                                    <label class="block text-gray-400 text-xs mb-1" for="city">
-                                        Town/City
-                                    </label>
-                                    <input
-                                        class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                        id="city" type="text" value="Los Angeles" />
-                                </div>
-                                <div class="w-28">
-                                    <label class="block text-gray-400 text-xs mb-1" for="zip">
-                                        Zip Code
-                                    </label>
-                                    <input
-                                        class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                        id="zip" type="text" value="90015" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-gray-400 text-xs mb-1" for="country">
-                                    Country
-                                </label>
-                                <input
-                                    class="w-full rounded-md border border-gray-600 bg-gray-800 text-gray-200 text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                    id="country" type="text" value="USA" />
+                                    name="username"
+                                    id="lastName" type="text" value="{{ auth()->user()->username ?? 'jhon doe' }}" />
                             </div>
                             <div class="flex justify-end">
                                 <button
@@ -120,7 +55,7 @@
                         </div>
                     </form>
                 </section>
-                <section aria-label="Payment methods" class="bg-gray-800 rounded-xl p-8 mx-8 shadow-lg mt-8">
+                {{-- <section aria-label="Payment methods" class="bg-gray-800 rounded-xl p-8 mx-8 shadow-lg mt-8">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-white font-bold text-lg">
                             Payment Method
@@ -176,7 +111,7 @@
                             </button>
                         </li>
                     </ul>
-                </section>
+                </section> --}}
             </main>
         </div>
     </div>
