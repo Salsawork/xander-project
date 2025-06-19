@@ -41,7 +41,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            
+
             // Redirect berdasarkan role user
             $user = Auth::user();
             if ($user->roles === 'admin') {
@@ -57,8 +57,9 @@ class LoginController extends Controller
         }
 
         return back()
-            ->withInput()
-            ->with('error', 'The provided credentials do not match our records.');
+            ->withInput()->withErrors([
+                'username' => 'The provided credentials do not match our records.',
+            ]);
     }
 
     /**

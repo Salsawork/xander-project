@@ -20,12 +20,24 @@
                     @csrf
                     <input type="text" placeholder="Full Name" name="name"
                         class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    @error('name')
+                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                    @enderror
                     <input type="text" placeholder="Phone number or Email or Username" name="username"
                         class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    @error('username')
+                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                    @enderror
                     <input type="password" placeholder="Password" name="password"
                         class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    @error('password')
+                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                    @enderror
                     <input type="password" placeholder="Confirm Password" name="password_confirmation"
                         class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    @error('password_confirmation')
+                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                    @enderror
                     <button type="submit"
                         class="mb-4 w-full rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
                         Sign Up

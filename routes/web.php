@@ -483,11 +483,11 @@ Route::get('/community/news/historic-rivalry', function () {
 Route::prefix('community')->name('community.')->group(function () {
     // Main community page (redirect to news index)
     Route::get('/', [NewsController::class, 'index'])->name('index');
-    
+
     // News Routes
     Route::get('/news', [NewsController::class, 'index'])->name('news.index');
     Route::get('/news/{news}', [NewsController::class, 'show'])->name('news.show');
-    
+
     // Remove duplicate routes
 })->withoutMiddleware([
     'auth',
