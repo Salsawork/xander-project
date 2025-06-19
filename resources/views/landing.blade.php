@@ -51,7 +51,7 @@
                                 $images = is_array($product->images) ? $product->images : json_decode($product->images);
                                 $firstImage = is_array($images) && !empty($images) ? $images[0] : null;
                             @endphp
-                            
+
                             @if ($firstImage)
                                 <a href="{{ route('products.detail', $product->id) }}">
                                     <img src="{{ str_replace('http://127.0.0.1:8000', '', $firstImage) }}" alt="{{ $product->name }}"
@@ -103,7 +103,7 @@
                 Billiard Playing Guide for Beginners
             </h1>
             <p class="text-sm md:text-base mb-6">
-                Learn basic techniques, game rules, and etiquette at the billiard table. Improve 
+                Learn basic techniques, game rules, and etiquette at the billiard table. Improve
                 your skills and enjoy the game with more confidence.
             </p>
             <a href="#"

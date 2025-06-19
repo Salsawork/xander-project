@@ -85,7 +85,7 @@
                             <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-3">
                                 @php
                                     $imagePath = 'https://placehold.co/400x600?text=No+Image';
-                                    
+
                                     if (!empty($product->images) && is_array($product->images)) {
                                         foreach ($product->images as $img) {
                                             if (!empty($img)) {
@@ -95,7 +95,7 @@
                                         }
                                     }
                                 @endphp
-                                <img src="{{ $imagePath }}" 
+                                <img src="{{ $imagePath }}"
                                     alt="{{ $product->name }}"
                                     class="h-full w-full object-cover"
                                     onerror="this.src='https://placehold.co/400x600?text=No+Image'" />

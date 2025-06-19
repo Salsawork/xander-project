@@ -25,6 +25,18 @@ use App\Http\Controllers\adminController\AdminAthleteController;
  */
 Route::get('/', function () {
     $products = App\Models\Product::inRandomOrder()->limit(4)->get();
+    // Track the visit
+    $ipAddress = request()->ip();
+    $visit = \App\Models\Visit::where('ip_address', $ipAddress)->whereDate('visit_date', today())->first();
+    if (!$visit) {
+        \App\Models\Visit::create([
+            'ip_address' => $ipAddress,
+            'visit' => 1,
+            'visit_date' => now(),
+        ]);
+    } else {
+        $visit->increment('visit');
+    }
     return view('landing', compact('products'));
 })->name('index');
 
