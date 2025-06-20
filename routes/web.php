@@ -357,6 +357,69 @@ Route::middleware('auth')->prefix('venue')->group(function () {
     // Venue Booking Management
     Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
 
+    // Create table
+    Route::get('/booking/create-table', [BookingController::class, 'createTable'])->name('venue.booking.create-table');
+    Route::post('/booking/create-table', [BookingController::class, 'storeTable'])->name('venue.booking.store-table');
+
+    // Delete table
+    Route::delete('/booking/delete-table/{table}', function ($table) {
+        try {
+            $table = \App\Models\Table::findOrFail($table);
+            $table->delete();
+            return redirect()->route('venue.booking')->with('success', 'Table deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('venue.booking')->with('error', 'Failed to delete table: ' . $e->getMessage());
+        }
+    })->name('venue.booking.delete-table');
+
+    // Venue price-schedule.destroy
+    Route::delete('/booking/delete-price-schedule/{priceSchedule}', function ($priceSchedule) {
+        try {
+            $priceSchedule = \App\Models\PriceSchedule::findOrFail($priceSchedule);
+            $priceSchedule->delete();
+            return redirect()->route('venue.booking')->with('success', 'Price schedule deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('venue.booking')->with('error', 'Failed to delete price schedule: ' . $e->getMessage());
+        }
+    })->name('price-schedule.destroy');
+
+    // price-schedule.create
+    Route::get('/booking/create-price-schedule', function () {
+        // Get all tables for the venue
+        $venueId = \App\Models\Venue::where('user_id', Auth::id())->value('id');
+        $tables = \App\Models\Table::where('venue_id', $venueId)->get();
+        return view('dash.venue.booking.create-price-schedule', compact('tables'));
+    })->name('price-schedule.create');
+
+    // price-schedule.store
+    Route::post('/booking/create-price-schedule', function (Request $request) {
+        $data = $request->validate([
+            'name' => 'required',
+            'start_time' => 'required',
+            'end_time' => 'required',
+            'days' => 'required',
+            'price' => 'required',
+            'is_active' => 'required',
+            'tables_applicable' => 'nullable',
+        ]);
+
+        try {
+            $priceSchedule = new \App\Models\PriceSchedule();
+            $priceSchedule->venue_id = \App\Models\Venue::where('user_id', Auth::id())->value('id');
+            $priceSchedule->name = $request->name;
+            $priceSchedule->start_time = $request->start_time;
+            $priceSchedule->end_time = $request->end_time;
+            $priceSchedule->days = $request->days;
+            $priceSchedule->price = $request->price;
+            $priceSchedule->is_active = $request->is_active ?? false;
+            $priceSchedule->tables_applicable = $request->tables_applicable; // Store as JSON if applicable
+            $priceSchedule->save();
+            return redirect()->route('venue.booking')->with('success', 'Price schedule created successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('venue.booking')->with('error', 'Failed to create price schedule: ' . $e->getMessage());
+        }
+    })->name('price-schedule.store');
+
     // Venue Promo Management
     Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
 

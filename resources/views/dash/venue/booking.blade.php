@@ -13,13 +13,13 @@
                         <div class="col-span-3 bg-[#292929] rounded-lg p-6 shadow-md h-130">
                             @include('dash.venue.components.booking.table-list', ['tables' => $tables])
                         </div>
-                        
+
                         <div class="col-span-2 flex flex-col gap-4">
                             {{-- Available & Booked Count --}}
                             <div class="bg-[#292929] rounded-lg p-6 shadow-md flex flex-col items-center justify-center">
                                 @include('dash.venue.components.booking.avail-booked', ['availableCount' => $availableCount, 'bookedCount' => $bookedCount])
                             </div>
-                            
+
                             {{-- Price & Schedule --}}
                             <div class="bg-[#292929] rounded-lg p-6 shadow-md flex-grow">
                                 @include('dash.venue.components.booking.price-schedule', ['priceSchedules' => $priceSchedules])
