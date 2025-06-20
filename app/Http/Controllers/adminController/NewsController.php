@@ -12,9 +12,20 @@ class NewsController extends Controller
     /**
      * Menampilkan daftar berita di dashboard admin
      */
-    public function index()
+    public function index(Request $request)
     {
-        $news = News::orderBy('published_at', 'desc')->get();
+        $news = News::when($request->has('search'), function ($query) use ($request) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('content', 'like', '%' . $search . '%');
+            });
+        })->when($request->has('category'), function ($query) use ($request) {
+            $category = $request->input('category');
+            if ($category) {
+                $query->where('category', $category);
+            }
+        })->orderBy('published_at', 'desc')->get();
         return view('dash.admin.comunity.index', compact('news'));
     }
 
@@ -40,7 +51,7 @@ class NewsController extends Controller
         ]);
 
         $data = $request->all();
-        
+
         // Handle image upload
         if ($request->hasFile('image_url')) {
             $file = $request->file('image_url');
@@ -80,14 +91,14 @@ class NewsController extends Controller
         ]);
 
         $data = $request->all();
-        
+
         // Handle image upload
         if ($request->hasFile('image_url')) {
             // Delete old image if exists
             if ($news->image_url && !str_starts_with($news->image_url, 'http://') && !str_starts_with($news->image_url, 'https://') && Storage::disk('public')->exists('uploads/' . $news->image_url)) {
                 Storage::disk('public')->delete('uploads/' . $news->image_url);
             }
-            
+
             $file = $request->file('image_url');
             $fileName = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('uploads', $fileName, 'public');
@@ -112,9 +123,9 @@ class NewsController extends Controller
         if ($news->image_url && !str_starts_with($news->image_url, 'http://') && !str_starts_with($news->image_url, 'https://') && Storage::disk('public')->exists('uploads/' . $news->image_url)) {
             Storage::disk('public')->delete('uploads/' . $news->image_url);
         }
-        
+
         $news->delete();
-        
+
         return redirect()->route('comunity.index')->with('success', 'Berita berhasil dihapus!');
     }
 }

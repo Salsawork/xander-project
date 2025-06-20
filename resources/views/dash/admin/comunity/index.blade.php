@@ -10,29 +10,33 @@
                 <h1 class="text-3xl font-extrabold mb-6">
                     Berita
                 </h1>
-                
+
                 @if (session('success'))
                     <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
                         {{ session('success') }}
                     </div>
                 @endif
-                
+
                 @if (session('error'))
                     <div class="mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
                         {{ session('error') }}
                     </div>
                 @endif
-                
+
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
                     <input
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-                        placeholder="Search" type="search" />
+                        placeholder="Search" type="search" value="{{ request('search') }}" onchange="location.href='{{ route('comunity.index') }}?search=' + this.value + '&category={{ request('category') }}'">
                     <div class="flex gap-2 items-center">
                         <select aria-label="Category filter"
+                            onchange="location.href='{{ route('comunity.index') }}?category=' + this.value + '&search={{ request('search') }}'"
                             class="bg-[#2c2c2c] text-gray-500 text-xs rounded border border-gray-700 px-2 py-1 cursor-pointer">
-                            <option>
-                                Kategori
+                            <option value="">
+                                -- Kategori --
                             </option>
+                            @foreach (['Championship', 'Tips', 'Event', 'Tutorial', 'Other'] as $category)
+                                <option value="{{ $category }}">{{ $category }}</option>
+                            @endforeach
                         </select>
                         <a href="{{ route('comunity.create') }}"
                             class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
@@ -157,21 +161,21 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = `/dashboard/comunity/${id}`;
-                
+
                 // Tambahkan CSRF token
                 const csrfToken = document.createElement('input');
                 csrfToken.type = 'hidden';
                 csrfToken.name = '_token';
                 csrfToken.value = '{{ csrf_token() }}';
                 form.appendChild(csrfToken);
-                
+
                 // Tambahkan method DELETE
                 const methodField = document.createElement('input');
                 methodField.type = 'hidden';
                 methodField.name = '_method';
                 methodField.value = 'DELETE';
                 form.appendChild(methodField);
-                
+
                 // Tambahkan form ke body dan submit
                 document.body.appendChild(form);
                 form.submit();
