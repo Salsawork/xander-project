@@ -10,35 +10,56 @@
                 <h1 class="text-3xl font-extrabold mb-6">
                     My Product
                 </h1>
-                
+
                 @if (session('success'))
                     <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
                         {{ session('success') }}
                     </div>
                 @endif
-                
+
                 @if (session('error'))
                     <div class="mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
                         {{ session('error') }}
                     </div>
                 @endif
-                
+
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
                     <input
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
+                        onchange="window.location.href = '{{ route('products.index') }}?search=' + this.value + '&status=' + document.getElementById('statusFilter').value + '&category=' + document.getElementById('categoryFilter').value;"
+                        value="{{ request('search') }}"
                         placeholder="Search" type="search" />
                     <div class="flex gap-2 items-center">
                         <select aria-label="Status filter"
+                            id="statusFilter"
+                            onchange="
+                                window.location.href = '{{ route('products.index') }}?search=' + document.querySelector('input[type=search]').value + '&status=' + this.value + '&category=' + document.getElementById('categoryFilter').value;
+                            "
                             class="bg-[#2c2c2c] text-gray-500 text-xs rounded border border-gray-700 px-2 py-1 cursor-pointer">
-                            <option>
-                                Status
+                            <option value="">
+                                -- Status --
+                            </option>
+                            <option value="in-stock" {{ request('status') == 'in-stock' ? 'selected' : '' }}>
+                                In Stock
+                            </option>
+                            <option value="out-of-stock" {{ request('status') == 'out-of-stock' ? 'selected' : '' }}>
+                                Out of Stock
                             </option>
                         </select>
                         <select aria-label="Category filter"
+                            id="categoryFilter"
+                            onchange="
+                                window.location.href = '{{ route('products.index') }}?search=' + document.querySelector('input[type=search]').value + '&status=' + document.getElementById('statusFilter').value + '&category=' + this.value;
+                            "
                             class="bg-[#2c2c2c] text-gray-500 text-xs rounded border border-gray-700 px-2 py-1 cursor-pointer">
-                            <option>
-                                Category
+                            <option value="">
+                                -- Category --
                             </option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
                         </select>
                         <a href="{{ route('products.create') }}"
                             class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
@@ -165,21 +186,21 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = `/dashboard/products/${id}`;
-                
+
                 // Tambahkan CSRF token
                 const csrfToken = document.createElement('input');
                 csrfToken.type = 'hidden';
                 csrfToken.name = '_token';
                 csrfToken.value = '{{ csrf_token() }}';
                 form.appendChild(csrfToken);
-                
+
                 // Tambahkan method DELETE
                 const methodField = document.createElement('input');
                 methodField.type = 'hidden';
                 methodField.name = '_method';
                 methodField.value = 'DELETE';
                 form.appendChild(methodField);
-                
+
                 // Tambahkan form ke body dan submit
                 document.body.appendChild(form);
                 form.submit();

@@ -34,7 +34,7 @@ class OrderController extends Controller
         Log::info('Checkout page accessed');
         Log::info('Request items', ['items' => $request->input('items', [])]);
         Log::info('Request price', ['price' => $request->input('price', [])]);
-        
+
         // Ambil data dari cookie
         $allCarts = [];
         $carts = [];
@@ -43,37 +43,37 @@ class OrderController extends Controller
         $total = 0;
         $tax = 0;
         $shipping = 30000; // Default shipping cost
-        
+
         // Ambil semua data cart dari cookie
         if (Cookie::has('cart')) {
             $cartData = Cookie::get('cart');
             Log::info('Cart data from Cookie facade', ['data' => $cartData]);
-            
+
             if ($cartData) {
                 $allCarts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
                 Log::info('All decoded cart data', ['allCarts' => $allCarts]);
-                
+
                 // Jika ada items yang dipilih, filter cart berdasarkan items
                 $selectedItems = $request->input('items', []);
-                
+
                 if (!empty($selectedItems)) {
                     // Konversi selectedItems ke integer untuk perbandingan yang benar
                     $selectedItems = array_map('intval', $selectedItems);
-                    
+
                     // Filter cart berdasarkan items yang dipilih
                     $carts = array_filter($allCarts, function($cart) use ($selectedItems) {
                         return in_array((int)$cart['id'], $selectedItems);
                     });
-                    
+
                     // Reset array keys
                     $carts = array_values($carts);
-                    
+
                     Log::info('Selected cart items', ['carts' => $carts]);
                 } else {
                     // Jika tidak ada items yang dipilih, tampilkan semua
                     $carts = $allCarts;
                 }
-                
+
                 // Hitung total
                 foreach ($carts as $cart) {
                     if (isset($cart['price'])) {
@@ -82,38 +82,38 @@ class OrderController extends Controller
                 }
             }
         }
-        
+
         // Ambil data sparring dari cookie jika ada
         if (Cookie::has('sparring')) {
             $sparringData = Cookie::get('sparring');
             $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-            
+
             foreach ($sparrings as $sparring) {
                 if (isset($sparring['price'])) {
                     $total += $sparring['price'];
                 }
             }
         }
-        
+
         // Ambil data venue dari cookie jika ada
         if (Cookie::has('venue')) {
             $venueData = Cookie::get('venue');
             $venue = is_array($venueData) ? $venueData : json_decode($venueData, true);
-            
+
             if ($venue && isset($venue['price'])) {
                 $total += $venue['price'];
             }
         }
-        
+
         // Hitung pajak (10% dari total)
         $tax = $total * 0.1;
-        
+
         // Hitung grand total
         $grandTotal = $total + $shipping + $tax;
-        
+
         // Tambahkan client key Midtrans untuk frontend
         $clientKey = config('midtrans.client_key');
-        
+
         return view('public.checkout.checkout', compact('carts', 'sparrings', 'venue', 'total', 'shipping', 'tax', 'grandTotal', 'clientKey'));
     }
 
@@ -142,7 +142,7 @@ class OrderController extends Controller
             'shipping_method' => 'required|in:express,standard',
             'note' => 'nullable|string',
         ]);
-        
+
         // Ambil data dari cookie
         $carts = [];
         $items = [];
@@ -150,31 +150,31 @@ class OrderController extends Controller
         $total = 0;
         $tax = 0;
         $shipping = 30000; // Default shipping cost
-        
+
         // Ambil data cart dari cookie
         if (Cookie::has('cart')) {
             $cartData = Cookie::get('cart');
             $allCarts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-            
+
             // Jika ada items yang dipilih, filter cart berdasarkan items
             $selectedItems = $request->input('items', []);
-            
+
             if (!empty($selectedItems)) {
                 // Konversi selectedItems ke integer untuk perbandingan yang benar
                 $selectedItems = array_map('intval', $selectedItems);
-                
+
                 // Filter cart berdasarkan items yang dipilih
                 $carts = array_filter($allCarts, function($cart) use ($selectedItems) {
                     return in_array((int)$cart['id'], $selectedItems);
                 });
-                
+
                 // Reset array keys
                 $carts = array_values($carts);
             } else {
                 // Jika tidak ada items yang dipilih, gunakan semua
                 $carts = $allCarts;
             }
-            
+
             // Hitung total
             foreach ($carts as $cart) {
                 $items[] = $cart['id'];
@@ -182,21 +182,21 @@ class OrderController extends Controller
                 $total += (int)$cart['price'];
             }
         }
-        
+
         // Jika tidak ada item, kembalikan error
         if (empty($items)) {
             return back()->with('error', 'No products in cart');
         }
-        
+
         // Hitung pajak (10% dari total)
         $tax = $total * 0.1;
-        
+
         // Hitung grand total
         $grandTotal = $total + $shipping + $tax;
-        
+
         // Generate order ID
         $orderId = 'XB-' . time();
-        
+
         // Simpan order ke database
         try {
             $order = DB::transaction(function () use ($request, $validatedData, $items, $prices, $carts, $total, $tax, $shipping, $grandTotal, $orderId) {
@@ -214,7 +214,7 @@ class OrderController extends Controller
                 $order->payment_method = 'midtrans'; // Karena menggunakan Midtrans
                 $order->total = $grandTotal;
                 $order->save();
-                
+
                 // Simpan order items
                 foreach ($carts as $index => $cart) {
                     $orderItem = new OrderItem();
@@ -226,13 +226,13 @@ class OrderController extends Controller
                     $orderItem->discount = 0;
                     $orderItem->save();
                 }
-                
+
                 // Simpan sparring jika ada
                 $sparrings = [];
                 if (Cookie::has('sparring')) {
                     $sparringData = Cookie::get('sparring');
                     $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-                    
+
                     foreach ($sparrings as $sparring) {
                         $orderSparring = new OrderSparring();
                         $orderSparring->order_id = $order->id;
@@ -240,7 +240,7 @@ class OrderController extends Controller
                         $orderSparring->schedule_id = $sparring['schedule_id'];
                         $orderSparring->price = $sparring['price'];
                         $orderSparring->save();
-                        
+
                         // Update schedule menjadi booked
                         $schedule = SparringSchedule::find($sparring['schedule_id']);
                         if ($schedule) {
@@ -249,10 +249,10 @@ class OrderController extends Controller
                         }
                     }
                 }
-                
+
                 return $order;
             });
-            
+
             // Siapkan parameter untuk Midtrans
             $params = [
                 'transaction_details' => [
@@ -283,7 +283,7 @@ class OrderController extends Controller
                     'credit_card', 'gopay', 'shopeepay', 'bca_va', 'bni_va', 'bri_va', 'other_va', 'dana'
                 ],
             ];
-            
+
             // Tambahkan sparring ke item_details jika ada
             if (!empty($sparrings)) {
                 foreach ($sparrings as $sparring) {
@@ -295,7 +295,7 @@ class OrderController extends Controller
                     ];
                 }
             }
-            
+
             // Tambahkan biaya pengiriman
             $params['item_details'][] = [
                 'id' => 'shipping',
@@ -303,7 +303,7 @@ class OrderController extends Controller
                 'quantity' => 1,
                 'name' => 'Shipping Cost (' . $validatedData['shipping_method'] . ')',
             ];
-            
+
             // Tambahkan pajak
             $params['item_details'][] = [
                 'id' => 'tax',
@@ -311,29 +311,29 @@ class OrderController extends Controller
                 'quantity' => 1,
                 'name' => 'Tax (10%)',
             ];
-            
+
             // Buat Snap Token
             $snapToken = Snap::getSnapToken($params);
-            
+
             // Simpan snap token ke database
             $order->snap_token = $snapToken;
             $order->save();
-            
+
             // Hapus cookie cart jika berhasil
             Cookie::queue(Cookie::forget('cart'));
-            
+
             // Hapus cookie sparring jika berhasil
             if (Cookie::has('sparring')) {
                 Cookie::queue(Cookie::forget('sparring'));
             }
-            
+
             // Kembalikan response dengan snap token
             return response()->json([
                 'status' => 'success',
                 'snap_token' => $snapToken,
                 'order_id' => $order->id,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Error creating order: ' . $e->getMessage());
             return response()->json([
@@ -350,24 +350,24 @@ class OrderController extends Controller
     {
         // Ambil data notifikasi dari Midtrans
         $notif = json_decode($request->getContent(), true);
-        
+
         // Ambil order ID dari notifikasi
         $orderId = $notif['order_id'];
         $transactionStatus = $notif['transaction_status'];
         $fraudStatus = $notif['fraud_status'] ?? null;
-        
+
         Log::info('Midtrans notification', $notif);
-        
+
         // Cari order berdasarkan ID
         $order = Order::find($orderId);
-        
+
         if (!$order) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Order not found',
             ], 404);
         }
-        
+
         // Mapping status dari Midtrans ke format database
         $statusMapping = [
             'settlement' => 'paid',
@@ -377,7 +377,7 @@ class OrderController extends Controller
             'expire' => 'failed',
             'cancel' => 'failed'
         ];
-        
+
         // Update status pembayaran berdasarkan notifikasi
         if ($transactionStatus == 'capture') {
             if ($fraudStatus == 'challenge') {
@@ -389,10 +389,10 @@ class OrderController extends Controller
             // Gunakan mapping untuk status lainnya
             $order->payment_status = $statusMapping[$transactionStatus] ?? 'pending';
         }
-        
+
         // Simpan perubahan
         $order->save();
-        
+
         return response()->json([
             'status' => 'success',
             'message' => 'Notification processed successfully',
@@ -406,12 +406,12 @@ class OrderController extends Controller
     {
         $orderId = $request->order_id;
         $transactionStatus = $request->transaction_status;
-        
+
         Log::info('Payment finish', [
             'order_id' => $orderId,
             'status' => $transactionStatus,
         ]);
-        
+
         // Mapping status dari Midtrans ke format database
         $statusMapping = [
             'settlement' => 'paid',
@@ -421,7 +421,7 @@ class OrderController extends Controller
             'expire' => 'failed',
             'cancel' => 'failed'
         ];
-        
+
         // Update status pembayaran di database
         $order = Order::find($orderId);
         if ($order) {
@@ -429,7 +429,7 @@ class OrderController extends Controller
             $order->payment_status = $statusMapping[$transactionStatus] ?? 'pending';
             $order->save();
         }
-        
+
         // Hapus cookie cart jika pembayaran berhasil
         if ($transactionStatus == 'settlement' || $transactionStatus == 'capture') {
             Cookie::queue(Cookie::forget('cart'));
@@ -453,11 +453,11 @@ class OrderController extends Controller
     {
         $orderId = $request->order_id;
         $order = Order::find($orderId);
-        
+
         if (!$order) {
             return redirect()->route('home')->with('error', 'Order not found');
         }
-        
+
         return view('public.checkout.success', compact('order'));
     }
 

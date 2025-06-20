@@ -12,10 +12,32 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::all();
-        return view('dash.admin.product.index', compact('products'));
+        $products = Product::when($request->has('search'), function ($query) use ($request) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhere('sku', 'like', '%' . $search . '%');
+            });
+        })->when($request->has('category'), function ($query) use ($request) {
+            $categoryId = $request->input('category');
+            if ($categoryId) {
+                $query->where('category_id', $categoryId);
+            }
+        })->when($request->has('status'), function ($query) use ($request) {
+            $status = $request->input('status');
+            if ($status == 'in-stock') {
+                $query->where('quantity', '>', 0);
+            } elseif ($status == 'out-of-stock') {
+                $query->where('quantity', 0);
+            }
+        })->orderBy('created_at', 'desc')->get();
+
+        $categories = \App\Models\Category::all();
+
+        return view('dash.admin.product.index', compact('products', 'categories'));
     }
 
     /**
@@ -70,12 +92,12 @@ class ProductController extends Controller
     {
         // Debugging: Cek data yang dikirim
         Log::info('Request data:', $request->all());
-        
+
         // Pastikan discount tidak null
         if ($request->discount === null) {
             $request->merge(['discount' => 0]);
         }
-        
+
         $validatedData = $request->validate([
             'name' => 'required|string',
             'description' => 'required|string',
@@ -93,12 +115,12 @@ class ProductController extends Controller
             'pricing' => 'required|numeric|min:0',
             'discount' => 'required|numeric|min:0|max:100'
         ]);
-        
+
         // Debugging: Cek data yang lolos validasi
         Log::info('Validated data:', $validatedData);
 
         $product = Product::findOrFail($id);
-        
+
         // Handle file uploads if any
         if ($request->hasFile('images')) {
             $uploadedImages = [];
@@ -107,7 +129,7 @@ class ProductController extends Controller
                 $image->storeAs('uploads', $imageName, 'public');
                 $uploadedImages[] = asset('storage/uploads/' . $imageName);
             }
-            
+
             // Merge with existing images if any
             $existingImages = json_decode($product->images ?? '[]', true);
             $validatedData['images'] = array_merge($existingImages, $uploadedImages);
@@ -115,10 +137,10 @@ class ProductController extends Controller
             // Keep existing images or set empty array if null
             $validatedData['images'] = $product->images ?? [];
         }
-        
+
         // Debugging: Cek data sebelum update
         Log::info('Data before update:', $product->toArray());
-        
+
         try {
             $product->update($validatedData);
             // Debugging: Cek data setelah update
@@ -138,21 +160,21 @@ class ProductController extends Controller
     {
         try {
             $product = Product::findOrFail($id);
-            
+
             // Hapus gambar jika ada
             if ($product->gambar && file_exists(public_path('images/products/' . $product->gambar))) {
                 unlink(public_path('images/products/' . $product->gambar));
             }
-            
+
             // Matiin foreign key checks sementara
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
-            
+
             // Hapus produk
             $product->delete();
-            
+
             // Nyalain lagi foreign key checks
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            
+
             return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');
         } catch (\Exception $e) {
             return redirect()->route('products.index')->with('error', 'Gagal menghapus produk: ' . $e->getMessage());

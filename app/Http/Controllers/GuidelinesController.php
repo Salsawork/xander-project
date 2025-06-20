@@ -24,21 +24,21 @@ class GuidelinesController extends Controller
 
         return view('public.guideline.category', compact('guidelines', 'categoryName'));
     }
-    
+
     public function show($slug)
     {
         // Ambil data guideline berdasarkan slug
         $guideline = \App\Models\Guideline::where('slug', $slug)->firstOrFail();
-        
+
         // Ambil beberapa guideline terkait untuk rekomendasi
         $relatedGuidelines = \App\Models\Guideline::where('id', '!=', $guideline->id)
             ->inRandomOrder()
             ->limit(4)
             ->get();
-            
+
         // Tambah jumlah view
         $guideline->increment('views_count');
-        
+
         return view('public.guideline.show', compact('guideline', 'relatedGuidelines'));
     }
 }
