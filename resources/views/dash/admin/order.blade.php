@@ -41,20 +41,33 @@
                         <div class="text-3xl font-extrabold leading-none">{{ $cancelledCount }}</div>
                         <div class="font-semibold mt-1">Cancelled</div>
                     </div>
-                    <button aria-label="More options" class="text-gray-400 hover:text-white ml-4 self-center">
+                    {{-- <button aria-label="More options" class="text-gray-400 hover:text-white ml-4 self-center">
                         <i class="fas fa-ellipsis-h"></i>
-                    </button>
+                    </button> --}}
                 </section>
                 <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between mx-8 mb-4 gap-4">
                     <input type="text" placeholder="Phone number or Email"
-                        class="bg-transparent border border-gray-600 rounded-md px-3 py-1.5 text-gray-400 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#0d82ff] focus:border-[#0d82ff] max-w-xs w-full sm:w-auto" />
+                        class="bg-transparent border border-gray-600 rounded-md px-3 py-1.5 text-gray-400 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#0d82ff] focus:border-[#0d82ff] max-w-xs w-full sm:w-auto"
+                        value="{{ request('search') }}"
+                        id="search"
+                        onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value"
+                        />
                     <div class="flex gap-2 text-xs text-gray-600 select-none">
-                        <div class="flex items-center gap-1 cursor-default">
-                            <span>Status</span>
-                            <i class="fas fa-chevron-down text-gray-600"></i>
+                        <div class="relative">
+                            {{-- Set select option --}}
+                            <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="status" onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value">
+                                <option value="" disabled selected>Filter by Status</option>
+                                @foreach(['pending','processing','packed','shipped','delivered','cancelled','returned'] as $option)
+                                    <option value="{{ $option }}" {{ request('status') == $option ? 'selected' : '' }}>{{ ucfirst($option) }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="flex items-center gap-1 cursor-default">
-                            <span>Date Range</span>
+                        <div class="relative">
+                            <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="orderBy" onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value">
+                                <option value="" disabled selected>Sort by Date</option>
+                                <option value="asc" {{ request('orderBy') == 'asc' ? 'selected' : '' }}>Oldest to Newest</option>
+                                <option value="desc" {{ request('orderBy') == 'desc' ? 'selected' : '' }}>Newest to Oldest</option>
+                            </select>
                         </div>
                     </div>
                 </section>
@@ -143,7 +156,7 @@
         if (typeof Alpine !== 'undefined' && !Alpine.initialized) {
             Alpine.start();
         }
-        
+
         // Tampilkan SweetAlert jika ada session success
         @if(session('success'))
             Swal.fire({
@@ -156,14 +169,14 @@
                 color: '#FFFFFF'
             });
         @endif
-        
+
         // Tambahkan event listener untuk link update status
         const statusLinks = document.querySelectorAll('.status-link');
         statusLinks.forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 const statusValue = e.target.getAttribute('data-status');
-                
+
                 Swal.fire({
                     title: 'Konfirmasi',
                     text: `Are you sure you want to change the status to ${statusValue}?`,
@@ -189,7 +202,7 @@
             button.addEventListener('click', function() {
                 const orderId = this.getAttribute('data-id');
                 const orderName = this.getAttribute('data-name');
-                
+
                 Swal.fire({
                     title: 'Konfirmasi',
                     text: `Are you sure you want to delete order ${orderName}?`,
@@ -205,7 +218,7 @@
                     if (result.isConfirmed) {
                         // Kirim request hapus order ke server
                         const deleteUrl = '{{ route("admin.orders.delete", ":id") }}'.replace(':id', orderId);
-                        
+
                         fetch(deleteUrl, {
                             method: 'DELETE',
                             headers: {

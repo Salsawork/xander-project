@@ -7,29 +7,38 @@
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
-                
+
                 <div class="p-8 mt-12 mx-20">
                     <h1 class="text-3xl font-bold mb-8">Transaction History</h1>
-                    
+
                     <div class="bg-[#292929] rounded-lg p-6 shadow-md">
                         <div class="flex justify-between items-center mb-6">
                             <div class="relative w-60">
-                                <input type="text" placeholder="Search" class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <input type="text" placeholder="Search" class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                id="search"
+                                value="{{ request('search') }}"
+                                onchange="window.location.href= '{{route('venue.transaction')}}?status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value + '&search=' + document.getElementById('search').value">
                             </div>
                             <div class="flex space-x-2">
                                 <div class="relative">
-                                    <button class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 flex items-center">
-                                        Status <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                    </button>
+                                    {{-- Set select option --}}
+                                    <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="status" onchange="window.location.href= '{{route('venue.transaction')}}?status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value + '&search=' + document.getElementById('search').value">
+                                        <option value="" disabled selected>Filter by Status</option>
+                                        @foreach(['pending','confirmed','cancelled','completed','booked'] as $option)
+                                            <option value="{{ $option }}" {{ request('status') == $option ? 'selected' : '' }}>{{ ucfirst($option) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div class="relative">
-                                    <button class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 flex items-center">
-                                        Date Range <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                    </button>
+                                    <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="orderBy" onchange="window.location.href= '{{route('venue.transaction')}}?status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value + '&search=' + document.getElementById('search').value">
+                                        <option value="" disabled selected>Sort by Date</option>
+                                        <option value="asc" {{ request('orderBy') == 'asc' ? 'selected' : '' }}>Oldest First</option>
+                                        <option value="desc" {{ request('orderBy') == 'desc' ? 'selected' : '' }}>Newest First</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead>
@@ -80,7 +89,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         <!-- Pagination -->
                         <div class="mt-6">
                             {{ $transactions->links('pagination::tailwind') }}

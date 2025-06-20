@@ -13,7 +13,7 @@ use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\TransactionController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\VenueController;
-use App\Http\Controllers\CommunityController\NewsController;
+use App\Http\Controllers\communityController\NewsController;
 use App\Http\Controllers\adminController\NewsController as AdminNewsController;
 use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelinesController;
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
@@ -224,7 +224,25 @@ Route::middleware('auth')->prefix('dashboard/athlete')->group(function () {
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::get('/', function () {
         // Ambil semua order dari database
-        $orders = \App\Models\Order::orderBy('created_at', 'desc')->get();
+        $orders = \App\Models\Order::orderBy('created_at', 'desc')->when(
+            request('search'),
+            function ($query) {
+                $query->whereHas('user', function ($q) {
+                          $q->where('name', 'like', '%' . request('search') . '%')
+                            ->orWhere('username', 'like', '%' . request('search') . '%');
+                      });
+            }
+        )->when(
+            request('status'),
+            function ($query) {
+                $query->where('delivery_status', request('status'));
+            }
+        )->when(
+            request('orderBy'),
+            function ($query) {
+                $query->orderBy('created_at', request('orderBy') === 'asc' ? 'asc' : 'desc');
+            }
+        )->get();
 
         // Hitung jumlah order berdasarkan status
         $pendingCount = \App\Models\Order::where('delivery_status', 'pending')->count();

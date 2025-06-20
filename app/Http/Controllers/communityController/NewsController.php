@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\CommunityController;
+namespace App\Http\Controllers\communityController;
 
 use App\Http\Controllers\Controller;
 use App\Models\News;
@@ -15,11 +15,11 @@ class NewsController extends Controller
     {
         // Filter berdasarkan kategori jika ada
         $query = News::query();
-        
+
         if ($request->has('category') && $request->category) {
             $query->where('category', $request->category);
         }
-        
+
         // Filter berdasarkan pencarian jika ada
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -28,10 +28,10 @@ class NewsController extends Controller
                   ->orWhere('content', 'like', "%{$search}%");
             });
         }
-        
+
         // Ambil semua berita dengan pagination
         $allNews = $query->latest('published_at')->paginate(9);
-        
+
         // Ambil berita featured untuk slider
         $featuredNews = News::where('is_featured', true)
             ->latest('published_at')
@@ -43,7 +43,7 @@ class NewsController extends Controller
             ->latest('published_at')
             ->take(4)
             ->get();
-            
+
         // Berita terbaru untuk sidebar
         $recentNews = News::latest('published_at')
             ->take(5)
@@ -54,7 +54,7 @@ class NewsController extends Controller
             ->distinct()
             ->whereNotNull('category')
             ->pluck('category');
-            
+
         // Hitung jumlah berita per kategori
         $categoryCount = [];
         foreach ($categories as $category) {
@@ -71,7 +71,7 @@ class NewsController extends Controller
                 'categoryCount'
             ));
         }
-        
+
         // Jika request dari halaman news
         return view('dash.community.news', compact(
             'allNews',
@@ -94,19 +94,19 @@ class NewsController extends Controller
             ->latest('published_at')
             ->take(3)
             ->get();
-            
+
         // Berita terbaru untuk sidebar
         $recentNews = News::latest('published_at')
             ->where('id', '!=', $news->id)
             ->take(5)
             ->get();
-            
+
         // Ambil semua kategori
         $categories = News::select('category')
             ->distinct()
             ->whereNotNull('category')
             ->pluck('category');
-            
+
         // Hitung jumlah berita per kategori
         $categoryCount = [];
         foreach ($categories as $category) {
@@ -114,7 +114,7 @@ class NewsController extends Controller
         }
 
         return view('dash.community.show', compact(
-            'news', 
+            'news',
             'relatedNews',
             'recentNews',
             'categories',

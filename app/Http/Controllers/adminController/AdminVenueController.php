@@ -17,7 +17,16 @@ class AdminVenueController extends Controller
      */
     public function index()
     {
-        $venues = Venue::with('user')->get();
+        $venues = Venue::with('user')->when(
+            request('search'),
+            function ($query) {
+                $query->where('name', 'like', '%' . request('search') . '%')
+                      ->orWhereHas('user', function ($q) {
+                          $q->where('name', 'like', '%' . request('search') . '%')
+                            ->orWhere('username', 'like', '%' . request('search') . '%');
+                      });
+            }
+        )->get();
         return view('dash.admin.venue.index', compact('venues'));
     }
 
@@ -77,7 +86,7 @@ class AdminVenueController extends Controller
         } catch (\Exception $e) {
             // Rollback transaksi jika ada error
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
                 ->withInput();
@@ -123,12 +132,12 @@ class AdminVenueController extends Controller
             $user = User::find($venue->user_id);
             $user->name = $request->name;
             $user->username = $request->username;
-            
+
             // Update password jika diisi
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
-            
+
             $user->save();
 
             // Update data venue
@@ -147,7 +156,7 @@ class AdminVenueController extends Controller
         } catch (\Exception $e) {
             // Rollback transaksi jika ada error
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
                 ->withInput();
@@ -165,19 +174,19 @@ class AdminVenueController extends Controller
 
             // Ambil user_id sebelum menghapus venue
             $userId = $venue->user_id;
-            
+
             // Nonaktifkan foreign key checks sementara
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
-            
+
             // Hapus venue
             $venue->delete();
-            
+
             // Hapus user terkait
             User::destroy($userId);
-            
+
             // Aktifkan kembali foreign key checks
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            
+
             // Commit transaksi
             DB::commit();
 
@@ -186,7 +195,7 @@ class AdminVenueController extends Controller
         } catch (\Exception $e) {
             // Rollback transaksi jika ada error
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }

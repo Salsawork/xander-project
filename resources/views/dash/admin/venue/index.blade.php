@@ -10,23 +10,25 @@
                 <h1 class="text-3xl font-extrabold mb-6">
                     Daftar Venue
                 </h1>
-                
+
                 @if (session('success'))
                     <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
                         {{ session('success') }}
                     </div>
                 @endif
-                
+
                 @if (session('error'))
                     <div class="mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
                         {{ session('error') }}
                     </div>
                 @endif
-                
+
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
                     <input
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-                        placeholder="Cari venue..." type="search" />
+                        id="statusFilter"
+                        value="{{ request('search') }}"
+                        placeholder="Cari venue..." type="search" onchange="window.location.href = '{{ route('venue.index') }}?search=' + this.value" />
                     <div class="flex gap-2 items-center">
                         <a href="{{ route('venue.create') }}"
                             class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
@@ -135,21 +137,21 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = `/dashboard/venue/${id}`;
-                
+
                 // Tambahkan CSRF token
                 const csrfToken = document.createElement('input');
                 csrfToken.type = 'hidden';
                 csrfToken.name = '_token';
                 csrfToken.value = '{{ csrf_token() }}';
                 form.appendChild(csrfToken);
-                
+
                 // Tambahkan method DELETE
                 const methodField = document.createElement('input');
                 methodField.type = 'hidden';
                 methodField.name = '_method';
                 methodField.value = 'DELETE';
                 form.appendChild(methodField);
-                
+
                 // Tambahkan form ke body dan submit
                 document.body.appendChild(form);
                 form.submit();

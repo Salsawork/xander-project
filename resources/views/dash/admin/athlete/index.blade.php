@@ -10,19 +10,19 @@
                 <h1 class="text-3xl font-extrabold mb-6">
                     Daftar Athlete
                 </h1>
-                
+
                 @if (session('success'))
                     <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
                         {{ session('success') }}
                     </div>
                 @endif
-                
+
                 @if (session('error'))
                     <div class="mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
                         {{ session('error') }}
                     </div>
                 @endif
-                
+
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
                     <input
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
@@ -68,10 +68,10 @@
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
                                         @if ($athlete->athleteDetail && $athlete->athleteDetail->image && Storage::disk('public')->exists($athlete->athleteDetail->image))
-                                            <img src="{{ asset('storage/' . $athlete->athleteDetail->image) }}" alt="{{ $athlete->name }}" 
+                                            <img src="{{ asset('storage/' . $athlete->athleteDetail->image) }}" alt="{{ $athlete->name }}"
                                                 class="h-10 w-10 rounded-full object-cover">
                                         @elseif ($athlete->athleteDetail && $athlete->athleteDetail->image)
-                                            <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}" alt="{{ $athlete->name }}" 
+                                            <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}" alt="{{ $athlete->name }}"
                                                 class="h-10 w-10 rounded-full object-cover">
                                         @else
                                             <div class="h-10 w-10 rounded-full bg-gray-700 flex items-center justify-center">
@@ -95,18 +95,22 @@
                                         Rp {{ number_format($athlete->athleteDetail ? $athlete->athleteDetail->price_per_session : 0, 0, ',', '.') }}
                                     </td>
                                     <td class="px-4 py-3 text-right space-x-2">
+                                        @if($athlete->athleteDetail?->id)
                                         <a href="{{ route('athlete.edit', $athlete->athleteDetail->id) }}"
                                             class="text-blue-400 hover:text-blue-300">
                                             <i class="fas fa-edit"></i>
                                             Edit
                                         </a>
-                                        <button 
-                                            class="text-red-400 hover:text-red-300 delete-btn" 
-                                            data-id="{{ $athlete->athleteDetail->id }}" 
+                                        @endif
+                                        @if($athlete->athleteDetail?->id)
+                                        <button
+                                            class="text-red-400 hover:text-red-300 delete-btn"
+                                            data-id="{{ $athlete->athleteDetail->id }}"
                                             data-name="{{ $athlete->name }}">
                                             <i class="fas fa-trash"></i>
                                             Hapus
                                         </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
@@ -131,12 +135,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Inisialisasi tombol hapus
         const deleteButtons = document.querySelectorAll('.delete-btn');
-        
+
         deleteButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const name = this.getAttribute('data-name');
-                
+
                 Swal.fire({
                     title: 'Hapus Athlete?',
                     text: `Apakah kamu yakin ingin menghapus athlete "${name}"?`,
@@ -155,27 +159,27 @@
                         form.method = 'POST';
                         form.action = "{{ url('dashboard/athlete') }}/" + id;
                         form.style.display = 'none';
-                        
+
                         const csrfToken = document.createElement('input');
                         csrfToken.type = 'hidden';
                         csrfToken.name = '_token';
                         csrfToken.value = '{{ csrf_token() }}';
-                        
+
                         const method = document.createElement('input');
                         method.type = 'hidden';
                         method.name = '_method';
                         method.value = 'DELETE';
-                        
+
                         form.appendChild(csrfToken);
                         form.appendChild(method);
                         document.body.appendChild(form);
-                        
+
                         form.submit();
                     }
                 });
             });
         });
-        
+
         // Tampilkan SweetAlert untuk pesan sukses
         @if(session('success'))
             Swal.fire({
@@ -188,7 +192,7 @@
                 color: '#fff'
             });
         @endif
-        
+
         // Tampilkan SweetAlert untuk pesan error
         @if(session('error'))
             Swal.fire({
