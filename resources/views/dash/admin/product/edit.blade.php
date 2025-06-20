@@ -16,11 +16,11 @@
                         <span>Kembali ke daftar produk</span>
                     </a>
                 </div>
-                
+
                 <form id="editProductForm" action="{{ route('products.update', $product->id) }}" method="POST" class="px-8" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
-                    
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <!-- Kolom Kiri -->
                         <div class="space-y-6">
@@ -30,7 +30,7 @@
                                     <i class="fas fa-info-circle mr-2 text-blue-400"></i>
                                     Informasi Dasar
                                 </h2>
-                                
+
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="product-name">
@@ -40,7 +40,7 @@
                                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             name="name" id="product-name" type="text" value="{{ $product->name }}" />
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="product-description">
                                             Deskripsi Produk
@@ -51,14 +51,14 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Kategori & Brand -->
                             <div class="bg-[#262626] rounded-lg p-6 space-y-4">
                                 <h2 class="text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                                     <i class="fas fa-tag mr-2 text-green-400"></i>
                                     Kategori & Brand
                                 </h2>
-                                
+
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="category">
@@ -74,7 +74,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="brand">
                                             Brand
@@ -89,12 +89,12 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1">Kondisi</label>
                                         <div class="flex gap-4">
                                             <label class="flex items-center gap-2">
-                                                <input type="radio" name="condition" value="new" {{ $product->condition == 'new' ? 'checked' : '' }} 
+                                                <input type="radio" name="condition" value="new" {{ $product->condition == 'new' ? 'checked' : '' }}
                                                     class="text-blue-500 focus:ring-blue-500 h-4 w-4" />
                                                 <span>Baru</span>
                                             </label>
@@ -108,7 +108,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Kolom Kanan -->
                         <div class="space-y-6">
                             <!-- Inventori -->
@@ -117,7 +117,7 @@
                                     <i class="fas fa-box mr-2 text-yellow-400"></i>
                                     Inventori
                                 </h2>
-                                
+
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="quantity">
@@ -127,7 +127,7 @@
                                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             name="quantity" id="quantity" type="number" value="{{ $product->quantity }}" />
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="sku">
                                             SKU (Opsional)
@@ -138,14 +138,14 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Gambar Produk -->
                             <div class="bg-[#262626] rounded-lg p-6 space-y-4">
                                 <h2 class="text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                                     <i class="fas fa-image mr-2 text-indigo-400"></i>
                                     Gambar Produk
                                 </h2>
-                                
+
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="images">
@@ -155,14 +155,14 @@
                                             class="w-full border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white rounded-md" />
                                         <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, GIF. Maks: 2MB</p>
                                     </div>
-                                    
+
                                     @if(isset($product->images) && count($product->images) > 0)
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
                                         <div class="flex flex-wrap gap-2">
                                             @foreach($product->images as $image)
                                             <div class="relative w-20 h-20">
-                                                <img src="{{ $image }}" class="w-full h-full object-cover rounded-md" alt="Product image" />
+                                                <img src="{{ asset('storage/uploads/' . $image) }}" class="w-full h-full object-cover rounded-md" alt="Product image" />
                                             </div>
                                             @endforeach
                                         </div>
@@ -170,14 +170,14 @@
                                     @endif
                                 </div>
                             </div>
-                            
+
                             <!-- Pengiriman & Dimensi -->
                             <div class="bg-[#262626] rounded-lg p-6 space-y-4">
                                 <h2 class="text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                                     <i class="fas fa-truck mr-2 text-purple-400"></i>
                                     Pengiriman & Dimensi
                                 </h2>
-                                
+
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="weight">
@@ -187,7 +187,7 @@
                                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             name="weight" id="weight" type="number" value="{{ $product->weight }}" />
                                     </div>
-                                    
+
                                     <div class="grid grid-cols-3 gap-4">
                                         <div>
                                             <label class="block text-xs text-gray-400 mb-1" for="length">
@@ -197,7 +197,7 @@
                                                 class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 name="length" id="length" type="number" value="{{ $product->length }}" />
                                         </div>
-                                        
+
                                         <div>
                                             <label class="block text-xs text-gray-400 mb-1" for="breadth">
                                                 Lebar (cm)
@@ -206,7 +206,7 @@
                                                 class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 name="breadth" id="breadth" type="number" value="{{ $product->breadth }}" />
                                         </div>
-                                        
+
                                         <div>
                                             <label class="block text-xs text-gray-400 mb-1" for="width">
                                                 Tinggi (cm)
@@ -218,14 +218,14 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Harga -->
                             <div class="bg-[#262626] rounded-lg p-6 space-y-4">
                                 <h2 class="text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                                     <i class="fas fa-tag mr-2 text-red-400"></i>
                                     Harga
                                 </h2>
-                                
+
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="pricing">
@@ -235,7 +235,7 @@
                                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             name="pricing" id="pricing" type="number" value="{{ $product->pricing }}" />
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1" for="discount">
                                             Diskon (%)
@@ -248,7 +248,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Tombol Aksi -->
                     <div class="flex justify-end mt-8 space-x-4">
                         <a href="{{ route('products.index') }}"
