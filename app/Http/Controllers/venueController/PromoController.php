@@ -19,29 +19,42 @@ class PromoController extends Controller
     {
         // Ambil venue yang terkait dengan user yang sedang login
         $venue = Venue::where('user_id', Auth::id())->first();
-        
+
+        $where = [];
         if ($venue) {
-            // Jika venue ditemukan, ambil voucher yang terkait dengan venue tersebut
-            $vouchers = Voucher::where('venue_id', $venue->id)->get();
-        } else {
-            // Jika venue tidak ditemukan, tampilkan data kosong
-            $vouchers = collect([]);
+            // Jika venue ditemukan, gunakan ID venue untuk query
+            $where['venue_id'] = $venue->id;
         }
-        
+
+        // Jika venue ditemukan, ambil voucher yang terkait dengan venue tersebut
+        $vouchers = Voucher::where($where)->when(request()->has('filter'), function ($query) {
+            $filter = request()->input('filter');
+            if ($filter === 'ongoing') {
+                return $query->where('is_active', true)
+                    ->where('end_date', '>', now())
+                    ->where('start_date', '<', now());
+            } elseif ($filter === 'upcoming') {
+                return $query->where('start_date', '>', now());
+            } elseif ($filter === 'ended') {
+                return $query->where('end_date', '<', now());
+            }
+            return $query; // Jika tidak ada filter, kembalikan query tanpa perubahan
+        })->get();
+
         // Hitung jumlah voucher berdasarkan status
-        $allCount = $vouchers->count();
-        $ongoingCount = $vouchers->where('is_active', true)
+        $allCount = Voucher::where($where)->count();
+        $ongoingCount = Voucher::where($where)->where('is_active', true)
             ->where('end_date', '>', now())
             ->where('start_date', '<', now())
             ->count();
-        $upcomingCount = $vouchers->where('start_date', '>', now())->count();
-        $endedCount = $vouchers->where('end_date', '<', now())->count();
-        
+        $upcomingCount = Voucher::where($where)->where('start_date', '>', now())->count();
+        $endedCount = Voucher::where($where)->where('end_date', '<', now())->count();
+
         return view('dash.venue.promo', compact(
-            'vouchers', 
-            'allCount', 
-            'ongoingCount', 
-            'upcomingCount', 
+            'vouchers',
+            'allCount',
+            'ongoingCount',
+            'upcomingCount',
             'endedCount'
         ));
     }

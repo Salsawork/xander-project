@@ -1,16 +1,16 @@
 <div>
     <!-- Filter Tabs -->
     <div class="flex border-b border-gray-700 mb-4">
-        <a href="#" class="px-4 py-2 pb-4 {{ request()->get('filter') == null ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
+        <a href="{{ route('venue.promo') }}" class="px-4 py-2 pb-4 {{ request()->get('filter') == null ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
             All <span class="ml-1 px-2 py-1 bg-gray-700 rounded-full text-xs">{{ $allCount }}</span>
         </a>
-        <a href="#" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'ongoing' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
+        <a href="{{ route('venue.promo') }}?filter=ongoing" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'ongoing' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
             Ongoing <span class="ml-1 px-2 py-1 bg-gray-700 rounded-full text-xs">{{ $ongoingCount }}</span>
         </a>
-        <a href="#" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'upcoming' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
+        <a href="{{ route('venue.promo') }}?filter=upcoming" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'upcoming' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
             Upcoming <span class="ml-1 px-2 py-1 bg-gray-700 rounded-full text-xs">{{ $upcomingCount }}</span>
         </a>
-        <a href="#" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'ended' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
+        <a href="{{ route('venue.promo') }}?filter=ended" class="px-4 py-2 pb-4 {{ request()->get('filter') == 'ended' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400' }}">
             Ended <span class="ml-1 px-2 py-1 bg-gray-700 rounded-full text-xs">{{ $endedCount }}</span>
         </a>
     </div>
@@ -44,7 +44,7 @@
                         <td class="py-3 px-4">{{ $voucher->name }}</td>
                         <td class="py-3 px-4">{{ $voucher->type }}</td>
                         <td class="py-3 px-4">
-                            {{ $voucher->start_date->format('d/m/Y H:i') }} - 
+                            {{ $voucher->start_date->format('d/m/Y H:i') }} -
                             {{ $voucher->end_date->format('d/m/Y H:i') }}
                         </td>
                         <td class="py-3 px-4">
@@ -58,12 +58,13 @@
                         <td class="py-3 px-4">{{ $voucher->claimed }}</td>
                         <td class="py-3 px-4">
                             <div class="flex space-x-2">
-                                <a href="#" class="text-blue-500 hover:text-blue-400">
+                                {{-- <a href="#" class="text-blue-500 hover:text-blue-400">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
-                                </a>
-                                <a href="#" class="text-red-500 hover:text-red-400">
+                                </a> --}}
+                                {{-- Delete --}}
+                                <a href="{{ route('venue.promo.delete', $voucher->id) }}" class="text-red-500 hover:text-red-400" onclick="return confirm('Are you sure you want to delete this voucher?')">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
