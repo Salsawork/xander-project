@@ -20,7 +20,7 @@
             // Ambil sesi terakhir yang diikuti athlete (maksimal 3)
             $recentSessions = App\Models\Participants::where('user_id', $athleteId)
                 ->where('status', '!=', 'cancelled')
-                ->with(['billiardSession.venue'])
+                ->with(['BilliardSession.venue'])
                 ->latest()
                 ->take(3)
                 ->get();
@@ -28,7 +28,7 @@
 
         @forelse($recentSessions as $participant)
             @php
-                $session = $participant->billiardSession;
+                $session = $participant->BilliardSession;
                 $venue = $session->venue;
 
                 // Format tanggal dan waktu

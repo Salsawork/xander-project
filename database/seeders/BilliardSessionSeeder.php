@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\billiardSession;
+use App\Models\BilliardSession;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -73,7 +73,7 @@ class BilliardSessionSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Sessions untuk venue 2 (Billiard Master)
             [
                 'venue_id' => 2,
@@ -126,7 +126,7 @@ class BilliardSessionSeeder extends Seeder
         ];
 
         foreach ($sessions as $session) {
-            billiardSession::create($session);
+            BilliardSession::create($session);
         }
 
         $this->command->info('Billiard sessions seeded successfully!');

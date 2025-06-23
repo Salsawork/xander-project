@@ -19,6 +19,8 @@ use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelines
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
 use App\Http\Controllers\adminController\AdminVenueController;
 use App\Http\Controllers\adminController\AdminAthleteController;
+use App\Http\Controllers\adminController\TournamentController;
+use App\Http\Controllers\TreeController;
 
 /**
  * Endpoint for home page
@@ -637,3 +639,17 @@ Route::prefix('community')->name('community.')->group(function () {
 Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('guideline.index');
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
+
+Route::middleware('auth')->prefix('dashboard/tournament')->group(function () {
+    Route::get('/', [TournamentController::class, 'index'])->name('tournament.index');
+    Route::get('/create', [TournamentController::class, 'create'])->name('tournament.create');
+    Route::post('/', [TournamentController::class, 'store'])->name('tournament.store');
+    Route::get('/{tournament}/edit', [TournamentController::class, 'edit'])->name('tournament.edit');
+    Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('tournament.update');
+
+    Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('tournament.destroy');
+});
+
+Route::get('/championships', [TreeController::class, 'index'])->name('tree.index');
+Route::post('/championships/{championship}/trees', [TreeController::class, 'store'])->name('tree.store');
+Route::put('/championships/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');

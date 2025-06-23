@@ -2,7 +2,10 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Container\Attributes\DB;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB as FacadesDB;
+use Pest\ArchPresets\Laravel;
 
 class DatabaseSeeder extends Seeder
 {
@@ -11,6 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        FacadesDB::statement('SET FOREIGN_KEY_CHECKS=0;');
         $this->call([
             UserSeeder::class,
             CategorySeeder::class,
@@ -29,6 +33,8 @@ class DatabaseSeeder extends Seeder
             NewsSeeder::class,
             GuidelinesSeeder::class,
             AthleteDetailSeeder::class,
+            LaravelTournamentSeeder::class,
         ]);
+        FacadesDB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }

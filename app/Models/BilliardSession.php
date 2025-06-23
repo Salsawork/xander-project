@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class billiardSession extends Model
+class BilliardSession extends Model
 {
     /**
      * The attributes that are mass assignable.
@@ -64,7 +64,7 @@ class billiardSession extends Model
     {
         return 'XB' . strtoupper(substr(uniqid(), -8));
     }
-    
+
     /**
      * Scope a query to only include pending sessions.
      */
@@ -72,7 +72,7 @@ class billiardSession extends Model
     {
         return $query->where('status', 'pending');
     }
-    
+
     /**
      * Scope a query to only include confirmed sessions.
      */
@@ -80,7 +80,7 @@ class billiardSession extends Model
     {
         return $query->where('status', 'confirmed');
     }
-    
+
     /**
      * Scope a query to only include cancelled sessions.
      */
@@ -88,7 +88,7 @@ class billiardSession extends Model
     {
         return $query->where('status', 'cancelled');
     }
-    
+
     /**
      * Scope a query to only include completed sessions.
      */
@@ -96,7 +96,7 @@ class billiardSession extends Model
     {
         return $query->where('status', 'completed');
     }
-    
+
     /**
      * Check if session still has available slots.
      */

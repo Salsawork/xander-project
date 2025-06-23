@@ -2,16 +2,24 @@
 
 namespace Database\Seeders;
 
-use App\Models\Venue;
+use App\Models\Venue as ModelsVenue;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Xoco70\LaravelTournaments\Models\Venue;
 
 class VenueSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Run the database seeders.
+     *
+     * @return void
      */
-    public function run(): void
+    public function run()
     {
+        $this->command->info('Venues seeding!');
+        DB::table('venue')->truncate();
+        factory(Venue::class, 5)->create();
+
         // Pastikan user dengan ID 4 dan 5 sudah ada
         if (!\App\Models\User::whereIn('id', [4, 5])->exists()) {
             $this->command->error('Users with ID 4 and 5 not found. Please run UserSeeder first.');
@@ -44,7 +52,7 @@ class VenueSeeder extends Seeder
         ];
 
         foreach ($venues as $venue) {
-            Venue::create($venue);
+            ModelsVenue::create($venue);
         }
 
         $this->command->info('Venues seeded successfully!');

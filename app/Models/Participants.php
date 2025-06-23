@@ -23,9 +23,9 @@ class Participants extends Model
     /**
      * Get the session that the participant joined.
      */
-    public function billiardSession(): BelongsTo
+    public function BilliardSession(): BelongsTo
     {
-        return $this->belongsTo(billiardSession::class, 'session_id');
+        return $this->belongsTo(BilliardSession::class, 'session_id');
     }
 
     /**
@@ -35,7 +35,7 @@ class Participants extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
+
     /**
      * Scope a query to only include registered participants.
      */
@@ -43,7 +43,7 @@ class Participants extends Model
     {
         return $query->where('status', 'registered');
     }
-    
+
     /**
      * Scope a query to only include attending participants.
      */
@@ -51,7 +51,7 @@ class Participants extends Model
     {
         return $query->where('status', 'attending');
     }
-    
+
     /**
      * Scope a query to only include cancelled participants.
      */
@@ -59,7 +59,7 @@ class Participants extends Model
     {
         return $query->where('status', 'cancelled');
     }
-    
+
     /**
      * Scope a query to only include participants with pending payment.
      */
@@ -67,7 +67,7 @@ class Participants extends Model
     {
         return $query->where('payment_status', 'pending');
     }
-    
+
     /**
      * Scope a query to only include participants with paid payment.
      */
@@ -75,7 +75,7 @@ class Participants extends Model
     {
         return $query->where('payment_status', 'paid');
     }
-    
+
     /**
      * Scope a query to only include participants with refunded payment.
      */

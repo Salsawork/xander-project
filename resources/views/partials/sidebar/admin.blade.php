@@ -125,5 +125,22 @@
                 </li>
             </ul>
         </li>
+        <li>
+            <div class="mb-2">Tournament</div>
+            <ul class="text-xs font-normal text-gray-300 space-y-1 ml-3">
+                <li>
+                    <a href="{{ route('tournament.index') }}"
+                        class="block {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
+                        Daftar Tournament
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('tournament.create') }}"
+                        class="block {{ request()->routeIs('tournament.create') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
+                        Tambah Tournament
+                    </a>
+                </li>
+            </ul>
+        </li>
     </ul>
 </aside>

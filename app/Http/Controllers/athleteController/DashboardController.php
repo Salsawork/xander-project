@@ -4,7 +4,7 @@ namespace App\Http\Controllers\athleteController;
 
 use App\Http\Controllers\Controller;
 use App\Models\MatchHistory;
-use App\Models\billiardSession;
+use App\Models\BilliardSession;
 use App\Models\Participants;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -16,66 +16,66 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         if ($user->roles !== 'athlete') {
             return redirect()->route('dashboard');
         }
-        
+
         // Ambil data rating dari review (diasumsikan rating 4.9)
         $rating = 4.9;
         $totalRating = 123000;
-        
+
         // Ambil data pendapatan bulanan
         $currentMonth = Carbon::now()->format('Y-m');
         $lastMonth = Carbon::now()->subMonth()->format('Y-m');
-        
+
         $monthlyEarnings = MatchHistory::where('user_id', $user->id)
             ->whereMonth('created_at', '=', Carbon::now()->month)
             ->whereYear('created_at', '=', Carbon::now()->year)
             ->where('status', 'completed')
             ->sum('total_amount');
-            
+
         $lastMonthEarnings = MatchHistory::where('user_id', $user->id)
             ->whereMonth('created_at', '=', Carbon::now()->subMonth()->month)
             ->whereYear('created_at', '=', Carbon::now()->subMonth()->year)
             ->where('status', 'completed')
             ->sum('total_amount');
-            
+
         // Hitung persentase perubahan pendapatan
         $percentageChange = 0;
         if ($lastMonthEarnings > 0) {
             $percentageChange = (($monthlyEarnings - $lastMonthEarnings) / $lastMonthEarnings) * 100;
         }
-        
+
         // Ambil data jumlah sesi yang dibuat
-        $sessionCreated = billiardSession::where('created_at', '>=', Carbon::now()->subYear())
+        $sessionCreated = BilliardSession::where('created_at', '>=', Carbon::now()->subYear())
             ->whereHas('participants', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->count();
-            
-        $lastYearSessionCreated = billiardSession::where('created_at', '>=', Carbon::now()->subYears(2))
+
+        $lastYearSessionCreated = BilliardSession::where('created_at', '>=', Carbon::now()->subYears(2))
             ->where('created_at', '<', Carbon::now()->subYear())
             ->whereHas('participants', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->count();
-            
+
         // Hitung persentase perubahan jumlah sesi
         $sessionPercentageChange = 0;
         if ($lastYearSessionCreated > 0) {
             $sessionPercentageChange = (($sessionCreated - $lastYearSessionCreated) / $lastYearSessionCreated) * 100;
         }
-        
+
         // Ambil data sesi terbaru
-        $recentSessions = billiardSession::whereHas('participants', function($query) use ($user) {
+        $recentSessions = BilliardSession::whereHas('participants', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->with('venue')
             ->orderBy('date', 'desc')
             ->take(3)
             ->get();
-        
+
         // Ambil data review (dummy data sementara)
         $reviews = [
             [
@@ -97,9 +97,9 @@ class DashboardController extends Controller
                 'positive' => true
             ]
         ];
-        
+
         // Tambahkan di Controller
-        $scheduledDates = billiardSession::whereHas('participants', function($query) use ($user) {
+        $scheduledDates = BilliardSession::whereHas('participants', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->whereMonth('date', Carbon::now()->month)
@@ -109,7 +109,7 @@ class DashboardController extends Controller
                 return Carbon::parse($date)->day;
             })
             ->toArray();
-        
+
         return view('dash.athlete.dashboard', compact(
             'user',
             'rating',
@@ -132,14 +132,14 @@ class DashboardController extends Controller
             $month = date('m');
             $year = date('Y');
         }
-        
+
         $date = Carbon::createFromDate($year, $month, 1);
         $daysInMonth = $date->daysInMonth;
         $firstDayOfWeek = $date->dayOfWeek;
-        
+
         // Tanggal-tanggal dengan event (hardcoded untuk contoh)
         $eventDates = [1, 5, 7];
-        
+
         return [
             'currentMonth' => $date->format('F Y'),
             'prevMonth' => $date->copy()->subMonth()->format('m'),

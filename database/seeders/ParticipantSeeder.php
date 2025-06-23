@@ -13,7 +13,7 @@ class ParticipantSeeder extends Seeder
     public function run(): void
     {
         // Pastikan session dan user yang dibutuhkan sudah ada
-        if (!\App\Models\billiardSession::whereIn('id', [1, 2, 3, 4, 5, 6])->exists() || 
+        if (!\App\Models\BilliardSession::whereIn('id', [1, 2, 3, 4, 5, 6])->exists() ||
             !\App\Models\User::whereIn('id', [3, 6, 7, 8, 9])->exists()) {
             $this->command->error('Required sessions or users not found. Please run BilliardSessionSeeder and UserSeeder first.');
             return;
@@ -52,7 +52,7 @@ class ParticipantSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Participants untuk session 2 (Afternoon Training)
             [
                 'session_id' => 2,
@@ -72,7 +72,7 @@ class ParticipantSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Participants untuk session 3 (Evening Tournament)
             [
                 'session_id' => 3,
@@ -101,7 +101,7 @@ class ParticipantSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Participants untuk session 4 (Pro Training)
             [
                 'session_id' => 4,
@@ -121,7 +121,7 @@ class ParticipantSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Participants untuk session 5 (Casual Play)
             [
                 'session_id' => 5,
@@ -141,7 +141,7 @@ class ParticipantSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            
+
             // Participants untuk session 6 (Weekend Championship)
             [
                 'session_id' => 6,
