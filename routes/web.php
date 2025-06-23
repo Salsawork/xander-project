@@ -558,6 +558,8 @@ Route::prefix('cart')->group(function () {
 Route::middleware('auth')->prefix('checkout')->group(function () {
     Route::post('/', [OrderController::class, 'store'])->name('checkout.store');
     Route::get('/', [OrderController::class, 'index'])->name('checkout.index');
+    Route::get('/payment', [OrderController::class, 'payment'])->name('checkout.payment');
+    Route::put('/payment/{order}', [OrderController::class, 'updatePayment'])->name('checkout.updatePayment');
     Route::get('/finish', [OrderController::class, 'finish'])->name('checkout.finish');
     Route::get('/success', [OrderController::class, 'success'])->name('checkout.success');
 });

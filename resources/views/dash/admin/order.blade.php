@@ -79,6 +79,7 @@
                                 <th class="px-4 py-3">Date</th>
                                 <th class="px-4 py-3">Name</th>
                                 <th class="px-4 py-3">Payment</th>
+                                <th class="px-4 py-3">File</th>
                                 <th class="px-4 py-3">Total</th>
                                 <th class="px-4 py-3">Status Pengiriman</th>
                                 <th class="px-4 py-3">Action</th>
@@ -93,6 +94,15 @@
                                         {{ $order->user->name ?? 'Guest' }}
                                     </td>
                                     <td class="px-4 py-3">{{ $order->payment_method }}</td>
+                                    <td>
+                                        @if($order->file)
+                                            <a href="{{ asset('storage/' . $order->file) }}" target="_blank" class="text-blue-400 hover:underline">
+                                                <i class="fas fa-file-alt"></i> View File
+                                            </a>
+                                        @else
+                                            <span class="text-gray-500">No File</span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
                                     <td class="px-4 py-3">
                                         @php

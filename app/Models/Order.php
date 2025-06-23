@@ -19,7 +19,8 @@ class Order extends Model
         'total',
         'payment_status',
         'delivery_status',
-        'payment_method'
+        'payment_method',
+        'file',
     ];
 
     protected $casts = [

@@ -141,6 +141,7 @@ class OrderController extends Controller
             'zip' => 'required|string|max:20',
             'shipping_method' => 'required|in:express,standard',
             'note' => 'nullable|string',
+            'payment_method' => 'required',
         ]);
 
         // Ambil data dari cookie
@@ -211,7 +212,7 @@ class OrderController extends Controller
                 }
                 $order->payment_status = 'pending';
                 $order->delivery_status = 'pending';
-                $order->payment_method = 'midtrans'; // Karena menggunakan Midtrans
+                $order->payment_method = $request->payment_method; // Karena menggunakan Midtrans
                 $order->total = $grandTotal;
                 $order->save();
 
@@ -313,26 +314,38 @@ class OrderController extends Controller
             ];
 
             // Buat Snap Token
-            $snapToken = Snap::getSnapToken($params);
+            if($request->payment_method == 'midtrans') {
+                $snapToken = Snap::getSnapToken($params);
 
-            // Simpan snap token ke database
-            $order->snap_token = $snapToken;
-            $order->save();
+                // Simpan snap token ke database
+                $order->snap_token = $snapToken;
+                $order->save();
 
-            // Hapus cookie cart jika berhasil
-            Cookie::queue(Cookie::forget('cart'));
+                // Hapus cookie cart jika berhasil
+                Cookie::queue(Cookie::forget('cart'));
 
-            // Hapus cookie sparring jika berhasil
-            if (Cookie::has('sparring')) {
-                Cookie::queue(Cookie::forget('sparring'));
+                // Hapus cookie sparring jika berhasil
+                if (Cookie::has('sparring')) {
+                    Cookie::queue(Cookie::forget('sparring'));
+                }
+
+                // Kembalikan response dengan snap token
+                return response()->json([
+                    'status' => 'success',
+                    'snap_token' => $snapToken,
+                    'order_id' => $order->id,
+                ]);
+            } else {
+                $order->snap_token = 'MANUAL_PAYMENT';
+                $order->save();
+
+                 // Kembalikan response dengan snap token
+                return response()->json([
+                    'status' => 'success',
+                    'snap_token' => 'MANUAL_PAYMENT',
+                    'order_id' => $order->id,
+                ]);
             }
-
-            // Kembalikan response dengan snap token
-            return response()->json([
-                'status' => 'success',
-                'snap_token' => $snapToken,
-                'order_id' => $order->id,
-            ]);
 
         } catch (\Exception $e) {
             Log::error('Error creating order: ' . $e->getMessage());
@@ -444,6 +457,33 @@ class OrderController extends Controller
             return redirect()->route('checkout.index')
                 ->with('error', 'Pembayaran gagal atau dibatalkan. Silakan coba lagi.');
         }
+    }
+
+    public function payment(Request $request)
+    {
+        // Validasi input
+        $request->validate([
+            'order_id' => 'required|string',
+        ]);
+
+        $order = Order::find($request->order_id);
+
+        return view('public.checkout.payment', compact('order'));
+    }
+
+    public function updatePayment(Request $request, Order $order) {
+        $data = $request->validate([
+            'file' => 'required|file|mimes:jpg,jpeg,png,pdf', // Maksimal 2MB
+        ]);
+
+        // Save file
+        $filePath = $data['file']->store('payment_proofs', 'public');
+
+        // Update order with file path
+        $order->file = $filePath;
+        $order->save();
+
+        return back()->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
     }
 
     /**

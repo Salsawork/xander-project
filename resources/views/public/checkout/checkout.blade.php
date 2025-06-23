@@ -38,8 +38,8 @@
                 @if(isset($sparrings) && count($sparrings) > 0)
                     @foreach($sparrings as $sparring)
                         <div class="flex items-center space-x-4 mb-4">
-                            <img src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}" 
-                                alt="{{ $sparring['name'] }}" 
+                            <img src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}"
+                                alt="{{ $sparring['name'] }}"
                                 class="w-16 h-16 object-cover rounded">
                             <div class="flex-1">
                                 <h3 class="font-semibold">{{ $sparring['name'] }}</h3>
@@ -83,11 +83,11 @@
             <div class="md:col-span-1 space-y-6">
                 <form action="{{ route('checkout.store') }}" method="POST">
                     @csrf
-                    
+
                     <!-- Detail Penagihan -->
                     <div class="bg-[#2D2D2D] rounded-lg p-6 mb-6">
                         <h2 class="text-xl font-bold mb-4">Billing Details</h2>
-                        
+
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="first_name" class="block text-sm font-medium text-gray-400 mb-1">First Name</label>
@@ -109,13 +109,13 @@
                                 <input type="tel" name="phone" id="phone" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex. 08123456789" required>
                                 </div>
                         </div>
-                    
-                        
+
+
                         <div class="mb-4">
                             <label for="address" class="block text-sm font-medium text-gray-400 mb-1">Address</label>
                             <input type="text" name="address" id="address" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex. 789 Greenway Street, Apt 48" required>
                         </div>
-                        
+
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="city" class="block text-sm font-medium text-gray-400 mb-1">Town/City</label>
@@ -126,17 +126,17 @@
                                 <input type="text" name="zip" id="zip" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex. 90015" required>
                             </div>
                         </div>
-                        
+
                         <div>
                             <label for="note" class="block text-sm font-medium text-gray-400 mb-1">Note</label>
                             <textarea name="note" id="note" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex. Please add extra bubble wrap"></textarea>
                         </div>
                     </div>
-                    
+
                     <!-- Metode Pengiriman & Pembayaran -->
                     <div class="bg-[#2D2D2D] rounded-lg p-6 mb-6">
                         <h2 class="text-xl font-bold mb-4">Shipping Method</h2>
-                        
+
                         <div class="mb-6">
                             <p class="text-sm font-medium text-gray-400 mb-2">Choose Shipping</p>
                             <div class="flex space-x-4">
@@ -150,7 +150,7 @@
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div>
                             <p class="text-sm font-medium text-gray-400 mb-2">Payment Method</p>
                             <p class="text-sm text-gray-400 mb-4">Available payment methods that you can choose after clicking the button below.</p>
@@ -179,7 +179,7 @@
                     <!-- Ringkasan Pembayaran -->
                     <div class="bg-[#2D2D2D] rounded-lg p-6 mb-6">
                         <h2 class="text-xl font-bold mb-4">Payment Summary</h2>
-                        
+
                         <div class="mb-4">
                             <label for="promo_code" class="block text-sm font-medium text-gray-400 mb-1">Promo Code (Optional)</label>
                             <div class="flex">
@@ -187,7 +187,7 @@
                                 <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-md ml-4">Use</button>
                             </div>
                         </div>
-                        
+
                         <div class="space-y-2 mt-4">
                             <div class="flex justify-between">
                                 <span class="text-gray-400">Subtotal</span>
@@ -206,12 +206,26 @@
                                 <span>Rp. {{ number_format($grandTotal, 0, ',', '.') }},-</span>
                             </div>
                         </div>
-                        
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1" for="condition">
+                                Payment Method
+                            </label>
+                            <select name="payment_method"
+                                id="payment_method"
+                                required
+                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option disabled selected>Please choose payment method</option>
+                                <option value="manual">Manual</option>
+                                <option value="midtrans">Midtrans</option>
+                            </select>
+                        </div>
+
                         <button type="button" id="pay-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-md mt-4">
                             Choose Payment Method
                         </button>
                     </div>
-                    
+
                     <!-- Kebijakan Pengembalian -->
                     <div class="bg-[#2D2D2D] rounded-lg p-6">
                         <h2 class="text-xl font-bold mb-2">Return Policy</h2>
@@ -237,7 +251,7 @@
                 r.parentElement.classList.remove('border-blue-500');
                 r.parentElement.classList.add('border-gray-600');
             });
-            
+
             // Set border untuk yang dipilih
             if (this.checked) {
                 this.parentElement.classList.remove('border-gray-600');
@@ -256,7 +270,7 @@
         // Get form data
         let form = document.querySelector('form');
         let formData = new FormData(form);
-        
+
         // Send AJAX request to create order
         fetch('{{ route('checkout.store') }}', {
             method: 'POST',
@@ -270,29 +284,36 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Open Snap payment page with the token
-                snap.pay(data.snap_token, {
-                    // Optional: Customize appearance
-                    onSuccess: function(result) {
-                        // Handle success, redirect to success page
-                        window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=capture';
-                    },
-                    onPending: function(result) {
-                        // Handle pending, redirect to pending page
-                        window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=pending';
-                    },
-                    onError: function(result) {
-                        // Handle error, redirect to error page
-                        window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=error';
-                    },
-                    onClose: function() {
-                        // Handle customer closed the popup without finishing payment
-                        payButton.disabled = false;
-                        payButton.textContent = 'Choose Payment Method';
-                        console.log('Customer closed the popup without finishing payment');
-                        // Tidak perlu redirect, biarkan user tetap di halaman checkout
-                    }
-                });
+                if (data.snap_token == 'MANUAL_PAYMENT') {
+                    // Handle manual payment
+                    alert('Please complete the payment manually. Your order ID is: ' + data.order_id);
+                    // Redirect to finish page with order ID
+                    window.location.href = '{{ route('checkout.payment') }}?order_id=' + data.order_id;
+                } else {
+                    // Open Snap payment page with the token
+                    snap.pay(data.snap_token, {
+                        // Optional: Customize appearance
+                        onSuccess: function(result) {
+                            // Handle success, redirect to success page
+                            window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=capture';
+                        },
+                        onPending: function(result) {
+                            // Handle pending, redirect to pending page
+                            window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=pending';
+                        },
+                        onError: function(result) {
+                            // Handle error, redirect to error page
+                            window.location.href = '{{ route('checkout.finish') }}?order_id=' + data.order_id + '&transaction_status=error';
+                        },
+                        onClose: function() {
+                            // Handle customer closed the popup without finishing payment
+                            payButton.disabled = false;
+                            payButton.textContent = 'Choose Payment Method';
+                            console.log('Customer closed the popup without finishing payment');
+                            // Tidak perlu redirect, biarkan user tetap di halaman checkout
+                        }
+                    });
+                }
             } else {
                 // Handle error
                 alert('Error: ' + (data.message || 'Failed to process payment'));
