@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('operating_hours')->nullable();
             $table->decimal('rating', 3, 2)->default(0);
+            $table->integer('price')->default(0);
             $table->timestamps();
         });
     }

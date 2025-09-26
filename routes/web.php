@@ -25,22 +25,47 @@ use App\Http\Controllers\TreeController;
 /**
  * Endpoint for home page
  */
-Route::get('/', function () {
-    $products = App\Models\Product::inRandomOrder()->limit(4)->get();
-    // Track the visit
-    $ipAddress = request()->ip();
-    $visit = \App\Models\Visit::where('ip_address', $ipAddress)->whereDate('visit_date', today())->first();
-    if (!$visit) {
-        \App\Models\Visit::create([
-            'ip_address' => $ipAddress,
-            'visit' => 1,
-            'visit_date' => now(),
-        ]);
-    } else {
-        $visit->increment('visit');
-    }
-    return view('landing', compact('products'));
-})->name('index');
+// Route::get('/', function () {
+//     $products = App\Models\Product::inRandomOrder()->limit(4)->get();
+//     // Track the visit
+//     $ipAddress = request()->ip();
+//     $visit = \App\Models\Visit::where('ip_address', $ipAddress)->whereDate('visit_date', today())->first();
+//     if (!$visit) {
+//         \App\Models\Visit::create([
+//             'ip_address' => $ipAddress,
+//             'visit' => 1,
+//             'visit_date' => now(),
+//         ]);
+//     } else {
+//         $visit->increment('visit');
+//     }
+//     return view('landing', compact('products'));
+// })->name('index');
+
+// Route::get('/', function () {
+//     $products = Product::inRandomOrder()->limit(4)->get();
+
+//     // Track the visit
+//     $ipAddress = request()->ip();
+//     $visit = Visit::where('ip_address', $ipAddress)
+//         ->whereDate('visit_date', today())
+//         ->first();
+
+//     if (!$visit) {
+//         Visit::create([
+//             'ip_address' => $ipAddress,
+//             'visit' => 1,
+//             'visit_date' => now(),
+//         ]);
+//     } else {
+//         $visit->increment('visit');
+//     }
+
+//     return view('landing', compact('products'));
+// })->name('index');
+
+Route::get('/', [ProductController::class, 'index'])->name('index');
+Route::get('/level', [ProductController::class, 'filterByLevel'])->name('level');
 
 /**
  * Endpoint for login page

@@ -37,10 +37,10 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
 
-                    <input type="text" name="username" placeholder="Phone number or Email"
-                           class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           value="{{ old('username') }}" required />
-                    @error('username')
+                    <input type="text" name="login" placeholder="Username or Phone Number"
+                            class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value="{{ old('login') }}" required />
+                    @error('login')
                         <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
                     @enderror
 

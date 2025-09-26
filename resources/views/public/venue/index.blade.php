@@ -73,14 +73,15 @@
                         </div>
                         <div class="mt-4">
                             <span class="text-gray-400 text-sm">start from</span>
-                            <span class="text-xl font-bold text-white ml-2">Rp. 50.000.-</span>
+                            {{-- <span class="text-xl font-bold text-white ml-2">Rp. 50.000.-</span> --}}
+                            <span class="text-xl font-bold text-white ml-2">
+                                Rp {{ number_format((float) $venue->price, 0, ',', '.') }}
+                            </span>
                             <span class="text-gray-400 text-sm">/ session</span>
                         </div>
                     </div>
                     <div class="absolute top-6 right-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 text-gray-400 hover:text-blue-500 cursor-pointer">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75a4.5 4.5 0 00-6.364 0l-.636.637-.636-.637a4.5 4.5 0 00-6.364 6.364l.637.636L12 20.25l7.364-7.364.636-.636a4.5 4.5 0 000-6.364z" />
-                        </svg>
+                        <i class="fa-regular fa-heart text-gray-400 hover:text-red-500 cursor-pointer text-[28px]" onclick="toggleHeart(this)"></i>
                     </div>
                 </div>
                 @empty
@@ -91,4 +92,12 @@
             </section>
         </div>
     </div>
+    <script>
+        function toggleHeart(el) {
+            el.classList.toggle('fa-regular');
+            el.classList.toggle('fa-solid');
+            el.classList.toggle('text-gray-400');
+            el.classList.toggle('text-red-500');
+        }
+        </script>
 @endsection

@@ -22,6 +22,7 @@ class LoginController extends Controller
         User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
+            'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
             'created_at' => now(),
             'updated_at' => now()
@@ -35,15 +36,16 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'username' => ['required'],
+            'login'    => ['required'], // bisa username atau phone
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        $field = is_numeric($credentials['login']) ? 'phone' : 'username';
 
-            // Redirect berdasarkan role user
+        if (Auth::attempt([$field => $credentials['login'], 'password' => $credentials['password']])) {
+            $request->session()->regenerate();
             $user = Auth::user();
+
             if ($user->roles === 'admin') {
                 return redirect()->route('dashboard');
             } elseif ($user->roles === 'venue') {
@@ -51,17 +53,14 @@ class LoginController extends Controller
             } elseif ($user->roles === 'athlete') {
                 return redirect()->route('athlete.dashboard');
             } else {
-                // Default untuk user biasa
                 return redirect()->route('dashboard');
             }
         }
 
-        return back()
-            ->withInput()->withErrors([
-                'username' => 'The provided credentials do not match our records.',
-            ]);
+        return back()->withInput()->withErrors([
+            'login' => 'The provided credentials do not match our records.',
+        ]);
     }
-
     /**
      * Process the logout request.
      */
