@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-
 class LoginController extends Controller
 {
     /**
@@ -71,4 +70,11 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
         return redirect()->route('login');
     }
+
+    public function updateProfile(Request $request)
+    {
+        auth()->user()->update($request->only('name', 'username'));
+        return back()->with('success', 'Profile updated successfully');
+    }
+
 }

@@ -4,7 +4,9 @@
 @section('content')
     <div class="min-h-screen bg-neutral-900 text-white">
         <div class="mb-16 bg-cover bg-center p-24" style="background-image: url('/images/bg/product_breadcrumb.png');">
-            <p class="text-sm text-gray-400 mt-1">Home / Product</p>
+            <p class="text-sm text-gray-400 mt-1">
+                <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Product
+            </p>
             <h2 class="text-4xl font-bold uppercase text-white">Explore All Products</h2>
         </div>
 

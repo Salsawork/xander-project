@@ -105,7 +105,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
         return view('dash.admin.product.create', compact('categories'));
     }
 
@@ -141,7 +141,7 @@ class ProductController extends Controller
     public function edit(string $id)
     {
         $product = Product::findOrFail($id);
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
         return view('dash.admin.product.edit', compact('product', 'categories'));
     }
 
@@ -240,4 +240,23 @@ class ProductController extends Controller
             return redirect()->route('products.index')->with('error', 'Gagal menghapus produk: ' . $e->getMessage());
         }
     }
+
+    public function landing(Request $request)
+{
+    $products = Product::all();
+    $carts = json_decode($request->cookie('cart') ?? '[]', true);
+    $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+
+    return view('public.product.index', compact('products', 'carts', 'sparrings'));
+}
+
+public function detail(Request $request, $product)
+{
+    $detail = Product::findOrFail($product);
+    $carts = json_decode($request->cookie('cart') ?? '[]', true);
+    $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+
+    return view('public.product.detail', compact('detail', 'carts', 'sparrings'));
+}
+
 }
