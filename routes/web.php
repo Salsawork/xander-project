@@ -122,12 +122,9 @@ Route::prefix('products')->group(function () {
         $sparrings = json_decode(request()->cookie('sparring') ?? '[]', true);
         return view('public.product.detail', compact('detail', 'carts', 'sparrings'));
     })->name('products.detail');
-    Route::get('/', function () {
-        $products = \App\Models\Product::all();
-        $carts = json_decode(request()->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode(request()->cookie('sparring') ?? '[]', true);
-        return view('public.product.index', compact('products', 'carts', 'sparrings'));
-    })->name('products.landing');
+    Route::get('/', [ProductController::class, 'filter'])->name('products.landing');
+
+
 });
 
 /**
@@ -230,21 +227,21 @@ Route::middleware('auth')->prefix('dashboard/order')->group(function () {
             request('search'),
             function ($query) {
                 $query->whereHas('user', function ($q) {
-                          $q->where('name', 'like', '%' . request('search') . '%')
-                            ->orWhere('username', 'like', '%' . request('search') . '%');
-                      });
+                    $q->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('username', 'like', '%' . request('search') . '%');
+                });
             }
         )->when(
-            request('status'),
-            function ($query) {
-                $query->where('delivery_status', request('status'));
-            }
-        )->when(
-            request('orderBy'),
-            function ($query) {
-                $query->orderBy('created_at', request('orderBy') === 'asc' ? 'asc' : 'desc');
-            }
-        )->get();
+                request('status'),
+                function ($query) {
+                    $query->where('delivery_status', request('status'));
+                }
+            )->when(
+                request('orderBy'),
+                function ($query) {
+                    $query->orderBy('created_at', request('orderBy') === 'asc' ? 'asc' : 'desc');
+                }
+            )->get();
 
         // Hitung jumlah order berdasarkan status
         $pendingCount = \App\Models\Order::where('delivery_status', 'pending')->count();
@@ -544,7 +541,7 @@ Route::prefix('cart')->group(function () {
     Route::post('/del', function (Request $request) {
         $cart = json_decode($request->cookie('cart') ?? '[]', true);
         $cart = array_filter($cart, function ($item) use ($request) {
-            return $item['id'] !== (int)$request->id;
+            return $item['id'] !== (int) $request->id;
         });
         return redirect()->back()
             ->withCookie(cookie('cart', json_encode(array_values($cart)), 60 * 24 * 7));
@@ -600,7 +597,10 @@ Route::middleware('auth')->prefix('athlete')->group(function () {
 /**
  * Endpoint to view all venues
  */
-Route::get('/venues', [VenueController::class, 'index'])->name('venues.index');
+Route::prefix('venues')->group(function () {
+    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
+});
+
 Route::view('/about', 'about')->name('about');
 
 // Sparring
@@ -633,9 +633,9 @@ Route::prefix('community')->name('community.')->group(function () {
 
     // Remove duplicate routes
 })->withoutMiddleware([
-    'auth',
-    'verified'
-]);
+            'auth',
+            'verified'
+        ]);
 
 // Guidline
 Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('guideline.index');
