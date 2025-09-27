@@ -30,7 +30,7 @@ Route::post('/upload', function (Request $request) {
             'message' => 'Upload failed: ' . $e->getMessage()
         ], 500);
     }
-})->name('upload.image');
+});
 
 Route::post('/callback/midtrans', function (Request $request) {
     $controller = new \App\api\callback\MidtransController();
