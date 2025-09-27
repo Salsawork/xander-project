@@ -14,6 +14,7 @@ return new class extends Migration
             $table->text('description');
             $table->unsignedBigInteger('category_id');
             $table->enum('brand', ['Mezz', 'Predator', 'Cuetec', 'Other'])->default('Other');
+            $table->enum('level', ['professional', 'beginner', 'under50', 'cue-cases']);
             $table->enum('condition', ['new', 'used'])->default('new');
             $table->integer('quantity')->default(0);
             $table->string('sku')->unique()->nullable();

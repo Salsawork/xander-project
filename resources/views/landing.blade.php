@@ -32,15 +32,28 @@
 
             <!-- Filter Buttons -->
             <div class="flex flex-wrap gap-3 mb-8">
-                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Professional
-                    Grade</button>
-                <button
-                    class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Beginner-Friendly</button>
-                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Under
-                    $50</button>
-                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Cue
-                    Cases</button>
+                <a href="{{ route('level', ['level' => 'professional']) }}">
+                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                        Professional Grade
+                    </button>
+                </a>
+                <a href="{{ route('level', ['level' => 'beginner']) }}">
+                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                        Beginner-Friendly
+                    </button>
+                </a>
+                <a href="{{ route('level', ['level' => 'under50']) }}">
+                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                        Under $50
+                    </button>
+                </a>
+                <a href="{{ route('level', ['level' => 'cue-cases']) }}">
+                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                        Cue Cases
+                    </button>
+                </a>
             </div>
+            
 
             <!-- Product Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
@@ -106,13 +119,13 @@
                 Learn basic techniques, game rules, and etiquette at the billiard table. Improve
                 your skills and enjoy the game with more confidence.
             </p>
-            <a href="#"
+           <a href="{{route('guideline.index')}}"
                 class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">Learn More</a>
         </div>
     </section>
 
     <!-- Services -->
-    <section class="relative bg-cover bg-center py-20 px-6 md:px-20"
+    {{-- <section class="relative bg-cover bg-center py-20 px-6 md:px-20"
         style="background-image: url('/images/bg/background_2.png')">
         <div class="relative z-10 text-white w-full">
             <h2 class="text-2xl md:text-3xl font-bold text-center mb-12">Our Services</h2>
@@ -137,7 +150,7 @@
                 @endforeach
             </div>
         </div>
-    </section>
+    </section> --}}
 
     <!-- Join Community -->
     <section class="flex flex-col md:flex-row min-h-[80vh]">
@@ -152,7 +165,7 @@
                     players of all skill levels, participate in events, share tips and tricks, and grow your game
                     together.
                 </p>
-                <a href="#"
+                <a href="{{ route('community.index') }}"
                     class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
                     Connect Now
                 </a>

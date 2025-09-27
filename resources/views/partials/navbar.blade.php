@@ -3,7 +3,7 @@
     <!-- Logo di kiri -->
     <div class="flex items-center space-x-3">
         <a href="{{ route('index') }}" class="flex items-center space-x-2">
-            <img src="{{ asset('images/logo.png') }}" alt="Logo" class="h-8" />
+            <img src="{{ asset('images/logo/logo-xander.png') }}" alt="Logo" class="h-12" />
         </a>
     </div>
 
@@ -61,3 +61,4 @@
 
 <!-- Spacer to prevent content from hiding behind fixed navbar -->
 <div class="h-14"></div>
+

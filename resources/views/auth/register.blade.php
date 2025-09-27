@@ -6,11 +6,24 @@
         <div class="hidden w-1/2 bg-cover bg-center lg:flex"
             style="background-image: url('{{ asset('/images/bg/login-bg.png') }}')">
             <div class="flex h-full w-full items-center justify-center ">
-                <img src="{{ asset('/images/big-logo.png') }}" alt="Logo" class="h-64 w-64" />
+                <a href="{{ route('index') }}">
+                    <img src="{{ asset('/images/logo/logo-xander.png') }}" alt="Logo" class="h-50 w-67" />
+                </a>
             </div>
         </div>
         <div class="flex w-full items-center justify-center bg-neutral-900 lg:w-1/2">
             <div class="w-full max-w-sm rounded-lg bg-neutral-800 p-8 shadow-md">
+
+                <a href="{{ route('index') }}"
+                   class="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white border-2 border-black text-black shadow transition
+                          hover:bg-gray-100 active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 focus:ring-offset-neutral-800"
+                   aria-label="Kembali ke Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                         class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+
                 <h2 class="mb-4 text-center text-xl font-semibold text-white">Sign Up</h2>
                 <p class="mb-4 text-center text-sm text-gray-400">
                     Already have account?
@@ -50,3 +63,4 @@
         </div>
     </div>
 @endsection
+

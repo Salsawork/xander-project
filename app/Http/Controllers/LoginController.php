@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-
+use Illuminate\Auth\Events\Registered;
 class LoginController extends Controller
 {
     /**
@@ -19,14 +19,14 @@ class LoginController extends Controller
             'username' => 'required|unique:users',
             'password' => 'required|min:6|confirmed',
         ]);
-        User::create([
+
+        $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
+            'phone' => $request->phone ?? null,
             'password' => Hash::make($validated['password']),
-            'created_at' => now(),
-            'updated_at' => now()
         ]);
-        return redirect()->intended('login');
+        return redirect()->route('login');
     }
 
     /**
@@ -35,15 +35,16 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'username' => ['required'],
+            'login'    => ['required'], // bisa username atau phone
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        $field = is_numeric($credentials['login']) ? 'phone' : 'username';
 
-            // Redirect berdasarkan role user
+        if (Auth::attempt([$field => $credentials['login'], 'password' => $credentials['password']])) {
+            $request->session()->regenerate();
             $user = Auth::user();
+
             if ($user->roles === 'admin') {
                 return redirect()->route('dashboard');
             } elseif ($user->roles === 'venue') {
@@ -51,17 +52,14 @@ class LoginController extends Controller
             } elseif ($user->roles === 'athlete') {
                 return redirect()->route('athlete.dashboard');
             } else {
-                // Default untuk user biasa
                 return redirect()->route('dashboard');
             }
         }
 
-        return back()
-            ->withInput()->withErrors([
-                'username' => 'The provided credentials do not match our records.',
-            ]);
+        return back()->withInput()->withErrors([
+            'login' => 'The provided credentials do not match our records.',
+        ]);
     }
-
     /**
      * Process the logout request.
      */
@@ -72,4 +70,11 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
         return redirect()->route('login');
     }
+
+    public function updateProfile(Request $request)
+    {
+        auth()->user()->update($request->only('name', 'username'));
+        return back()->with('success', 'Profile updated successfully');
+    }
+
 }
