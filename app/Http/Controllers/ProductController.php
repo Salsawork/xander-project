@@ -259,4 +259,22 @@ public function detail(Request $request, $product)
     return view('public.product.detail', compact('detail', 'carts', 'sparrings'));
 }
 
+
+    public function filter(Request $request)
+    {
+        $products = Product::query()
+            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
+            ->when($request->category, fn($q) => $q->where('category_id', $request->category))
+            ->when($request->brand, fn($q) => $q->where('brand', $request->brand))
+            ->when($request->condition, fn($q) => $q->where('condition', $request->condition))
+            ->when($request->price, fn($q) => $q->where('pricing', '<=', $request->price))
+            ->orderBy('created_at', 'desc')
+            ->paginate(12)
+            ->withQueryString();
+
+        $carts = json_decode($request->cookie('cart') ?? '[]', true);
+        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+
+        return view('public.product.index', compact('products', 'carts', 'sparrings'));
+    }
 }
