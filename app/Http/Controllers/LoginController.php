@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 class LoginController extends Controller
 {
     /**
@@ -18,15 +19,14 @@ class LoginController extends Controller
             'username' => 'required|unique:users',
             'password' => 'required|min:6|confirmed',
         ]);
-        User::create([
+
+        $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
-            'phone' => $validated['phone'],
+            'phone' => $request->phone ?? null,
             'password' => Hash::make($validated['password']),
-            'created_at' => now(),
-            'updated_at' => now()
         ]);
-        return redirect()->intended('login');
+        return redirect()->route('login');
     }
 
     /**
