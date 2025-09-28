@@ -21,4 +21,13 @@ class VenueController extends Controller
         return view('public.venue.index', compact('venues'));
     }
 
+    public function detail(Request $request, $venue)
+    {
+        $detail = Venue::findOrFail($venue);
+        $carts = json_decode($request->cookie('cart') ?? '[]', true);
+        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+        
+        return view('public.venue.detail', compact('detail', 'carts', 'sparrings'));
+    }
+
 }

@@ -62,4 +62,15 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(SparringSchedule::class, 'athlete_id');
     }
+
+    public function reviewsReceived()
+    {
+        return $this->hasMany(Review::class, 'athlete_id');
+    }
+
+    public function reviewsGiven()
+    {
+        return $this->hasMany(Review::class, 'user_id');
+    }
+
 }

@@ -15,6 +15,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\UploadController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController;
@@ -41,7 +42,11 @@ Route::get('/', [ProductController::class, 'index'])->name('index');
 Route::get('/level', [ProductController::class, 'filterByLevel'])->name('level');
 
 Route::view('/about', 'about')->name('about');
-Route::get('/venues', [VenueController::class, 'index'])->name('venues.index');
+
+Route::prefix('venues')->group(function () {
+    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
+    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
+});
 
 /** Login & Register */
 Route::view('/login', 'auth.login')->name('login');
@@ -52,45 +57,9 @@ Route::view('/register', 'auth.register')->name('signup');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
 
 /** Image Upload */
-// Route::post('/upload', function (Request $request) {
-//     try {
-//         if (!$request->hasFile('image')) {
-//             return response()->json(['success' => false, 'message' => 'No file uploaded'], 400);
-//         }
-
-//         $file = $request->file('image');
-//         $fileName = time() . '_' . $file->getClientOriginalName();
-//         $file->storeAs('uploads', $fileName, 'public');
-
-//         return response()->json([
-//             'success' => true,
-//             'message' => 'File uploaded successfully',
-//             'data'    => ['image' => $fileName, 'path' => $fileName]
-//         ]);
-//     } catch (\Exception $e) {
-//         return response()->json(['success' => false, 'message' => 'Upload failed: ' . $e->getMessage()], 500);
-//     }
-// })->name('upload.image');
 Route::post('/upload', [UploadController::class, 'store'])->name('upload.image');
 
 /** Products */
-// Route::prefix('products')->group(function () {
-//     Route::get('/', function () {
-//         $products = \App\Models\Product::all();
-//         $carts = json_decode(request()->cookie('cart') ?? '[]', true);
-//         $sparrings = json_decode(request()->cookie('sparring') ?? '[]', true);
-
-//         return view('public.product.index', compact('products', 'carts', 'sparrings'));
-//     })->name('products.landing');
-
-//     Route::get('/{product}', function ($product) {
-//         $detail = \App\Models\Product::findOrFail($product);
-//         $carts = json_decode(request()->cookie('cart') ?? '[]', true);
-//         $sparrings = json_decode(request()->cookie('sparring') ?? '[]', true);
-
-//         return view('public.product.detail', compact('detail', 'carts', 'sparrings'));
-//     })->name('products.detail');
-// });
 Route::prefix('products')->group(function () {
     Route::get('/', [ProductController::class, 'landing'])->name('products.landing');
     Route::get('/{product}', [ProductController::class, 'detail'])->name('products.detail');
@@ -107,6 +76,8 @@ Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.in
 Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
 Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
 Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
+
+Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
 
 /** Community (Public) */
 Route::prefix('community')->name('community.')->withoutMiddleware(['auth', 'verified'])->group(function () {
@@ -126,32 +97,6 @@ Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->na
 | Cart & Checkout
 |--------------------------------------------------------------------------
 */
-// Route::prefix('cart')->group(function () {
-//     Route::post('/add', function (Request $request) {
-//         $cart = json_decode($request->cookie('cart') ?? '[]', true);
-//         $product = \App\Models\Product::findOrFail($request->id);
-
-//         $exists = collect($cart)->contains(fn($item) => $item['id'] === $product->id);
-
-//         if (!$exists) {
-//             $cart[] = [
-//                 'id'    => $product->id,
-//                 'name'  => $product->name,
-//                 'image' => $product->images[0] ?? null,
-//                 'price' => $product->pricing,
-//             ];
-//         }
-
-//         return redirect()->back()->withCookie(cookie('cart', json_encode($cart), 60 * 24 * 7));
-//     })->name('cart.add');
-
-//     Route::post('/del', function (Request $request) {
-//         $cart = json_decode($request->cookie('cart') ?? '[]', true);
-//         $cart = array_values(array_filter($cart, fn($item) => $item['id'] !== (int)$request->id));
-
-//         return redirect()->back()->withCookie(cookie('cart', json_encode($cart), 60 * 24 * 7));
-//     })->name('cart.del');
-// });
 Route::prefix('cart')->group(function () {
     Route::post('/add', [CartController::class, 'add'])->name('cart.add');
     Route::post('/del', [CartController::class, 'delete'])->name('cart.del');
@@ -251,8 +196,6 @@ Route::middleware('auth')->group(function () {
             return view('dash.admin.partner');
         })->name('partner.index');
     });
-    /** Admin: Venue, Athlete, Order, Promo, Partner ... */
-    // --> (Lanjutan sama persis, tinggal dilanjut sesuai grouping yang sudah ada di kode aslinya)
 });
 
 

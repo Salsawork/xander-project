@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\AthleteDetail;
+use App\Models\AthleteReview;
 use App\Models\SparringSchedule;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class SparringController extends Controller
 {
@@ -50,39 +52,135 @@ class SparringController extends Controller
     /**
      * Display the specified athlete.
      */
+    // public function show($id)
+    // {
+    //     // Ambil data atlet berdasarkan ID
+    //     $athlete = User::where('roles', 'athlete')
+    //         ->where('id', $id)
+    //         ->with('athleteDetail')
+    //         ->firstOrFail();
+
+    //     // Ambil jadwal sparring yang tersedia untuk atlet ini
+    //     $schedules = SparringSchedule::where('athlete_id', $id)
+    //         ->where('is_booked', false)
+    //         ->where('date', '>=', now()->format('Y-m-d'))
+    //         ->orderBy('date')
+    //         ->orderBy('start_time')
+    //         ->limit(9) // Batasi hanya 9 schedule
+    //         ->get();
+
+    //     // Ambil data cart dari cookie
+    //     $carts = [];
+    //     if (Cookie::has('cart')) {
+    //         $cartData = Cookie::get('cart');
+    //         $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
+    //     }
+
+    //     // Ambil data sparring dari cookie
+    //     $sparrings = [];
+    //     if (Cookie::has('sparring')) {
+    //         $sparringData = Cookie::get('sparring');
+    //         $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
+    //     }
+
+    //     return view('dash.sparring.detail', compact('athlete', 'schedules', 'carts', 'sparrings'));
+    // }
     public function show($id)
     {
-        // Ambil data atlet berdasarkan ID
         $athlete = User::where('roles', 'athlete')
             ->where('id', $id)
             ->with('athleteDetail')
             ->firstOrFail();
 
-        // Ambil jadwal sparring yang tersedia untuk atlet ini
         $schedules = SparringSchedule::where('athlete_id', $id)
             ->where('is_booked', false)
             ->where('date', '>=', now()->format('Y-m-d'))
             ->orderBy('date')
             ->orderBy('start_time')
-            ->limit(9) // Batasi hanya 9 schedule
+            ->limit(9)
             ->get();
 
-        // Ambil data cart dari cookie
+        // --- AthleteReview section ---
+        $reviews = AthleteReview::where('athlete_id', $athlete->id)
+            ->with('user')
+            ->latest()
+            ->get();
+
+        $totalReviews = $reviews->count();
+        $averageRating = $totalReviews ? round($reviews->avg('rating'), 1) : 0.0;
+
+        $counts = [];
+        $percents = [];
+        for ($i = 5; $i >= 1; $i--) {
+            $counts[$i] = $reviews->where('rating', $i)->count();
+            $percents[$i] = $totalReviews ? round($counts[$i] / $totalReviews * 100) : 0;
+        }
+
+        // --- Check apakah user sudah kasih review ---
+        $alreadyReviewed = false;
+        if (auth()->check()) {
+            $alreadyReviewed = AthleteReview::where('athlete_id', $athlete->id)
+                ->where('user_id', auth()->id())
+                ->exists();
+        }
+
+        // Cart & sparrings dari cookie
         $carts = [];
         if (Cookie::has('cart')) {
             $cartData = Cookie::get('cart');
             $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
         }
 
-        // Ambil data sparring dari cookie
         $sparrings = [];
         if (Cookie::has('sparring')) {
             $sparringData = Cookie::get('sparring');
             $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
         }
 
-        return view('dash.sparring.detail', compact('athlete', 'schedules', 'carts', 'sparrings'));
+        return view('dash.sparring.detail', compact(
+            'athlete',
+            'schedules',
+            'carts',
+            'sparrings',
+            'reviews',
+            'averageRating',
+            'totalReviews',
+            'counts',
+            'percents',
+            'alreadyReviewed'
+        ));
     }
+
+
+    public function storeReview(Request $request, $id)
+    {
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'required|string|max:2000',
+        ]);
+
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Silakan login untuk memberi review.');
+        }
+
+        $existing = AthleteReview::where('athlete_id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if ($existing) {
+            return back()->with('error', 'Anda sudah pernah memberi review untuk atlet ini.');
+        }
+
+        AthleteReview::create([
+            'athlete_id' => $id,
+            'user_id' => Auth::id(),
+            'rating' => $request->rating,
+            'comment' => $request->comment,
+        ]);
+
+        return back()->with('success', 'AthleteReview berhasil dikirim.');
+    }
+
 
     /**
      * Add sparring to cart.

@@ -32,10 +32,6 @@ Route::post('/upload', function (Request $request) {
     }
 });
 
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/main
 Route::post('/callback/midtrans', function (Request $request) {
     $controller = new \App\api\callback\MidtransController();
     return $controller->notification($request);

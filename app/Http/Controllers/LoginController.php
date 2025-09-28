@@ -25,6 +25,7 @@ class LoginController extends Controller
             'username' => $validated['username'],
             'phone' => $request->phone ?? null,
             'password' => Hash::make($validated['password']),
+            'status' => 0,
         ]);
         return redirect()->route('login');
     }
