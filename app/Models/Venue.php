@@ -19,6 +19,7 @@ class Venue extends Model
         'address',
         'phone',
         'description',
+        'date',
         'operating_hours',
         'rating',
         'price'

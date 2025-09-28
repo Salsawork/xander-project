@@ -18,36 +18,73 @@ class SparringController extends Controller
      */
     public function index(Request $request)
     {
-        // Ambil semua user dengan role athlete yang memiliki athlete_detail
-        $athletes = User::where('roles', 'athlete')
+        // Filter dasar: hanya role athlete yang punya detail
+        $query = User::where('roles', 'athlete')
             ->whereHas('athleteDetail')
-            ->with('athleteDetail')
-            ->get();
-
-        // Tambahkan log untuk debugging
-        Log::info('Athletes query result:', [
-            'count' => $athletes->count(),
-            'roles_in_db' => User::distinct('roles')->pluck('roles')->toArray(),
-            'athlete_users' => User::where('roles', 'athlete')->count(),
-            'athlete_details' => \App\Models\AthleteDetail::count(),
-        ]);
-
-        // Ambil data cart dari cookie
+            ->with('athleteDetail');
+    
+        // Filter search
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('athleteDetail', function ($q2) use ($request) {
+                      $q2->where('location', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+    
+        // Filter location
+        if ($request->filled('address')) {
+            $query->whereHas('athleteDetail', function ($q) use ($request) {
+                $q->where('location', $request->address);
+            });
+        }
+    
+        // Filter price range
+        if ($request->filled('price_min')) {
+            $query->whereHas('athleteDetail', function ($q) use ($request) {
+                $q->where('price_per_session', '>=', $request->price_min);
+            });
+        }
+        if ($request->filled('price_max')) {
+            $query->whereHas('athleteDetail', function ($q) use ($request) {
+                $q->where('price_per_session', '<=', $request->price_max);
+            });
+        }
+    
+        // Ambil data
+        $athletes = $query->get();
+    
+        // Lokasi unik
+        $locations = AthleteDetail::distinct('location')->pluck('location');
+    
+        // Harga min dan max (supaya bisa jadi placeholder di filter)
+        $minPrice = AthleteDetail::min('price_per_session');
+        $maxPrice = AthleteDetail::max('price_per_session');
+    
+        // Data cart dari cookie
         $carts = [];
         if (Cookie::has('cart')) {
             $cartData = Cookie::get('cart');
             $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
         }
-
-        // Ambil data sparring dari cookie
+    
         $sparrings = [];
         if (Cookie::has('sparring')) {
             $sparringData = Cookie::get('sparring');
             $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
         }
-
-        return view('dash.sparring.index', compact('athletes', 'carts', 'sparrings'));
+    
+        return view('dash.sparring.index', compact(
+            'athletes',
+            'carts',
+            'sparrings',
+            'locations',
+            'minPrice',
+            'maxPrice'
+        ));
     }
+    
 
     /**
      * Display the specified athlete.
