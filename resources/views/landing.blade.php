@@ -131,14 +131,9 @@
             </div>
             
 
-                @php
-                    // Ambil tepat 5 produk pertama (support array atau Collection)
-                    $items =
-                        $products instanceof \Illuminate\Support\Collection
-                            ? $products->take(5)
-                            : collect($products)->take(5);
-                @endphp
-
+            @php
+                $items = $products->take(5);
+            @endphp
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                     @forelse ($items as $product)
                         <article class="group">
@@ -213,7 +208,7 @@
                 Learn basic techniques, game rules, and etiquette at the billiard table. Improve
                 your skills and enjoy the game with more confidence.
             </p>
-            <a href="#"
+            <a href="{{ route('guideline.index') }}"
                 class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">Learn More</a>
         </div>
     </section>
@@ -259,7 +254,7 @@
                     players of all skill levels, participate in events, share tips and tricks, and grow your game
                     together.
                 </p>
-                <a href="#"
+                <a href="{{ route('community.index') }}"
                     class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
                     Connect Now
                 </a>
