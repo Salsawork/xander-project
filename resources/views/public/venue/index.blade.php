@@ -120,7 +120,7 @@
                         </div>
                         <div class="absolute top-6 right-6">
                             <i id="bookmarkIcon" 
-                               class="fa-regular fa-bookmark text-gray-400 text-2xl cursor-pointer hover:text-blue-500">
+                            class="fa-regular fa-bookmark text-gray-400 text-2xl cursor-pointer hover:text-blue-500">
                             </i>
                         </div>
                     </div>
@@ -139,15 +139,26 @@
 
     </div>
     <script>
-        const bookmark = document.getElementById('bookmarkIcon');
+       document.getElementById('bookmarkIcon').addEventListener('click', function() {
+            let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+            let venueId = "{{ $venue->id }}";
 
-            bookmark.addEventListener('click', function () {
-            this.classList.toggle('fa-regular'); 
-            this.classList.toggle('fa-solid'); 
-            this.classList.toggle('text-white'); 
-            this.classList.toggle('text-gray-400'); 
+            if (favorites.includes(venueId)) {
+                favorites = favorites.filter(id => id !== venueId);
+                this.classList.remove('fa-solid', 'text-blue-500');
+                this.classList.add('fa-regular', 'text-gray-400');
+            } else {
+                favorites.push(venueId);
+                this.classList.remove('fa-regular', 'text-gray-400');
+                this.classList.add('fa-solid', 'text-blue-500');
+            }
+
+            localStorage.setItem('favorites', JSON.stringify(favorites));
         });
+
     </script>
+    
+        
 @endsection
 
 @push('scripts')

@@ -22,6 +22,7 @@ use App\Http\Controllers\venueController\DashboardController;
 use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\TransactionController;
+use App\Http\Controllers\FavoriteController;
 
 // Community & Admin Controllers
 use App\Http\Controllers\communityController\NewsController;
@@ -46,6 +47,8 @@ Route::view('/about', 'about')->name('about');
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
     Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
+    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+
 });
 
 /** Login & Register */

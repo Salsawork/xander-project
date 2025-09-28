@@ -1,6 +1,20 @@
 @extends('app')
 @section('title', 'Register Page - Xander Billiard')
 
+@push('styles')
+<style>
+  /* Tidak mengubah layout: hanya atur perilaku scroll & warna latar dokumen */
+  html, body {
+    background: #0a0a0a;           /* hilangkan flash putih di tepi/overscroll */
+    overscroll-behavior-y: none;   /* cegah bounce (Chrome/Edge/Firefox/Android) */
+    overscroll-behavior-x: none;
+    overflow-x: hidden;
+  }
+  /* Penting: jangan beri background ke img agar PNG transparan tetap transparan */
+  img { display: block; }
+</style>
+@endpush
+
 @section('content')
     <div class="flex min-h-screen">
         <div class="hidden w-1/2 bg-cover bg-center lg:flex"
@@ -64,3 +78,28 @@
     </div>
 @endsection
 
+@push('scripts')
+<script>
+  // ==== iOS edge-bounce guard: tetap bisa scroll, tanpa putih-putih di tepi ====
+  (function(){
+    const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+    if (!isIOS) return;
+
+    let startY = 0;
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length) startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!e.touches || !e.touches.length) return;
+      const scroller = document.scrollingElement || document.documentElement;
+      const atTop    = scroller.scrollTop <= 0;
+      const atBottom = (scroller.scrollTop + window.innerHeight) >= (scroller.scrollHeight - 1);
+      const dy = e.touches[0].clientY - startY;
+
+      // Di tepi atas geser ke bawah, atau di tepi bawah geser ke atas -> tahan
+      if ((atTop && dy > 0) || (atBottom && dy < 0)) e.preventDefault();
+    }, { passive: false });
+  })();
+</script>
+@endpush

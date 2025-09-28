@@ -45,4 +45,10 @@ class Venue extends Model
     {
         return $this->hasMany(Voucher::class);
     }
+
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
+    }
+
 }
