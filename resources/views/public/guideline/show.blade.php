@@ -1,11 +1,25 @@
 @extends('app')
 @section('title', $guideline->title . ' - Xander Billiard')
 
+@push('styles')
+<style>
+  :root { color-scheme: dark; }
+  /* Kunci latar gelap & cegah flash putih saat overscroll */
+  html, body {
+    min-height: 100%;
+    margin: 0;
+    background: #0a0a0a;     /* gelap stabil sebagai fallback */
+    overscroll-behavior: none; /* stop scroll chaining/overscroll glow */
+  }
+  body { overflow-x: hidden; }
+</style>
+@endpush
+
 @section('content')
     <div class="bg-neutral-900 text-white min-h-screen">
         <!-- Navigation -->
-        <div class="px-6 lg:px-24 py-4 text-sm text-gray-400">
-            <div class="container mx-auto">
+        <div class="px-6 lg:px-24 py-4 text-sm text-gray-400 ">
+            <div class="container mx-auto mt-8">
                 <div class="flex items-center gap-2">
                     <a href="{{ route('community.index') }}" class="hover:text-white">Community</a>
                     <span>/</span>
@@ -27,19 +41,11 @@
             @if (!empty($guideline->featured_image))
                 @php
                     $imagePath = $guideline->featured_image;
-                    // Cek apakah path dimulai dengan 'guidelines/' (dari storage)
                     if (Str::startsWith($imagePath, 'guidelines/')) {
                         $imagePath = Storage::url($imagePath);
-                    }
-                    // Cek apakah gambar ada di public path
-                    elseif (
-                        !file_exists(public_path($imagePath)) &&
-                        file_exists(public_path('images/guidelines/' . basename($imagePath)))
-                    ) {
+                    } elseif (!file_exists(public_path($imagePath)) && file_exists(public_path('images/guidelines/' . basename($imagePath)))) {
                         $imagePath = asset('images/guidelines/' . basename($imagePath));
-                    }
-                    // Jika tidak, gunakan asset biasa
-                    else {
+                    } else {
                         $imagePath = asset($imagePath);
                     }
                 @endphp
@@ -117,13 +123,8 @@
                                         @if (!empty($related->featured_image))
                                             @php
                                                 $imagePath = $related->featured_image;
-                                                // Cek apakah gambar ada di storage
-                                                if (
-                                                    !file_exists(public_path($imagePath)) &&
-                                                    file_exists(
-                                                        public_path('images/guidelines/' . basename($imagePath)),
-                                                    )
-                                                ) {
+                                                if (!file_exists(public_path($imagePath)) &&
+                                                    file_exists(public_path('images/guidelines/' . basename($imagePath)))) {
                                                     $imagePath = 'images/guidelines/' . basename($imagePath);
                                                 }
                                             @endphp
@@ -136,8 +137,7 @@
                                             class="font-medium hover:text-blue-400">
                                             {{ $related->title }}
                                         </a>
-                                        <p class="text-xs text-gray-400 mt-1">{{ $related->published_at->format('d F Y') }}
-                                        </p>
+                                        <p class="text-xs text-gray-400 mt-1">{{ $related->published_at->format('d F Y') }}</p>
                                     </div>
                                 </div>
                             @endforeach
@@ -155,3 +155,33 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+/* iOS rubber-band guard: cegah putih-putih saat overscroll */
+(function () {
+  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+  if (!isIOS) return;
+
+  let startY = 0;
+
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length) startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!e.touches || !e.touches.length) return;
+
+    const scroller = document.scrollingElement || document.documentElement;
+    const atTop = scroller.scrollTop <= 0;
+    const atBottom = (scroller.scrollTop + window.innerHeight) >= (scroller.scrollHeight - 1);
+    const dy = e.touches[0].clientY - startY;
+
+    // Cegah bounce di tepi atas/bawah
+    if ((atTop && dy > 0) || (atBottom && dy < 0)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+</script>
+@endpush
