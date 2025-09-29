@@ -5,8 +5,9 @@
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-8">
                 @include('partials.topbar')
+               <div>
                 <h1 class="text-3xl font-extrabold mb-6">
                     Berita
                 </h1>
