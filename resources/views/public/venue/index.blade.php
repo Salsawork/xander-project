@@ -17,51 +17,37 @@
                         <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-1.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
-                    <!-- <div class="border-t border-gray-500 pt-4">
-                        <div class="flex items-center justify-between mb-2 font-semibold">
-                            <span>Date</span>
-                            <span class="text-xl leading-none text-gray-300">–</span>
-                        </div>
-                        <div class="flex items-center gap-2 justify-center">
-                            <button type="button" class="text-gray-400 hover:text-white">&#60;</button>
-                            <span>February</span>
-                            <button type="button" class="text-gray-400 hover:text-white">&#62;</button>
-                        </div>
-                        <div class="grid grid-cols-7 gap-1 text-center mt-2 text-xs text-gray-400">
-                            @for ($i = 1; $i <= 28; $i++)
-                            <span class="py-1">{{ $i }}</span>
-                            @endfor
-                        </div>
-                    </div> -->
 
                     <div x-data="calendar('{{ request('date') }}')" 
                         class="bg-neutral-900 pt-4 text-white rounded-xl text-sm">
 
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>Date</span>
-                            <span @click="toggle = !toggle" class="cursor-pointer text-xl">–</span>
+                            <span class="toggleBtn cursor-pointer text-xl">–</span>
                         </div>
 
-                        <!-- Hidden input agar ikut ke form -->
-                        <input type="hidden" name="date" x-model="selectedDate">
+                        <div class="toggleContent">
+                            <!-- Hidden input agar ikut ke form -->
+                            <input type="hidden" name="date" x-model="selectedDate">
 
-                        <div class="flex items-center justify-center gap-2 mb-2">
-                            <button type="button" @click="prevMonth()" class="text-gray-400 hover:text-white">&lt;</button>
-                            <span x-text="monthNames[month] + ' ' + year"></span>
-                            <button type="button" @click="nextMonth()" class="text-gray-400 hover:text-white">&gt;</button>
-                        </div>
+                            <div class="flex items-center justify-center gap-2 mb-2">
+                                <button type="button" @click="prevMonth()" class="text-gray-400 hover:text-white">&lt;</button>
+                                <span x-text="monthNames[month] + ' ' + year"></span>
+                                <button type="button" @click="nextMonth()" class="text-gray-400 hover:text-white">&gt;</button>
+                            </div>
 
-                        <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
-                            <template x-for="d in daysInMonth()" :key="d">
-                                <span 
-                                    class="py-1 cursor-pointer rounded transition-colors"
-                                    :class="selectedDate === formatDate(year, month, d) 
-                                            ? 'bg-blue-500 text-white' 
-                                            : 'hover:bg-gray-600'"
-                                    @click="selectDate(d)"
-                                    x-text="d">
-                                </span>
-                            </template>
+                            <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
+                                <template x-for="d in daysInMonth()" :key="d">
+                                    <span 
+                                        class="py-1 cursor-pointer rounded transition-colors"
+                                        :class="selectedDate === formatDate(year, month, d) 
+                                                ? 'bg-blue-500 text-white' 
+                                                : 'hover:bg-gray-600'"
+                                        @click="selectDate(d)"
+                                        x-text="d">
+                                    </span>
+                                </template>
+                            </div>
                         </div>
                     </div>
 
@@ -89,9 +75,11 @@
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
                         <div class="toggleContent w-full flex items-center gap-2">
-                            <input type="number" name="price_min" placeholder="Min" value="{{ request('price_min') }}"
+                            <input type="text" id="price_min" name="price_min" placeholder="Min"
+                                value="{{ request('price_min') }}"
                                 class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
-                            <input type="number" name="price_max" placeholder="Max" value="{{ request('price_max') }}"
+                            <input type="text" id="price_max" name="price_max" placeholder="Max"
+                                value="{{ request('price_max') }}"
                                 class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
                         </div>
                     </div>
@@ -170,57 +158,41 @@
         function syncFavoritesToUrl() {
             let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
             const params = new URLSearchParams(window.location.search);
-            params.set("favorites", favorites.join(",")); // update param favorites
-            window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
-            window.location.reload();
+    
+            if (favorites.length > 0) {
+                params.set("favorites", favorites.join(","));
+            } else {
+                params.delete("favorites");
+            }
+    
+            // replaceState supaya tidak reload full
+            window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+            window.location.reload(); // reload utk trigger filter backend
         }
-        </script>        
-
-    <script>
+    
         document.addEventListener("DOMContentLoaded", () => {
             let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-            console.log("favorites", favorites);
-
             const params = new URLSearchParams(window.location.search);
-
-            if (!params.has("favorites") && favorites.length > 0) {
-                let url = "/venues?favorites=" + favorites.join(",");
-                window.location.href = url;
+    
+            // ✅ Tambahkan favorites ke URL tanpa menghapus filter lain
+            if (favorites.length > 0 && !params.has("favorites")) {
+                params.set("favorites", favorites.join(","));
+                window.location.href = `${window.location.pathname}?${params.toString()}`;
                 return;
             }
-
-            document.querySelectorAll("i[data-id]").forEach(icon => {
-                const id = icon.getAttribute("data-id");
-
-                if (favorites.includes(id)) {
-                    icon.classList.remove("fa-regular", "text-gray-400");
-                    icon.classList.add("fa-solid", "text-blue-500");
-                } else {
-                    icon.classList.remove("fa-solid", "text-blue-500");
-                    icon.classList.add("fa-regular", "text-gray-400");
-                }
-            });
-        });
-    </script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-            console.log("favorites awal:", favorites);
-
-            // Atur icon sesuai favorites saat load
+    
+            // Render icon sesuai data
             document.querySelectorAll("i[data-id]").forEach(icon => {
                 const venueId = icon.getAttribute("data-id");
-
+    
                 if (favorites.includes(venueId)) {
                     icon.classList.remove("fa-regular", "text-gray-400");
                     icon.classList.add("fa-solid", "text-blue-500");
                 }
-
-                // Event klik untuk toggle
-                icon.addEventListener("click", function(e) {
-                    e.stopPropagation(); // biar gak ikut trigger klik parent <span>
-
+    
+                icon.addEventListener("click", function (e) {
+                    e.stopPropagation();
+    
                     if (favorites.includes(venueId)) {
                         favorites = favorites.filter(id => id !== venueId);
                         this.classList.remove("fa-solid", "text-blue-500");
@@ -230,34 +202,66 @@
                         this.classList.remove("fa-regular", "text-gray-400");
                         this.classList.add("fa-solid", "text-blue-500");
                     }
-
+    
                     localStorage.setItem("favorites", JSON.stringify(favorites));
-
                     syncFavoritesToUrl();
-                    console.log("favorites updated:", favorites);
                 });
             });
         });
     </script>
 
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const toggles = document.querySelectorAll(".toggleBtn");
-    
-        toggles.forEach((btn) => {
-            const content = btn.parentElement.nextElementSibling;
-    
-            btn.addEventListener("click", () => {
-                if (content.classList.contains("max-h-0")) {
-                    content.classList.remove("max-h-0");
-                    btn.textContent = "–";
-                } else {
-                    content.classList.add("max-h-0");
-                    btn.textContent = "+";
-                }
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const toggles = document.querySelectorAll(".toggleBtn");
+        
+            toggles.forEach((btn) => {
+                const content = btn.parentElement.nextElementSibling;
+        
+                btn.addEventListener("click", () => {
+                    if (content.classList.contains("max-h-0")) {
+                        content.classList.remove("max-h-0");
+                        btn.textContent = "–";
+                    } else {
+                        content.classList.add("max-h-0");
+                        btn.textContent = "+";
+                    }
+                });
             });
         });
-    });
+    </script>
+
+    <script>
+        function formatNumberInput(input) {
+            let value = input.value.replace(/\D/g, ""); // hapus non digit
+            if (!value) {
+                input.value = "";
+                return;
+            }
+            input.value = new Intl.NumberFormat("id-ID").format(value);
+        }
+
+        function unformatNumberInput(input) {
+            return input.value.replace(/\./g, ""); // hilangkan titik pemisah
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const minInput = document.getElementById("price_min");
+            const maxInput = document.getElementById("price_max");
+
+            // format langsung saat load jika ada value
+            if (minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
+            if (maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
+
+            // format ketika user ketik
+            minInput.addEventListener("input", () => formatNumberInput(minInput));
+            maxInput.addEventListener("input", () => formatNumberInput(maxInput));
+
+            // sebelum submit, balikin ke angka biasa (biar server bisa baca)
+            minInput.form.addEventListener("submit", () => {
+                minInput.value = unformatNumberInput(minInput);
+                maxInput.value = unformatNumberInput(maxInput);
+            });
+        });
     </script>
     
     <style>

@@ -9,12 +9,13 @@ class VenueController extends Controller
 {
     public function index(Request $request)
     {
-        $favorites = $request->favorites
-            ? explode(',', $request->favorites)
-            : [];
+        $favorites = collect(explode(',', $request->favorites ?? ''))
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->toArray();
     
-        $venues = Venue::query()
-            // 🔍 Search bisa ke name, address, description
+            $venues = Venue::query()
+            // 🔍 Search
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->where('name', 'like', "%{$request->search}%")
@@ -22,16 +23,19 @@ class VenueController extends Controller
                         ->orWhere('description', 'like', "%{$request->search}%");
                 });
             })
-            // 📍 Filter lokasi (kalau dipilih di radio)
+            // 📍 Filter lokasi
             ->when($request->address, fn ($q) => $q->where('address', $request->address))
             // 💰 Range harga
             ->when($request->price_min, fn ($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn ($q) => $q->where('price', '<=', $request->price_max))
-            // ⭐ Prioritas favorit
+            // ⭐ Urutkan favorit paling atas
             ->when(! empty($favorites), function ($q) use ($favorites) {
-                $ids = implode(',', $favorites);
-                $q->orderByRaw("FIELD(id, $ids) DESC");
-            })
+                $ids = implode(',', array_map('intval', $favorites));
+            
+                if (! empty($ids)) {
+                    $q->orderByRaw("FIELD(id, $ids) DESC");
+                }
+            })            
             ->orderBy('created_at', 'desc')
             ->paginate(5)
             ->withQueryString();

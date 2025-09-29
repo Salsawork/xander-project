@@ -86,9 +86,7 @@
                         </p>
 
                         <!-- BUY NOW -> abu gelap -->
-                        <a href="{{ route('products.landing') }}"
-                            class="inline-flex items-center rounded-md bg-[#2D2D2D] px-5 py-2.5 text-sm md:text-base font-medium
-                  text-white shadow hover:bg-[#3A3A3A] focus:outline-none focus:ring-2 focus:ring-white/30">
+                        <a href="{{ route('products.landing') }}" class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
                             Buy Now
                         </a>
                     </div>

@@ -54,10 +54,34 @@ Route::prefix('venues')->group(function () {
 /** Login & Register */
 Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('authenticate');
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::view('/register', 'auth.register')->name('signup');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
+Route::get('/verify', [LoginController::class, 'showVerificationForm'])->name('verification.form');
+Route::post('/verify', [LoginController::class, 'verifyOtp'])->name('verification.verify');
+
+Route::middleware('auth')->prefix('dashboard/notification')->group(function () {
+    Route::get('/', function () {
+        return view('dash.user.notification');
+    })->name('notification.index');
+});
+
+Route::middleware('auth')->prefix('dashboard/myorder')->group(function () {
+    Route::get('/', function () {
+        return view('dash.user.myorder');
+    })->name('myorder.index');
+});
+
+/**
+ * Can only be accessed when logged in
+ * Dashboard user booking page
+ */
+Route::middleware('auth')->prefix('dashboard/booking')->group(function () {
+    Route::get('/', function () {
+        return view('dash.user.booking');
+    })->name('booking.index');
+});
 
 /** Image Upload */
 Route::post('/upload', [UploadController::class, 'store'])->name('upload.image');
