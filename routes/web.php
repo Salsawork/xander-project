@@ -78,10 +78,6 @@ Route::middleware('auth')->prefix('dashboard/myorder')->group(function () {
     })->name('myorder.index');
 });
 
-/**
- * Can only be accessed when logged in
- * Dashboard user booking page
- */
 Route::middleware('auth')->prefix('dashboard/booking')->group(function () {
     Route::get('/', function () {
         return view('dash.user.booking');
@@ -127,8 +123,12 @@ Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->na
 |--------------------------------------------------------------------------
 */
 Route::prefix('cart')->group(function () {
-    Route::post('/add', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/del', [CartController::class, 'delete'])->name('cart.del');
+    Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
+    Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
+    Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
+    Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
+    Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
+    Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
 });
 
 /** Checkout (auth required) */
@@ -156,13 +156,14 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
 | Authenticated Dashboard Routes
 |--------------------------------------------------------------------------
 */
+
 Route::middleware('auth')->group(function () {
 
     /** General Dashboard */
     Route::redirect('dashboard', 'dashboard/overview');
     Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
 
-    // ===== User pages for sidebar (FIX ROUTES) =====
+    // ===== User pages for sidebar (FIX ROUTES) ===== ini ada 2 route nya
     Route::get('dashboard/notification', fn() => view('user.notification'))->name('notification.index');
     Route::get('dashboard/myorder', fn() => view('user.myorder'))->name('myorder.index');
     Route::get('dashboard/booking', fn() => view('user.booking'))->name('booking.index');

@@ -1,26 +1,143 @@
 @extends('app')
 @section('title', 'Venues - Xander Billiard')
+@php
+$cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+$cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+$cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+$cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+@endphp
+
+@push('styles')
+<style>
+    .toggleContent {
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        max-height: 1000px;
+    }
+
+    .toggleContent.max-h-0 {
+        max-height: 0;
+    }
+
+    @media (min-width: 1024px) {
+        .lg-hidden {
+            display: none !important;
+        }
+    }
+
+    /* Mobile filter toggle */
+    @media (max-width: 1023px) {
+        .sm-hidden {
+            display: none !important;
+        }
+
+        .mobile-filter-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+        }
+
+        .mobile-filter-overlay.active {
+            display: block;
+        }
+
+        .mobile-filter-sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 85%;
+            max-width: 320px;
+            height: 100%;
+            background: #171717;
+            z-index: 50;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .mobile-filter-sidebar.open {
+            left: 0;
+        }
+    }
+
+    /* Toggle content */
+    .toggleContent {
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        max-height: 1000px;
+        /* default terbuka */
+    }
+
+    .toggleContent.max-h-0 {
+        max-height: 0;
+    }
+</style>
+@endpush
 
 @section('content')
-    <div class="min-h-screen bg-neutral-900 text-white">
-        <div class="mb-16 bg-cover bg-center p-24" style="background-image: url('/images/bg/product_breadcrumb.png');">
-            <p class="text-sm text-gray-400 mt-1"><span onclick="window.location='{{ route('index') }}'">Home</span> / Venue
-            </p>
-            <h2 class="text-4xl font-bold uppercase text-white">FIND YOUR FAVORITE VENUE HERE</h2>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-24 py-18">
+<div class="min-h-screen bg-neutral-900 text-white">
+    <div class="mb-16 bg-cover bg-center p-24 sm-hidden"
+        style="background-image: url('/images/bg/product_breadcrumb.png');">
+        <p class="text-sm text-gray-400 mt-1"><span onclick="window.location='{{ route('index') }}'">Home</span> / Venue
+        </p>
+        <h2 class="text-4xl font-bold uppercase text-white">FIND YOUR FAVORITE VENUE HERE</h2>
+    </div>
 
-            <div class="w-full space-y-6 rounded-xl bg-neutral-900 p-4 text-white text-sm">
-                <form method="GET" action="{{ route('venues.index') }}" class="space-y-4">
+    <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden"
+        style="background-image: url('/images/bg/product_breadcrumb.png');">
+        <p class="text-xs sm:text-sm text-gray-400 mt-1">
+            <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Venue
+        </p>
+        <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold uppercase text-white mt-2">FIND YOUR FAVORITE VENUE HERE
+        </h2>
+    </div>
 
+    <div class="lg-hidden px-4 sm:px-6 mb-4">
+        <button id="mobileFilterBtn"
+            class="w-full bg-transparent rounded border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400">
+            <i class="fas fa-filter"></i>
+            Filter & Search
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 sm:py-8 lg:py-12">
+        <aside id="filterVenue" class="mobile-filter-sidebar bg-neutral-900">
+            <div class="px-4 space-y-6 text-white text-sm">
+                <!-- Close Button -->
+                <div class="flex items-center justify-between mb-4 lg-hidden">
+                    <h3 class="text-lg font-semibold">Filter & Search</h3>
+                    <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
+                </div>
+
+                <form method="GET" action="{{ route('venues.index') }}">
+                    <!-- Search -->
                     <div>
                         <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
-                            class="w-full rounded border border-gray-400 bg-transparent px-3 py-1.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                            class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
+                    <!-- <div class="border-t border-gray-500 pt-4">
+                        <div class="flex items-center justify-between mb-2 font-semibold">
+                            <span>Date</span>
+                            <span class="text-xl leading-none text-gray-300">–</span>
+                        </div>
+                        <div class="flex items-center gap-2 justify-center">
+                            <button type="button" class="text-gray-400 hover:text-white">&#60;</button>
+                            <span>February</span>
+                            <button type="button" class="text-gray-400 hover:text-white">&#62;</button>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center mt-2 text-xs text-gray-400">
+                            @for ($i = 1; $i <= 28; $i++)
+                            <span class="py-1">{{ $i }}</span>
+                            @endfor
+                        </div>
+                    </div> -->
 
                     <div x-data="calendar('{{ request('date') }}')" 
                         class="bg-neutral-900 pt-4 text-white rounded-xl text-sm">
-
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>Date</span>
                             <span class="toggleBtn cursor-pointer text-xl">–</span>
@@ -57,17 +174,18 @@
                             <span>Location</span>
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
-                        <div class="toggleContent flex flex-wrap gap-2">
+                        <div class="toggleContent flex flex-wrap gap-2 mb-4">
                             @foreach ($addresses as $loc)
-                                <label class="px-3 py-1 rounded-full border cursor-pointer
-                                              {{ request('address') == $loc ? 'border-blue-500 text-blue-400' : 'border-gray-500 text-gray-400' }}">
-                                    <input type="radio" name="address" value="{{ $loc }}" class="hidden"
-                                        @checked(request('address') == $loc) />
-                                    {{ $loc }}
-                                </label>
+                            <label
+                                class="px-3 py-1 rounded-full border cursor-pointer {{ request('address') == $loc ? 'border-blue-500 text-blue-400' : 'border-gray-500 text-gray-400' }}">
+                                <input type="radio" name="address" value="{{ $loc }}" class="hidden"
+                                    @checked(request('address')==$loc) />
+                                {{ $loc }}
+                            </label>
                             @endforeach
                         </div>
-                   
+                    </div>
+
                     <!-- Price Range -->
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
@@ -83,8 +201,6 @@
                                 class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
                         </div>
                     </div>
-                    
-                    </div>
 
                     <!-- Buttons -->
                     <div class="flex gap-2 pt-2">
@@ -99,60 +215,59 @@
                     </div>
                 </form>
             </div>
+        </aside>
+        <div id="mobileFilterOverlay" class="mobile-filter-overlay lg-hidden"></div>
 
-            <section class="lg:col-span-4 flex flex-col gap-8">
-                @forelse ($venues as $venue)
-                    <div class="relative">
-                        <span class="relative" onclick="window.location='{{ route('venues.detail', $venue->id) }}'">
-                            <div
-                                class="bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-row items-center p-6 relative">
-                                <div
-                                    class="w-64 h-36 bg-neutral-700 rounded-lg mr-8 flex-shrink-0 flex items-center justify-center">
-                                    <span class="text-gray-500 text-2xl">Image</span>
-                                </div>
-                                <div class="flex-1 flex flex-col justify-between h-full">
-                                    <div>
-                                        <h3 class="text-2xl font-bold mb-1">{{ $venue->name }} | {{ $venue->id }}</h3>
-                                        <div class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <span class="text-gray-400 text-sm">start from</span>
-                                        <span class="text-xl font-bold text-white ml-2">Rp.
-                                            {{ number_format($venue->price ?? 50000, 0, ',', '.') }}</span>
-                                        <span class="text-gray-400 text-sm">/ session</span>
-                                    </div>
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            @forelse ($venues as $venue)
+            <div class="group">
+                <div onclick="window.location='{{ route('venues.detail', $venue->id) }}'"
+                    class="bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
+
+                    <!-- Image -->
+                    <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 flex items-center justify-center">
+                        <span class="text-gray-500 text-lg sm:text-2xl">Image</span>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="w-full flex flex-col justify-between px-4">
+                            <div class="flex justify-between items-start lg:mb-8">
+                                <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
+                                <div class="flex justify-center items-end sm:mt-2">
+                                    <i data-id="{{ $venue->id }}"
+                                        class="fa-regular fa-bookmark text-gray-400 text-xl sm:text-2xl sm cursor-pointer hover:text-blue-500 transition"></i>
                                 </div>
                             </div>
-                        </span>
-
-                        <div class="absolute top-6 right-6">
-                            <i data-id="{{ $venue->id }}"
-                                class="fa-regular fa-bookmark text-gray-400 text-2xl cursor-pointer hover:text-blue-500">
-                            </i>
+                            <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
+                        <div class="mt-12">
+                            <div class="flex items-baseline gap-1 text-sm">
+                                <span class="text-gray-400">start from</span>
+                                <span class="text-lg sm:text-xl font-bold">Rp. {{ number_format($venue->price ?? 50000, 0, ',', '.') }}</span>
+                                <span class="text-gray-400">/ session</span>
+                            </div>
                         </div>
                     </div>
-                @empty
-                    <div class="text-center py-12">
-                        <p class="text-gray-400">No venues found.</p>
-                    </div>
-                @endforelse
-
-                <div class="mt-6 flex justify-center">
-                    {{ $venues->links() }}
                 </div>
-            </section>
-        </div>
+            </div>
+            @empty
+            <div class="text-center py-12 text-gray-400">No venues found.</div>
+            @endforelse
 
+            <!-- Pagination -->
+            <div class="mt-6 flex justify-center">{{ $venues->links() }}</div>
+        </section>
     </div>
+    @include('public.cart')
+</div>
 
-    <button aria-label="Shopping cart with {{ count($carts) + count($sparrings ?? []) }} items" onclick="showCart()"
-        class="fixed right-6 bottom-10 bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
-        <i class="fas fa-shopping-cart text-white text-3xl"></i>
-        <span
-            class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-            {{ count($carts) + count($sparrings ?? []) }}
-        </span>
-    </button>
+<button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
+    class="fixed right-6 bottom-10 bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+    <i class="fas fa-shopping-cart text-white text-3xl"></i>
+    <span
+        class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+        {{ $cartCount }}
+    </span>
+</button>
 
     <script>
         function syncFavoritesToUrl() {
@@ -283,7 +398,7 @@
     function calendar(defaultDate = '') {
         const today = new Date();
         let initialDate = defaultDate ? new Date(defaultDate) : today;
-    
+
         return {
             month: initialDate.getMonth(),
             year: initialDate.getFullYear(),
@@ -320,6 +435,6 @@
             }
         }
     }
-    </script>
-    
+</script>
+
 @endpush

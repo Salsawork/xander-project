@@ -17,7 +17,7 @@ class VenueSeeder extends Seeder
     public function run()
     {
         $this->command->info('Venues seeding!');
-        DB::table('venue')->truncate();
+        DB::table('venue')->delete();
         factory(Venue::class, 5)->create();
 
         // Pastikan user dengan ID 4 dan 5 sudah ada

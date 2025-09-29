@@ -138,14 +138,14 @@
         </div>
 
         <!-- Floating Shopping Cart Button -->
-        <button aria-label="Shopping cart with {{ count($carts ?? []) + count($sparrings ?? []) }} items" onclick="showCart()"
+        <button aria-label="Shopping cart with {{ count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []) }} items" onclick="showCart()"
             class="fixed right-6 bottom-10 bg-gray-800 hover:bg-gray-700 w-16 h-16 rounded-full shadow-xl flex items-center justify-center group transition-transform transform hover:scale-110 z-50">
             <i class="fas fa-shopping-cart text-white text-3xl">
-                <!-- Badge -->
-                <span
-                    class="absolute top-1.5 right-1.5 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                    {{ count($carts ?? []) + count($sparrings ?? []) }}
-                </span>
+            <!-- Badge -->
+            <span
+                class="absolute top-1.5 right-1.5 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                {{ count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []) }}
+            </span>
             </i>
         </button>
 

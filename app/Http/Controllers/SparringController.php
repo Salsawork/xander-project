@@ -22,24 +22,24 @@ class SparringController extends Controller
         $query = User::where('roles', 'athlete')
             ->whereHas('athleteDetail')
             ->with('athleteDetail');
-    
+
         // Filter search
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('athleteDetail', function ($q2) use ($request) {
-                      $q2->where('location', 'like', '%' . $request->search . '%');
-                  });
+                    ->orWhereHas('athleteDetail', function ($q2) use ($request) {
+                        $q2->where('location', 'like', '%' . $request->search . '%');
+                    });
             });
         }
-    
+
         // Filter location
         if ($request->filled('address')) {
             $query->whereHas('athleteDetail', function ($q) use ($request) {
                 $q->where('location', $request->address);
             });
         }
-    
+
         // Filter price range
         if ($request->filled('price_min')) {
             $query->whereHas('athleteDetail', function ($q) use ($request) {
@@ -51,40 +51,47 @@ class SparringController extends Controller
                 $q->where('price_per_session', '<=', $request->price_max);
             });
         }
-    
+
         // Ambil data
         $athletes = $query->get();
-    
+
         // Lokasi unik
         $locations = AthleteDetail::distinct('location')->pluck('location');
-    
+
         // Harga min dan max (supaya bisa jadi placeholder di filter)
         $minPrice = AthleteDetail::min('price_per_session');
         $maxPrice = AthleteDetail::max('price_per_session');
-    
+
         // Data cart dari cookie
-        $carts = [];
-        if (Cookie::has('cart')) {
-            $cartData = Cookie::get('cart');
-            $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
+        $cartProducts = [];
+        if (Cookie::has('cartProducts')) {
+            $cartData = Cookie::get('cartProducts');
+            $cartProducts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
         }
-    
-        $sparrings = [];
-        if (Cookie::has('sparring')) {
-            $sparringData = Cookie::get('sparring');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
+
+        $cartVenues = [];
+        if (Cookie::has('cartVenues')) {
+            $cartData = Cookie::get('cartVenues');
+            $cartVenues = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
         }
-    
-        return view('dash.sparring.index', compact(
+
+        $cartSparrings = [];
+        if (Cookie::has('cartSparrings')) {
+            $sparringData = Cookie::get('cartSparrings');
+            $cartSparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
+        }
+
+        return view('public.sparring.index', compact(
             'athletes',
-            'carts',
-            'sparrings',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings',
             'locations',
             'minPrice',
             'maxPrice'
         ));
     }
-    
+
 
     /**
      * Display the specified athlete.
@@ -122,6 +129,79 @@ class SparringController extends Controller
 
     //     return view('dash.sparring.detail', compact('athlete', 'schedules', 'carts', 'sparrings'));
     // }
+    // public function show($id)
+    // {
+    //     $athlete = User::where('roles', 'athlete')
+    //         ->where('id', $id)
+    //         ->with('athleteDetail')
+    //         ->firstOrFail();
+
+    //     $schedules = SparringSchedule::where('athlete_id', $id)
+    //         ->where('is_booked', false)
+    //         ->where('date', '>=', now()->format('Y-m-d'))
+    //         ->orderBy('date')
+    //         ->orderBy('start_time')
+    //         ->limit(9)
+    //         ->get();
+
+    //     // --- AthleteReview section ---
+    //     $reviews = AthleteReview::where('athlete_id', $athlete->id)
+    //         ->with('user')
+    //         ->latest()
+    //         ->get();
+
+    //     $totalReviews = $reviews->count();
+    //     $averageRating = $totalReviews ? round($reviews->avg('rating'), 1) : 0.0;
+
+    //     $counts = [];
+    //     $percents = [];
+    //     for ($i = 5; $i >= 1; $i--) {
+    //         $counts[$i] = $reviews->where('rating', $i)->count();
+    //         $percents[$i] = $totalReviews ? round($counts[$i] / $totalReviews * 100) : 0;
+    //     }
+
+    //     // --- Check apakah user sudah kasih review ---
+    //     $alreadyReviewed = false;
+    //     if (auth()->check()) {
+    //         $alreadyReviewed = AthleteReview::where('athlete_id', $athlete->id)
+    //             ->where('user_id', auth()->id())
+    //             ->exists();
+    //     }
+
+    //     // Cart & sparrings dari cookie
+    //     $cartProducts = [];
+    //     if (Cookie::has('cartProducts')) {
+    //         $cartData = Cookie::get('cartProducts');
+    //         $cartProducts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
+    //     }
+
+    //     $cartVenues = [];
+    //     if (Cookie::has('cartVenues')) {
+    //         $cartData = Cookie::get('cartVenues');
+    //         $cartVenues = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
+    //     }
+
+    //     $cartSparrings = [];
+    //     if (Cookie::has('cartSparrings')) {
+    //         $sparringData = Cookie::get('cartSparrings');
+    //         $cartSparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
+    //     }
+
+    //     return view('public.sparring.detail', compact(
+    //         'athlete',
+    //         'schedules',
+    //         'cartProducts',
+    //         'cartVenues',
+    //         'cartSparrings',
+    //         'reviews',
+    //         'averageRating',
+    //         'totalReviews',
+    //         'counts',
+    //         'percents',
+    //         'alreadyReviewed'
+    //     ));
+    // }
+
     public function show($id)
     {
         $athlete = User::where('roles', 'athlete')
@@ -129,15 +209,26 @@ class SparringController extends Controller
             ->with('athleteDetail')
             ->firstOrFail();
 
+        // Ambil semua schedule yang belum booked
         $schedules = SparringSchedule::where('athlete_id', $id)
             ->where('is_booked', false)
-            ->where('date', '>=', now()->format('Y-m-d'))
+            ->whereBetween('date', [now()->toDateString(), now()->addDays(3)->toDateString()])
             ->orderBy('date')
             ->orderBy('start_time')
-            ->limit(9)
-            ->get();
+            ->get()
+            ->map(fn($item) => [
+                'id' => $item->id,
+                'athlete_id' => $item->athlete_id,
+                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'), 
+                'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'), 
+                'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'), 
+                'is_booked' => $item->is_booked,
+            ]);
 
-        // --- AthleteReview section ---
+        // Ambil tanggal unik untuk date picker
+        $availableDates = $schedules->pluck('date')->unique();
+
+        // --- Review dan cart tetap seperti sebelumnya ---
         $reviews = AthleteReview::where('athlete_id', $athlete->id)
             ->with('user')
             ->latest()
@@ -153,32 +244,21 @@ class SparringController extends Controller
             $percents[$i] = $totalReviews ? round($counts[$i] / $totalReviews * 100) : 0;
         }
 
-        // --- Check apakah user sudah kasih review ---
-        $alreadyReviewed = false;
-        if (auth()->check()) {
-            $alreadyReviewed = AthleteReview::where('athlete_id', $athlete->id)
-                ->where('user_id', auth()->id())
-                ->exists();
-        }
+        $alreadyReviewed = auth()->check()
+            ? AthleteReview::where('athlete_id', $athlete->id)->where('user_id', auth()->id())->exists()
+            : false;
 
-        // Cart & sparrings dari cookie
-        $carts = [];
-        if (Cookie::has('cart')) {
-            $cartData = Cookie::get('cart');
-            $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-        }
+        $cartProducts = json_decode(Cookie::get('cartProducts') ?? '[]', true);
+        $cartVenues = json_decode(Cookie::get('cartVenues') ?? '[]', true);
+        $cartSparrings = json_decode(Cookie::get('cartSparrings') ?? '[]', true);
 
-        $sparrings = [];
-        if (Cookie::has('sparring')) {
-            $sparringData = Cookie::get('sparring');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-        }
-
-        return view('dash.sparring.detail', compact(
+        return view('public.sparring.detail', compact(
             'athlete',
             'schedules',
-            'carts',
-            'sparrings',
+            'availableDates',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings',
             'reviews',
             'averageRating',
             'totalReviews',
@@ -187,7 +267,6 @@ class SparringController extends Controller
             'alreadyReviewed'
         ));
     }
-
 
     public function storeReview(Request $request, $id)
     {
@@ -216,91 +295,5 @@ class SparringController extends Controller
         ]);
 
         return back()->with('success', 'AthleteReview berhasil dikirim.');
-    }
-
-
-    /**
-     * Add sparring to cart.
-     */
-    public function addToCart(Request $request)
-    {
-        // Validasi request
-        $request->validate([
-            'athlete_id' => 'required|exists:users,id',
-            'schedule_id' => 'required|exists:sparring_schedules,id',
-        ]);
-
-        // Ambil data atlet dan jadwal
-        $athlete = User::where('id', $request->athlete_id)
-            ->with('athleteDetail')
-            ->firstOrFail();
-
-        $schedule = SparringSchedule::where('id', $request->schedule_id)
-            ->where('is_booked', false)
-            ->firstOrFail();
-
-        // Ambil data sparring dari cookie
-        $sparrings = [];
-        if (Cookie::has('sparring')) {
-            $sparringData = Cookie::get('sparring');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-        }
-
-        // Buat data sparring baru
-        $newSparring = [
-            'athlete_id' => $athlete->id,
-            'name' => $athlete->name,
-            'image' => $athlete->athleteDetail->image ?? null,
-            'schedule_id' => $schedule->id,
-            'schedule' => date('d M Y', strtotime($schedule->date)) . ' ' . date('H:i', strtotime($schedule->start_time)) . '-' . date('H:i', strtotime($schedule->end_time)),
-            'price' => $athlete->athleteDetail->price_per_session,
-        ];
-
-        // Cek apakah sparring dengan schedule_id yang sama sudah ada di cart
-        $existingIndex = array_search($schedule->id, array_column($sparrings, 'schedule_id'));
-
-        if ($existingIndex !== false) {
-            // Update sparring yang sudah ada
-            $sparrings[$existingIndex] = $newSparring;
-        } else {
-            // Tambahkan sparring baru
-            $sparrings[] = $newSparring;
-        }
-
-        // Simpan kembali ke cookie
-        Cookie::queue('sparring', json_encode($sparrings), 60 * 24 * 7); // 1 minggu
-
-        return redirect()->back()->with('success', 'Sparring session added to cart');
-    }
-
-    /**
-     * Remove sparring from cart.
-     */
-    public function removeFromCart(Request $request)
-    {
-        // Validasi request
-        $request->validate([
-            'schedule_id' => 'required|exists:sparring_schedules,id',
-        ]);
-
-        // Ambil data sparring dari cookie
-        $sparrings = [];
-        if (Cookie::has('sparring')) {
-            $sparringData = Cookie::get('sparring');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-        }
-
-        // Hapus sparring dengan schedule_id yang sesuai
-        $sparrings = array_filter($sparrings, function($sparring) use ($request) {
-            return $sparring['schedule_id'] != $request->schedule_id;
-        });
-
-        // Reset array keys
-        $sparrings = array_values($sparrings);
-
-        // Simpan kembali ke cookie
-        Cookie::queue('sparring', json_encode($sparrings), 60 * 24 * 7); // 1 minggu
-
-        return redirect()->back()->with('success', 'Sparring session removed from cart');
     }
 }

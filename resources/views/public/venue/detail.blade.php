@@ -1,13 +1,14 @@
 @extends('app')
 @section('title', 'Venues Page - Xander Billiard')
 @php
-    $cart = Cookie::get('cart');
-    $cartItems = is_array($cart) ? $cart : json_decode($cart, true);
-    $cartCount = is_array($cartItems) ? count($cartItems) : 0;
+    $cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @endphp
 
 @section('content')
-    <main class="min-h-screen px-6 md:px-20 py-10 bg-neutral-900 text-white">
+    <div class="min-h-screen px-6 md:px-20 py-10 bg-neutral-900 text-white">
         <div class="container mx-auto space-y-10">
             <nav class="text-xs text-gray-400 mb-4">
                 <a href="{{ route('index') }}">Home</a> /
@@ -100,7 +101,7 @@
                             Rp. {{ number_format($detail->price, 0, ',', '.') }} / session
                         </h2>
 
-                        <form action="{{ route('cart.add') }}" method="POST" class="space-y-4">
+                        <form id="addToCartForm" action="{{ route('cart.add.venue') }}" method="POST" class="space-y-4">
                             @csrf
                             <input type="hidden" name="id" value="{{ $detail->id }}">
 
@@ -112,17 +113,37 @@
                             </div>
 
                             {{-- Schedule --}}
+                            @php
+                                $operating = $detail->operating_hours;
+                                [$start, $end] = explode(' - ', $operating);
+
+                                $slots = [];
+                                $startTime = \Carbon\Carbon::createFromFormat('H:i', $start);
+                                $endTime = \Carbon\Carbon::createFromFormat('H:i', $end);
+
+                                while ($startTime->lt($endTime)) {
+                                    $nextTime = $startTime->copy()->addHour();
+                                    $slots[] = $startTime->format('H:i') . ' - ' . $nextTime->format('H:i');
+                                    $startTime = $nextTime;
+                                }
+                            @endphp
+
                             <div>
                                 <label class="text-sm text-gray-400">Schedule</label>
                                 <div class="grid grid-cols-3 gap-2 mt-1">
-                                    @foreach (['09.00-10.00', '10.00-11.00', '11.00-12.00', '13.00-14.00', '14.00-15.00', '15.00-16.00', '17.00-18.00', '18.00-19.00', '20.00-21.00'] as $slot)
-                                        <label
-                                            class="border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600">
-                                            <input type="radio" name="schedule" value="{{ $slot }}" class="hidden"> {{ $slot }}
-                                        </label>
+                                    @foreach ($slots as $slot)
+                                                    <label class="cursor-pointer">
+                                                        <input type="radio" name="schedule" value="{{ $slot }}" class="hidden peer">
+                                                        <span class="block border border-gray-600 rounded text-center py-2 text-sm
+                                         hover:bg-blue-600 hover:border-blue-600
+                                         peer-checked:bg-blue-600 peer-checked:text-white">
+                                                            {{ $slot }}
+                                                        </span>
+                                                    </label>
                                     @endforeach
                                 </div>
                             </div>
+
 
                             {{-- Promo --}}
                             <div>
@@ -155,5 +176,43 @@
                 </div>
             </div>
         </div>
-    </main>
+
+        <button aria-label="Shopping cart with 3 items" onclick="showCart()"
+            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+            <i class="fas fa-shopping-cart text-white text-3xl">
+            </i>
+            @if ($cartCount > 0)
+                <span
+                    class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                    {{ $cartCount }}
+                </span>
+            @endif
+
+        </button>
+        {{-- Cart Sidebar --}}
+        @include('public.cart')
+    </div>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('addToCartForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            // Tampilkan SweetAlert
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Venue ditambahkan ke keranjang',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6',
+                background: '#1E1E1F',
+                color: '#FFFFFF',
+                iconColor: '#4BB543'
+            }).then((result) => {
+                // Kirim form setelah user klik OK
+                this.submit();
+            });
+        });
+    </script>
+@endpush

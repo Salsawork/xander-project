@@ -23,38 +23,37 @@ class VenueController extends Controller
                         ->orWhere('description', 'like', "%{$request->search}%");
                 });
             })
-            // 📍 Filter lokasi
+            // 📍 Filter lokasi (kalau dipilih di radio)
             ->when($request->address, fn ($q) => $q->where('address', $request->address))
             // 💰 Range harga
             ->when($request->price_min, fn ($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn ($q) => $q->where('price', '<=', $request->price_max))
-            // ⭐ Urutkan favorit paling atas
+            // ⭐ Prioritas favorit
             ->when(! empty($favorites), function ($q) use ($favorites) {
-                $ids = implode(',', array_map('intval', $favorites));
-            
-                if (! empty($ids)) {
-                    $q->orderByRaw("FIELD(id, $ids) DESC");
-                }
-            })            
+                $ids = implode(',', $favorites);
+                $q->orderByRaw("FIELD(id, $ids) DESC");
+            })
             ->orderBy('created_at', 'desc')
             ->paginate(5)
             ->withQueryString();
-    
-        $carts = json_decode($request->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+
+        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
+        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
+        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
         $addresses = Venue::select('address')
-        ->distinct()
-        ->pluck('address');
-        return view('public.venue.index', compact('venues', 'carts', 'sparrings', 'addresses'));
+            ->distinct()
+            ->pluck('address');
+        return view('public.venue.index', compact('venues', 'cartProducts', 'cartVenues', 'cartSparrings', 'addresses'));
     }
-    
+
 
     public function detail(Request $request, $venue)
     {
         $detail = Venue::findOrFail($venue);
-        $carts = json_decode($request->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
+        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
+        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
 
-        return view('public.venue.detail', compact('detail', 'carts', 'sparrings'));
+        return view('public.venue.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 }
