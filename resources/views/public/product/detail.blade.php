@@ -1,9 +1,10 @@
 @extends('app')
 @section('title', 'Products Page - Xander Billiard')
 @php
-    $cart = Cookie::get('cart');
-    $cartItems = is_array($cart) ? $cart : json_decode($cart, true);
-    $cartCount = is_array($cartItems) ? count($cartItems) : 0;
+    $cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @endphp
 
 @section('content')
@@ -87,7 +88,7 @@
                 <p class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl">
                     {{ $detail->description }}
                 </p>
-                <form id="addToCartForm" action="{{ route('cart.add') }}" method="POST">
+                <form id="addToCartForm" action="{{ route('cart.add.product') }}" method="POST">
                     @csrf
                     <input type="hidden" name="id" value="{{ $detail->id }}">
                     <button

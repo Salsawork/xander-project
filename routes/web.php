@@ -44,17 +44,10 @@ Route::get('/level', [ProductController::class, 'filterByLevel'])->name('level')
 
 Route::view('/about', 'about')->name('about');
 
-Route::prefix('venues')->group(function () {
-    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
-    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
-    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
-
-});
-
 /** Login & Register */
 Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('authenticate');
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::view('/register', 'auth.register')->name('signup');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
@@ -68,6 +61,13 @@ Route::prefix('products')->group(function () {
     Route::get('/{product}', [ProductController::class, 'detail'])->name('products.detail');
 });
 
+/** Venue */
+Route::prefix('venues')->group(function () {
+    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
+    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
+    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+
+});
 
 /** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
@@ -77,9 +77,6 @@ Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->
 /** Sparring */
 Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
 Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
-Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
-Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
-
 Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
 
 /** Community (Public) */
@@ -101,8 +98,12 @@ Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->na
 |--------------------------------------------------------------------------
 */
 Route::prefix('cart')->group(function () {
-    Route::post('/add', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/del', [CartController::class, 'delete'])->name('cart.del');
+    Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
+    Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
+    Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
+    Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
+    Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
+    Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
 });
 
 /** Checkout (auth required) */
@@ -131,6 +132,7 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
 | Authenticated Dashboard Routes
 |--------------------------------------------------------------------------
 */
+
 Route::middleware('auth')->group(function () {
 
     /** General Dashboard */

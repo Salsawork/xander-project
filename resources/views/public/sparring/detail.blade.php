@@ -1,6 +1,12 @@
 @extends('app')
 
 @section('title', 'Sparring Detail')
+@php
+    $cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+@endphp
 
 @section('content')
     <div class="bg-gray-950 text-white min-h-screen overflow-hidden">
@@ -50,16 +56,13 @@
 
                 <!-- Share Icons -->
                 <div class="flex space-x-3 mt-4">
-                    <a href="#"
-                        class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
+                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
                         <i class="fab fa-facebook-f text-white"></i>
                     </a>
-                    <a href="#"
-                        class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
+                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
                         <i class="fab fa-twitter text-white"></i>
                     </a>
-                    <a href="#"
-                        class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
+                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
                         <i class="fab fa-instagram text-white"></i>
                     </a>
                 </div>
@@ -74,29 +77,27 @@
                         Rp. {{ number_format($athlete->athleteDetail->price_per_session, 0, ',', '.') }} / session
                     </h2>
 
-                    <form action="{{ route('cart.add') }}" method="POST" class="space-y-4">
+                    <form id="addToCartForm" action="{{ route('cart.add.sparring') }}" method="POST" class="space-y-4">
                         @csrf
-                        <input type="hidden" name="id" value="{{ $athlete->id }}">
+                        <input type="hidden" name="athlete_id" value="{{ $athlete->id }}">
 
                         {{-- Date --}}
                         <div>
                             <label class="text-sm text-gray-400">Date</label>
-                            <input type="date" name="date"
-                                class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500">
+                            <select name="date" id="dateSelect"
+                                class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
+                                required>
+                                <option value="">-- Select Date --</option>
+                                @foreach ($availableDates as $date)
+                                    <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
+                                @endforeach
+                            </select>
                         </div>
 
                         {{-- Schedule --}}
-                        <div>
+                        <div id="scheduleContainer" class="hidden mt-1">
                             <label class="text-sm text-gray-400">Schedule</label>
-                            <div class="grid grid-cols-3 gap-2 mt-1">
-                                @foreach (['09.00-10.00', '10.00-11.00', '11.00-12.00', '13.00-14.00', '14.00-15.00', '15.00-16.00', '17.00-18.00', '18.00-19.00', '20.00-21.00'] as $slot)
-                                    <label
-                                        class="border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600">
-                                        <input type="radio" name="schedule" value="{{ $slot }}" class="hidden">
-                                        {{ $slot }}
-                                    </label>
-                                @endforeach
-                            </div>
+                            <div class="grid grid-cols-3 gap-2 mt-1"></div>
                         </div>
 
                         {{-- Promo --}}
@@ -112,6 +113,7 @@
                             Add to cart
                         </button>
                     </form>
+
                 </div>
             </div>
         </div> <!-- tutup grid -->
@@ -167,7 +169,6 @@
                     @endforeach
                 </div>
             </div>
-
             <!-- Add Review Form -->
             @auth
                 @if (!$alreadyReviewed)
@@ -200,5 +201,83 @@
                 @endif
             @endauth
         </div>
+
+        <button aria-label="Shopping cart with 3 items" onclick="showCart()"
+            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+            <i class="fas fa-shopping-cart text-white text-3xl">
+            </i>
+            @if ($cartCount > 0)
+                <span
+                    class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                    {{ $cartCount }}
+                </span>
+            @endif
+
+        </button>
+        {{-- Cart Sidebar --}}
+        @include('public.cart')
     </div>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        const dateSelect = document.getElementById('dateSelect');
+        const scheduleContainer = document.getElementById('scheduleContainer');
+        const scheduleGrid = scheduleContainer.querySelector('.grid');
+
+        // Ambil semua schedules dari Blade
+        const schedules = @json($schedules);
+
+        dateSelect.addEventListener('change', function () {
+            const selectedDate = this.value;
+            scheduleGrid.innerHTML = '';
+
+            if (!selectedDate) {
+                scheduleContainer.classList.add('hidden');
+                return;
+            }
+
+            // Filter schedule by date
+            const filtered = schedules.filter(s => s.date === selectedDate);
+
+            if (filtered.length === 0) {
+                scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Tidak ada jadwal tersedia.</p>';
+            } else {
+                filtered.forEach(schedule => {
+                    const slot = `${schedule.start_time.substr(0, 5)} - ${schedule.end_time.substr(0, 5)}`;
+
+                    const label = document.createElement('label');
+                    label.className = 'border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600';
+                    label.innerHTML = `<input type="radio" name="schedule_id" value="${schedule.id}" class="hidden" required>${slot}`;
+                    scheduleGrid.appendChild(label);
+                });
+            }
+
+            scheduleContainer.classList.remove('hidden');
+        });
+
+    </script>
+
+    <script>
+        document.getElementById('addToCartForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Tampilkan SweetAlert
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Sparring ditambahkan ke keranjang',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6',
+                background: '#1E1E1F',
+                color: '#FFFFFF',
+                iconColor: '#4BB543'
+            }).then((result) => {
+                // Kirim form setelah user klik OK
+                this.submit();
+            });
+        });
+    </script>
+@endpush

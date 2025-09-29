@@ -73,7 +73,7 @@
       <div>
         <h4 class="font-semibold mb-4">Contact Us</h4>
         <ul class="space-y-3 text-gray-400 text-sm">
-          <li class="flex items-center gap-2"><i class="fas fa-envelope"></i> xanderbilliard@gmail.com</li>
+          <li class="flex items-center gap-2"><i class="fas fa-envelope"></i> <span class="wrap">xanderbilliard@gmail. com</span></li>
           <li class="flex items-center gap-2">
             <i class="fas fa-phone-alt"></i>
             <a href="https://wa.me/6281284679921" target="_blank" class="hover:text-white transition">+62 812-8467-9921</a>
@@ -96,3 +96,9 @@
     </div>
   </div>
 </footer>
+
+<style>
+  .wrap{
+    text-wrap: wrap;
+  }
+</style>
