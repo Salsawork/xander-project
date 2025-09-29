@@ -164,9 +164,9 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
 
     // ===== User pages for sidebar (FIX ROUTES) ===== ini ada 2 route nya
-    Route::get('dashboard/notification', fn() => view('user.notification'))->name('notification.index');
-    Route::get('dashboard/myorder', fn() => view('user.myorder'))->name('myorder.index');
-    Route::get('dashboard/booking', fn() => view('user.booking'))->name('booking.index');
+    // Route::get('dashboard/notification', fn() => view('user.notification'))->name('notification.index');
+    // Route::get('dashboard/myorder', fn() => view('user.myorder'))->name('myorder.index');
+    // Route::get('dashboard/booking', fn() => view('user.booking'))->name('booking.index');
 
     Route::post('profile/update', function (Request $request) {
         Auth::user()->update($request->only('name', 'username'));
