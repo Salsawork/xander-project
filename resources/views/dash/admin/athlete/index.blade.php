@@ -2,7 +2,7 @@
 @section('title', 'Admin Dashboard - Daftar Athlete')
 
 @section('content')
-    <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
+    <div class="flex flex-col min-h-screen bg-[#1E1E1F] text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">

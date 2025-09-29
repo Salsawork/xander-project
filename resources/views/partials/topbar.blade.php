@@ -1,4 +1,4 @@
-<header class="bg-gray-900 h-12 flex items-center justify-end px-4 fixed top-0 w-5/6">
+<header class="bg-[#161617] h-12 flex items-center justify-end px-4 fixed top-0 w-5/6">
     <div class="relative">
         <button aria-label="User profile"
             class="flex items-center space-x-2 text-gray-400 hover:text-white focus:outline-none"
