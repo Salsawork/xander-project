@@ -87,8 +87,8 @@
 
                         <!-- BUY NOW -> abu gelap -->
                         <a href="{{ route('products.landing') }}"
-                            class="inline-flex items-center rounded-md bg-[#2D2D2D] px-5 py-2.5 text-sm md:text-base font-medium
-                  text-white shadow hover:bg-[#3A3A3A] focus:outline-none focus:ring-2 focus:ring-white/30">
+                            class="inline-flex items-center rounded-md bg-blue-500 px-5 py-2.5 text-sm md:text-base font-medium
+    text-white shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white/30">
                             Buy Now
                         </a>
                     </div>
@@ -106,34 +106,34 @@
                     <h2 class="text-2xl md:text-3xl font-bold">Top Picks</h2>
                 </div>
 
-            <!-- Filter Buttons -->
-            <div class="flex flex-wrap gap-3 mb-8">
-                <a href="{{ route('level', ['level' => 'professional']) }}">
-                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                        Professional Grade
-                    </button>
-                </a>
-                <a href="{{ route('level', ['level' => 'beginner']) }}">
-                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                        Beginner-Friendly
-                    </button>
-                </a>
-                <a href="{{ route('level', ['level' => 'under50']) }}">
-                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                        Under $50
-                    </button>
-                </a>
-                <a href="{{ route('level', ['level' => 'cue-cases']) }}">
-                    <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                        Cue Cases
-                    </button>
-                </a>
-            </div>
-            
+                <!-- Filter Buttons -->
+                <div class="flex flex-wrap gap-3 mb-8">
+                    <a href="{{ route('level', ['level' => 'professional']) }}">
+                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                            Professional Grade
+                        </button>
+                    </a>
+                    <a href="{{ route('level', ['level' => 'beginner']) }}">
+                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                            Beginner-Friendly
+                        </button>
+                    </a>
+                    <a href="{{ route('level', ['level' => 'under50']) }}">
+                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                            Under $50
+                        </button>
+                    </a>
+                    <a href="{{ route('level', ['level' => 'cue-cases']) }}">
+                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
+                            Cue Cases
+                        </button>
+                    </a>
+                </div>
 
-            @php
-                $items = $products->take(5);
-            @endphp
+
+                @php
+                    $items = $products->take(5);
+                @endphp
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                     @forelse ($items as $product)
                         <article class="group">
@@ -194,73 +194,76 @@
             </div>
         </section>
 
-    <!-- Jumbotron 2 - Guidelines -->
-    <section class="relative bg-cover bg-center min-h-[70vh] md:h-screen flex items-center"
-        style="background-image: url('/images/jumbotron2.png')">
-        <div class="absolute inset-0 bg-gradient-to-tr from-black via-black/50 to-transparent"></div>
+        <!-- Jumbotron 2 - Guidelines -->
+        <section class="relative bg-cover bg-center min-h-[70vh] md:h-screen flex items-center"
+            style="background-image: url('/images/jumbotron2.png')">
+            <div class="absolute inset-0 bg-gradient-to-tr from-black via-black/50 to-transparent"></div>
 
-        <div class="relative max-w-xl px-6 md:px-20 text-white z-10 py-16">
-            <p class="font-semibold mb-2 text-sm md:text-base">Billiard Guidelines</p>
-            <h1 class="text-3xl md:text-4xl font-bold leading-tight mb-4">
-                Billiard Playing Guide for Beginners
-            </h1>
-            <p class="text-sm md:text-base mb-6">
-                Learn basic techniques, game rules, and etiquette at the billiard table. Improve
-                your skills and enjoy the game with more confidence.
-            </p>
-            <a href="{{ route('guideline.index') }}"
-                class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">Learn More</a>
-        </div>
-    </section>
-
-    <!-- Services -->
-    <section class="relative bg-cover bg-center py-20 px-6 md:px-20"
-        style="background-image: url('/images/bg/background_2.png')">
-        <div class="relative z-10 text-white w-full">
-            <h2 class="text-2xl md:text-3xl font-bold text-center mb-12">Our Services</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                @php
-                    $services = [
-                        'Tip Installation',
-                        'Tip Reshaping',
-                        'Shaft Cleaning',
-                        'Grip Replacement',
-                        'Balancing & Refinishing',
-                        'Ferrule Replacement',
-                    ];
-                @endphp
-                @foreach ($services as $service)
-                    <div class="border border-white/20 rounded-xl p-6 flex flex-col gap-6 hover:border-white transition">
-                        <div class="text-3xl mb-10 text-[#F8F8F8]"><x-icon.setting class="h-10 w-10" /></div>
-                        <div class="flex justify-between items-center">
-                            <p class="text-sm text-[#F8F8F8]">{{ $service }} <span class="ml-3">></span></p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <!-- Join Community -->
-    <section class="flex flex-col md:flex-row min-h-[80vh]">
-        <div class="w-full md:w-1/2 h-64 md:h-auto">
-            <img src="{{ asset('images/jumbotron3.png') }}" alt="Billiard Balls" class="w-full h-full object-cover" />
-        </div>
-        <div class="w-full md:w-1/2 bg-[#1c1c1c] text-white flex items-center justify-center px-6 md:px-16 py-10 md:py-0">
-            <div class="max-w-md">
-                <h2 class="text-2xl md:text-4xl font-bold mb-4">Join the Billiard Community Today!</h2>
-                <p class="text-sm md:text-base text-gray-300 mb-6 leading-relaxed">
-                    Be part of a vibrant and passionate community that shares your love for billiards. Connect with
-                    players of all skill levels, participate in events, share tips and tricks, and grow your game
-                    together.
+            <div class="relative max-w-xl px-6 md:px-20 text-white z-10 py-16">
+                <p class="font-semibold mb-2 text-sm md:text-base">Billiard Guidelines</p>
+                <h1 class="text-3xl md:text-4xl font-bold leading-tight mb-4">
+                    Billiard Playing Guide for Beginners
+                </h1>
+                <p class="text-sm md:text-base mb-6">
+                    Learn basic techniques, game rules, and etiquette at the billiard table. Improve
+                    your skills and enjoy the game with more confidence.
                 </p>
-                <a href="{{ route('community.index') }}"
-                    class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
-                    Connect Now
-                </a>
+                <a href="{{ route('guideline.index') }}"
+                    class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">Learn
+                    More</a>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <!-- Services -->
+        <section class="relative bg-cover bg-center py-20 px-6 md:px-20"
+            style="background-image: url('/images/bg/background_2.png')">
+            <div class="relative z-10 text-white w-full">
+                <h2 class="text-2xl md:text-3xl font-bold text-center mb-12">Our Services</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                    @php
+                        $services = [
+                            'Tip Installation',
+                            'Tip Reshaping',
+                            'Shaft Cleaning',
+                            'Grip Replacement',
+                            'Balancing & Refinishing',
+                            'Ferrule Replacement',
+                        ];
+                    @endphp
+                    @foreach ($services as $service)
+                        <div
+                            class="border border-white/20 rounded-xl p-6 flex flex-col gap-6 hover:border-white transition">
+                            <div class="text-3xl mb-10 text-[#F8F8F8]"><x-icon.setting class="h-10 w-10" /></div>
+                            <div class="flex justify-between items-center">
+                                <p class="text-sm text-[#F8F8F8]">{{ $service }} <span class="ml-3">></span></p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        <!-- Join Community -->
+        <section class="flex flex-col md:flex-row min-h-[80vh]">
+            <div class="w-full md:w-1/2 h-64 md:h-auto">
+                <img src="{{ asset('images/jumbotron3.png') }}" alt="Billiard Balls" class="w-full h-full object-cover" />
+            </div>
+            <div
+                class="w-full md:w-1/2 bg-[#1c1c1c] text-white flex items-center justify-center px-6 md:px-16 py-10 md:py-0">
+                <div class="max-w-md">
+                    <h2 class="text-2xl md:text-4xl font-bold mb-4">Join the Billiard Community Today!</h2>
+                    <p class="text-sm md:text-base text-gray-300 mb-6 leading-relaxed">
+                        Be part of a vibrant and passionate community that shares your love for billiards. Connect with
+                        players of all skill levels, participate in events, share tips and tricks, and grow your game
+                        together.
+                    </p>
+                    <a href="{{ route('community.index') }}"
+                        class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
+                        Connect Now
+                    </a>
+                </div>
+            </div>
+        </section>
 
         <!-- Latest News & Events -->
         <section

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 /**
  * Controllers
  */
+
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\Auth\GoogleController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController;
@@ -39,22 +41,25 @@ use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 | Public Routes
 |--------------------------------------------------------------------------
 */
+
 Route::get('/', [ProductController::class, 'index'])->name('index');
 Route::get('/level', [ProductController::class, 'filterByLevel'])->name('level');
-
 Route::view('/about', 'about')->name('about');
 
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
     Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
-
 });
 
 /** Login & Register */
 Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('authenticate');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+
+// Google OAuth Routes
+Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('oauth.google.redirect');
+Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('oauth.google.callback');
 
 Route::view('/register', 'auth.register')->name('signup');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
@@ -68,7 +73,6 @@ Route::prefix('products')->group(function () {
     Route::get('/{product}', [ProductController::class, 'detail'])->name('products.detail');
 });
 
-
 /** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/event/{event:name}', [EventController::class, 'show'])->name('events.show');
@@ -79,7 +83,6 @@ Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.in
 Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
 Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
 Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
-
 Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
 
 /** Community (Public) */
@@ -93,7 +96,6 @@ Route::prefix('community')->name('community.')->withoutMiddleware(['auth', 'veri
 Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('guideline.index');
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -125,7 +127,6 @@ Route::middleware('auth')->prefix('dashboard/order')->group(function () {
 /** Midtrans Notification (public) */
 Route::post('/payment/notification', [OrderController::class, 'notification'])->name('payment.notification');
 
-
 /*
 |--------------------------------------------------------------------------
 | Authenticated Dashboard Routes
@@ -136,6 +137,11 @@ Route::middleware('auth')->group(function () {
     /** General Dashboard */
     Route::redirect('dashboard', 'dashboard/overview');
     Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
+
+    // ===== User pages for sidebar (FIX ROUTES) =====
+    Route::get('dashboard/notification', fn() => view('user.notification'))->name('notification.index');
+    Route::get('dashboard/myorder', fn() => view('user.myorder'))->name('myorder.index');
+    Route::get('dashboard/booking', fn() => view('user.booking'))->name('booking.index');
 
     Route::post('profile/update', function (Request $request) {
         Auth::user()->update($request->only('name', 'username'));
@@ -171,11 +177,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/{guideline}', [AdminGuidelinesController::class, 'update'])->name('admin.guidelines.update');
         Route::delete('/{guideline}', [AdminGuidelinesController::class, 'destroy'])->name('admin.guidelines.destroy');
     });
+
     Route::prefix('dashboard/promo')->group(function () {
         Route::get('/', function () {
             return view('dash.admin.promo');
         })->name('promo.index');
     });
+
     Route::prefix('dashboard/venue')->group(function () {
         Route::get('/', [AdminVenueController::class, 'index'])->name('venue.index');
         Route::get('/create', [AdminVenueController::class, 'create'])->name('venue.create');
@@ -200,7 +208,6 @@ Route::middleware('auth')->group(function () {
         })->name('partner.index');
     });
 });
-
 
 /*
 |--------------------------------------------------------------------------
