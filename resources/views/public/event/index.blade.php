@@ -1,6 +1,29 @@
 @extends('app')
 @section('title', 'Events - Xander Billiard')
 
+@push('styles')
+<style>
+  /* ===== Anti white overscroll (tanpa ubah tampilan) ===== */
+  :root { color-scheme: dark; }
+  html, body {
+    height: 100%;
+    background: #0a0a0a;          /* latar gelap saat bounce */
+    overscroll-behavior-y: none;  /* cegah chain overscroll (Chrome/Android/iOS modern) */
+  }
+  /* iOS Safari rubber-band: kanvas gelap di belakang konten */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: #0a0a0a;
+    pointer-events: none;
+    z-index: -1; /* selalu di belakang */
+  }
+  /* Kalau layout punya wrapper, pastikan juga gelap */
+  #app, main { background: #0a0a0a; }
+</style>
+@endpush
+
 @section('content')
     <div class="min-h-screen bg-neutral-900 text-white">
         <div class="mb-16 bg-cover bg-center p-24" style="background-image: url('/images/bg/product_breadcrumb.png');">
