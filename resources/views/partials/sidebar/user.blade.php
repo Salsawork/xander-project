@@ -50,6 +50,6 @@
           @endif
         </a>
       </li>
-    </ul>
+  </ul>
   </nav>
 </aside>

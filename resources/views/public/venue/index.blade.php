@@ -9,72 +9,68 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
 @push('styles')
 <style>
+    /* ===== Anti white overscroll (global, tanpa ubah tampilan) ===== */
+    :root { color-scheme: dark; }
+    html, body {
+        height: 100%;
+        background: #0a0a0a;         /* latar gelap saat bounce */
+        overscroll-behavior-y: none; /* cegah chain overscroll (Chrome/Android/modern iOS) */
+    }
+    /* iOS Safari rubber-band: bentangkan kanvas gelap di belakang semua konten */
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: #0a0a0a;
+        pointer-events: none;
+        z-index: -1; /* selalu di belakang */
+    }
+
+    /* ====== Styles halaman yang sudah ada ====== */
     .toggleContent {
         overflow: hidden;
         transition: max-height 0.3s ease;
-        max-height: 1000px;
+        max-height: 1000px; /* default terbuka */
     }
-
-    .toggleContent.max-h-0 {
-        max-height: 0;
-    }
+    .toggleContent.max-h-0 { max-height: 0; }
 
     @media (min-width: 1024px) {
-        .lg-hidden {
-            display: none !important;
-        }
+        .lg-hidden { display: none !important; }
     }
 
     /* Mobile filter toggle */
     @media (max-width: 1023px) {
-        .sm-hidden {
-            display: none !important;
-        }
+        .sm-hidden { display: none !important; }
 
         .mobile-filter-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5);
             z-index: 40;
             display: none;
         }
-
-        .mobile-filter-overlay.active {
-            display: block;
-        }
+        .mobile-filter-overlay.active { display: block; }
 
         .mobile-filter-sidebar {
             position: fixed;
-            top: 0;
-            left: -100%;
-            width: 85%;
-            max-width: 320px;
-            height: 100%;
+            top: 0; left: -100%;
+            width: 85%; max-width: 320px; height: 100%;
             background: #171717;
             z-index: 50;
             transition: left 0.3s ease;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* smooth scroll iOS */
         }
-
-        .mobile-filter-sidebar.open {
-            left: 0;
-        }
+        .mobile-filter-sidebar.open { left: 0; }
     }
 
-    /* Toggle content */
+    /* (duplikasi aman) */
     .toggleContent {
         overflow: hidden;
         transition: max-height 0.3s ease;
         max-height: 1000px;
-        /* default terbuka */
     }
-
-    .toggleContent.max-h-0 {
-        max-height: 0;
-    }
+    .toggleContent.max-h-0 { max-height: 0; }
 </style>
 @endpush
 
@@ -119,22 +115,6 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                         <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
-                    <!-- <div class="border-t border-gray-500 pt-4">
-                        <div class="flex items-center justify-between mb-2 font-semibold">
-                            <span>Date</span>
-                            <span class="text-xl leading-none text-gray-300">–</span>
-                        </div>
-                        <div class="flex items-center gap-2 justify-center">
-                            <button type="button" class="text-gray-400 hover:text-white">&#60;</button>
-                            <span>February</span>
-                            <button type="button" class="text-gray-400 hover:text-white">&#62;</button>
-                        </div>
-                        <div class="grid grid-cols-7 gap-1 text-center mt-2 text-xs text-gray-400">
-                            @for ($i = 1; $i <= 28; $i++)
-                            <span class="py-1">{{ $i }}</span>
-                            @endfor
-                        </div>
-                    </div> -->
 
                     <div x-data="calendar('{{ request('date') }}')" 
                         class="bg-neutral-900 pt-4 text-white rounded-xl text-sm">

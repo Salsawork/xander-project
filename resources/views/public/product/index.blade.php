@@ -2,6 +2,27 @@
 @section('title', 'Products Page - Xander Billiard')
 @push('styles')
     <style>
+        /* ===== Anti white overscroll (global) ===== */
+        :root { color-scheme: dark; }
+        html, body {
+            height: 100%;
+            background-color: #0a0a0a;   /* pastikan root gelap */
+            overscroll-behavior-y: none; /* nonaktifkan chain overscroll (Chrome/Android, Edge, Firefox) */
+        }
+        /* Pastikan wrapper utama dari layout juga gelap */
+        #app, main { background-color: #0a0a0a; }
+
+        /* iOS Safari fix: kanvas hitam fixed di balik konten saat rubber-band bounce */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: #0a0a0a;
+            pointer-events: none;
+            z-index: -1;  /* di belakang semua */
+        }
+
+        /* ===== Style bawaan halaman ===== */
         .max-h-0 {
             max-height: 0 !important;
         }
@@ -44,6 +65,7 @@
                 z-index: 50;
                 transition: left 0.3s ease;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .mobile-filter-sidebar.open {
@@ -55,7 +77,7 @@
 
 @section('content')
     <div class="min-h-screen bg-neutral-900 text-white">
-    <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
+        <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
             <p class="text-sm text-gray-400 mt-1">
                 <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Product
             </p>
@@ -290,6 +312,7 @@
             function openMobileFilter() {
                 filterProduct.classList.add("open");
                 mobileFilterOverlay.classList.add("active");
+                // body lock optional; background sudah gelap & anti overscroll aktif
                 document.body.style.overflow = "hidden";
             }
 

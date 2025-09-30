@@ -1,177 +1,297 @@
 @extends('app')
 @section('title', 'Products Page - Xander Billiard')
+
 @php
-    $cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    // Cart count from cookies
+    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
     $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
-    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    // Gambar utama + thumbnails
+    $images = is_array($detail->images ?? null) ? array_values(array_filter($detail->images)) : [];
+    $resolveImg = function ($img) {
+        if (!$img) return 'https://placehold.co/800x1066?text=No+Image';
+        if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://') && !str_starts_with($img, '/storage/')) {
+            return asset('storage/uploads/' . $img);
+        }
+        return $img;
+    };
+    $mainImagePath = $resolveImg($images[0] ?? null);
+
+    // Spesifikasi (fallback)
+    $specs = [
+        'Tip Diameter' => $detail->tip_diameter ?? '12.5 mm',
+        'Wrap'         => $detail->wrap ?? 'Luxe Leather Wrap for enhanced grip',
+        'Weight'       => $detail->weight ?? 'Adjustable from 18.5 oz to 21 oz',
+    ];
+
+    // Related products
+    $related = $relatedProducts ?? collect();
 @endphp
 
-@section('content')
-    <main class="min-h-screen px-20 py-10 bg-neutral-900 text-white">
-        <div class="flex flex-col md:flex-row md:space-x-12">
-            <div class="flex flex-col items-center md:items-start space-y-3 md:space-y-4 w-full md:w-[320px]">
-                <nav class="text-xs text-gray-400 mb-3 self-start">
-                    <a href="{{ route('index') }}">
-                        Home
-                    </a>
-                    /
-                    <a href="{{ route('products.landing') }}">
-                        Product
-                    </a>
-                    /
-                    <a href="{{ route('products.detail', $detail->id) }}">
-                        {{ $detail->name }}
-                    </a>
-                </nav>
-                @php
-                    $mainImagePath = 'https://placehold.co/400x600?text=No+Image';
-                    if (!empty($detail->images) && is_array($detail->images) && !empty($detail->images[0])) {
-                        $img = $detail->images[0];
-                        if (
-                            !str_starts_with($img, 'http://') &&
-                            !str_starts_with($img, 'https://') &&
-                            !str_starts_with($img, '/storage/')
-                        ) {
-                            $mainImagePath = asset('storage/uploads/' . $img);
-                        } else {
-                            $mainImagePath = $img;
-                        }
-                    }
-                @endphp
-                <img id="mainImage" alt="{{ $detail->name }}" class="rounded-md w-full max-w-[320px] object-cover"
-                    height="400" src="{{ $mainImagePath }}" width="320" />
-                <div class="flex space-x-3">
-                    <button aria-label="Previous image"
-                        class="text-gray-400 hover:text-white focus:outline-none self-center">
-                        <i class="fas fa-chevron-left text-xs">
-                        </i>
-                    </button>
-                    <div class="flex space-x-2">
-                        @foreach ($detail->images as $index => $image)
-                            @php
-                                $thumbImagePath = 'https://placehold.co/400x600?text=No+Image';
-                                if (!empty($image)) {
-                                    if (
-                                        !str_starts_with($image, 'http://') &&
-                                        !str_starts_with($image, 'https://') &&
-                                        !str_starts_with($image, '/storage/')
-                                    ) {
-                                        $thumbImagePath = asset('storage/uploads/' . $image);
-                                        $originalImage = $image; // Simpan nama file asli untuk fungsi JS
-                                    } else {
-                                        $thumbImagePath = $image;
-                                        $originalImage = $image;
-                                    }
-                                }
-                            @endphp
-                            <img alt="{{ $detail->name . ' #' . $index }}"
-                                class="rounded-md w-[70px] h-[70px] object-cover cursor-pointer border-2 {{ $index == 0 ? 'border-blue-600' : 'border-gray-600' }} thumbnail-image"
-                                height="70" src="{{ $thumbImagePath }}" width="70"
-                                onclick="changeMainImage('{{ $thumbImagePath }}', this)" />
-                        @endforeach
-                    </div>
-                    <button aria-label="Next image" class="text-gray-400 hover:text-white focus:outline-none self-center">
-                        <i class="fas fa-chevron-right text-xs">
-                        </i>
-                    </button>
-                </div>
-            </div>
-            <section class="flex-1 mt-8 md:mt-0">
-                <h1 class="text-white font-extrabold text-xl md:text-2xl leading-tight">
-                    {{ $detail->name }}
-                </h1>
-                <p class="text-gray-300 mt-1 mb-6 text-sm md:text-base">
-                    Rp. {{ number_format($detail->pricing, 0, ',', '.') }}
-                </p>
-                <hr class="border-gray-700 mb-6" />
-                <p class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl">
-                    {{ $detail->description }}
-                </p>
-                <form id="addToCartForm" action="{{ route('cart.add.product') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="id" value="{{ $detail->id }}">
-                    <button
-                        class="mt-6 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-medium py-2 px-4 rounded"
-                        type="submit">
-                        <i class="fas fa-shopping-cart mr-2"></i>
-                        Add to cart
-                    </button>
-                </form>
-                <hr class="border-gray-700 my-6" />
-                <div class="flex items-center space-x-3 text-xs text-gray-400 max-w-xl">
-                    <span>
-                        Share :
-                    </span>
-                    <a aria-label="Instagram" class="hover:text-white" href="#">
-                        <i class="fab fa-instagram">
-                        </i>
-                    </a>
-                    <a aria-label="Twitter" class="hover:text-white" href="#">
-                        <i class="fab fa-twitter">
-                        </i>
-                    </a>
-                    <a aria-label="Facebook" class="hover:text-white" href="#">
-                        <i class="fab fa-facebook-f">
-                        </i>
-                    </a>
-                </div>
-                <hr class="border-gray-700 mt-3" />
-            </section>
-        </div>
-        <button aria-label="Shopping cart with 3 items" onclick="showCart()"
-            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
-            <i class="fas fa-shopping-cart text-white text-3xl">
-            </i>
-            @if ($cartCount > 0)
-                <span
-                    class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-                    {{ $cartCount }}
-                </span>
-            @endif
+@push('styles')
+<style>
+  /* ===== Anti white overscroll (global) ===== */
+  :root { color-scheme: dark; }
+  html, body {
+    height: 100%;
+    background:#0a0a0a;
+    overscroll-behavior-y: none;
+  }
+  #app, main { background:#0a0a0a; }
+  body::before { content:""; position:fixed; inset:0; background:#0a0a0a; pointer-events:none; z-index:-1; }
+  body { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  img { color: transparent; }
 
-        </button>
-        @include('public.cart')
-    </main>
+  /* Dekor latar lembut */
+  .page-bg{
+    --c1: rgba(255,255,255,.04); --c2: transparent;
+    background:
+      radial-gradient(80rem 40rem at -20% 120%, var(--c1), var(--c2)),
+      radial-gradient(50rem 30rem at 120% 20%, var(--c1), var(--c2));
+  }
+
+  /* Kartu/cover */
+  .card{ background:#2a2a2a; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,.28); }
+
+  /* Ukuran gambar utama seperti contoh */
+  .main-cover{
+    aspect-ratio: 3 / 4;        /* proporsi portrait */
+    background:#1f2937;
+    width:100%;
+    border-radius:14px;          /* rounded-xl feel */
+    overflow:hidden;
+  }
+
+  /* Thumbnails seperti contoh (84x84, rounded, jarak konsisten) */
+  .thumb{
+    width:84px; height:84px;
+    border-radius:12px;
+    object-fit:cover;
+    background:#1f2937;
+    border:2px solid #4b5563;
+    cursor:pointer;
+  }
+  .thumb-active{ border-color:#2563eb; }
+
+  /* Tombol panah kecil (28px) */
+  .nav-dot{
+    width:28px; height:28px;
+    border-radius:9999px;
+    display:grid; place-items:center;
+    background:rgba(255,255,255,.12);
+    color:#cbd5e1;
+    transition:background .2s, color .2s;
+  }
+  .nav-dot:hover{ background:rgba(255,255,255,.18); color:#fff; }
+
+  /* Grid related products */
+  .rel-grid{ display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:1rem; }
+  @media(min-width:640px){ .rel-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(min-width:1024px){ .rel-grid{ grid-template-columns:repeat(4,1fr); } }
+  @media(min-width:1280px){ .rel-grid{ grid-template-columns:repeat(5,1fr); } }
+</style>
+@endpush
+
+@section('content')
+<main class="min-h-screen page-bg text-white">
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-10">
+
+    {{-- Breadcrumb --}}
+    <nav class="text-sm md:text-xs text-gray-200/90 mb-4 md:mb-5">
+      <a class="hover:underline" href="{{ route('index') }}">Home</a>
+      <span class="mx-2">/</span>
+      <a class="hover:underline" href="{{ route('products.landing') }}">Product</a>
+      <span class="mx-2">/</span>
+      <span class="text-gray-300">{{ $detail->name }}</span>
+    </nav>
+
+    {{-- Top: Image + Detail --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 items-start">
+
+      {{-- Left: main image + thumbs --}}
+      <div>
+        <div class="card overflow-hidden">
+          <img id="mainImage"
+               class="main-cover"
+               src="{{ $mainImagePath }}"
+               alt="{{ $detail->name }}"
+               loading="eager" decoding="async"
+               onerror="this.src='https://placehold.co/800x1066?text=No+Image'">
+        </div>
+
+        @if(count($images))
+          <div class="mt-4 flex items-center justify-between gap-3">
+            <button id="prevBtn" aria-label="Previous image" class="nav-dot">
+              <i class="fas fa-chevron-left text-[10px]"></i>
+            </button>
+
+            <div class="flex gap-3">
+              @foreach ($images as $i => $img)
+                @php $thumb = $resolveImg($img); @endphp
+                <img
+                  data-index="{{ $i }}"
+                  src="{{ $thumb }}"
+                  alt="{{ $detail->name.' #'.$i }}"
+                  class="thumb {{ $i===0 ? 'thumb-active' : '' }}"
+                  loading="lazy" decoding="async"
+                  onerror="this.src='https://placehold.co/168x168?text=No+Image'">
+              @endforeach
+            </div>
+
+            <button id="nextBtn" aria-label="Next image" class="nav-dot">
+              <i class="fas fa-chevron-right text-[10px]"></i>
+            </button>
+          </div>
+        @endif
+      </div>
+
+      {{-- Right: Title, Price, Specs, Desc, CTA, Share --}}
+      <div>
+        <h1 class="font-extrabold text-2xl md:text-3xl lg:text-4xl leading-tight">
+          {{ $detail->name }}
+        </h1>
+        <p class="text-gray-300 mt-2 mb-6 text-base md:text-lg">
+          {{-- FORMAT: Rp 3.500.000 --}}
+          Rp {{ number_format($detail->pricing, 0, ',', '.') }}
+        </p>
+
+        <hr class="border-gray-700 mb-6" />
+
+        {{-- Specs (2 columns) --}}
+        <div class="grid grid-cols-3 gap-y-3 gap-x-4 text-sm">
+          @foreach($specs as $label => $value)
+            <div class="text-gray-400">{{ $label }}:</div>
+            <div class="col-span-2 text-gray-200">{{ $value }}</div>
+          @endforeach
+        </div>
+
+        {{-- Description --}}
+        <p class="text-sm md:text-base text-gray-300 mt-6 leading-relaxed">
+          {{ $detail->description }}
+        </p>
+
+        {{-- Add to cart --}}
+        <form id="addToCartForm" action="{{ route('cart.add.product') }}" method="POST">
+          @csrf
+          <input type="hidden" name="id" value="{{ $detail->id }}">
+          <button type="submit"
+                  class="mt-6 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-4 rounded">
+            <i class="fas fa-shopping-cart"></i>
+            add to cart
+          </button>
+        </form>
+
+        {{-- Share --}}
+        <hr class="border-gray-700 my-6" />
+        <div class="flex items-center gap-4 text-sm text-gray-400">
+          <span>Share :</span>
+          <a class="hover:text-white" aria-label="Instagram" href="#"><i class="fab fa-instagram"></i></a>
+          <a class="hover:text-white" aria-label="Twitter"   href="#"><i class="fab fa-twitter"></i></a>
+          <a class="hover:text-white" aria-label="Facebook"  href="#"><i class="fab fa-facebook-f"></i></a>
+        </div>
+        <hr class="border-gray-700 mt-4" />
+      </div>
+    </div>
+
+    {{-- Related products --}}
+    <div class="mt-12 md:mt-16">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg md:text-xl font-semibold">Related products</h2>
+        <a href="{{ route('products.landing') }}" class="text-sm text-gray-300 hover:text-white">See More</a>
+      </div>
+
+      <div class="rel-grid">
+        @forelse ($related as $prod)
+          @php
+            $pimg = 'https://placehold.co/600x800?text=No+Image';
+            if (is_array($prod->images ?? null)) {
+              foreach ($prod->images as $im) {
+                if (!empty($im)) { $pimg = $resolveImg($im); break; }
+              }
+            }
+          @endphp
+          <a href="{{ route('products.detail', $prod->id) }}" class="block">
+            <div class="card p-2 hover:shadow-xl transition-shadow">
+              <div class="rounded-[12px] overflow-hidden bg-neutral-700" style="aspect-ratio:3/4;">
+                <img src="{{ $pimg }}" alt="{{ $prod->name }}" class="w-full h-full object-cover"
+                     loading="lazy" decoding="async"
+                     onerror="this.src='https://placehold.co/600x800?text=No+Image'">
+              </div>
+              <div class="px-2 py-3">
+                <h3 class="text-sm font-medium line-clamp-2">{{ $prod->name }}</h3>
+                <p class="text-sm text-gray-400 mt-1">
+                  Rp {{ number_format((float)($prod->pricing ?? 0), 0, ',', '.') }}
+                </p>
+              </div>
+            </div>
+          </a>
+        @empty
+          <div class="text-gray-400">No related products.</div>
+        @endforelse
+      </div>
+    </div>
+
+  </div>
+
+  {{-- Floating Cart Button --}}
+  <button
+    aria-label="Shopping cart with {{ $cartCount }} items"
+    onclick="showCart()"
+    class="fixed right-4 md:right-6 bottom-6 md:bottom-8 bg-[#2a2a2a] rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
+  >
+    <i class="fas fa-shopping-cart text-white text-2xl md:text-3xl"></i>
+    @if ($cartCount > 0)
+      <span class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+        {{ $cartCount }}
+      </span>
+    @endif
+  </button>
+
+  @include('public.cart')
+</main>
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        // Fungsi untuk mengganti gambar utama
-        function changeMainImage(imageUrl, clickedThumb) {
-            // Ganti gambar utama
-            document.getElementById('mainImage').src = imageUrl;
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  // Thumbnail -> main image + prev/next
+  (function () {
+    const main   = document.getElementById('mainImage');
+    const thumbs = Array.from(document.querySelectorAll('.thumb'));
+    let idx      = Math.max(0, thumbs.findIndex(t => t.classList.contains('thumb-active')));
 
-            // Reset border semua thumbnail
-            const thumbnails = document.querySelectorAll('.thumbnail-image');
-            thumbnails.forEach(thumb => {
-                thumb.classList.remove('border-blue-600');
-                thumb.classList.add('border-gray-600');
-            });
+    function setActive(i){
+      if(!thumbs.length) return;
+      idx = (i + thumbs.length) % thumbs.length;
+      thumbs.forEach(el => el.classList.remove('thumb-active'));
+      const el = thumbs[idx];
+      el.classList.add('thumb-active');
+      if(main) main.src = el.getAttribute('src');
+    }
 
-            // Highlight thumbnail yang diklik
-            clickedThumb.classList.remove('border-gray-600');
-            clickedThumb.classList.add('border-blue-600');
-        }
+    thumbs.forEach((el,i)=> el.addEventListener('click', ()=> setActive(i)));
+    document.getElementById('prevBtn')?.addEventListener('click', ()=> setActive(idx - 1));
+    document.getElementById('nextBtn')?.addEventListener('click', ()=> setActive(idx + 1));
+  })();
 
-        document.getElementById('addToCartForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            // Tampilkan SweetAlert
-            Swal.fire({
-                title: 'Berhasil!',
-                text: 'Produk ditambahkan ke keranjang',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF',
-                iconColor: '#4BB543'
-            }).then((result) => {
-                // Kirim form setelah user klik OK
-                this.submit();
-            });
-        });
-    </script>
+  // SweetAlert konfirmasi add to cart
+  const form = document.getElementById('addToCartForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      Swal.fire({
+        title: 'Berhasil!',
+        text: 'Produk ditambahkan ke keranjang',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF',
+        iconColor: '#4BB543'
+      }).then(() => this.submit());
+    });
+  }
+</script>
 @endpush
