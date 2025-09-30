@@ -12,7 +12,7 @@
 
         <form method="POST" action="{{ route('verification.verify') }}">
             @csrf
-            <input type="hidden" name="username" value="{{ $email }}">
+            <input type="hidden" name="email" value="{{ $email }}">
 
             <input type="text" name="otp_code" placeholder="Enter 6 digit code"
                    class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"

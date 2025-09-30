@@ -148,10 +148,12 @@
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
                         <div class="toggleContent w-full flex items-center gap-2">
-                            <input type="number" name="price_min" placeholder="Min" value="{{ request('price_min') }}"
-                                class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
-                            <input type="number" name="price_max" placeholder="Max" value="{{ request('price_max') }}"
-                                class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
+                            <input type="text" id="price_min" name="price_min" placeholder="Min"
+                                value="{{ request('price_min') }}"
+                                class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
+                            <input type="text" id="price_max" name="price_max" placeholder="Max"
+                                value="{{ request('price_max') }}"
+                                class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
                         </div>
                         <!-- Buttons -->
                         <div class="flex gap-2 pt-2">
@@ -223,6 +225,40 @@
 
         @include('public.cart')
     </div>
+
+    <script>
+        function formatNumberInput(input) {
+            let value = input.value.replace(/\D/g, ""); // hapus non digit
+            if (!value) {
+                input.value = "";
+                return;
+            }
+            input.value = new Intl.NumberFormat("id-ID").format(value);
+        }
+
+        function unformatNumberInput(input) {
+            return input.value.replace(/\./g, ""); // hilangkan titik pemisah
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const minInput = document.getElementById("price_min");
+            const maxInput = document.getElementById("price_max");
+
+            // format langsung saat load jika ada value
+            if (minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
+            if (maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
+
+            // format ketika user ketik
+            minInput.addEventListener("input", () => formatNumberInput(minInput));
+            maxInput.addEventListener("input", () => formatNumberInput(maxInput));
+
+            // sebelum submit, balikin ke angka biasa (biar server bisa baca)
+            minInput.form.addEventListener("submit", () => {
+                minInput.value = unformatNumberInput(minInput);
+                maxInput.value = unformatNumberInput(maxInput);
+            });
+        });
+    </script>
 @endsection
 
 @push('scripts')
@@ -276,4 +312,6 @@
             }
         });
    </script>
+
+   
 @endpush

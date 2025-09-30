@@ -82,7 +82,7 @@
                     {{ $detail->name }}
                 </h1>
                 <p class="text-gray-300 mt-1 mb-6 text-sm md:text-base">
-                    Rp. {{ number_format($detail->pricing, 0, ',', '.') }},-
+                    Rp. {{ number_format($detail->pricing, 0, ',', '.') }}
                 </p>
                 <hr class="border-gray-700 mb-6" />
                 <p class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl">
