@@ -180,7 +180,7 @@ class SparringController extends Controller
         // Ambil semua schedule yang belum booked
         $schedules = SparringSchedule::where('athlete_id', $id)
             ->where('is_booked', false)
-            ->whereBetween('date', [now()->toDateString(), now()->addDays(3)->toDateString()])
+            ->where('date', '>=', now()->toDateString())
             ->orderBy('date')
             ->orderBy('start_time')
             ->get()

@@ -24,7 +24,7 @@
                     <img src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
                     <div class="flex-1">
                         <h3 class="font-semibold">{{ $cart['name'] }}</h3>
-                        <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }},-</p>
+                        <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }}</p>
                     </div>
                 </div>
                 @empty
@@ -44,7 +44,7 @@
                     <div class="flex-1">
                         <h3 class="font-semibold">{{ $sparring['name'] }}</h3>
                         <p class="text-gray-400">{{ $sparring['schedule'] }}</p>
-                        <p class="text-gray-400">Rp. {{ number_format($sparring['price'], 0, ',', '.') }},-</p>
+                        <p class="text-gray-400">Rp. {{ number_format($sparring['price'], 0, ',', '.') }}</p>
                     </div>
                 </div>
                 @endforeach

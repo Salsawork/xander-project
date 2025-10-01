@@ -46,12 +46,6 @@ Route::get('/', [ProductController::class, 'index'])->name('index');
 Route::get('/level', [ProductController::class, 'filterByLevel'])->name('level');
 Route::view('/about', 'about')->name('about');
 
-Route::prefix('venues')->group(function () {
-    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
-    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
-    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
-});
-
 /** Login & Register */
 Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('authenticate');
@@ -73,6 +67,12 @@ Route::post('/upload', [UploadController::class, 'store'])->name('upload.image')
 Route::prefix('products')->group(function () {
     Route::get('/', [ProductController::class, 'landing'])->name('products.landing');
     Route::get('/{product}', [ProductController::class, 'detail'])->name('products.detail');
+});
+
+Route::prefix('venues')->group(function () {
+    Route::get('/', [VenueController::class, 'index'])->name('venues.index');
+    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
+    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
 /** Events */
