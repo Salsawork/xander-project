@@ -52,8 +52,8 @@
           <li><a href="{{ route('products.landing') }}" class="hover:text-white">Product</a></li>
           <li><a href="{{ route('venues.index') }}" class="hover:text-white">Venue</a></li>
           <li><a href="{{ route('events.index') }}" class="hover:text-white">Event</a></li>
-          <li><a href="#" class="hover:text-white">Guidelines</a></li>
-          <li><a href="https://chat.whatsapp.com/BXUFjPpsG9QArMalFEY2IB" class="hover:text-white">Community</a></li>
+          <li><a href="{{ route('guideline.index') }}" class="hover:text-white">Guidelines</a></li>
+          <li><a href="{{ route('community.index') }}" class="hover:text-white">Community</a></li>
         </ul>
       </div>
       <div>
