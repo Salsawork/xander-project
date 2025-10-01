@@ -44,23 +44,7 @@ class LoginController extends Controller
      /**
      * Process the signup request.
      */
-    // public function register(Request $request)
-    // {
-    //     $validated = $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'email' => 'required|unique:users',
-    //         'password' => 'required|min:6|confirmed',
-    //     ]);
-
-    //     $user = User::create([
-    //         'name' => $validated['name'],
-    //         'email' => $validated['email'],
-    //         'phone' => $request->phone ?? null,
-    //         'password' => Hash::make($validated['password']),
-    //         'status' => 0,
-    //     ]);
-    //     return redirect()->route('login');
-    // }
+    
     public function showVerificationForm(Request $request)
     {
         $email = $request->query('email') ?? $request->query('email'); // aman

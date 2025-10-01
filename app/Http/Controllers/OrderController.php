@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderSparring;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -230,11 +232,30 @@ class OrderController extends Controller
                         'schedule_id' => $sparring['schedule_id'],
                         'price'       => $sparring['price'],
                     ]);
-
+            
                     $total += $sparring['price'];
+            
+                    // Kirim email ke athlete
+                    $athlete = User::find($sparring['athlete_id']);
+                    $user    = auth()->user(); // pemesan
+                    if ($athlete && $athlete->email) {
+                        $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
+                                       "Detail Pemesan:\n" .
+                                       "- Nama: {$user->name}\n" .
+                                       "- Email: {$user->email}\n" .
+                                       "- Telepon: {$user->phone}\n\n" .
+                                       "Detail Order:\n" .
+                                       "- Order Number: {$order->order_number}\n" .
+                                       "- Total: Rp " . number_format($order->total, 0, ',', '.');
+            
+                        Mail::raw($messageBody, function ($message) use ($athlete) {
+                            $message->to($athlete->email)
+                                    ->subject('Notifikasi Order Sparring Baru');
+                        });
+                    }
                 }
             }
-
+            
             // Update total order
             $order->update(['total' => $total]);
 
@@ -260,9 +281,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
-
-
 
     /**
      * Handle notification from Midtrans

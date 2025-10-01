@@ -70,6 +70,9 @@ class VenueController extends Controller
                 'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
                 'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
                 'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                'schedule' => \Carbon\Carbon::parse($item->start_time)->format('H:i')
+                    . ' - ' .
+                    \Carbon\Carbon::parse($item->end_time)->format('H:i'),
                 'promo_code' => $item->promo_code,
                 'status' => $item->status,
             ]);
@@ -91,5 +94,6 @@ class VenueController extends Controller
             'cartSparrings'
         ));
     }
+    
     
 }

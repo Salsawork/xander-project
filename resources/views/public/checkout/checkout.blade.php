@@ -57,20 +57,40 @@
             <div>
                 <h2 class="text-lg font-bold mb-4">Venue</h2>
                 @if(isset($venues) && count($venues) > 0)
-                @foreach($venues as $venue)
-                <div class="flex items-center space-x-4">
-                    <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $venue['name'] }}" class="w-16 h-16 object-cover rounded">
-                    <div class="flex-1">
-                        <h3 class="font-semibold">{{ $venue['name'] }}</h3>
-                        <p class="text-gray-400">{{ $venue['start'] }} - {{ $venue['end'] }}</p>
-                        <p class="text-gray-400">Rp. {{ number_format($venue['price'], 0, ',', '.') }},-</p>
-                    </div>
-                </div>
-                @endforeach
+                    @foreach($venues as $venue)
+                        <div class="flex items-center space-x-4 mb-4">
+                            <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" 
+                                 alt="{{ $venue['name'] }}" 
+                                 class="w-16 h-16 object-cover rounded">
+                            <div class="flex-1">
+                                <h3 class="font-semibold">{{ $venue['name'] }}</h3>
+                                
+                                {{-- Jadwal (start_time - end_time) --}}
+                                @if(isset($venue['start_time']) && isset($venue['end_time']))
+                                    <p class="text-gray-400">{{ $venue['start_time'] }} - {{ $venue['end_time'] }}</p>
+                                @elseif(isset($venue['schedule']))
+                                    <p class="text-gray-400">{{ $venue['schedule'] }}</p>
+                                @endif
+            
+                                {{-- Tanggal --}}
+                                @if(isset($venue['date']))
+                                    <p class="text-gray-400">{{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
+                                @endif
+            
+                                {{-- Harga --}}
+                                @if(isset($venue['price']))
+                                    <p class="text-gray-400">
+                                        Rp. {{ number_format($venue['price'], 0, ',', '.') }},-
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
                 @else
-                <p class="text-gray-400">No venue selected</p>
+                    <p class="text-gray-400">No venue selected</p>
                 @endif
             </div>
+            
         </div>
     </div>
 

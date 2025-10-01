@@ -201,7 +201,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('dashboard/athlete')->group(function () {
-        Route::get('/', [AdminAthleteController::class, 'index'])->name('athlete.dashboard');
+        Route::get('/', [AdminAthleteController::class, 'index'])->name('athlete.index');
         Route::get('/create', [AdminAthleteController::class, 'create'])->name('athlete.create');
         Route::post('/', [AdminAthleteController::class, 'store'])->name('athlete.store');
         Route::get('/{athlete}/edit', [AdminAthleteController::class, 'edit'])->name('athlete.edit');
