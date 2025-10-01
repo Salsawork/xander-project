@@ -2,81 +2,120 @@
 
 @section('title', 'Sparring')
 
+@php
+    // === Data keranjang dari cookie (produk, venue, sparring) ===
+    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    // ===== Jaga variabel $locations biar filter tidak error saat dummy =====
+    $locations = $locations ?? ['Jakarta', 'Bandung', 'Surabaya', 'Medan'];
+
+    // ===== Ambil data atlet yang SUDAH ada (apapun bentuknya) jadi Collection =====
+    $existingItems = collect(
+        ($athletes ?? collect()) instanceof \Illuminate\Pagination\LengthAwarePaginator
+            ? ($athletes->items() ?? [])
+            : (is_iterable($athletes ?? []) ? $athletes : [])
+    );
+
+    // ===== Tambah dummy sampai MINIMAL 12 item (tanpa mengubah data asli) =====
+    $need = max(0, 12 - $existingItems->count());
+    $dummies = collect(range(1, $need))->map(function($i) use ($existingItems){
+        $idx = (($existingItems->count() + $i - 1) % 6) + 1; // rotasi 1..6
+        $id  = $existingItems->count() + $i;
+        return (object)[
+            'id'   => $id,
+            'name' => "Athlete #$id",
+            'athleteDetail' => (object)[
+                'image'             => "athlete-$idx.png",
+                'price_per_session' => 100000 * $idx,
+            ],
+        ];
+    });
+
+    $allItems = $existingItems->values()->merge($dummies->values());
+
+    // ===== Pagination adaptif via query 'pp' (per page): desktop 8 / mobile 4 ====
+    $pp   = (int) (request('pp') ?: 8);   // default 8; JS akan set 4 di mobile
+    $page = (int) (request('page') ?: 1);
+
+    $slice    = $allItems->forPage($page, $pp)->values();
+    $athletes = new \Illuminate\Pagination\LengthAwarePaginator(
+        $slice,
+        $allItems->count(),
+        $pp,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+@endphp
+
 @push('styles')
     <style>
         /* ===== Anti white overscroll (global) ===== */
         :root { color-scheme: dark; }
-        html, body {
-            height: 100%;
-            background-color: #0a0a0a;   /* pastikan root gelap */
-            overscroll-behavior-y: none; /* nonaktifkan chain overscroll (Chrome/Android, Edge, Firefox) */
-        }
-        /* Pastikan wrapper utama dari layout juga gelap */
-        #app, main { background-color: #0a0a0a; }
+        html, body { height:100%; background:#0a0a0a; overscroll-behavior-y:none; }
+        #app, main { background:#0a0a0a; }
+        body::before { content:""; position:fixed; inset:0; background:#0a0a0a; pointer-events:none; z-index:-1; }
 
-        /* iOS Safari fix: kanvas hitam fixed di balik konten saat rubber-band bounce */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: #0a0a0a;
-            pointer-events: none;
-            z-index: -1;  /* di belakang semua */
-        }
-
-        /* ===== Util ===== */
         .max-h-0 { max-height: 0 !important; }
+        @media (min-width: 1024px) { .lg-hidden { display:none !important; } }
+        @media (max-width: 1023px) { .sm-hidden { display:none !important; } }
 
-        @media (min-width: 1024px) {
-            .lg-hidden { display: none !important; }
-        }
-        @media (max-width: 1023px) {
-            .sm-hidden { display: none !important; }
-        }
-
-        /* ===== Mobile filter overlay + sidebar ===== */
-        @media (max-width: 1023px) {
-            .mobile-filter-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 40;
-                display: none;
+        /* Mobile filter overlay + sidebar */
+        @media (max-width:1023px){
+            .mobile-filter-overlay{
+                position:fixed; inset:0; background:rgba(0,0,0,.5);
+                z-index:40; display:none;
             }
-            .mobile-filter-overlay.active { display: block; }
-
-            .mobile-filter-sidebar {
-                position: fixed;
-                top: 0;
-                left: -100%;
-                width: 85%;
-                max-width: 340px;
-                height: 100%;
-                background: rgb(23, 23, 23);
-                z-index: 50;
-                transition: left 0.3s ease;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: 24px;
+            .mobile-filter-overlay.active{ display:block; }
+            .mobile-filter-sidebar{
+                position:fixed; top:0; left:-100%;
+                width:85%; max-width:340px; height:100%;
+                background:rgb(23,23,23); z-index:50;
+                transition:left .3s ease; overflow-y:auto; -webkit-overflow-scrolling:touch;
+                padding-bottom:24px;
             }
-            .mobile-filter-sidebar.open { left: 0; }
+            .mobile-filter-sidebar.open{ left:0; }
         }
+        .toggleContent{ overflow:hidden; transition:max-height .3s ease; max-height:1000px; }
+        .toggleContent.max-h-0{ max-height:0; }
 
-        /* Toggle content anim */
-        .toggleContent {
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-            max-height: 1000px; /* default terbuka */
+        /* ===== Pill Pagination (mobile & desktop) ===== */
+        .pager {
+            display:inline-flex; align-items:center; gap:10px;
+            background:#1f2937; /* slate-800 */
+            border:1px solid rgba(255,255,255,.06);
+            border-radius:9999px; padding:6px 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25);
         }
-        .toggleContent.max-h-0 { max-height: 0; }
+        .pager-label {
+            min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px;
+        }
+        .pager-btn {
+            width:44px; height:44px; display:grid; place-items:center;
+            border-radius:9999px; line-height:0; text-decoration:none;
+            border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35);
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        .pager-btn:hover { transform: translateY(-1px); }
+        .pager-prev { background:#e5e7eb; color:#0f172a; }
+        .pager-next { background:#2563eb; color:#fff; }
+        .pager-btn[aria-disabled="true"] { opacity:.45; pointer-events:none; filter:grayscale(20%); }
+        @media (max-width:640px){
+            .pager { padding:4px 8px; gap:8px; }
+            .pager-btn { width:40px; height:40px; }
+            .pager-label { min-width:80px; font-size:.9rem; }
+        }
     </style>
 @endpush
 
 @section('content')
-    <div class="min-h-screen bg-neutral-900 text-white">
+    <div class="min-h-screen bg-neutral-900 text-white"
+         style="background-image:url('{{ asset('images/bg/background_3.png') }}'); background-size:cover; background-position:center; background-repeat:no-repeat;">
 
         <!-- Desktop Hero -->
-        <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
+        <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image:url('/images/bg/product_breadcrumb.png')">
             <p class="text-sm text-gray-400 mt-1">
                 <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Sparring
             </p>
@@ -84,7 +123,7 @@
         </div>
 
         <!-- Mobile Hero -->
-        <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
+        <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden" style="background-image:url('/images/bg/product_breadcrumb.png')">
             <p class="text-xs sm:text-sm text-gray-400 mt-1">
                 <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Sparring
             </p>
@@ -104,22 +143,22 @@
         <div id="mobileFilterOverlay" class="mobile-filter-overlay lg-hidden"></div>
 
         <!-- Grid: Filter + List -->
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 lg:py-12">
-            <!-- Filter (mobile = sidebar slide-in, desktop = kolom statis) -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 lg:py-12" id="list">
+            <!-- Filter -->
             <aside id="filterSparring" class="mobile-filter-sidebar lg:relative lg:left-0 lg:col-span-1">
                 <div class="px-4 lg:px-0 space-y-6 text-white text-sm lg:sticky lg:top-24">
-                    <!-- Header hanya tampil di mobile -->
                     <div class="flex items-center justify-between mb-4 lg-hidden">
                         <h3 class="text-lg font-semibold">Filter & Search</h3>
                         <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
                     </div>
 
                     <form method="GET" action="{{ route('sparring.index') }}" class="space-y-4 rounded-xl lg:bg-neutral-900 lg:p-4">
+                        <input type="hidden" name="pp" id="ppInput" value="{{ $pp }}"/>
+
                         <!-- Search -->
                         <div>
-                            <input type="text" name="search" placeholder="Search"
-                                value="{{ request('search') }}"
-                                class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                            <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
+                                   class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                         </div>
 
                         <!-- Date -->
@@ -137,12 +176,9 @@
                                 </div>
                                 <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
                                     <template x-for="d in daysInMonth()" :key="d">
-                                        <span
-                                            class="py-1 cursor-pointer rounded transition-colors"
-                                            :class="selectedDate === formatDate(year, month, d) ? 'bg-blue-500 text-white' : 'hover:bg-gray-600'"
-                                            @click="selectDate(d)"
-                                            x-text="d">
-                                        </span>
+                                        <span class="py-1 cursor-pointer rounded transition-colors"
+                                              :class="selectedDate === formatDate(year, month, d) ? 'bg-blue-500 text-white' : 'hover:bg-gray-600'"
+                                              @click="selectDate(d)" x-text="d"></span>
                                     </template>
                                 </div>
                             </div>
@@ -156,8 +192,7 @@
                             </div>
                             <div class="toggleContent flex flex-wrap gap-2">
                                 @foreach ($locations as $loc)
-                                    <label class="px-3 py-1 rounded-full border cursor-pointer
-                                                  {{ request('address') == $loc ? 'border-blue-500 text-blue-400' : 'border-gray-500 text-gray-400' }}">
+                                    <label class="px-3 py-1 rounded-full border cursor-pointer {{ request('address') == $loc ? 'border-blue-500 text-blue-400' : 'border-gray-500 text-gray-400' }}">
                                         <input type="radio" name="address" value="{{ $loc }}" class="hidden" @checked(request('address') == $loc) />
                                         {{ $loc }}
                                     </label>
@@ -173,24 +208,18 @@
                             </div>
                             <div class="toggleContent w-full flex items-center gap-2">
                                 <input type="text" id="price_min" name="price_min" placeholder="Min"
-                                    value="{{ request('price_min') }}"
-                                    class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
+                                       value="{{ request('price_min') }}"
+                                       class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
                                 <input type="text" id="price_max" name="price_max" placeholder="Max"
-                                    value="{{ request('price_max') }}"
-                                    class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
+                                       value="{{ request('price_max') }}"
+                                       class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
                             </div>
                         </div>
 
                         <!-- Buttons -->
                         <div class="flex gap-2 pt-2">
-                            <button type="submit"
-                                class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">
-                                Filter
-                            </button>
-                            <a href="{{ route('sparring.index') }}"
-                               class="flex-1 rounded border border-blue-500 px-4 py-2 font-medium text-center text-blue-500 hover:bg-blue-500 hover:text-white">
-                                Reset
-                            </a>
+                            <button type="submit" class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">Filter</button>
+                            <a href="{{ route('sparring.index') }}" class="flex-1 rounded border border-blue-500 px-4 py-2 font-medium text-center text-blue-500 hover:bg-blue-500 hover:text-white">Reset</a>
                         </div>
                     </form>
                 </div>
@@ -221,29 +250,68 @@
                             </div>
                         </a>
                     @empty
-                        <div class="col-span-full text-center py-12 text-gray-400">
-                            No athletes available at the moment.
-                        </div>
+                        <div class="col-span-full text-center py-12 text-gray-400">No athletes available at the moment.</div>
                     @endforelse
                 </div>
 
-                <!-- Pagination (jika pakai paginator untuk athletes) -->
-                @if(method_exists($athletes, 'links'))
-                    <div class="flex justify-center mt-6">
-                        {{ $athletes->links('vendor.pagination.tailwind') }}
-                    </div>
-                @endif
+                {{-- Pagination: model pill (Prev • X of Y • Next) --}}
+                @php
+                    $current = $athletes->currentPage();
+                    $last    = $athletes->lastPage();
+                    $prevUrl = $current > 1 ? $athletes->appends(request()->query())->url($current - 1) . '#list' : null;
+                    $nextUrl = $current < $last ? $athletes->appends(request()->query())->url($current + 1) . '#list' : null;
+                @endphp
+                <div class="flex justify-center mt-6">
+                    <nav class="pager" role="navigation" aria-label="Pagination">
+                        {{-- Prev --}}
+                        @if ($prevUrl)
+                            <a class="pager-btn pager-prev" href="{{ $prevUrl }}" aria-label="Previous page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </a>
+                        @else
+                            <span class="pager-btn pager-prev" aria-disabled="true" aria-label="Previous page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        @endif
+
+                        {{-- Label tengah --}}
+                        <span class="pager-label">{{ $current }} of {{ $last }}</span>
+
+                        {{-- Next --}}
+                        @if ($nextUrl)
+                            <a class="pager-btn pager-next" href="{{ $nextUrl }}" aria-label="Next page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </a>
+                        @else
+                            <span class="pager-btn pager-next" aria-disabled="true" aria-label="Next page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        @endif
+                    </nav>
+                </div>
             </section>
         </div>
 
-        <!-- Floating Shopping Cart Button -->
-        <button aria-label="Shopping cart with {{ count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []) }} items"
-                onclick="showCart()"
-                class="fixed right-4 sm:right-6 bottom-6 sm:bottom-10 bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow z-50">
-            <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
-            <span class="absolute top-0 right-0 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-                {{ count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []) }}
-            </span>
+        <!-- Floating Cart -->
+        <button
+            aria-label="Shopping cart with {{ $cartCount }} items"
+            onclick="showCart()"
+            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg z-[60]"
+        >
+            <i class="fas fa-shopping-cart text-white text-3xl"></i>
+            @if ($cartCount > 0)
+                <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                    {{ $cartCount }}
+                </span>
+            @endif
         </button>
 
         @include('public.cart')
@@ -252,29 +320,41 @@
 
 @push('scripts')
     <script>
-        // ===== Toggle section (Location, Price, dll) =====
+        // ===== Atur per-page adaptif: Desktop 8 / Mobile 4 (query ?pp=...)
+        (function(){
+            const isDesktop  = window.matchMedia('(min-width: 1024px)').matches;
+            const desiredPP  = isDesktop ? 8 : 4;
+            const url        = new URL(window.location.href);
+            const currentPP  = parseInt(url.searchParams.get('pp') || '0', 10);
+
+            if (!currentPP || currentPP !== desiredPP) {
+                url.searchParams.set('pp', String(desiredPP));
+                url.searchParams.set('page', '1');
+                url.hash = '#list';
+                window.location.replace(url.toString());
+                return;
+            }
+            const ppInput = document.getElementById('ppInput');
+            if (ppInput) ppInput.value = String(desiredPP);
+        })();
+
+        // Toggle (Location, Price, dll)
         document.addEventListener("DOMContentLoaded", () => {
-            const toggles = document.querySelectorAll(".toggleBtn");
-            toggles.forEach((btn) => {
+            document.querySelectorAll(".toggleBtn").forEach((btn) => {
                 const content = btn.parentElement.nextElementSibling;
                 btn.addEventListener("click", () => {
-                    if (content.classList.contains("max-h-0")) {
-                        content.classList.remove("max-h-0");
-                        btn.textContent = "–";
-                    } else {
-                        content.classList.add("max-h-0");
-                        btn.textContent = "+";
-                    }
+                    if (content.classList.contains("max-h-0")) { content.classList.remove("max-h-0"); btn.textContent = "–"; }
+                    else { content.classList.add("max-h-0"); btn.textContent = "+"; }
                 });
             });
         });
 
-        // ===== Mobile filter open/close =====
+        // Mobile filter open/close
         document.addEventListener("DOMContentLoaded", () => {
-            const mobileFilterBtn = document.getElementById("mobileFilterBtn");
-            const filterSparring = document.getElementById("filterSparring");
+            const mobileFilterBtn     = document.getElementById("mobileFilterBtn");
+            const filterSparring      = document.getElementById("filterSparring");
             const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
-            const closeMobileFilter = document.getElementById("closeMobileFilter");
+            const closeMobileFilter   = document.getElementById("closeMobileFilter");
 
             function openMobileFilter() {
                 filterSparring.classList.add("open");
@@ -287,66 +367,50 @@
                 document.body.style.overflow = "";
             }
 
-            if (mobileFilterBtn) mobileFilterBtn.addEventListener("click", openMobileFilter);
-            if (closeMobileFilter) closeMobileFilter.addEventListener("click", closeMobileFilterFunc);
-            if (mobileFilterOverlay) mobileFilterOverlay.addEventListener("click", closeMobileFilterFunc);
+            mobileFilterBtn?.addEventListener("click", openMobileFilter);
+            closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
+            mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
         });
 
-        // ===== Price input: format ribuan saat ketik, unformat saat submit =====
+        // Format harga (input)
         function formatNumberInput(input) {
-            let value = input.value.replace(/\D/g, ""); // hapus non digit
+            let value = input.value.replace(/\D/g, "");
             if (!value) { input.value = ""; return; }
             input.value = new Intl.NumberFormat("id-ID").format(value);
         }
-        function unformatNumberInput(value) {
-            return (value || "").toString().replace(/\./g, "");
-        }
+        function unformatNumberInput(value) { return (value || "").toString().replace(/\./g, ""); }
+
         document.addEventListener("DOMContentLoaded", () => {
             const minInput = document.getElementById("price_min");
             const maxInput = document.getElementById("price_max");
             if (minInput && minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
             if (maxInput && maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
 
-            if (minInput) minInput.addEventListener("input", () => formatNumberInput(minInput));
-            if (maxInput) maxInput.addEventListener("input", () => formatNumberInput(maxInput));
+            minInput?.addEventListener("input", () => formatNumberInput(minInput));
+            maxInput?.addEventListener("input", () => formatNumberInput(maxInput));
 
-            // sebelum submit, balikin ke angka biasa (biar server bisa baca)
             const form = document.querySelector('#filterSparring form');
-            if (form) {
-                form.addEventListener("submit", () => {
-                    if (minInput) minInput.value = unformatNumberInput(minInput.value);
-                    if (maxInput) maxInput.value = unformatNumberInput(maxInput.value);
-                });
-            }
+            form?.addEventListener("submit", () => {
+                if (minInput) minInput.value = unformatNumberInput(minInput.value);
+                if (maxInput) maxInput.value = unformatNumberInput(maxInput.value);
+            });
         });
 
-        // ===== Mini Alpine Calendar =====
+        // Mini Alpine Calendar (dummy)
         function calendar(defaultDate = '') {
             const today = new Date();
             let initialDate = defaultDate ? new Date(defaultDate) : today;
-
             return {
                 month: initialDate.getMonth(),
-                year: initialDate.getFullYear(),
+                year : initialDate.getFullYear(),
                 selectedDate: defaultDate || '',
                 toggle: true,
-                monthNames: [
-                    "January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"
-                ],
-                daysInMonth() { return new Date(this.year, this.month + 1, 0).getDate(); },
-                prevMonth() {
-                    if (this.month === 0) { this.month = 11; this.year--; }
-                    else { this.month--; }
-                },
-                nextMonth() {
-                    if (this.month === 11) { this.month = 0; this.year++; }
-                    else { this.month++; }
-                },
-                formatDate(year, month, day) {
-                    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                },
-                selectDate(day) { this.selectedDate = this.formatDate(this.year, this.month, day); }
+                monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+                daysInMonth(){ return new Date(this.year, this.month + 1, 0).getDate(); },
+                prevMonth(){ this.month === 0 ? (this.month = 11, this.year--) : this.month--; },
+                nextMonth(){ this.month === 11 ? (this.month = 0, this.year++) : this.month++; },
+                formatDate(y, m, d){ return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; },
+                selectDate(d){ this.selectedDate = this.formatDate(this.year, this.month, d); }
             }
         }
     </script>

@@ -27,10 +27,36 @@
 
   .hero-viewport{
     height: calc(95vh - var(--header-h, 0px));
-    min-height: 750px;
+    min-height: 750px; /* desktop tetap */
   }
+
+  /* ======== MOBILE TUNING: banner lebih kecil & rapi ======== */
   @media (max-width: 640px){
-    .hero-viewport{ height: calc(60vh - var(--header-h, 0px)); min-height: 320px; }
+    /* Kurangi tinggi hero agar tidak “gede” di HP */
+    .hero-viewport{
+      height: min(calc(48vh - var(--header-h, 0px)), 420px);
+      min-height: 260px;
+    }
+    /* Optimalkan crop gambar agar fokus tidak kepotong aneh */
+    .featured-slider .swiper-slide img {
+      object-position: 60% center;
+    }
+    /* Kecilkan tombol panah agar tidak menutupi konten */
+    .slider-prev, .slider-next {
+      padding: 6px;
+      transform: translateY(-50%) scale(0.9);
+    }
+    /* Perkecil titik pagination */
+    .swiper-pagination-bullet { width: 6px; height: 6px; }
+    /* Sesuaikan tipografi agar muat rapi */
+    .featured-slider .swiper-slide h1 {
+      font-size: clamp(1.1rem, 5.2vw, 1.5rem); /* ~17.6px–24px */
+      line-height: 1.25;
+      margin-bottom: .5rem;
+    }
+    .featured-slider .swiper-slide p {
+      font-size: .9rem; /* ~14.4px */
+    }
   }
 
   .swiper-pagination-bullet { background: #ffffff !important; opacity: .5; }
