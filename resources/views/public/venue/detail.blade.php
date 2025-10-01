@@ -108,14 +108,13 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                             {{-- Date --}}
                             <div>
                                 <label class="text-sm text-gray-400">Date</label>
-                                <select name="date" id="dateSelect"
+                                <input type="date" name="date" id="dateSelect"
                                     class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
-                                    required>
-                                    <option value="">-- Select Date --</option>
-                                    @foreach ($availableDates as $date)
-                                        <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
-                                    @endforeach
-                                </select>
+                                    required
+                                    min="{{ \Carbon\Carbon::parse($availableDates->max())->format('Y-m-d') }}"
+                                    max="{{ \Carbon\Carbon::parse($availableDates->max())->format('Y-m-d') }}"
+                                    onfocus="this.showPicker()"
+                                    onkeydown="return false">
                             </div>
     
                             {{-- Schedule (akan di-fill oleh JS) --}}
@@ -221,12 +220,23 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                 scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Tidak ada jadwal tersedia.</p>';
             } else {
                 filtered.forEach(schedule => {
-                    const slot = `${schedule.start_time} - ${schedule.end_time}`;
-    
+                    const start = schedule.start_time;
+                    const end   = schedule.end_time;
                     const label = document.createElement('label');
-                    label.className =
-                        'border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600';
-                    label.innerHTML = `<input type="radio" name="schedule_id" value="${schedule.id}" class="hidden" required>${slot}`;
+                    label.className = 'cursor-pointer';
+                    label.innerHTML = `
+                        <input type="radio"
+                               name="schedule[start]"
+                               value="${start}"
+                               class="hidden peer"
+                               data-end="${end}"
+                               required>
+                        <input type="hidden" name="schedule[end]" value="${end}">
+                        <span class="block border border-gray-600 rounded text-center py-2 text-sm
+                                     hover:bg-blue-600 hover:border-blue-600
+                                     peer-checked:bg-blue-600 peer-checked:text-white">
+                            ${start} - ${end}
+                        </span>`;
                     scheduleGrid.appendChild(label);
                 });
             }

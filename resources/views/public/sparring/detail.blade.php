@@ -84,14 +84,10 @@
                         {{-- Date --}}
                         <div>
                             <label class="text-sm text-gray-400">Date</label>
-                            <select name="date" id="dateSelect"
+                            <input type="date" name="date" id="dateSelect"
                                 class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
+                                min="{{ $availableDates->min() }}"
                                 required>
-                                <option value="">-- Select Date --</option>
-                                @foreach ($availableDates as $date)
-                                    <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
-                                @endforeach
-                            </select>
                         </div>
 
                         {{-- Schedule --}}

@@ -72,8 +72,10 @@ class OrderController extends Controller
             $venueData = Cookie::get('cartVenues');
             $venues = is_array($venueData) ? $venueData : json_decode($venueData, true);
 
-            if ($venues && isset($venues['price'])) {
-                $total += (int)$venues['price'];
+            foreach ($venues as $v) {
+                if (isset($v['price'])) {
+                    $total += (int)$v['price'];
+                }
             }
         }
 
