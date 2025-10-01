@@ -2,284 +2,411 @@
 
 @section('title', 'Sparring Detail')
 @php
-    $cartProducts = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
     $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
-    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    $detail    = $athlete->athleteDetail ?? null;
+    $years     = $detail->experience_years ?? null;
+    $yearsText = $years ? $years . ' Years' : 'N/A';
+    $specialty = $detail->specialty ?? 'N/A';
+    $location  = $detail->location  ?? 'N/A';
+    $bio       = $detail->bio ?? 'Pemain biliar profesional dengan pengalaman mengajar lebih dari 5 tahun. Spesialis dalam teknik kontrol bola dan strategi permainan.';
+
+    // Share data
+    $shareUrlAbs  = url()->current();
+    $shareText    = 'Sparring dengan ' . ($athlete->name ?? 'Athlete') . ' di Xander Billiard';
+    $fbShareUrl   = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrlAbs);
+    $xShareUrl    = 'https://twitter.com/intent/tweet?text=' . urlencode($shareText) . '&url=' . urlencode($shareUrlAbs);
+
+    $availableDates = $availableDates ?? [];
+
+    // Rating summary
+    $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
+    $fullStars = floor((float)($averageRating ?? 0));
 @endphp
 
+@push('styles')
+<style>
+    /* ====== ANTI OVERFLOW & SCROLL ====== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+        width:100%; max-width:100%;
+        overflow-x:hidden;
+        overscroll-behavior-y:none;
+        overscroll-behavior-x:none;
+        scrollbar-gutter: stable both-edges;
+    }
+    .page-wrap { overflow-x: clip; }
+
+    :root { color-scheme: dark; }
+    html, body { background:#0a0a0a; }
+    #app, main { background:#0a0a0a; }
+
+    .btn-share{ width:2.25rem; height:2.25rem; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:#374151; transition:.2s; }
+    .btn-share:hover{ background:#4b5563; }
+
+    .card { background:rgba(38,38,38,.95); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+
+    .input-pill{
+        width:100%; padding:.80rem 2.75rem .80rem .9rem;
+        border-radius:12px; background:#3f3f46; color:#fff;
+        border:1.5px solid rgba(255,255,255,.35); outline:none;
+        -webkit-appearance:none; appearance:none; font-size:13px;
+    }
+    .input-pill:focus{ box-shadow:0 0 0 2px #3b82f6; border-color:#3b82f6; }
+    .input-pill::placeholder{ color:#9ca3af; }
+
+    input[type="date"]::-webkit-calendar-picker-indicator{ opacity:0; display:none; }
+    input[type="date"]::-webkit-inner-spin-button,
+    input[type="date"]::-webkit-clear-button{ display:none; }
+    input[type="date"]{ -moz-appearance:textfield; }
+
+    .slot{ display:flex; align-items:center; justify-content:center; padding:.38rem .5rem; border-radius:9px; font-weight:800; background:#4b5563; color:#fff; border:1.5px solid rgba(255,255,255,.6); transition:.18s; cursor:pointer; user-select:none; font-size:.88rem; }
+    .slot:hover{ background:#3b82f6; border-color:#3b82f6; }
+    .slot--active{ background:#3b82f6 !important; border-color:#3b82f6 !important; }
+    .slot--disabled{ background:#6b7280 !important; color:#d1d5db !important; border-color:transparent !important; cursor:not-allowed !important; }
+
+    .booking-card{ padding:25px !important; border-radius:12px; }
+    .booking-card hr{ margin-top:8px; margin-bottom:14px; }
+    .booking-card .price{ font-size:20px !important; line-height:1; }
+    .booking-card p, .booking-card label, .booking-card span{ font-size:12px; }
+    .booking-card button[type="submit"]{ height:42px; font-size:15px; border-radius:10px; }
+
+    .field-wrap{ position:relative; overflow:hidden; border-radius:12px; }
+    .field-wrap .date-btn{ position:absolute; right:6px; top:0; height:100%; display:flex; align-items:center; justify-content:center; padding-inline:6px; color:#d1d5db; font-size:13px; background:transparent; border:0; cursor:pointer; }
+    .field-wrap .date-btn:hover{ color:#ffffff; }
+
+    /* ====== Ringkasan Customer Reviews (kiri) ====== */
+    .reviews-card{ background:rgba(23,23,23,.95); border-radius:14px; padding:18px 16px; box-shadow:0 10px 30px rgba(0,0,0,.35); width:100%; }
+    .reviews-card h3{ font-weight:700; }
+    .reviews-card hr{ border-color:rgba(255,255,255,.12); margin:8px 0 14px; }
+    .rating-row{ display:flex; align-items:center; gap:.75rem; }
+    .rating-stars i{ font-size:22px; color:#fbbf24; }
+    .rating-number{ font-size:28px; font-weight:800; letter-spacing:.5px; }
+    .rating-outof{ font-size:12px; color:#9ca3af; margin-left:.35rem; }
+    .bar-row{ display:flex; align-items:center; gap:.6rem; margin-top:.55rem; }
+    .bar-row .label{ width:18px; color:#fbbf24; text-align:center; }
+    .bar-row .ratebar{ flex:1; height:10px; background:#4b5563; border-radius:9999px; overflow:hidden; }
+    .bar-row .ratebar .fill{ height:100%; background:#e5e7eb; border-radius:9999px; }
+    .bar-row .count{ width:70px; text-align:right; font-size:12px; color:#9ca3af; }
+
+    /* ====== REVIEW ITEM (desktop default) ====== */
+    .review-item{
+        --avatar: 48px;
+        --gap: 16px;
+        --indent: calc(var(--avatar) + var(--gap));
+        position: relative;
+        padding-top: 22px;
+    }
+    .review-item::before{
+        content:"";
+        position:absolute;
+        left: var(--indent);
+        right: 0;
+        top: 0;
+        height:1px;
+        background:rgba(255,255,255,.18);
+    }
+    .review-head{ position:relative; }
+    .review-left{ display:flex; align-items:center; gap:16px; }
+    .review-avatar{
+        width: var(--avatar); height: var(--avatar);
+        border-radius:9999px; background:#374151;
+        display:flex; align-items:center; justify-content:center;
+        font-weight:800; font-size:18px;
+        overflow:hidden;
+    }
+    .review-stars-row{
+        position:absolute;
+        left: var(--indent);
+        right: 0;
+        top: 2px;
+        display:flex; justify-content:flex-end;
+        pointer-events:none;
+    }
+    .user-stars i{ font-size:26px; color:#e5e7eb; }
+
+    /* ====== MOBILE ONLY: rapihin rating & header komentar ====== */
+    @media (max-width: 640px){
+        .review-item{
+            --avatar: 40px;
+            --gap: 12px;
+            padding: 16px 14px 14px;
+        }
+        .review-left{ gap:12px; }
+        .review-avatar{ font-size:16px; }
+        .review-name{ font-size:15px !important; line-height:1.2; }
+        .review-date{ font-size:11px !important; }
+
+        /* Bintang pindah ke flow normal (tak overlap) */
+        .review-head .review-stars-row{
+            position: static;
+            margin-top: 4px;
+            justify-content: flex-start;
+            pointer-events: none;
+        }
+        .review-head .user-stars i{ font-size:18px; }
+    }
+</style>
+@endpush
+
 @section('content')
-    <div class="bg-gray-950 text-white min-h-screen overflow-hidden">
-        <!-- Breadcrumb + Title -->
-        <div class="relative bg-gray-900">
-            <div class="relative max-w-7xl mx-auto px-6 py-8">
-                <div class="flex items-center space-x-2 text-sm">
-                    <a href="/" class="text-gray-400 hover:text-white">Home</a>
-                    <span class="text-gray-600">/</span>
-                    <a href="{{ route('sparring.index') }}" class="text-gray-400 hover:text-white">Sparring</a>
-                    <span class="text-gray-600">/</span>
-                    <span class="text-gray-400">{{ $athlete->name }}</span>
-                </div>
-            </div>
+<div class="page-wrap text-white min-h-screen" style="background-image:url('{{ asset('images/bg/background_3.png') }}'); background-size:cover; background-position:center; background-repeat:no-repeat;">
+
+    <!-- TOP: Foto / Bio / Booking -->
+    <div class="max-w-7xl mx-auto px-4 lg:px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+        <!-- Foto -->
+        <div>
+            <nav id="breadcrumbTop" class="flex items-center gap-2 text-sm text-gray-300 mb-3">
+                <a href="/" class="hover:text-white">Home</a><span class="text-gray-500">/</span>
+                <a href="{{ route('sparring.index') }}" class="hover:text-white">Sparring</a><span class="text-gray-500">/</span>
+                <span class="text-white">{{ $athlete->name }}</span>
+            </nav>
+            @php
+                $photo = ($detail && $detail->image) ? asset('images/athlete/' . $detail->image) : asset('images/placeholder.jpg');
+            @endphp
+            <img src="{{ $photo }}" alt="{{ $athlete->name }}"
+                 class="w-full h-[430px] object-cover rounded-lg shadow-lg"
+                 onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
         </div>
 
-        <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
+        <!-- Bio -->
+        <div id="titleStart" class="mt-0">
+            <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">{{ $athlete->name }}</h1>
+            <p class="text-xl text-gray-300 mt-1">Handicap {{ $detail->handicap ?? 'N/A' }}</p>
+            <hr class="border-white/30 mt-6 mb-6">
 
-            <!-- Left Column: Photo -->
+            <div class="space-y-5 text-[16px] md:text-[17px]">
+                <div class="flex items-baseline"><div class="w-56 md:w-64 font-semibold text-gray-200">Years of experience</div><div class="px-3 text-gray-300">:</div><div class="flex-1 text-gray-100">{{ $yearsText }}</div></div>
+                <div class="flex items-baseline"><div class="w-56 md:w-64 font-semibold text-gray-200">Specialty</div><div class="px-3 text-gray-300">:</div><div class="flex-1 text-gray-100">{{ $specialty }}</div></div>
+                <div class="flex items-baseline"><div class="w-56 md:w-64 font-semibold text-gray-200">Location</div><div class="px-3 text-gray-300">:</div><div class="flex-1 text-gray-100">{{ $location }}</div></div>
+            </div>
+
+            <p class="text-gray-100/90 text-[15.5px] md:text-[16px] leading-7 mt-6">{{ $bio }}</p>
+
+            <hr class="border-white/30 mt-6 mb-4">
             <div>
-                @if ($athlete->athleteDetail && $athlete->athleteDetail->image)
-                    <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}" alt="{{ $athlete->name }}"
-                        class="rounded-lg shadow-md w-full object-cover"
-                        onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
-                @else
-                    <img src="{{ asset('images/placeholder.jpg') }}" alt="{{ $athlete->name }}"
-                        class="rounded-lg shadow-md w-full object-cover">
-                @endif
-            </div>
-
-            <!-- Middle Column: Bio -->
-            <div class="space-y-4">
-                <h2 class="text-3xl font-bold">{{ $athlete->name }}</h2>
-                <p class="text-gray-400">{{ $athlete->athleteDetail->handicap ?? 'Handicap N/A' }}</p>
-
-                <div class="text-sm space-y-2 mt-4">
-                    <p><span class="font-semibold">Year of Experience:</span>
-                        {{ $athlete->athleteDetail->experience_years ?? 'N/A' }} Years</p>
-                    <p><span class="font-semibold">Specialty:</span> {{ $athlete->athleteDetail->specialty ?? 'N/A' }}</p>
-                    <p><span class="font-semibold">Location:</span> {{ $athlete->athleteDetail->location ?? 'N/A' }}</p>
-                </div>
-
-                <p class="text-sm text-gray-300 mt-4">
-                    {{ $athlete->athleteDetail->bio ?? 'No bio available.' }}
-                </p>
-
-                <!-- Share Icons -->
-                <div class="flex space-x-3 mt-4">
-                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
-                        <i class="fab fa-facebook-f text-white"></i>
-                    </a>
-                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
-                        <i class="fab fa-twitter text-white"></i>
-                    </a>
-                    <a href="#" class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
-                        <i class="fab fa-instagram text-white"></i>
-                    </a>
+                <span class="text-sm text-gray-300">Share :</span>
+                <div class="mt-4 flex items-center gap-3">
+                    <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on Facebook" title="Share on Facebook"><i class="fab fa-facebook-f text-white"></i></a>
+                    <a href="{{ $xShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on X" title="Share on X"><i class="fab fa-x-twitter text-white"></i></a>
+                    <button type="button" id="igShareBtn" class="btn-share" aria-label="Share to Instagram" title="Share to Instagram"><i class="fab fa-instagram text-white"></i></button>
                 </div>
             </div>
+            <hr class="border-white/30 mt-6">
+        </div>
 
-            <!-- Right Column: Booking -->
-            <div class="space-y-6">
-                {{-- Booking Box --}}
-                <div class="bg-neutral-800 p-5 rounded-lg shadow-md">
-                    <p class="text-sm text-gray-400 mb-1">Start from</p>
-                    <h2 class="text-xl font-bold text-white mb-4">
-                        Rp. {{ number_format($athlete->athleteDetail->price_per_session, 0, ',', '.') }} / session
-                    </h2>
-
-                    <form id="addToCartForm" action="{{ route('cart.add.sparring') }}" method="POST" class="space-y-4">
-                        @csrf
-                        <input type="hidden" name="athlete_id" value="{{ $athlete->id }}">
-
-                        {{-- Date --}}
-                        <div>
-                            <label class="text-sm text-gray-400">Date</label>
-                            <select name="date" id="dateSelect"
-                                class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
-                                required>
-                                <option value="">-- Select Date --</option>
-                                @foreach ($availableDates as $date)
-                                    <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Schedule --}}
-                        <div id="scheduleContainer" class="hidden mt-1">
-                            <label class="text-sm text-gray-400">Schedule</label>
-                            <div class="grid grid-cols-3 gap-2 mt-1"></div>
-                        </div>
-
-                        {{-- Promo --}}
-                        <div>
-                            <label class="text-sm text-gray-400">Promo code (Optional)</label>
-                            <input type="text" name="promo"
-                                class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
-                                placeholder="Ex. PROMO70%DAY">
-                        </div>
-
-                        <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
-                            Add to cart
-                        </button>
-                    </form>
-
+        <!-- Booking -->
+        <div class="md:sticky md:top-20" id="bookingStart">
+            <div class="card booking-card">
+                <p class="text-sm text-gray-300">start from</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <div class="price font-extrabold tracking-tight">Rp. {{ number_format($detail->price_per_session ?? 0, 0, ',', '.') }}.-</div>
+                    <span class="text-sm text-gray-300">/ session</span>
                 </div>
-            </div>
-        </div> <!-- tutup grid -->
+                <hr class="border-white/20">
 
-        <!-- Customer Reviews -->
-        <div class="max-w-7xl mx-auto px-4 mt-16">
-            <h2 class="text-2xl font-bold mb-6">Customer Reviews</h2>
+                <form id="addToCartForm" method="POST" action="{{ route('cart.add.sparring') }}" class="space-y-4">
+                    @csrf
+                    <input type="hidden" name="athlete_id" value="{{ $athlete->id }}">
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <!-- Rating Summary -->
-                <div class="bg-gray-900 p-5 rounded-lg shadow-md">
-                    <div class="flex items-center text-yellow-400 text-2xl font-bold mb-4">
-                        <span class="text-3xl">{{ $averageRating }}</span>
-                        <span class="text-sm text-gray-400 ml-2">out of 5</span>
+                    <div>
+                        <label class="text-sm text-gray-300">Date</label>
+                        <div class="field-wrap mt-2">
+                            <input id="dateInput" name="date" type="date" class="input-pill pr-12" placeholder="YYYY-MM-DD">
+                            <button type="button" id="openDateBtn" class="date-btn" aria-label="Open date picker" title="Pick a date"><i class="far fa-calendar-alt"></i></button>
+                        </div>
                     </div>
 
-                    <div class="space-y-2">
-                        @for ($i = 5; $i >= 1; $i--)
-                            <div class="flex items-center">
-                                <div class="text-yellow-400">
-                                    {!! str_repeat('★', $i) !!}{!! str_repeat('☆', 5 - $i) !!}
-                                </div>
-                                <div class="w-full bg-gray-700 rounded-full h-2.5 ml-2">
-                                    <div class="bg-white h-2.5 rounded-full" style="width: {{ $percents[$i] }}%"></div>
-                                </div>
-                                <span class="text-xs text-gray-400 ml-2">{{ $counts[$i] }}</span>
-                            </div>
+                    <div id="scheduleContainer">
+                        <label class="text-sm text-gray-300">Schedule</label>
+                        <div class="grid grid-cols-3 gap-3 mt-3" id="scheduleGrid"></div>
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-gray-300">Promo code (Optional)</label>
+                        <input type="text" name="promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">Add to cart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOMER REVIEWS -->
+    <div class="max-w-7xl mx-auto px-4 lg:px-6 pb-16">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Ringkasan -->
+            <aside class="reviews-card md:col-span-1">
+                <h3 class="text-base">Customer Reviews</h3>
+                <hr>
+                <div class="rating-row">
+                    <div class="rating-stars">
+                        @for ($s=1; $s<=5; $s++)
+                            <i class="{{ $s <= $fullStars ? 'fas' : 'far' }} fa-star"></i>
                         @endfor
                     </div>
+                    <div class="rating-number">{{ $avgText }}</div>
+                    <div class="rating-outof">out of&nbsp;5</div>
                 </div>
 
-                <!-- Reviews List -->
-                <div class="md:col-span-2 space-y-4">
-                    @foreach ($reviews as $review)
-                        <div class="bg-gray-900 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-4 mb-3">
-                                    <div
-                                        class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-xl font-bold">
-                                        {{ substr($review->user->name, 0, 1) }}
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold">{{ $review->user->name }}</p>
-                                        <p class="text-xs text-gray-400">{{ $review->created_at->format('d/m/Y') }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-yellow-400 text-sm mb-2">
-                                    {!! str_repeat('★', $review->rating) !!}{!! str_repeat('☆', 5 - $review->rating) !!}
-                                </div>
-                            </div>
-                            <p class="text-gray-300">{{ $review->comment }}</p>
+                <div class="mt-3">
+                    @for ($i = 5; $i >= 1; $i--)
+                        @php
+                            $pct = (float)($percents[$i] ?? 0);
+                            $cnt = (int)($counts[$i] ?? 0);
+                        @endphp
+                        <div class="bar-row">
+                            <div class="label"><i class="fas fa-star"></i></div>
+                            <div class="w-5 text-sm text-gray-300" style="text-align:center;">{{ $i }}</div>
+                            <div class="ratebar"><div class="fill" style="width: {{ $pct }}%"></div></div>
+                            <div class="count">({{ number_format($cnt, 0, ',', '.') }})</div>
                         </div>
-                    @endforeach
+                    @endfor
                 </div>
-            </div>
-            <!-- Add Review Form -->
-            @auth
-                @if (!$alreadyReviewed)
-                    <div class="mt-10 bg-gray-900 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-4">Leave a Review</h3>
-                        <form action="{{ route('sparring.review.store', $athlete->id) }}" method="POST" class="space-y-4">
-                            @csrf
-                            <div>
-                                <label class="block text-sm mb-1">Rating</label>
-                                <select name="rating" required
-                                    class="w-full p-2 rounded bg-gray-800 text-white border border-gray-700">
-                                    <option value="">Select rating</option>
-                                    <option value="5">★★★★★ - Excellent</option>
-                                    <option value="4">★★★★☆ - Good</option>
-                                    <option value="3">★★★☆☆ - Average</option>
-                                    <option value="2">★★☆☆☆ - Poor</option>
-                                    <option value="1">★☆☆☆☆ - Terrible</option>
-                                </select>
+            </aside>
+
+            <!-- Daftar review -->
+            <section class="md:col-span-2 space-y-6">
+                @foreach ($reviews as $review)
+                    <article class="review-item bg-gray-900/95 p-6 rounded-lg shadow-md ring-1 ring-black/20 hover:shadow-lg transition-shadow">
+                        <header class="review-head">
+                            <div class="review-left">
+                                <div class="review-avatar">
+                                    {{ strtoupper(substr($review->user->name, 0, 1)) }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-[18px] leading-tight review-name">{{ $review->user->name }}</p>
+                                    <p class="text-xs text-gray-400 review-date">{{ $review->created_at->format('d/m/Y') }}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm mb-1">Your Review</label>
-                                <textarea name="comment" rows="3" required
-                                    class="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"></textarea>
+
+                            <!-- BARIS RATING -->
+                            <div class="review-stars-row">
+                                <div class="user-stars">
+                                    @for ($s=1; $s<=5; $s++)
+                                        <i class="{{ $s <= $review->rating ? 'fas' : 'far' }} fa-star"></i>
+                                    @endfor
+                                </div>
                             </div>
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
-                                Submit Review
-                            </button>
-                        </form>
-                    </div>
-                @endif
-            @endauth
+                        </header>
+
+                        <p class="mt-4 text-gray-300">{{ $review->comment }}</p>
+                    </article>
+                @endforeach
+            </section>
         </div>
-
-        <button aria-label="Shopping cart with 3 items" onclick="showCart()"
-            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
-            <i class="fas fa-shopping-cart text-white text-3xl">
-            </i>
-            @if ($cartCount > 0)
-                <span
-                    class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-                    {{ $cartCount }}
-                </span>
-            @endif
-
-        </button>
-        {{-- Cart Sidebar --}}
-        @include('public.cart')
     </div>
+
+    <!-- Cart -->
+    <button aria-label="Shopping cart" onclick="showCart()" class="fixed right-6 top-[60%] bg-neutral-700/90 backdrop-blur rounded-full w-16 h-16 flex items-center justify-center shadow-xl ring-1 ring-black/30">
+        <i class="fas fa-shopping-cart text-white text-2xl"></i>
+        @if ($cartCount > 0)
+            <span class="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">{{ $cartCount }}</span>
+        @endif
+    </button>
+
+    @include('public.cart')
+</div>
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Ratakan judul & kartu booking dengan breadcrumb
+    function alignTitleAndCard() {
+        const mq = window.matchMedia('(min-width: 768px)');
+        const crumb = document.getElementById('breadcrumbTop');
+        const titleStart = document.getElementById('titleStart');
+        const bookingStart = document.getElementById('bookingStart');
+        if (!crumb || !titleStart || !bookingStart) return;
 
-    <script>
-        const dateSelect = document.getElementById('dateSelect');
-        const scheduleContainer = document.getElementById('scheduleContainer');
-        const scheduleGrid = scheduleContainer.querySelector('.grid');
+        if (mq.matches) {
+            const styles = getComputedStyle(crumb);
+            const total = crumb.getBoundingClientRect().height + parseFloat(styles.marginBottom || '0');
+            titleStart.style.marginTop = total + 'px';
+            bookingStart.style.marginTop = total + 'px';
+        } else {
+            titleStart.style.marginTop = '0px';
+            bookingStart.style.marginTop = '0px';
+        }
+    }
+    window.addEventListener('DOMContentLoaded', alignTitleAndCard);
+    window.addEventListener('resize', alignTitleAndCard);
 
-        // Ambil semua schedules dari Blade
-        const schedules = @json($schedules);
+    const dateInput   = document.getElementById('dateInput');
+    const openDateBtn = document.getElementById('openDateBtn');
+    openDateBtn?.addEventListener('click', () => { if (dateInput?.showPicker) dateInput.showPicker(); else dateInput.focus(); });
 
-        dateSelect.addEventListener('change', function () {
-            const selectedDate = this.value;
-            scheduleGrid.innerHTML = '';
+    const firstDate = @json($availableDates[0] ?? null);
+    if (dateInput && firstDate) dateInput.value = firstDate;
 
-            if (!selectedDate) {
-                scheduleContainer.classList.add('hidden');
-                return;
-            }
-
-            // Filter schedule by date
-            const filtered = schedules.filter(s => s.date === selectedDate);
-
-            if (filtered.length === 0) {
-                scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Tidak ada jadwal tersedia.</p>';
-            } else {
-                filtered.forEach(schedule => {
-                    const slot = `${schedule.start_time.substr(0, 5)} - ${schedule.end_time.substr(0, 5)}`;
-
-                    const label = document.createElement('label');
-                    label.className = 'border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600';
-                    label.innerHTML = `<input type="radio" name="schedule_id" value="${schedule.id}" class="hidden" required>${slot}`;
-                    scheduleGrid.appendChild(label);
-                });
-            }
-
-            scheduleContainer.classList.remove('hidden');
+    // Jadwal dummy
+    const scheduleGrid = document.getElementById('scheduleGrid');
+    const DUMMY_SLOTS = [
+        { label: '09.00–10.00', disabled: false },
+        { label: '10.00–11.00', disabled: true  },
+        { label: '11.00–12.00', disabled: false },
+        { label: '13.00–14.00', disabled: true  },
+        { label: '14.00–15.00', disabled: false },
+        { label: '15.00–16.00', disabled: false },
+        { label: '17.00–18.00', disabled: false },
+        { label: '18.00–19.00', disabled: false },
+        { label: '20.00–21.00', disabled: true  },
+    ];
+    function renderDummy() {
+        if (!scheduleGrid) return;
+        scheduleGrid.innerHTML = '';
+        DUMMY_SLOTS.forEach(s => {
+            const lbl = document.createElement('label');
+            lbl.className = 'slot' + (s.disabled ? ' slot--disabled' : '');
+            lbl.dataset.slot = '1';
+            lbl.innerHTML = `<input type="radio" name="schedule_time" class="hidden" value="${s.label}" ${s.disabled ? 'disabled' : 'required'}> ${s.label}`;
+            scheduleGrid.appendChild(lbl);
         });
+    }
+    renderDummy();
 
-    </script>
+    scheduleGrid?.addEventListener('click', function(e){
+        const label = e.target.closest('label[data-slot]');
+        if(!label || label.classList.contains('slot--disabled')) return;
+        [...scheduleGrid.querySelectorAll('label.slot')].forEach(l=>l.classList.remove('slot--active'));
+        label.classList.add('slot--active');
+        const input = label.querySelector('input[type="radio"]');
+        if (input) input.checked = true;
+    });
 
-    <script>
-        document.getElementById('addToCartForm').addEventListener('submit', function (e) {
-            e.preventDefault();
+    document.getElementById('addToCartForm')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        Swal.fire({
+            title:'Berhasil!', text:'Sparring ditambahkan ke keranjang', icon:'success',
+            confirmButtonText:'OK', confirmButtonColor:'#3085d6',
+            background:'#1E1E1F', color:'#FFFFFF', iconColor:'#4BB543'
+        }).then(() => this.submit());
+    });
 
-            // Tampilkan SweetAlert
-            Swal.fire({
-                title: 'Berhasil!',
-                text: 'Sparring ditambahkan ke keranjang',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF',
-                iconColor: '#4BB543'
-            }).then((result) => {
-                // Kirim form setelah user klik OK
-                this.submit();
-            });
+    (function () {
+        const igBtn = document.getElementById('igShareBtn');
+        if (!igBtn) return;
+        const shareData = { title: @json($shareText), text:@json($shareText), url:@json($shareUrlAbs) };
+        igBtn.addEventListener('click', async () => {
+            try {
+                if (navigator.share) { await navigator.share(shareData); }
+                else if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                    Swal.fire({ toast:true, position:'top-end', timer:2200, showConfirmButton:false, icon:'success', title:'Link disalin. Buka Instagram dan tempel tautannya.' });
+                } else {
+                    const t = document.createElement('textarea'); t.value = `${shareData.text} ${shareData.url}`;
+                    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
+                    alert('Link disalin. Buka Instagram dan tempel tautannya.');
+                }
+            } catch (e) {}
         });
-    </script>
+    })();
+</script>
 @endpush
 @push('styles')
     <style>

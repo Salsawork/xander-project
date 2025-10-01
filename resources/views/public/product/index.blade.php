@@ -1,5 +1,68 @@
 @extends('app')
 @section('title', 'Products Page - Xander Billiard')
+
+@php
+    // === Data keranjang dari cookie (produk, venue, sparring) ===
+    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
+    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    /**
+     * ===== Dummy 15 products (nama mengikuti yang diminta) =====
+     * Mobile: 4 item / halaman
+     * Desktop: 12 item / halaman
+     */
+    use Illuminate\Pagination\LengthAwarePaginator;
+
+    $names = [
+        // nama-nama yang “tetap pakai itu”
+        'Testing ya',
+        'Pool Cue Stick',
+        'Billiard Balls Set',
+        'Chalk Box',
+        // sisanya dilengkapi agar total 15 item
+        'Cue Case',
+        'Tip Shaper',
+        'Cue Tip Glue',
+        'Bridge Head',
+        'Triangle Rack',
+        'Cue Glove',
+        'Table Brush',
+        'Table Cover',
+        'Scoreboard',
+        'Chalk Holder',
+        'Measuring Tape',
+    ];
+
+    // bentuk koleksi produk dummy (15 item)
+    $allProducts = collect($names)->values()->map(function ($name, $idx) {
+        $i = $idx + 1;
+        return (object) [
+            'id'      => $i,
+            'name'    => $name,
+            'pricing' => [39990, 49990, 89990, 129990, 299990, 499990, 999990, 1499990, 1999990, 2499990][array_rand([0,1,2,3,4,5,6,7,8,9])],
+            'images'  => ["https://placehold.co/600x900?text=" . urlencode($name)],
+        ];
+    });
+
+    // deteksi sederhana mobile/desktop via User-Agent
+    $ua       = request()->header('User-Agent', '');
+    $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
+    $perPage  = $isMobile ? 4 : 12;
+
+    $page   = max((int) request('page', 1), 1);
+    $slice  = $allProducts->slice(($page - 1) * $perPage, $perPage)->values();
+
+    $products = new LengthAwarePaginator(
+        $slice,
+        $allProducts->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+@endphp
+
 @push('styles')
     <style>
         /* ===== Anti white overscroll (global) ===== */
@@ -23,60 +86,66 @@
         }
 
         /* ===== Style bawaan halaman ===== */
-        .max-h-0 {
-            max-height: 0 !important;
-        }
-        
-        @media (min-width: 1024px) {
-            .lg-hidden {
-                display: none !important;
-            }
-        }
+        .max-h-0 { max-height: 0 !important; }
+        @media (min-width: 1024px) { .lg-hidden { display: none !important; } }
 
         /* Mobile filter toggle */
         @media (max-width: 1023px) {
-            .sm-hidden {
-                display: none !important;
-            }
-
+            .sm-hidden { display: none !important; }
             .mobile-filter-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 40;
-                display: none;
+                position: fixed; top:0; left:0; right:0; bottom:0;
+                background: rgba(0,0,0,.5); z-index:40; display:none;
             }
-            
-            .mobile-filter-overlay.active {
-                display: block;
-            }
-            
+            .mobile-filter-overlay.active { display:block; }
             .mobile-filter-sidebar {
-                position: fixed;
-                top: 0;
-                left: -100%;
-                width: 85%;
-                max-width: 320px;
-                height: 100%;
-                background: rgb(23, 23, 23);
-                z-index: 50;
-                transition: left 0.3s ease;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
+                position: fixed; top:0; left:-100%;
+                width:85%; max-width:320px; height:100%;
+                background: rgb(23,23,23); z-index:50;
+                transition:left .3s ease; overflow-y:auto; -webkit-overflow-scrolling:touch;
             }
-            
-            .mobile-filter-sidebar.open {
-                left: 0;
-            }
+            .mobile-filter-sidebar.open { left:0; }
+        }
+
+        /* ===== Pill Pagination (mobile & desktop) ===== */
+        .pager {
+            display:inline-flex; align-items:center; gap:10px;
+            background:#1f2937; /* slate-800 */
+            border:1px solid rgba(255,255,255,.06);
+            border-radius:9999px; padding:6px 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25);
+        }
+        .pager-label {
+            min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px;
+        }
+        .pager-btn {
+            width:44px; height:44px; display:grid; place-items:center;
+            border-radius:9999px; line-height:0; text-decoration:none;
+            border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35);
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        .pager-btn:hover { transform: translateY(-1px); }
+        .pager-prev { background:#e5e7eb; color:#0f172a; }
+        .pager-next { background:#2563eb; color:#fff; }
+        .pager-btn[aria-disabled="true"] { opacity:.45; pointer-events:none; filter:grayscale(20%); }
+
+        @media (max-width:640px){
+            .pager { padding:4px 8px; gap:8px; }
+            .pager-btn { width:40px; height:40px; }
+            .pager-label { min-width:80px; font-size:.9rem; }
         }
     </style>
 @endpush
 
 @section('content')
-    <div class="min-h-screen bg-neutral-900 text-white">
+    <div
+        class="min-h-screen bg-neutral-900 text-white"
+        style="
+            background-image: url('{{ asset('images/bg/background_1.png') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        "
+    >
         <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
             <p class="text-sm text-gray-400 mt-1">
                 <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Product
@@ -204,7 +273,9 @@
                                         if (!empty($product->images) && is_array($product->images)) {
                                             foreach ($product->images as $img) {
                                                 if (!empty($img)) {
-                                                    $imagePath = asset('storage/uploads/' . $img);
+                                                    $imagePath = preg_match('/^https?:\/\//i', $img)
+                                                        ? $img
+                                                        : asset('storage/uploads/' . ltrim($img, '/'));
                                                     break;
                                                 }
                                             }
@@ -227,24 +298,68 @@
                     @endforelse
                 </div>
 
-                <!-- Pagination -->
+                <!-- Pagination (custom pill untuk mobile & desktop) -->
+                @php
+                    $current = $products->currentPage();
+                    $last    = $products->lastPage();
+                    $prevUrl = $current > 1 ? $products->appends(request()->query())->url($current - 1) : null;
+                    $nextUrl = $current < $last ? $products->appends(request()->query())->url($current + 1) : null;
+                @endphp
                 <div class="flex justify-center mt-6">
-                    {{ $products->links('vendor.pagination.tailwind') }}
+                    <nav class="pager" role="navigation" aria-label="Pagination">
+                        {{-- Prev --}}
+                        @if ($prevUrl)
+                            <a class="pager-btn pager-prev" href="{{ $prevUrl }}" aria-label="Previous page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </a>
+                        @else
+                            <span class="pager-btn pager-prev" aria-disabled="true" aria-label="Previous page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        @endif
+
+                        {{-- Label tengah: "X of Y" (page of pages) --}}
+                        <span class="pager-label">{{ $current }} of {{ $last }}</span>
+
+                        {{-- Next --}}
+                        @if ($nextUrl)
+                            <a class="pager-btn pager-next" href="{{ $nextUrl }}" aria-label="Next page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </a>
+                        @else
+                            <span class="pager-btn pager-next" aria-disabled="true" aria-label="Next page">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        @endif
+                    </nav>
                 </div>
-
+                <!-- /Pagination -->
             </section>
-
         </div>
 
-        <!-- Cart Button -->
-        <button aria-label="Shopping cart with {{ count($cartProducts) + count($cartSparrings ?? []) + count($cartVenues ?? []) }} items" onclick="showCart()"
-            class="fixed right-4 sm:right-6 bottom-6 sm:bottom-10 bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
-            <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
-            <span class="absolute top-0 right-0 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-                {{ count($cartProducts) + count($cartSparrings ?? []) + count($cartVenues ?? []) }}
-            </span>
+        <!-- === Floating Cart (sesuai contoh) === -->
+        <button
+            aria-label="Shopping cart with {{ $cartCount }} items"
+            onclick="showCart()"
+            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
+        >
+            <i class="fas fa-shopping-cart text-white text-3xl"></i>
+            @if ($cartCount > 0)
+                <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                    {{ $cartCount }}
+                </span>
+            @endif
         </button>
 
+        {{-- Modal/Drawer keranjang + fungsi showCart() biasanya ada di partial berikut --}}
         @include('public.cart')
     </div>
 
@@ -286,53 +401,37 @@
 @push('scripts')
    <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Toggle functionality for filter sections
-            const toggles = document.querySelectorAll(".toggleBtn");
-        
-            toggles.forEach((btn) => {
+            // Toggle collapsible filter sections
+            document.querySelectorAll(".toggleBtn").forEach((btn) => {
                 const content = btn.parentElement.nextElementSibling;
-        
                 btn.addEventListener("click", () => {
                     if (content.classList.contains("max-h-0")) {
-                        content.classList.remove("max-h-0");
-                        btn.textContent = "–";
+                        content.classList.remove("max-h-0"); btn.textContent = "–";
                     } else {
-                        content.classList.add("max-h-0");
-                        btn.textContent = "+";
+                        content.classList.add("max-h-0"); btn.textContent = "+";
                     }
                 });
             });
 
-            // Mobile filter sidebar functionality
-            const mobileFilterBtn = document.getElementById("mobileFilterBtn");
-            const filterProduct = document.getElementById("filterProduct");
+            // Mobile filter sidebar
+            const mobileFilterBtn   = document.getElementById("mobileFilterBtn");
+            const filterProduct     = document.getElementById("filterProduct");
             const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
             const closeMobileFilter = document.getElementById("closeMobileFilter");
 
             function openMobileFilter() {
                 filterProduct.classList.add("open");
                 mobileFilterOverlay.classList.add("active");
-                // body lock optional; background sudah gelap & anti overscroll aktif
                 document.body.style.overflow = "hidden";
             }
-
             function closeMobileFilterFunc() {
                 filterProduct.classList.remove("open");
                 mobileFilterOverlay.classList.remove("active");
                 document.body.style.overflow = "";
             }
-
-            if (mobileFilterBtn) {
-                mobileFilterBtn.addEventListener("click", openMobileFilter);
-            }
-
-            if (closeMobileFilter) {
-                closeMobileFilter.addEventListener("click", closeMobileFilterFunc);
-            }
-
-            if (mobileFilterOverlay) {
-                mobileFilterOverlay.addEventListener("click", closeMobileFilterFunc);
-            }
+            mobileFilterBtn?.addEventListener("click", openMobileFilter);
+            closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
+            mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
         });
    </script>
 
