@@ -30,6 +30,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        
         // Logging untuk debugging
         Log::info('Checkout page accessed');
         Log::info('Request items', ['items' => $request->input('items', [])]);

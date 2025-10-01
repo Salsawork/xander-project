@@ -13,11 +13,30 @@ class GuidelinesController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        $guidelines = Guideline::orderBy('created_at', 'desc')->get();
-        return view('dash.admin.guidelines.index', compact('guidelines'));
+  public function index(Request $request)
+{
+    $query = Guideline::query();
+
+    // Search
+    if ($request->filled('search')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('title', 'like', '%' . $request->search . '%')
+              ->orWhere('description', 'like', '%' . $request->search . '%')
+              ->orWhere('author_name', 'like', '%' . $request->search . '%');
+        });
     }
+
+    // Filter category
+    if ($request->filled('category')) {
+        $query->where('category', $request->category);
+    }
+
+    // Urutkan terbaru dulu
+    $guidelines = $query->orderBy('created_at', 'desc')->get();
+
+    return view('dash.admin.guidelines.index', compact('guidelines'));
+}
+
 
     /**
      * Show the form for creating a new resource.

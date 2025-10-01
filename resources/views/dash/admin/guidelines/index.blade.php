@@ -24,25 +24,37 @@
                 @endif
 
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
-                    <input
-                        class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-                        placeholder="Search" type="search" />
-                    <div class="flex gap-2 items-center">
-                        <select aria-label="Category filter"
+                    <form method="GET" action="{{ route('admin.guidelines.index') }}"
+                        class="flex flex-col sm:flex-row gap-2 w-full">
+                        <input
+                            class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
+                            placeholder="Search" type="search" name="search" value="{{ request('search') }}" />
+
+                        <select name="category"
                             class="bg-[#2c2c2c] text-gray-500 text-xs rounded border border-gray-700 px-2 py-1 cursor-pointer">
                             <option value="">Semua Kategori</option>
-                            <option value="BEGINNER">Beginner</option>
-                            <option value="INTERMEDIATE">Intermediate</option>
-                            <option value="MASTER">Master</option>
-                            <option value="GENERAL">General</option>
+                            <option value="BEGINNER" {{ request('category') == 'BEGINNER' ? 'selected' : '' }}>Beginner
+                            </option>
+                            <option value="INTERMEDIATE" {{ request('category') == 'INTERMEDIATE' ? 'selected' : '' }}>
+                                Intermediate</option>
+                            <option value="MASTER" {{ request('category') == 'MASTER' ? 'selected' : '' }}>Master</option>
+                            <option value="GENERAL" {{ request('category') == 'GENERAL' ? 'selected' : '' }}>General
+                            </option>
                         </select>
-                        <a href="{{ route('admin.guidelines.create') }}"
-                            class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
-                            <i class="fas fa-plus"></i>
-                            Tambah Guideline
-                        </a>
-                    </div>
+
+                        <button type="submit"
+                            class="border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
+                            Filter
+                        </button>
+                    </form>
+
+                    <a href="{{ route('admin.guidelines.create') }}"
+                        class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
+                        <i class="fas fa-plus"></i>
+                        Tambah Guideline
+                    </a>
                 </div>
+
 
                 <div class="px-8 overflow-x-auto">
                     <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">

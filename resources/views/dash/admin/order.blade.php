@@ -2,9 +2,11 @@
 @section('title', 'Admin Dashboard - Order')
 
 @push('styles')
-<style>
-    [x-cloak] { display: none !important; }
-</style>
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -46,28 +48,38 @@
                     </button> --}}
                 </section>
                 <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between mx-8 mb-4 gap-4">
-                    <input type="text" placeholder="Phone number or Email"
+                    <input type="text" placeholder="Name or Order ID"
                         class="bg-transparent border border-gray-600 rounded-md px-3 py-1.5 text-gray-400 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#0d82ff] focus:border-[#0d82ff] max-w-xs w-full sm:w-auto"
-                        value="{{ request('search') }}"
-                        id="search"
-                        onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value"
-                        />
+                        value="{{ request('search') }}" id="search"
+                        onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value" />
                     <div class="flex gap-2 text-xs text-gray-600 select-none">
                         <div class="relative">
                             {{-- Set select option --}}
-                            <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="status" onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value">
+                            <select
+                                class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                id="status"
+                                onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value">
                                 <option value="" disabled selected>Filter by Status</option>
-                                @foreach(['pending','processing','packed','shipped','delivered','cancelled','returned'] as $option)
-                                    <option value="{{ $option }}" {{ request('status') == $option ? 'selected' : '' }}>{{ ucfirst($option) }}</option>
+                                @foreach (['pending', 'processing', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'] as $option)
+                                    <option value="{{ $option }}"
+                                        {{ request('status') == $option ? 'selected' : '' }}>{{ ucfirst($option) }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="relative">
-                            <select class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500" id="orderBy" onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + document.getElementById('orderBy').value">
-                                <option value="" disabled selected>Sort by Date</option>
-                                <option value="asc" {{ request('orderBy') == 'asc' ? 'selected' : '' }}>Oldest to Newest</option>
-                                <option value="desc" {{ request('orderBy') == 'desc' ? 'selected' : '' }}>Newest to Oldest</option>
+                            <select
+                                class="bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                id="orderBy"
+                                onchange="window.location.href='{{ route('order.index') }}?search=' + document.getElementById('search').value + '&status=' + document.getElementById('status').value + '&orderBy=' + this.value">
+
+                                <option value="" {{ request('orderBy') ? '' : 'selected' }}>Sort by Date</option>
+                                <option value="asc" {{ request('orderBy') == 'asc' ? 'selected' : '' }}>Oldest to Newest
+                                </option>
+                                <option value="desc" {{ request('orderBy') == 'desc' ? 'selected' : '' }}>Newest to
+                                    Oldest</option>
                             </select>
+
                         </div>
                     </div>
                 </section>
@@ -90,13 +102,15 @@
                                 <tr class="border-b border-gray-700">
                                     <td class="px-4 py-3">{{ $order->id }}</td>
                                     <td class="px-4 py-3">{{ $order->created_at->format('d/m/Y') }}</td>
-                                    <td class="px-4 py-3 truncate max-w-[160px]" title="{{ $order->user->name ?? 'Guest' }}">
+                                    <td class="px-4 py-3 truncate max-w-[160px]"
+                                        title="{{ $order->user->name ?? 'Guest' }}">
                                         {{ $order->user->name ?? 'Guest' }}
                                     </td>
                                     <td class="px-4 py-3">{{ $order->payment_method }}</td>
                                     <td>
-                                        @if($order->file)
-                                            <a href="{{ asset('storage/' . $order->file) }}" target="_blank" class="text-blue-400 hover:underline">
+                                        @if ($order->file)
+                                            <a href="{{ asset('storage/' . $order->file) }}" target="_blank"
+                                                class="text-blue-400 hover:underline">
                                                 <i class="fas fa-file-alt"></i> View File
                                             </a>
                                         @else
@@ -122,25 +136,44 @@
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 flex gap-4 text-gray-500">
-                                        <a href="{{ route('order.detail.index', $order->id) }}" aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
+                                        <a href="{{ route('order.detail.index', $order->id) }}"
+                                            aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <div class="relative" x-data="{ open: false }">
-                                            <button @click="open = !open" aria-label="Update status order {{ $order->id }}" class="hover:text-blue-400">
+                                            <button @click="open = !open"
+                                                aria-label="Update status order {{ $order->id }}"
+                                                class="hover:text-blue-400">
                                                 <i class="fas fa-shipping-fast"></i>
                                             </button>
-                                            <div x-show="open" x-cloak @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50" style="transform: translateX(-30%); min-width: 12rem;">
+                                            <div x-show="open" x-cloak @click.away="open = false"
+                                                class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50"
+                                                style="transform: translateX(-30%); min-width: 12rem;">
                                                 <div class="py-1">
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'pending']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Pending">Pending</a>
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'processing']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Processing">Processing</a>
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'packed']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Packed">Packed</a>
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'shipped']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Shipped">Shipped</a>
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'delivered']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Delivered">Delivered</a>
-                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'cancelled']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Cancelled">Cancelled</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'pending']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Pending">Pending</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'processing']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Processing">Processing</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'packed']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Packed">Packed</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'shipped']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Shipped">Shipped</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'delivered']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Delivered">Delivered</a>
+                                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'cancelled']) }}"
+                                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
+                                                        data-status="Cancelled">Cancelled</a>
                                                 </div>
                                             </div>
                                         </div>
-                                        <button aria-label="Delete order {{ $order->id }}" class="hover:text-red-500 delete-order" data-id="{{ $order->id }}" data-name="{{ $order->user->name ?? 'Guest' }}">
+                                        <button aria-label="Delete order {{ $order->id }}"
+                                            class="hover:text-red-500 delete-order" data-id="{{ $order->id }}"
+                                            data-name="{{ $order->user->name ?? 'Guest' }}">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
@@ -159,126 +192,128 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Inisialisasi Alpine.js jika belum
-        if (typeof Alpine !== 'undefined' && !Alpine.initialized) {
-            Alpine.start();
-        }
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi Alpine.js jika belum
+            if (typeof Alpine !== 'undefined' && !Alpine.initialized) {
+                Alpine.start();
+            }
 
-        // Tampilkan SweetAlert jika ada session success
-        @if(session('success'))
-            Swal.fire({
-                title: 'Success!',
-                text: '{{ session('success') }}',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF'
-            });
-        @endif
-
-        // Tambahkan event listener untuk link update status
-        const statusLinks = document.querySelectorAll('.status-link');
-        statusLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const statusValue = e.target.getAttribute('data-status');
-
+            // Tampilkan SweetAlert jika ada session success
+            @if (session('success'))
                 Swal.fire({
-                    title: 'Konfirmasi',
-                    text: `Are you sure you want to change the status to ${statusValue}?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Change!',
-                    cancelButtonText: 'Cancel',
+                    title: 'Success!',
+                    text: '{{ session('success') }}',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
                     confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
                     background: '#1E1E1F',
                     color: '#FFFFFF'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = e.target.href;
-                    }
+                });
+            @endif
+
+            // Tambahkan event listener untuk link update status
+            const statusLinks = document.querySelectorAll('.status-link');
+            statusLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const statusValue = e.target.getAttribute('data-status');
+
+                    Swal.fire({
+                        title: 'Konfirmasi',
+                        text: `Are you sure you want to change the status to ${statusValue}?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Change!',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = e.target.href;
+                        }
+                    });
+                });
+            });
+
+            // Tambahkan event listener untuk tombol hapus order
+            const deleteOrderButtons = document.querySelectorAll('.delete-order');
+            deleteOrderButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-id');
+                    const orderName = this.getAttribute('data-name');
+
+                    Swal.fire({
+                        title: 'Konfirmasi',
+                        text: `Are you sure you want to delete order ${orderName}?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Delete!',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Kirim request hapus order ke server
+                            const deleteUrl = '{{ route('admin.orders.delete', ':id') }}'
+                                .replace(':id', orderId);
+
+                            fetch(deleteUrl, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            title: 'Success!',
+                                            text: 'Order has been successfully deleted.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK',
+                                            confirmButtonColor: '#3085d6',
+                                            background: '#1E1E1F',
+                                            color: '#FFFFFF'
+                                        });
+                                        // Muat ulang halaman
+                                        window.location.reload();
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Error!',
+                                            text: data.message ||
+                                                'Failed to delete order.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK',
+                                            confirmButtonColor: '#3085d6',
+                                            background: '#1E1E1F',
+                                            color: '#FFFFFF'
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: 'Failed to delete order.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK',
+                                        confirmButtonColor: '#3085d6',
+                                        background: '#1E1E1F',
+                                        color: '#FFFFFF'
+                                    });
+                                });
+                        }
+                    });
                 });
             });
         });
-
-        // Tambahkan event listener untuk tombol hapus order
-        const deleteOrderButtons = document.querySelectorAll('.delete-order');
-        deleteOrderButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const orderId = this.getAttribute('data-id');
-                const orderName = this.getAttribute('data-name');
-
-                Swal.fire({
-                    title: 'Konfirmasi',
-                    text: `Are you sure you want to delete order ${orderName}?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Delete!',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    background: '#1E1E1F',
-                    color: '#FFFFFF'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Kirim request hapus order ke server
-                        const deleteUrl = '{{ route("admin.orders.delete", ":id") }}'.replace(':id', orderId);
-
-                        fetch(deleteUrl, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Order has been successfully deleted.',
-                                    icon: 'success',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#3085d6',
-                                    background: '#1E1E1F',
-                                    color: '#FFFFFF'
-                                });
-                                // Muat ulang halaman
-                                window.location.reload();
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: data.message || 'Failed to delete order.',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#3085d6',
-                                    background: '#1E1E1F',
-                                    color: '#FFFFFF'
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Failed to delete order.',
-                                icon: 'error',
-                                confirmButtonText: 'OK',
-                                confirmButtonColor: '#3085d6',
-                                background: '#1E1E1F',
-                                color: '#FFFFFF'
-                            });
-                        });
-                    }
-                });
-            });
-        });
-    });
-</script>
+    </script>
 @endpush
