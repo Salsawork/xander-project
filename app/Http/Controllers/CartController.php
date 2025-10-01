@@ -28,29 +28,34 @@ class CartController extends Controller
 
     public function addVenueToCart(Request $request)
     {
-        $cartVenue = json_decode($request->cookie('cartVenues') ?? '[]', true);
+        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
         $venue = Venue::findOrFail($request->id);
 
         $date = date('d-m-Y', strtotime($request->date));
-        $schedule = $request->schedule;
+        $startTime = $request->input('schedule.start');
+        $endTime   = $request->input('schedule.end');
 
-        // Cek apakah ada venue dengan id + date + schedule yang sama
-        $exists = collect($cartVenue)->contains(function ($item) use ($venue, $date, $schedule) {
-            return $item['id'] === $venue->id && $item['date'] === $date && $item['schedule'] === $schedule;
+        $exists = collect($cartVenues)->contains(function ($item) use ($venue, $date, $startTime, $endTime) {
+            return $item['id'] === $venue->id
+                && $item['date'] === $date
+                && $item['start'] === $startTime
+                && $item['end'] === $endTime;
         });
 
         if (!$exists) {
-            $cartVenue[] = [
-                'id' => $venue->id,
-                'name' => $venue->name,
+            $cartVenues[] = [
+                'id'    => $venue->id,
+                'name'  => $venue->name,
                 'price' => $venue->price,
-                'date' => $date,
-                'schedule' => $schedule,
+                'date'  => $date,
+                'start' => $startTime,
+                'end'   => $endTime,
             ];
         }
 
-        return redirect()->back()->withCookie(cookie('cartVenues', json_encode($cartVenue), 60 * 24 * 7));
+        return redirect()->back()->withCookie(cookie('cartVenues', json_encode($cartVenues), 60 * 24 * 7));
     }
+
 
     public function addSparringToCart(Request $request)
     {

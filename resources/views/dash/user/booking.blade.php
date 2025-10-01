@@ -5,53 +5,43 @@
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 my-8">
                 @include('partials.topbar')
-                <section class="flex-1 overflow-auto p-6 space-y-6 mt-12 mx-8">
-                    <h1 class="text-2xl font-bold mb-4">
+                <section class="flex-1 overflow-auto space-y-6 mt-16 mx-16">
+                    <h1 class="text-3xl font-bold mb-8">
                         Booking
                     </h1>
                     <nav class="flex space-x-6 text-gray-400 text-sm font-semibold mb-6 border-b border-gray-700">
-                        <button class="text-white border-b-2 border-[#0ea5e9] pb-1 flex items-center space-x-1">
-                            <span>
-                                All
-                            </span>
-                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">
-                                10
-                            </span>
-                        </button>
-                        <button class="flex items-center space-x-1" disabled="">
-                            <span>
-                                Pending
-                            </span>
-                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">
-                                5
-                            </span>
-                        </button>
-                        <button class="flex items-center space-x-1" disabled="">
-                            <span>
-                                Confirmed
-                            </span>
-                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">
-                                5
-                            </span>
-                        </button>
-                        <button class="flex items-center space-x-1" disabled="">
-                            <span>
-                                Completed
-                            </span>
-                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">
-                                0
-                            </span>
-                        </button>
-                        <button class="flex items-center space-x-1" disabled="">
-                            <span>
-                                Cancelled
-                            </span>
-                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">
-                                0
-                            </span>
-                        </button>
+                        <a href="{{ route('booking.index') }}"
+                            class="flex items-center space-x-1 @if(request('status') === null) text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>All</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $orderCount ?? 10 }}</span>
+                        </a>
+                        <a href="{{ route('booking.index', ['status' => 'processing']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'processing') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Processing</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $processingCount ?? 0 }}</span>
+                        </a>
+                        <a href="{{ route('booking.index', ['status' => 'booked']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'booked') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Booked</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $bookedCount ?? 0 }}</span>
+                        </a>
+                        <a href="{{ route('booking.index', ['status' => 'shipped']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'shipped') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Shipped</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $shippedCount ?? 0 }}</span>
+                        </a>
+                        <a href="{{ route('booking.index', ['status' => 'delivered']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'delivered') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Delivered</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $deliveredCount ?? 0 }}</span>
+                        </a>
+                        <a href="{{ route('booking.index', ['status' => 'cancelled']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'cancelled') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Cancelled</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $cancelledCount ?? 0 }}</span>
+                        </a>
                     </nav>
                     <div class="space-y-6">
                         <section class="bg-[#222222] rounded-lg p-4 space-y-4">

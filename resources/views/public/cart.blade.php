@@ -60,7 +60,7 @@
                                 {{ $venue['name'] }}
                             </p>
                             <p class="text-white text-xs mt-1">
-                                {{ $venue['date'] }} {{ $venue['schedule'] }}
+                                {{ $venue['date'] }} {{ $venue['start'] }} - {{ $venue['end'] }}
                             </p>
                             <input type="hidden" id="price-venue-{{ $venue['id'] }}" value="{{ $venue['price'] }}">
                             <p class="text-white text-sm mt-1">

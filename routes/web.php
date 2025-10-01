@@ -66,24 +66,6 @@ Route::post('/register', [LoginController::class, 'register'])->name('register')
 Route::get('/verify', [LoginController::class, 'showVerificationForm'])->name('verification.form');
 Route::post('/verify', [LoginController::class, 'verifyOtp'])->name('verification.verify');
 
-Route::middleware('auth')->prefix('dashboard/notification')->group(function () {
-    Route::get('/', function () {
-        return view('dash.user.notification');
-    })->name('notification.index');
-});
-
-Route::middleware('auth')->prefix('dashboard/myorder')->group(function () {
-    Route::get('/', function () {
-        return view('dash.user.myorder');
-    })->name('myorder.index');
-});
-
-Route::middleware('auth')->prefix('dashboard/booking')->group(function () {
-    Route::get('/', function () {
-        return view('dash.user.booking');
-    })->name('booking.index');
-});
-
 /** Image Upload */
 Route::post('/upload', [UploadController::class, 'store'])->name('upload.image');
 
@@ -163,10 +145,10 @@ Route::middleware('auth')->group(function () {
     Route::redirect('dashboard', 'dashboard/overview');
     Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
 
-    // ===== User pages for sidebar (FIX ROUTES) ===== ini ada 2 route nya
-    // Route::get('dashboard/notification', fn() => view('user.notification'))->name('notification.index');
-    // Route::get('dashboard/myorder', fn() => view('user.myorder'))->name('myorder.index');
-    // Route::get('dashboard/booking', fn() => view('user.booking'))->name('booking.index');
+    /** User: pages for sidebar **/
+    Route::get('dashboard/notification', fn() => view('dash.user.notification'))->name('notification.index');
+    Route::get('dashboard/myorder', fn() => view('dash.user.myorder'))->name('myorder.index');
+    Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
     Route::post('profile/update', function (Request $request) {
         Auth::user()->update($request->only('name', 'username'));
