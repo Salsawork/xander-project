@@ -154,7 +154,7 @@ class OrderController extends Controller
                 'id' => (string) \Illuminate\Support\Str::uuid(),
                 'user_id' => $user->id,
                 'order_number' => $orderNumber,
-                'total'           => 0, // update belakangan
+                'total'           => 0, 
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
@@ -227,7 +227,7 @@ class OrderController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Failed to process order',
-                'error'   => $e->getMessage(), // sementara untuk debug
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

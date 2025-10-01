@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venue;
+use App\Models\BilliardSession;
 use Illuminate\Http\Request;
 
 class VenueController extends Controller
@@ -47,13 +48,48 @@ class VenueController extends Controller
     }
 
 
-    public function detail(Request $request, $venue)
+    public function detail(Request $request, $venueId)
     {
-        $detail = Venue::findOrFail($venue);
-        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
+        // Ambil detail venue
+        $detail = Venue::findOrFail($venueId);
+    
+        // Ambil semua session billiard yang masih available
+        $sessions = BilliardSession::where('venue_id', $detail->id)
+            ->where('status', 'confirmed')
+            ->whereBetween('date', [now()->toDateString(), now()->addDays(3)->toDateString()])
+            ->orderBy('date')
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn($item) => [
+                'id' => $item->id,
+                'venue_id' => $item->venue_id,
+                'title' => $item->title,
+                'game_type' => $item->game_type,
+                'skill_level' => $item->skill_level,
+                'price' => $item->price,
+                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
+                'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
+                'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                'promo_code' => $item->promo_code,
+                'status' => $item->status,
+            ]);
+    
+        // Ambil tanggal unik untuk date picker
+        $availableDates = $sessions->pluck('date')->unique();
+    
+        // Cart
+        $cartProducts = json_decode($request->cookie('cartProducts') ?? '[]', true);
         $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
-
-        return view('public.venue.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
+        $cartSparrings = json_decode($request->cookie('cartSparrings') ?? '[]', true);
+    
+        return view('public.venue.detail', compact(
+            'detail',
+            'sessions',
+            'availableDates',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings'
+        ));
     }
+    
 }

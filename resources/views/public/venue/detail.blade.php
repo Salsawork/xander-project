@@ -100,51 +100,30 @@
                         <h2 class="text-xl font-bold text-white mb-4">
                             Rp. {{ number_format($detail->price, 0, ',', '.') }} / session
                         </h2>
-
+    
                         <form id="addToCartForm" action="{{ route('cart.add.venue') }}" method="POST" class="space-y-4">
                             @csrf
                             <input type="hidden" name="id" value="{{ $detail->id }}">
-
+    
                             {{-- Date --}}
                             <div>
                                 <label class="text-sm text-gray-400">Date</label>
-                                <input type="date" name="date"
-                                    class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500">
-                            </div>
-
-                            {{-- Schedule --}}
-                            @php
-                                $operating = $detail->operating_hours;
-                                [$start, $end] = explode(' - ', $operating);
-
-                                $slots = [];
-                                $startTime = \Carbon\Carbon::createFromFormat('H:i', $start);
-                                $endTime = \Carbon\Carbon::createFromFormat('H:i', $end);
-
-                                while ($startTime->lt($endTime)) {
-                                    $nextTime = $startTime->copy()->addHour();
-                                    $slots[] = $startTime->format('H:i') . ' - ' . $nextTime->format('H:i');
-                                    $startTime = $nextTime;
-                                }
-                            @endphp
-
-                            <div>
-                                <label class="text-sm text-gray-400">Schedule</label>
-                                <div class="grid grid-cols-3 gap-2 mt-1">
-                                    @foreach ($slots as $slot)
-                                                    <label class="cursor-pointer">
-                                                        <input type="radio" name="schedule" value="{{ $slot }}" class="hidden peer">
-                                                        <span class="block border border-gray-600 rounded text-center py-2 text-sm
-                                         hover:bg-blue-600 hover:border-blue-600
-                                         peer-checked:bg-blue-600 peer-checked:text-white">
-                                                            {{ $slot }}
-                                                        </span>
-                                                    </label>
+                                <select name="date" id="dateSelect"
+                                    class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
+                                    required>
+                                    <option value="">-- Select Date --</option>
+                                    @foreach ($availableDates as $date)
+                                        <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</option>
                                     @endforeach
-                                </div>
+                                </select>
                             </div>
-
-
+    
+                            {{-- Schedule (akan di-fill oleh JS) --}}
+                            <div id="scheduleContainer" class="hidden mt-1">
+                                <label class="text-sm text-gray-400">Schedule</label>
+                                <div class="grid grid-cols-3 gap-2 mt-1"></div>
+                            </div>
+    
                             {{-- Promo --}}
                             <div>
                                 <label class="text-sm text-gray-400">Promo code (Optional)</label>
@@ -152,7 +131,7 @@
                                     class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500"
                                     placeholder="Ex. PROMO70%DAY">
                             </div>
-
+    
                             <button type="submit"
                                 class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
                                 Add to cart
@@ -215,4 +194,54 @@
             });
         });
     </script>
+    <script>
+        const dateSelect = document.getElementById('dateSelect');
+        const scheduleContainer = document.getElementById('scheduleContainer');
+        const scheduleGrid = scheduleContainer.querySelector('.grid');
+        const schedules = @json($sessions); 
+    
+        // Saat pertama load, sembunyikan container
+        scheduleContainer.classList.add('hidden');
+        scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Pilih tanggal terlebih dahulu.</p>';
+    
+        dateSelect.addEventListener('change', function () {
+            const selectedDate = this.value;
+            scheduleGrid.innerHTML = '';
+    
+            if (!selectedDate) {
+                scheduleContainer.classList.add('hidden');
+                scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Pilih tanggal terlebih dahulu.</p>';
+                return;
+            }
+    
+            // Filter schedule by date
+            const filtered = schedules.filter(s => s.date === selectedDate);
+    
+            if (filtered.length === 0) {
+                scheduleGrid.innerHTML = '<p class="text-gray-400 text-sm">Tidak ada jadwal tersedia.</p>';
+            } else {
+                filtered.forEach(schedule => {
+                    const slot = `${schedule.start_time} - ${schedule.end_time}`;
+    
+                    const label = document.createElement('label');
+                    label.className =
+                        'border border-gray-600 rounded text-center py-2 text-sm cursor-pointer hover:bg-blue-600 hover:border-blue-600';
+                    label.innerHTML = `<input type="radio" name="schedule_id" value="${schedule.id}" class="hidden" required>${slot}`;
+                    scheduleGrid.appendChild(label);
+                });
+            }
+    
+            scheduleContainer.classList.remove('hidden');
+        });
+    </script>
+    
+@endpush
+@push('styles')
+    <style>
+        label:has(input[type="radio"]:checked) {
+        background-color: #2563eb;
+        border-color: #2563eb;
+        color: white;
+        }
+    </style>
 @endpush

@@ -96,39 +96,7 @@ class SparringController extends Controller
     /**
      * Display the specified athlete.
      */
-    // public function show($id)
-    // {
-    //     // Ambil data atlet berdasarkan ID
-    //     $athlete = User::where('roles', 'athlete')
-    //         ->where('id', $id)
-    //         ->with('athleteDetail')
-    //         ->firstOrFail();
-
-    //     // Ambil jadwal sparring yang tersedia untuk atlet ini
-    //     $schedules = SparringSchedule::where('athlete_id', $id)
-    //         ->where('is_booked', false)
-    //         ->where('date', '>=', now()->format('Y-m-d'))
-    //         ->orderBy('date')
-    //         ->orderBy('start_time')
-    //         ->limit(9) // Batasi hanya 9 schedule
-    //         ->get();
-
-    //     // Ambil data cart dari cookie
-    //     $carts = [];
-    //     if (Cookie::has('cart')) {
-    //         $cartData = Cookie::get('cart');
-    //         $carts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-    //     }
-
-    //     // Ambil data sparring dari cookie
-    //     $sparrings = [];
-    //     if (Cookie::has('sparring')) {
-    //         $sparringData = Cookie::get('sparring');
-    //         $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-    //     }
-
-    //     return view('dash.sparring.detail', compact('athlete', 'schedules', 'carts', 'sparrings'));
-    // }
+    
     // public function show($id)
     // {
     //     $athlete = User::where('roles', 'athlete')
