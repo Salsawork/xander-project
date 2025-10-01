@@ -14,6 +14,7 @@ class Booking extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'order_id',
         'venue_id',
         'table_id',
         'user_id',
@@ -38,6 +39,14 @@ class Booking extends Model
         'price' => 'decimal:2',
         'discount' => 'decimal:2',
     ];
+
+    /**
+     * Get the order that the booking belongs to.
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
 
     /**
      * Get the venue that owns the booking.

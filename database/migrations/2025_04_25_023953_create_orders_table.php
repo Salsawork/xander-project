@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->constrained()->onDelete('restrict');
+            $table->string('order_number')->unique();
             $table->decimal('total', 12, 0)->default(0);
             $table->enum('payment_status', [
                 'pending',
@@ -32,7 +33,9 @@ return new class extends Migration
                 'returned'
             ])->default('pending')->index();
             $table->string('payment_method')->nullable();
+            $table->string('file')->nullable();
             $table->string('snap_token')->nullable();
+            $table->timestamp('expired_at')->nullable(); 
             $table->timestamps();
             $table->softDeletes();
             $table->index('created_at');

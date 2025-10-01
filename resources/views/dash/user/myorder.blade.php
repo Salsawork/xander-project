@@ -5,10 +5,10 @@
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 my-8">
                 @include('partials.topbar')
-                <section class="flex-1 overflow-auto p-6 space-y-6 mt-12 mx-8">
-                    <h1 class="text-3xl font-extrabold">
+                <section class="flex-1 overflow-auto space-y-6 mt-16 mx-16">
+                    <h1 class="text-3xl font-bold mb-8">
                         My Order
                     </h1>
                     @php
@@ -30,61 +30,31 @@
                         $deliveredCount = Order::where('user_id', auth()->id())->where('delivery_status', 'delivered')->count();
                         $cancelledCount = Order::where('user_id', auth()->id())->where('delivery_status', 'cancelled')->count();
                     @endphp
-                    <nav class="flex space-x-6 border-b border-gray-700 text-sm font-semibold text-gray-500">
-                        <a
-                            class="relative after:left-0 after:right-0 after:h-[2px] after:bg-[#0ea5e9] after:rounded
-                                @if(request('status') === null) text-[#0ea5e9]  @endif
-                            "
-                            href="{{ route('myorder.index') }}">
-                            All
-                            <span
-                                class="ml-2 inline-block rounded border border-gray-600 bg-[#2c2c2c] px-2 text-xs font-normal text-gray-400">
-                                {{ $orderCount }}
-                            </span>
+                    <nav class="flex space-x-6 text-gray-400 text-sm font-semibold mb-6 border-b border-gray-700">
+                        <a href="{{ route('myorder.index') }}"
+                            class="flex items-center space-x-1 @if(request('status') === null) text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>All</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $orderCount }}</span>
                         </a>
-                        <a class="flex items-center space-x-1 cursor-default
-                            @if(request('status') === 'processing') text-[#0ea5e9]  @endif"
-                            href="{{ route('myorder.index', ['status' => 'processing']) }}">
-                            <span>
-                                Processing
-                            </span>
-                            <span
-                                class="inline-block rounded border border-gray-600 bg-[#2c2c2c] px-2 text-xs font-normal text-gray-400">
-                                {{ $processingCount }}
-                            </span>
+                        <a href="{{ route('myorder.index', ['status' => 'processing']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'processing') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Processing</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $processingCount }}</span>
                         </a>
-                        <a class="flex items-center space-x-1 cursor-default
-                            @if(request('status') === 'shipped') text-[#0ea5e9]  @endif"
-                            href="{{ route('myorder.index', ['status' => 'shipped']) }}">
-                            <span>
-                                Shipped
-                            </span>
-                            <span
-                                class="inline-block rounded border border-gray-600 bg-[#2c2c2c] px-2 text-xs font-normal text-gray-400">
-                                {{ $shippedCount }}
-                            </span>
+                        <a href="{{ route('myorder.index', ['status' => 'shipped']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'shipped') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Shipped</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $shippedCount }}</span>
                         </a>
-                        <a class="flex items-center space-x-1 cursor-default
-                            @if(request('status') === 'delivered') text-[#0ea5e9]  @endif"
-                            href="{{ route('myorder.index', ['status' => 'delivered']) }}">
-                            <span>
-                                Delivered
-                            </span>
-                            <span
-                                class="inline-block rounded border border-gray-600 bg-[#2c2c2c] px-2 text-xs font-normal text-gray-400">
-                                {{ $deliveredCount }}
-                            </span>
+                        <a href="{{ route('myorder.index', ['status' => 'delivered']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'delivered') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Delivered</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $deliveredCount }}</span>
                         </a>
-                        <a class="flex items-center space-x-1 cursor-default
-                            @if(request('status') === 'cancelled') text-[#0ea5e9]  @endif"
-                            href="{{ route('myorder.index', ['status' => 'cancelled']) }}">
-                            <span>
-                                Cancelled
-                            </span>
-                            <span
-                                class="inline-block rounded border border-gray-600 bg-[#2c2c2c] px-2 text-xs font-normal text-gray-400">
-                                {{ $cancelledCount }}
-                            </span>
+                        <a href="{{ route('myorder.index', ['status' => 'cancelled']) }}"
+                            class="flex items-center space-x-1 @if(request('status') === 'cancelled') text-white border-b-2 border-[#0ea5e9] pb-1 @endif">
+                            <span>Cancelled</span>
+                            <span class="bg-gray-700 rounded text-xs font-normal px-2 py-[2px]">{{ $cancelledCount }}</span>
                         </a>
                     </nav>
                     <div class="space-y-6">

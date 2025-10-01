@@ -1,5 +1,3 @@
-
-
 @extends('app')
 
 @section('title', 'Checkout - Xander Billiard')
@@ -22,15 +20,15 @@
             <div>
                 <h2 class="text-lg font-bold mb-4">Product</h2>
                 @forelse ($carts as $cart)
-                    <div class="flex items-center space-x-4 mb-4">
-                        <img src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
-                        <div class="flex-1">
-                            <h3 class="font-semibold">{{ $cart['name'] }}</h3>
-                            <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }},-</p>
-                        </div>
+                <div class="flex items-center space-x-4 mb-4">
+                    <img src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
+                    <div class="flex-1">
+                        <h3 class="font-semibold">{{ $cart['name'] }}</h3>
+                        <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }},-</p>
                     </div>
+                </div>
                 @empty
-                    <p class="text-gray-400">No products in cart</p>
+                <p class="text-gray-400">No products in cart</p>
                 @endforelse
             </div>
 
@@ -38,37 +36,39 @@
             <div>
                 <h2 class="text-lg font-bold mb-4">Sparring</h2>
                 @if(isset($sparrings) && count($sparrings) > 0)
-                    @foreach($sparrings as $sparring)
-                        <div class="flex items-center space-x-4 mb-4">
-                            <img src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}"
-                                alt="{{ $sparring['name'] }}"
-                                class="w-16 h-16 object-cover rounded">
-                            <div class="flex-1">
-                                <h3 class="font-semibold">{{ $sparring['name'] }}</h3>
-                                <p class="text-gray-400">{{ $sparring['schedule'] }}</p>
-                                <p class="text-gray-400">Rp. {{ number_format($sparring['price'], 0, ',', '.') }},-</p>
-                            </div>
-                        </div>
-                    @endforeach
+                @foreach($sparrings as $sparring)
+                <div class="flex items-center space-x-4 mb-4">
+                    <img src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}"
+                        alt="{{ $sparring['name'] }}"
+                        class="w-16 h-16 object-cover rounded">
+                    <div class="flex-1">
+                        <h3 class="font-semibold">{{ $sparring['name'] }}</h3>
+                        <p class="text-gray-400">{{ $sparring['schedule'] }}</p>
+                        <p class="text-gray-400">Rp. {{ number_format($sparring['price'], 0, ',', '.') }},-</p>
+                    </div>
+                </div>
+                @endforeach
                 @else
-                    <p class="text-gray-400">No sparring session selected</p>
+                <p class="text-gray-400">No sparring session selected</p>
                 @endif
             </div>
 
             <!-- Venue -->
             <div>
                 <h2 class="text-lg font-bold mb-4">Venue</h2>
-                @if(isset($venue))
-                    <div class="flex items-center space-x-4">
-                        <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $venue['name'] }}" class="w-16 h-16 object-cover rounded">
-                        <div class="flex-1">
-                            <h3 class="font-semibold">{{ $venue['name'] }}</h3>
-                            <p class="text-gray-400">{{ $venue['schedule'] }}</p>
-                            <p class="text-gray-400">Rp. {{ number_format($venue['price'], 0, ',', '.') }},-</p>
-                        </div>
+                @if(isset($venues) && count($venues) > 0)
+                @foreach($venues as $venue)
+                <div class="flex items-center space-x-4">
+                    <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $venue['name'] }}" class="w-16 h-16 object-cover rounded">
+                    <div class="flex-1">
+                        <h3 class="font-semibold">{{ $venue['name'] }}</h3>
+                        <p class="text-gray-400">{{ $venue['start'] }} - {{ $venue['end'] }}</p>
+                        <p class="text-gray-400">Rp. {{ number_format($venue['price'], 0, ',', '.') }},-</p>
                     </div>
+                </div>
+                @endforeach
                 @else
-                    <p class="text-gray-400">No venue selected</p>
+                <p class="text-gray-400">No venue selected</p>
                 @endif
             </div>
         </div>
@@ -88,23 +88,26 @@
 
                     <!-- Hidden input untuk produk -->
                     @foreach($carts as $index => $cart)
-                        <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
-                        <input type="hidden" name="products[{{ $index }}][qty]" value="1">
+                    <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
+                    <input type="hidden" name="products[{{ $index }}][qty]" value="1">
                     @endforeach
 
                     <!-- Hidden input untuk sparring -->
                     @if(isset($sparrings))
-                        @foreach($sparrings as $index => $sparring)
-                            <input type="hidden" name="sparrings[{{ $index }}][athlete_id]" value="{{ $sparring['athlete_id'] }}">
-                            <input type="hidden" name="sparrings[{{ $index }}][schedule_id]" value="{{ $sparring['schedule_id'] }}">
-                            <input type="hidden" name="sparrings[{{ $index }}][price]" value="{{ $sparring['price'] }}">
-                        @endforeach
+                    @foreach($sparrings as $index => $sparring)
+                    <input type="hidden" name="sparrings[{{ $index }}][athlete_id]" value="{{ $sparring['athlete_id'] }}">
+                    <input type="hidden" name="sparrings[{{ $index }}][schedule_id]" value="{{ $sparring['schedule_id'] }}">
+                    <input type="hidden" name="sparrings[{{ $index }}][price]" value="{{ $sparring['price'] }}">
+                    @endforeach
                     @endif
 
                     <!-- Hidden input untuk venue -->
                     @if(isset($venue))
-                        <input type="hidden" name="venues[0][id]" value="{{ $venue['id'] }}">
-                        <input type="hidden" name="venues[0][price]" value="{{ $venue['price'] }}">
+                    <input type="hidden" name="venues[0][id]" value="{{ $venue['id'] }}">
+                    <input type="hidden" name="venues[0][price]" value="{{ $venue['price'] }}">
+                    <input type="hidden" name="venues[0][date]" value="{{ $venue['date'] }}">
+                    <input type="hidden" name="venues[0][start]" value="{{ $venue['start'] }}">
+                    <input type="hidden" name="venues[0][end]" value="{{ $venue['end'] }}">
                     @endif
 
                     <!-- Billing Details -->
@@ -112,26 +115,26 @@
                         <div>
                             <label for="firstname" class="block font-semibold mb-1">First Name</label>
                             <input type="text" name="firstname" id="firstname"
-                                   value="{{ old('firstname', $user->firstname ?? '') }}"
-                                   class="w-full border rounded p-2" required>
+                                value="{{ old('firstname', $user->firstname ?? '') }}"
+                                class="w-full border rounded p-2" required>
                         </div>
                         <div>
                             <label for="lastname" class="block font-semibold mb-1">Last Name</label>
                             <input type="text" name="lastname" id="lastname"
-                                   value="{{ old('lastname', $user->lastname ?? '') }}"
-                                   class="w-full border rounded p-2" required>
+                                value="{{ old('lastname', $user->lastname ?? '') }}"
+                                class="w-full border rounded p-2" required>
                         </div>
                         <div>
                             <label for="email" class="block font-semibold mb-1">Email</label>
                             <input type="email" name="email" id="email"
-                                   value="{{ old('email', $user->email ?? '') }}"
-                                   class="w-full border rounded p-2" required>
+                                value="{{ old('email', $user->email ?? '') }}"
+                                class="w-full border rounded p-2" required>
                         </div>
                         <div>
                             <label for="phone" class="block font-semibold mb-1">Phone</label>
                             <input type="tel" name="phone" id="phone"
-                                   value="{{ old('phone', $user->phone ?? '') }}"
-                                   class="w-full border rounded p-2" required>
+                                value="{{ old('phone', $user->phone ?? '') }}"
+                                class="w-full border rounded p-2" required>
                         </div>
                     </div>
 
@@ -158,8 +161,8 @@
                         <p class="font-bold">Grand Total: Rp {{ number_format($grandTotal, 0, ',', '.') }}</p>
                     </div>
 
-                      <!-- Kebijakan Pengembalian -->
-                      <div class="bg-[#2D2D2D] rounded-lg p-6">
+                    <!-- Kebijakan Pengembalian -->
+                    <div class="bg-[#2D2D2D] rounded-lg p-6">
                         <h2 class="text-xl font-bold mb-2">Return Policy</h2>
                         <p class="text-gray-400 text-sm">
                             If you need to return an item, you may do so within <span class="text-white font-medium">7 days of delivery</span>, provided it is unused, in its original packaging, and accompanied by proof of purchase.
@@ -167,11 +170,11 @@
                     </div>
                     <div class="p-6">
                         <button type="button" id="pay-button"
-                                class="w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700">
+                            class="w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700">
                             Place Order
                         </button>
                     </div>
-                   
+
                 </form>
             </div>
         </div>
@@ -179,7 +182,7 @@
 </div>
 
 <script>
-    document.getElementById('pay-button').addEventListener('click', async function () {
+    document.getElementById('pay-button').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true;
         btn.textContent = 'Processing...';
@@ -188,7 +191,7 @@
         const formData = new FormData(form);
 
         try {
-            const res = await fetch('{{ route('checkout.store') }}', {
+            const res = await fetch('{{ route("checkout.store") }}', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -200,8 +203,9 @@
             const data = await res.json();
 
             if (res.ok && data.status === 'success') {
-                alert('Please complete the payment manually. Your order ID is: ' + data.order_number);
-                window.location.href = '{{ route('checkout.payment') }}?order_number=' + data.order_number;
+                console.log("Redirecting to payment page with order:", data.order_number);
+                const redirectUrl = '{{ route("checkout.payment") }}?order_number=' + data.order_number;
+                window.location.href = redirectUrl; // ✅ langsung redirect
             } else {
                 alert(data.message || 'Order failed');
                 btn.disabled = false;
@@ -215,5 +219,7 @@
         }
     });
 </script>
-@endsection
 
+
+
+@endsection

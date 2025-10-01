@@ -54,7 +54,12 @@ class Order extends Model
     }
     public function items()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'order_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'order_id'); 
     }
 
     /**
@@ -62,11 +67,7 @@ class Order extends Model
      */
     public function orderSparrings()
     {
-        return $this->hasMany(OrderSparring::class);
+        return $this->hasMany(OrderSparring::class, 'order_id');
     }
-
-    public function orderVenues()
-    {
-        return $this->hasMany(OrderVenue::class);
-    }
+    
 }
