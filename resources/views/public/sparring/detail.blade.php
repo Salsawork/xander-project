@@ -408,12 +408,3 @@
     })();
 </script>
 @endpush
-@push('styles')
-    <style>
-        label:has(input[type="radio"]:checked) {
-        background-color: #2563eb;
-        border-color: #2563eb;
-        color: white;
-        }
-    </style>
-@endpush
