@@ -149,27 +149,19 @@
                             <input type="hidden" name="date" x-model="selectedDate">
                             <div class="flex items-center justify-between my-2 font-semibold border-b border-gray-500 pb-1">
                                 <span>Date</span>
-                                <span class="toggleBtn cursor-pointer text-xl">–</span>
+                                <span @click="toggle = !toggle" class="cursor-pointer text-xl leading-none text-gray-300">–</span>
                             </div>
-                            <div class="toggleContent">
-                                <input type="hidden" name="date" x-model="selectedDate">
-    
+                            <div x-show="toggle" x-transition>
                                 <div class="flex items-center justify-center gap-2 mb-2">
                                     <button type="button" @click="prevMonth()" class="text-gray-400 hover:text-white">&lt;</button>
                                     <span x-text="monthNames[month] + ' ' + year"></span>
                                     <button type="button" @click="nextMonth()" class="text-gray-400 hover:text-white">&gt;</button>
                                 </div>
-    
                                 <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
                                     <template x-for="d in daysInMonth()" :key="d">
-                                        <span 
-                                            class="py-1 cursor-pointer rounded transition-colors"
-                                            :class="selectedDate === formatDate(year, month, d) 
-                                                    ? 'bg-blue-500 text-white' 
-                                                    : 'hover:bg-gray-600'"
-                                            @click="selectDate(d)"
-                                            x-text="d">
-                                        </span>
+                                        <span class="py-1 cursor-pointer rounded transition-colors"
+                                              :class="selectedDate === formatDate(year, month, d) ? 'bg-blue-500 text-white' : 'hover:bg-gray-600'"
+                                              @click="selectDate(d)" x-text="d"></span>
                                     </template>
                                 </div>
                             </div>
