@@ -20,11 +20,16 @@ use App\Http\Controllers\UploadController;
 use App\Http\Controllers\Auth\GoogleController;
 
 // Venue Controllers
-use App\Http\Controllers\venueController\DashboardController;
+use App\Http\Controllers\venueController\DashboardController as VenueDashboardController; 
 use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\TransactionController;
 use App\Http\Controllers\FavoriteController;
+
+// Athlete Controllers
+use App\Http\Controllers\athleteController\DashboardController as AthleteDashboardController;
+use App\Http\Controllers\athleteController\MatchHistoryController;
+use App\Http\Controllers\athleteController\SparringController as AthleteSparringController;
 
 // Community & Admin Controllers
 use App\Http\Controllers\communityController\NewsController;
@@ -209,28 +214,28 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
-    // Route::middleware('auth')->prefix('athlete')->group(function () {
-    //     // Athlete Dashboard
-    //     Route::get('/dashboard', [App\Http\Controllers\athleteController\DashboardController::class, 'index'])->name('athlete.dashboard');
+    Route::prefix('athlete')->group(function () {
+        // Athlete Dashboard
+        Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
     
-    //     // Athlete Sparring - Create Session
-    //     Route::get('/sparring/create', function () {
-    //         return view('dash.athlete.sparring.create');
-    //     })->name('athlete.sparring.create');
+        // Athlete Sparring - Create Session
+        Route::get('/sparring/create', function () {
+            return view('dash.athlete.sparring.create');
+        })->name('athlete.sparring.create');
     
     
-    //     // Athlete Match History (BARU)
-    //     Route::get('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'index'])->name('athlete.match');
-    //     // Create Session
-    //     Route::get('/match/create', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'create'])->name('athlete.match.create');
-    //     Route::post('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'store'])->name('athlete.match.store');
+        // Athlete Match History (BARU)
+        Route::get('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'index'])->name('athlete.match');
+        // Create Session
+        Route::get('/match/create', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'create'])->name('athlete.match.create');
+        Route::post('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'store'])->name('athlete.match.store');
     
-    //     // Athlete Calendar
-    //     Route::get('/calendar/{year}/{month}', [App\Http\Controllers\athleteController\DashboardController::class, 'getCalendar']);
+        // Athlete Calendar
+        Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
     
-    //     // Athlete Match History (BARU)
-    //     Route::get('/match/{id}', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'show'])->name('athlete.match.show');
-    // });
+        // Athlete Match History (BARU)
+        Route::get('/match/{id}', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'show'])->name('athlete.match.show');
+    });
 
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', function () {

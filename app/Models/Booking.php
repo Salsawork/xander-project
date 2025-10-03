@@ -18,6 +18,7 @@ class Booking extends Model
         'venue_id',
         'table_id',
         'user_id',
+        'billiard_session_id',
         'booking_date',
         'start_time',
         'end_time',
@@ -51,6 +52,11 @@ class Booking extends Model
     /**
      * Get the venue that owns the booking.
      */
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(BilliardSession::class, 'billiard_session_id');
+    }
+
     public function venue(): BelongsTo
     {
         return $this->belongsTo(Venue::class);

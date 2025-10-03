@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('venue_id')->constrained('venues')->onDelete('cascade');
             $table->foreignId('table_id')->constrained('tables')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('billiard_session_id')->nullable()->constrained('billiard_sessions')->onDelete('cascade');
             $table->date('booking_date');
             $table->time('start_time');
             $table->time('end_time');
@@ -36,6 +37,7 @@ return new class extends Migration
             $table->index('venue_id');
             $table->index('table_id');
             $table->index('user_id');
+            $table->index('billiard_session_id');
             $table->index('booking_date');
             $table->index('status');
         });

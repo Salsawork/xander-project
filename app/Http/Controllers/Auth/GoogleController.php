@@ -34,7 +34,7 @@ class GoogleController extends Controller
         }
 
         // Cari pengguna by username = email (skema kamu: username UNIQUE)
-        $user = User::where('username', $email)->first();
+        $user = User::where('email', $email)->first();
 
         if (!$user) {
             // Pecah nama jadi first/last sederhana
