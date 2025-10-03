@@ -10,6 +10,7 @@ use App\Models\OrderSparring;
 use App\Models\SparringSchedule;
 use App\Models\OrderVenue;
 use App\Models\Product;
+use App\Models\Venue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
@@ -118,7 +119,7 @@ class OrderController extends Controller
             'venues.*.date'     => 'required',
             'venues.*.start'    => 'required',
             'venues.*.end'      => 'required',
-            'venues.*.table_id' => 'nullable|exists:tables,id'
+            'venues.*.table' => 'nullable|exists:table'
         ]);
 
         if (!auth()->check()) {
@@ -182,10 +183,19 @@ class OrderController extends Controller
             if ($request->has('venues')) {
                 foreach ($request->venues as $venue) {
                     $bookingDate = \Carbon\Carbon::createFromFormat('d-m-Y', $venue['date'])->format('Y-m-d');
+                    
+                    // Cara yang lebih aman untuk mendapatkan venue id
+                    if (isset($venue['table'])) {
+                        $venueId = Venue::where('table_number', $venue['table'])->firstOrFail()->id;
+                    } elseif (isset($venue['id'])) {
+                        $venueId = $venue['id'];
+                    } else {
+                        throw new \Exception('Venue ID is required');
+                    }
                     $order->bookings()->create([
-                        'venue_id' => $venue['id'],
+                        'venue_id' => $venueId,
                         'price'    => $venue['price'],
-                        'table_id' => $venue['table_id'] ?? 1,
+                        'table_id' => $venueId,
                         'user_id'  => $user->id,
                         'booking_date' => $bookingDate,
                         'start_time'   => $venue['start'],

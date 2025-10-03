@@ -6,5 +6,7 @@
         @include('dash.admin.overview')
     @elseif (Auth::user()->roles == 'user')
         @include('dash.user.profile')
+    @elseif (Auth::user()->roles == 'venue')
+        @include('dash.user.profile')
     @endif
 @endsection

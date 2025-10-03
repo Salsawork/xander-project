@@ -13,7 +13,7 @@
 
 <body>
     <div class="w-full">
-        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*'))
+        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*'))
             @include('partials.navbar')
         @endif
 

@@ -1,33 +1,45 @@
-<aside class="bg-[#2D2D2D] w-1/6 flex-shrink-0 sticky top-0 h-screen">
-    <header class="bg-[#2D2D2D] h-12 flex items-center justify-end px-4 mt-8">
-        <a href="{{ route('index') }}" class="flex items-center justify-center w-full">
-            <img src="{{ asset('/images/logo.png') }}" alt="Logo" class="h-8" />
-        </a>
-    </header>
-    <ul class="space-y-6 text-sm font-semibold p-6">
-        <li>
-            <a href="{{ route('venue.index') }}"
-                class="block {{ request()->routeIs('venue.index') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
-                Dashboard
+<header class="bg-[#161617] h-16 flex items-center justify-between px-10 fixed top-0 w-5/6">
+    <div class="flex-1 flex justify-start">
+        <p class="text-sm text-gray-400">
+            <a href="{{ route('index') }}" class="cursor-pointer hover:text-white">
+                <i class="fas fa-chevron-left mr-2"></i>Home
             </a>
-        </li>
-        <li>
-            <a href="{{ route('venue.booking') }}"
-                class="block {{ request()->routeIs('venue.booking') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
-                Booking Management
+        </p>
+    </div>
+
+    <div class="flex-1 flex justify-end relative">
+        <button aria-label="User menu"
+            class="flex items-center text-gray-300 hover:text-white focus:outline-none transition duration-200"
+            onclick="toggleDropdown()">
+            <i class="fas fa-user-circle fa-lg"></i>
+        </button>
+        
+        <div id="userDropdown"
+            class="hidden absolute right-0 top-8 w-48 bg-[#2a2a2a] rounded-lg shadow-lg py-2 z-50 border border-gray-700">
+            @guest
+            <a href="{{ route('login') }}"
+            class="flex items-center gap-3 px-2 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
+            <i class="fas fa-sign-in-alt w-4 shrink-0 text-gray-300"></i>
+                <span>Login</span>
             </a>
-        </li>
-        <li>
-            <a href="{{ route('venue.promo') }}"
-                class="block {{ request()->routeIs('venue.promo') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
-                Promo Management
+            @endguest
+
+            @auth
+            <a href="{{ route('dashboard') }}"
+            class="flex items-center gap-3 px-2 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
+            <i class="fas fa-user mr-2"></i> 
+                <span>Profile</span>
             </a>
-        </li>
-        <li>
-            <a href="{{ route('venue.transaction') }}"
-                class="block {{ request()->routeIs('venue.transaction') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
-                Transaction History
-            </a>
-        </li>
-    </ul>
-</aside>
+            
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                class="w-full flex items-center gap-3 px-2 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap text-left">
+                <i class="fas fa-sign-out-alt w-4 shrink-0 text-gray-300"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+        @endauth
+        </div>
+    </div>
+</header>
