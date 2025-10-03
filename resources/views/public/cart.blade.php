@@ -135,8 +135,9 @@
                             onchange="handleCheckboxChange(this)"
                             class="w-5 h-5 border border-gray-600 rounded-sm bg-transparent checked:bg-blue-500 checked:border-blue-500" />
 
-                        <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
-                            src="https://placehold.co/400x400?text=No+Image" width="80" />
+                        <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
+                            src="https://placehold.co/400x400?text=No+Image" width="80" height="80" />
+
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white text-base leading-tight cart-name">
                                 {{ $venue['name'] }}
@@ -144,7 +145,6 @@
                             <p class="text-white text-xs mt-1 cart-meta">
                                 {{ $venue['date'] }} {{ $venue['start'] }} - {{ $venue['end'] }}
                             </p>
-                            
                             <input type="hidden" id="price-venue-{{ $venue['id'] }}" value="{{ $venue['price'] }}">
                             <p class="text-white text-sm mt-1 cart-price">
                                 Rp. {{ number_format($venue['price'], 0, ',', '.') }}

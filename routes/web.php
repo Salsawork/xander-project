@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController; 
 use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
+use App\Http\Controllers\venueController\PriceScheduleController;
 use App\Http\Controllers\venueController\TransactionController;
 use App\Http\Controllers\FavoriteController;
 
@@ -191,14 +192,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{guideline}', [AdminGuidelinesController::class, 'destroy'])->name('admin.guidelines.destroy');
     });
 
-  Route::prefix('dashboard/promo')->group(function () {
-    Route::get('/', [VoucherController::class, 'index'])->name('promo.index');
-    Route::get('/create', [VoucherController::class, 'create'])->name('promo.create');
-    Route::post('/', [VoucherController::class, 'store'])->name('promo.store');
-    Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])->name('promo.edit');
-    Route::put('/{voucher}', [VoucherController::class, 'update'])->name('promo.update');
-    Route::delete('/{voucher}', [VoucherController::class, 'destroy'])->name('promo.destroy');
-});
+    Route::prefix('dashboard/promo')->group(function () {
+        Route::get('/', [VoucherController::class, 'index'])->name('promo.index');
+        Route::get('/create', [VoucherController::class, 'create'])->name('promo.create');
+        Route::post('/', [VoucherController::class, 'store'])->name('promo.store');
+        Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])->name('promo.edit');
+        Route::put('/{voucher}', [VoucherController::class, 'update'])->name('promo.update');
+        Route::delete('/{voucher}', [VoucherController::class, 'destroy'])->name('promo.destroy');
+    });
     Route::prefix('dashboard/venue')->group(function () {
         Route::get('/', [AdminVenueController::class, 'index'])->name('venue.index');
         Route::get('/create', [AdminVenueController::class, 'create'])->name('venue.create');
@@ -206,7 +207,33 @@ Route::middleware('auth')->group(function () {
         Route::get('/{venue}/edit', [AdminVenueController::class, 'edit'])->name('venue.edit');
         Route::put('/{venue}', [AdminVenueController::class, 'update'])->name('venue.update');
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
+        
     });
+    // Route::prefix('venue')->group(function () {
+        // Booking
+        Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
+        Route::get('/booking/create-table', [BookingController::class, 'createTable'])->name('venue.booking.create-table');
+        Route::post('/booking/create-table', [BookingController::class, 'storeTable'])->name('venue.booking.store-table');
+        Route::delete('/booking/delete-table/{table}', [BookingController::class, 'deleteTable'])->name('venue.booking.delete-table');
+    
+        // Tampilkan form
+        Route::get('/booking/create-price-schedule', [PriceScheduleController::class, 'create'])->name('price-schedule.create');
+
+        // Simpan data
+        Route::post('/booking/price-schedule', [PriceScheduleController::class, 'store'])->name('price-schedule.store');
+
+        // Hapus data
+        Route::delete('/booking/price-schedule/{priceSchedule}', [PriceScheduleController::class, 'destroy'])->name('price-schedule.destroy');
+
+        // Promo
+        Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
+        Route::get('/promo/create', [PromoController::class, 'create'])->name('venue.promo.create');
+        Route::post('/promo/create', [PromoController::class, 'store'])->name('venue.promo.store');
+        Route::get('/promo/delete/{voucher}', [PromoController::class, 'delete'])->name('venue.promo.delete');
+    
+        // Transaction
+        Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
+    // });
 
     Route::prefix('dashboard/athlete')->group(function () {
         Route::get('/', [AdminAthleteController::class, 'index'])->name('athlete.index');
@@ -228,16 +255,16 @@ Route::middleware('auth')->group(function () {
     
     
         // Athlete Match History (BARU)
-        Route::get('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'index'])->name('athlete.match');
+        Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         // Create Session
-        Route::get('/match/create', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'create'])->name('athlete.match.create');
-        Route::post('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'store'])->name('athlete.match.store');
+        Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
+        Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
     
         // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
     
         // Athlete Match History (BARU)
-        Route::get('/match/{id}', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'show'])->name('athlete.match.show');
+        Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
     Route::prefix('dashboard/partner')->group(function () {
