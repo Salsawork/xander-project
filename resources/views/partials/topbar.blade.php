@@ -1,9 +1,9 @@
 <header class="bg-[#161617] h-16 flex items-center justify-between px-10 fixed top-0 w-5/6">
     <div>
         <p class="text-sm text-gray-400">
-            <span onclick="window.location='{{ route('index') }}'" class="cursor-pointer hover:text-white">
+            <a href="{{ route('index') }}" class="cursor-pointer hover:text-white">
                 <i class="fas fa-chevron-left mr-2"></i>Home
-            </span>
+            </a>
         </p>
     </div>
     <div class="relative">

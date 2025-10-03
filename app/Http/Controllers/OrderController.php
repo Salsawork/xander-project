@@ -37,76 +37,46 @@ class OrderController extends Controller
         
         // Logging untuk debugging
         Log::info('Checkout page accessed');
+        $carts = $venues = $sparrings = [];
+        $total = $shipping = 0;
 
-        $allCarts = [];
-        $carts = [];
-        $sparrings = [];
-        $venues = [];
-        $total = 0;
-        $tax = 0;
-        $shipping = 0;
+        $selectedItems = (array) $request->input('selected_items', []);
 
-        // Ambil semua data cart dari cookie
+        // Products
         if (Cookie::has('cartProducts')) {
-            $cartData = Cookie::get('cartProducts');
-            if ($cartData) {
-                $allCarts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-
-                $selectedItems = $request->input('items', []);
-                if (!empty($selectedItems)) {
-                    $selectedItems = array_map('intval', $selectedItems);
-                    $carts = array_filter($allCarts, function ($cart) use ($selectedItems) {
-                        return in_array((int)$cart['id'], $selectedItems);
-                    });
-                    $carts = array_values($carts);
-                } else {
-                    $carts = $allCarts;
-                }
-
-                foreach ($carts as $cart) {
-                    if (isset($cart['price'])) {
-                        $total += (int)$cart['price'];
-                    }
-                }
+            $cartData = json_decode(Cookie::get('cartProducts'), true) ?? [];
+            $carts = array_values(array_filter($cartData, fn($cart) => in_array((string)$cart['id'], $selectedItems)));
+            foreach ($carts as $c) {
+                $total += (int) $c['price'];
             }
         }
 
-        // Venue dari cookie
+        // Venues
         if (Cookie::has('cartVenues')) {
-            $venueData = Cookie::get('cartVenues');
-            $venues = is_array($venueData) ? $venueData : json_decode($venueData, true);
-
+            $venueData = json_decode(Cookie::get('cartVenues'), true) ?? [];
+            $venues = array_values(array_filter($venueData, fn($venue) => in_array("venue-{$venue['id']}", $selectedItems)));
             foreach ($venues as $v) {
-                if (isset($v['price'])) {
-                    $total += (int)$v['price'];
-                }
+                $total += (int) $v['price'];
             }
         }
 
-        // Sparring dari cookie
+        // Sparrings
         if (Cookie::has('cartSparrings')) {
-            $sparringData = Cookie::get('cartSparrings');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-
-            foreach ($sparrings as $sparring) {
-                if (isset($sparring['price'])) {
-                    $total += (int)$sparring['price'];
-                }
+            $sparringData = json_decode(Cookie::get('cartSparrings'), true) ?? [];
+            $sparrings = array_values(array_filter($sparringData, fn($sparring) => in_array("sparring-{$sparring['schedule_id']}", $selectedItems)));
+            foreach ($sparrings as $s) {
+                $total += (int) $s['price'];
             }
         }
 
-        // Hitung pajak dan grand total
         $tax = $total * 0.1;
-        $grandTotal = (int)($total + $shipping + $tax);
+        $grandTotal = $total + $shipping + $tax;
 
-        // Kirim client key midtrans
-        $clientKey = config('midtrans.client_key');
-
-        // Kirim user (jika login) agar bisa prefill di blade
         $user = $request->user();
-
-        return view('public.checkout.checkout', compact('carts', 'sparrings', 'venues', 'total', 'shipping', 'tax', 'grandTotal', 'clientKey', 'user'));
+        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user'));
     }
+
+
 
 
     /**
@@ -236,30 +206,30 @@ class OrderController extends Controller
                         'schedule_id' => $sparring['schedule_id'],
                         'price'       => $sparring['price'],
                     ]);
-            
+
                     $total += $sparring['price'];
-            
+
                     // Kirim email ke athlete
                     $athlete = User::find($sparring['athlete_id']);
                     $user    = auth()->user(); // pemesan
                     if ($athlete && $athlete->email) {
                         $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
-                                       "Detail Pemesan:\n" .
-                                       "- Nama: {$user->name}\n" .
-                                       "- Email: {$user->email}\n" .
-                                       "- Telepon: {$user->phone}\n\n" .
-                                       "Detail Order:\n" .
-                                       "- Order Number: {$order->order_number}\n" .
-                                       "- Total: Rp " . number_format($order->total, 0, ',', '.');
-            
+                            "Detail Pemesan:\n" .
+                            "- Nama: {$user->name}\n" .
+                            "- Email: {$user->email}\n" .
+                            "- Telepon: {$user->phone}\n\n" .
+                            "Detail Order:\n" .
+                            "- Order Number: {$order->order_number}\n" .
+                            "- Total: Rp " . number_format($order->total, 0, ',', '.');
+
                         Mail::raw($messageBody, function ($message) use ($athlete) {
                             $message->to($athlete->email)
-                                    ->subject('Notifikasi Order Sparring Baru');
+                                ->subject('Notifikasi Order Sparring Baru');
                         });
                     }
                 }
             }
-            
+
             // Update total order
             $order->update(['total' => $total]);
 

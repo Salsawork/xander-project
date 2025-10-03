@@ -225,7 +225,7 @@
                             <div class="mt-12">
                                 <div class="flex items-baseline gap-1 text-sm">
                                     <span class="text-gray-400">start from</span>
-                                    <span class="text-lg sm:text-xl font-bold">Rp. {{ number_format($venue->price ?? 50000, 0, ',', '.') }}</span>
+                                    <span class="text-lg sm:text-xl font-bold">Rp. {{ number_format($venue->price ?? 0, 0, ',', '.') }}</span>
                                     <span class="text-gray-400">/ session</span>
                                 </div>
                             </div>
