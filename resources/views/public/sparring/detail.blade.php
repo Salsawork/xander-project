@@ -772,5 +772,4 @@ $fullStars = floor((float)($averageRating ?? 0));
         })();
     });
 </script>
-
 @endpush
