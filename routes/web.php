@@ -40,6 +40,7 @@ use App\Http\Controllers\adminController\AdminVenueController;
 use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
+use App\Http\Controllers\adminController\VoucherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -190,12 +191,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{guideline}', [AdminGuidelinesController::class, 'destroy'])->name('admin.guidelines.destroy');
     });
 
-    Route::prefix('dashboard/promo')->group(function () {
-        Route::get('/', function () {
-            return view('dash.admin.promo');
-        })->name('promo.index');
-    });
-
+  Route::prefix('dashboard/promo')->group(function () {
+    Route::get('/', [VoucherController::class, 'index'])->name('promo.index');
+    Route::get('/create', [VoucherController::class, 'create'])->name('promo.create');
+    Route::post('/', [VoucherController::class, 'store'])->name('promo.store');
+    Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])->name('promo.edit');
+    Route::put('/{voucher}', [VoucherController::class, 'update'])->name('promo.update');
+    Route::delete('/{voucher}', [VoucherController::class, 'destroy'])->name('promo.destroy');
+});
     Route::prefix('dashboard/venue')->group(function () {
         Route::get('/', [AdminVenueController::class, 'index'])->name('venue.index');
         Route::get('/create', [AdminVenueController::class, 'create'])->name('venue.create');
