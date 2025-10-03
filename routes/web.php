@@ -330,29 +330,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
-    // Route::middleware('auth')->prefix('athlete')->group(function () {
-    //     // Athlete Dashboard
-    //     Route::get('/dashboard', [App\Http\Controllers\athleteController\DashboardController::class, 'index'])->name('athlete.dashboard');
-
-    //     // Athlete Sparring - Create Session
-    //     Route::get('/sparring/create', function () {
-    //         return view('dash.athlete.sparring.create');
-    //     })->name('athlete.sparring.create');
-
-
-    //     // Athlete Match History (BARU)
-    //     Route::get('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'index'])->name('athlete.match');
-    //     // Create Session
-    //     Route::get('/match/create', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'create'])->name('athlete.match.create');
-    //     Route::post('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'store'])->name('athlete.match.store');
-
-    //     // Athlete Calendar
-    //     Route::get('/calendar/{year}/{month}', [App\Http\Controllers\athleteController\DashboardController::class, 'getCalendar']);
-
-    //     // Athlete Match History (BARU)
-    //     Route::get('/match/{id}', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'show'])->name('athlete.match.show');
-    // });
-
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', function () {
             return view('dash.admin.partner');
