@@ -1,7 +1,14 @@
-<header class="bg-[#161617] h-12 flex items-center justify-end px-4 fixed top-0 w-5/6">
+<header class="bg-[#161617] h-16 flex items-center justify-between px-10 fixed top-0 w-5/6">
+    <div>
+        {{-- <p class="text-sm text-gray-400">
+            <span onclick="window.location='{{ route('index') }}'" class="cursor-pointer hover:text-white">
+                <i class="fas fa-chevron-left mr-2"></i>Home
+            </span>
+        </p> --}}
+    </div>
     <div class="relative">
         <button aria-label="User profile"
-            class="flex items-center space-x-2 text-gray-400 hover:text-white focus:outline-none"
+            class="flex items-center space-x-2 text-gray-400 mr-4 hover:text-white focus:outline-none"
             onclick="toggleDropdown()">
             <i class="fas fa-user-circle fa-lg"></i>
         </button>
@@ -9,7 +16,13 @@
             <a href="{{ route('dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 <i class="fas fa-user mr-2"></i> Profile
             </a>
-            <a href="{{ route('logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
+                @csrf
+            </form>
+
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
             </a>
         </div>
