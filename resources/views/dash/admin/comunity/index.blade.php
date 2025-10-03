@@ -7,10 +7,7 @@
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-8">
                 @include('partials.topbar')
-               <div>
-                <h1 class="text-3xl font-extrabold mb-6">
-                    Berita
-                </h1>
+            
 
                 @if (session('success'))
                     <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
@@ -136,7 +133,6 @@
                     </table>
                 </div>
             </main>
-        </div>
     </div>
 @endsection
 

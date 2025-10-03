@@ -41,49 +41,77 @@ class ProductController extends Controller
     // }
 
     public function index(Request $request)
-    {
-        $query = Product::query();
+{
+    $query = Product::query();
 
-        // Filter Level
-        if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
-            $query->where('level', $request->level);
-        }
-
-        // Filter Harga
-        if ($request->filter === 'under50') {
-            $query->where('pricing', '<', 50000);
-        }
-
-        // Filter Kategori
-        if ($request->has('category')) {
-            $query->where('category_id', $request->category);
-        }
-
-        // Kalau tidak ada filter → random 4
-        if (!$request->hasAny(['level', 'filter', 'category'])) {
-            $query->inRandomOrder()->limit(4);
-        }
-
-        $products = Product::paginate(10);
-
-        // Track the visit
-        $ipAddress = $request->ip();
-        $visit = Visit::where('ip_address', $ipAddress)
-            ->whereDate('visit_date', today())
-            ->first();
-
-        if (!$visit) {
-            Visit::create([
-                'ip_address' => $ipAddress,
-                'visit' => 1,
-                'visit_date' => now(),
-            ]);
-        } else {
-            $visit->increment('visit');
-        }
-
-        return view('landing', compact('products'));
+    // 🔹 Filter Level
+    if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
+        $query->where('level', $request->level);
     }
+
+    // 🔹 Filter Harga
+    if ($request->filter === 'under50') {
+        $query->where('pricing', '<', 50000);
+    }
+
+    // 🔹 Filter Kategori
+    if ($request->has('category') && $request->category) {
+        $query->where('category_id', $request->category);
+    }
+
+    // 🔹 Filter Search
+    if ($request->has('search') && $request->search) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', '%' . $search . '%')
+              ->orWhere('description', 'like', '%' . $search . '%')
+              ->orWhere('sku', 'like', '%' . $search . '%');
+        });
+    }
+
+    // 🔹 Filter Status
+    if ($request->has('status')) {
+        if ($request->status === 'in-stock') {
+            $query->where('quantity', '>', 0);
+        } elseif ($request->status === 'out-of-stock') {
+            $query->where('quantity', '=', 0);
+        }
+    }
+
+    // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing)
+    if (!$request->hasAny(['level', 'filter', 'category', 'search', 'status'])) {
+        $products = $query->inRandomOrder()->limit(4)->get();
+    } else {
+        $products = $query->orderBy('created_at', 'desc')->paginate(10);
+    }
+
+    // 🔹 Track the visit (hanya sekali per hari per IP)
+    $ipAddress = $request->ip();
+    $visit = Visit::where('ip_address', $ipAddress)
+        ->whereDate('visit_date', today())
+        ->first();
+
+    if (!$visit) {
+        Visit::create([
+            'ip_address' => $ipAddress,
+            'visit'      => 1,
+            'visit_date' => now(),
+        ]);
+    } else {
+        $visit->increment('visit');
+    }
+
+    // 🔹 Ambil kategori untuk filter di view (dashboard)
+    $categories = \App\Models\Category::all();
+
+    // 🔹 Pilih view sesuai kebutuhan
+    if ($request->is('dashboard*')) {
+        return view('dash.admin.product.index', compact('products', 'categories'));
+    }
+
+    return view('landing', compact('products'));
+}
+
 
     public function filterByLevel(Request $request)
     {

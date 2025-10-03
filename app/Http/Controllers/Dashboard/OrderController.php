@@ -13,37 +13,36 @@ class OrderController extends Controller
      * Tampilkan semua order
      */
     public function index(Request $request)
-    {
-        $orders = Order::orderBy('created_at', 'desc')
-            ->when($request->search, function ($query) use ($request) {
-                $query->whereHas('user', function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                      ->orWhere('username', 'like', '%' . $request->search . '%');
-                });
-            })
-            ->when($request->status, function ($query) use ($request) {
-                $query->where('delivery_status', $request->status);
-            })
-            ->when($request->orderBy, function ($query) use ($request) {
-                $query->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc');
-            })
-            ->get();
+{
+    $orders = Order::when($request->search, function ($query) use ($request) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('username', 'like', '%' . $request->search . '%');
+            });
+        })
+        ->when($request->status, function ($query) use ($request) {
+            $query->where('delivery_status', $request->status);
+        })
+        // hanya 1 orderBy, kasih default DESC
+        ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
+        ->get();
 
-        $pendingCount    = Order::where('delivery_status', 'pending')->count();
-        $processingCount = Order::where('delivery_status', 'processing')->count();
-        $shippedCount    = Order::where('delivery_status', 'shipped')->count();
-        $deliveredCount  = Order::where('delivery_status', 'delivered')->count();
-        $cancelledCount  = Order::where('delivery_status', 'cancelled')->count();
+    $pendingCount    = Order::where('delivery_status', 'pending')->count();
+    $processingCount = Order::where('delivery_status', 'processing')->count();
+    $shippedCount    = Order::where('delivery_status', 'shipped')->count();
+    $deliveredCount  = Order::where('delivery_status', 'delivered')->count();
+    $cancelledCount  = Order::where('delivery_status', 'cancelled')->count();
 
-        return view('dash.admin.order', compact(
-            'orders',
-            'pendingCount',
-            'processingCount',
-            'shippedCount',
-            'deliveredCount',
-            'cancelledCount'
-        ));
-    }
+    return view('dash.admin.order', compact(
+        'orders',
+        'pendingCount',
+        'processingCount',
+        'shippedCount',
+        'deliveredCount',
+        'cancelledCount'
+    ));
+}
+
 
     /**
      * Detail order

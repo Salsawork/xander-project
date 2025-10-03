@@ -34,6 +34,8 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        
+        // Logging untuk debugging
         Log::info('Checkout page accessed');
         $carts = $venues = $sparrings = [];
         $total = $shipping = 0;
