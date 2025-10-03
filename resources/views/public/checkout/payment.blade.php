@@ -20,7 +20,7 @@
                 <div class="space-y-3 text-left">
                     <div class="flex justify-between">
                         <span class="text-gray-400">Order ID:</span>
-                        <span>{{ $order->id }}</span>
+                        <span>{{ $order->order_number }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Date:</span>

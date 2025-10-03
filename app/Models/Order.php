@@ -16,11 +16,17 @@ class Order extends Model
     protected $fillable = [
         'id',
         'user_id',
+        'order_number',
+        'firstname',
+        'lastname',
+        'email',
         'total',
+        'phone',
         'payment_status',
         'delivery_status',
         'payment_method',
         'file',
+
     ];
 
     protected $casts = [
@@ -46,12 +52,22 @@ class Order extends Model
             ->withPivot('quantity', 'price', 'subtotal', 'discount')
             ->withTimestamps();
     }
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class, 'order_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'order_id'); 
+    }
 
     /**
      * Get the sparring sessions associated with the order.
      */
     public function orderSparrings()
     {
-        return $this->hasMany(OrderSparring::class);
+        return $this->hasMany(OrderSparring::class, 'order_id');
     }
+    
 }

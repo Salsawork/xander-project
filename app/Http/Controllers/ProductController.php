@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-   
+
     // public function index(Request $request)
     // {
     //     $products = Product::when($request->has('search'), function ($query) use ($request) {
@@ -271,38 +271,32 @@ class ProductController extends Controller
 
     public function landing(Request $request)
     {
-        $products = Product::paginate(12);
-        $carts = json_decode($request->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+        $products = Product::query()
+            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
+            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
+            ->when($request->category, fn($q) => $q->where('category_id', $request->category))
+            ->when($request->brand, fn($q) => $q->where('brand', $request->brand))
+            ->when($request->condition, fn($q) => $q->where('condition', $request->condition))
+            ->when($request->price_min, fn($q) => $q->where('pricing', '>=', $request->price_min))
+            ->when($request->price_max, fn($q) => $q->where('pricing', '<=', $request->price_max))
+            ->orderBy('created_at', 'desc')
+            ->paginate(12)
+            ->withQueryString();
 
-        return view('public.product.index', compact('products', 'carts', 'sparrings'));
+        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
+        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
+        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
+
+        return view('public.product.index', compact('products', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 
     public function detail(Request $request, $product)
     {
         $detail = Product::findOrFail($product);
-        $carts = json_decode($request->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
+        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
+        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
+        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
 
-        return view('public.product.detail', compact('detail', 'carts', 'sparrings'));
-    }
-
-
-    public function filter(Request $request)
-    {
-        $products = Product::query()
-            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
-            ->when($request->category, fn($q) => $q->where('category_id', $request->category))
-            ->when($request->brand, fn($q) => $q->where('brand', $request->brand))
-            ->when($request->condition, fn($q) => $q->where('condition', $request->condition))
-            ->when($request->price, fn($q) => $q->where('pricing', '<=', $request->price))
-            ->orderBy('created_at', 'desc')
-            ->paginate(12)
-            ->withQueryString();
-
-        $carts = json_decode($request->cookie('cart') ?? '[]', true);
-        $sparrings = json_decode($request->cookie('sparring') ?? '[]', true);
-
-        return view('public.product.index', compact('products', 'carts', 'sparrings'));
+        return view('public.product.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 }

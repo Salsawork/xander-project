@@ -53,4 +53,5 @@ class Product extends Model
             ->withPivot('quantity', 'price', 'subtotal', 'discount')
             ->withTimestamps();
     }
+    
 }

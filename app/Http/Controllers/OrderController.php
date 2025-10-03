@@ -3,16 +3,20 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderSparring;
 use App\Models\SparringSchedule;
+use App\Models\OrderVenue;
+use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -33,90 +37,47 @@ class OrderController extends Controller
         
         // Logging untuk debugging
         Log::info('Checkout page accessed');
-        Log::info('Request items', ['items' => $request->input('items', [])]);
-        Log::info('Request price', ['price' => $request->input('price', [])]);
+        $carts = $venues = $sparrings = [];
+        $total = $shipping = 0;
 
-        // Ambil data dari cookie
-        $allCarts = [];
-        $carts = [];
-        $sparrings = [];
-        $venue = null;
-        $total = 0;
-        $tax = 0;
-        $shipping = 30000; // Default shipping cost
+        $selectedItems = (array) $request->input('selected_items', []);
 
-        // Ambil semua data cart dari cookie
-        if (Cookie::has('cart')) {
-            $cartData = Cookie::get('cart');
-            Log::info('Cart data from Cookie facade', ['data' => $cartData]);
-
-            if ($cartData) {
-                $allCarts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-                Log::info('All decoded cart data', ['allCarts' => $allCarts]);
-
-                // Jika ada items yang dipilih, filter cart berdasarkan items
-                $selectedItems = $request->input('items', []);
-
-                if (!empty($selectedItems)) {
-                    // Konversi selectedItems ke integer untuk perbandingan yang benar
-                    $selectedItems = array_map('intval', $selectedItems);
-
-                    // Filter cart berdasarkan items yang dipilih
-                    $carts = array_filter($allCarts, function($cart) use ($selectedItems) {
-                        return in_array((int)$cart['id'], $selectedItems);
-                    });
-
-                    // Reset array keys
-                    $carts = array_values($carts);
-
-                    Log::info('Selected cart items', ['carts' => $carts]);
-                } else {
-                    // Jika tidak ada items yang dipilih, tampilkan semua
-                    $carts = $allCarts;
-                }
-
-                // Hitung total
-                foreach ($carts as $cart) {
-                    if (isset($cart['price'])) {
-                        $total += (int)$cart['price'];
-                    }
-                }
+        // Products
+        if (Cookie::has('cartProducts')) {
+            $cartData = json_decode(Cookie::get('cartProducts'), true) ?? [];
+            $carts = array_values(array_filter($cartData, fn($cart) => in_array((string)$cart['id'], $selectedItems)));
+            foreach ($carts as $c) {
+                $total += (int) $c['price'];
             }
         }
 
-        // Ambil data sparring dari cookie jika ada
-        if (Cookie::has('sparring')) {
-            $sparringData = Cookie::get('sparring');
-            $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-
-            foreach ($sparrings as $sparring) {
-                if (isset($sparring['price'])) {
-                    $total += $sparring['price'];
-                }
+        // Venues
+        if (Cookie::has('cartVenues')) {
+            $venueData = json_decode(Cookie::get('cartVenues'), true) ?? [];
+            $venues = array_values(array_filter($venueData, fn($venue) => in_array("venue-{$venue['id']}", $selectedItems)));
+            foreach ($venues as $v) {
+                $total += (int) $v['price'];
             }
         }
 
-        // Ambil data venue dari cookie jika ada
-        if (Cookie::has('venue')) {
-            $venueData = Cookie::get('venue');
-            $venue = is_array($venueData) ? $venueData : json_decode($venueData, true);
-
-            if ($venue && isset($venue['price'])) {
-                $total += $venue['price'];
+        // Sparrings
+        if (Cookie::has('cartSparrings')) {
+            $sparringData = json_decode(Cookie::get('cartSparrings'), true) ?? [];
+            $sparrings = array_values(array_filter($sparringData, fn($sparring) => in_array("sparring-{$sparring['schedule_id']}", $selectedItems)));
+            foreach ($sparrings as $s) {
+                $total += (int) $s['price'];
             }
         }
 
-        // Hitung pajak (10% dari total)
         $tax = $total * 0.1;
-
-        // Hitung grand total
         $grandTotal = $total + $shipping + $tax;
 
-        // Tambahkan client key Midtrans untuk frontend
-        $clientKey = config('midtrans.client_key');
-
-        return view('public.checkout.checkout', compact('carts', 'sparrings', 'venue', 'total', 'shipping', 'tax', 'grandTotal', 'clientKey'));
+        $user = $request->user();
+        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user'));
     }
+
+
+
 
     /**
      * Show the form for creating a new resource.
@@ -131,228 +92,166 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
-        // Validasi data checkout
-        $validatedData = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'zip' => 'required|string|max:20',
-            'shipping_method' => 'required|in:express,standard',
-            'note' => 'nullable|string',
-            'payment_method' => 'required',
+        $request->validate([
+            'firstname'      => 'required|string|max:255',
+            'lastname'       => 'required|string|max:255',
+            'email'          => 'required|email',
+            'phone'          => 'required|string|max:20',
+            'payment_method' => 'required|in:transfer_manual',
+            'file'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+
+            // products
+            'products'        => 'array',
+            'products.*.id'   => 'required|exists:products,id',
+            'products.*.qty'  => 'required|integer|min:1',
+
+            // sparrings
+            'sparrings'                => 'array',
+            'sparrings.*.athlete_id'   => 'required|exists:users,id',
+            'sparrings.*.schedule_id'  => 'required|exists:sparring_schedules,id',
+            'sparrings.*.price'        => 'required|numeric|min:0',
+
+            // venues
+            'venues'            => 'array',
+            'venues.*.id'       => 'required|exists:venues,id',
+            'venues.*.price'    => 'required|numeric|min:0',
+            'venues.*.date'     => 'required',
+            'venues.*.start'    => 'required',
+            'venues.*.end'      => 'required',
+            'venues.*.table_id' => 'nullable|exists:tables,id'
         ]);
 
-        // Ambil data dari cookie
-        $carts = [];
-        $items = [];
-        $prices = [];
-        $total = 0;
-        $tax = 0;
-        $shipping = 30000; // Default shipping cost
-
-        // Ambil data cart dari cookie
-        if (Cookie::has('cart')) {
-            $cartData = Cookie::get('cart');
-            $allCarts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-
-            // Jika ada items yang dipilih, filter cart berdasarkan items
-            $selectedItems = $request->input('items', []);
-
-            if (!empty($selectedItems)) {
-                // Konversi selectedItems ke integer untuk perbandingan yang benar
-                $selectedItems = array_map('intval', $selectedItems);
-
-                // Filter cart berdasarkan items yang dipilih
-                $carts = array_filter($allCarts, function($cart) use ($selectedItems) {
-                    return in_array((int)$cart['id'], $selectedItems);
-                });
-
-                // Reset array keys
-                $carts = array_values($carts);
-            } else {
-                // Jika tidak ada items yang dipilih, gunakan semua
-                $carts = $allCarts;
-            }
-
-            // Hitung total
-            foreach ($carts as $cart) {
-                $items[] = $cart['id'];
-                $prices[] = $cart['price'];
-                $total += (int)$cart['price'];
-            }
+        if (!auth()->check()) {
+            return redirect()->route('login')->with('error', 'Harus login untuk checkout.');
         }
 
-        // Jika tidak ada item, kembalikan error
-        if (empty($items)) {
-            return back()->with('error', 'No products in cart');
-        }
+        DB::beginTransaction();
 
-        // Hitung pajak (10% dari total)
-        $tax = $total * 0.1;
-
-        // Hitung grand total
-        $grandTotal = $total + $shipping + $tax;
-
-        // Generate order ID
-        $orderId = 'XB-' . time();
-
-        // Simpan order ke database
         try {
-            $order = DB::transaction(function () use ($request, $validatedData, $items, $prices, $carts, $total, $tax, $shipping, $grandTotal, $orderId) {
-                $order = new Order();
-                $order->id = $orderId;
-                // Cek apakah user sudah login
-                if ($request->user()) {
-                    $order->user_id = $request->user()->id;
-                } else {
-                    // Jika belum login, set user_id ke null atau guest
-                    $order->user_id = null; // Pastikan kolom user_id di database bisa null
+            $user = auth()->user();
+
+            // Upload file bukti pembayaran
+            $path = null;
+            if ($request->hasFile('file')) {
+                $filename = time() . '_' . $request->file('file')->getClientOriginalName();
+                $path = $request->file('file')->storeAs('payments', $filename, 'public');
+            }
+
+
+            // Generate order number
+            $orderNumber = 'ORD-' . strtoupper(uniqid());
+
+            // Buat order utama
+            $order = Order::create([
+                'id'              => (string) Str::uuid(),
+                'user_id'         => $user->id,
+                'order_number'    => $orderNumber,
+                'total'           => 0, // update setelah item masuk
+                'payment_status'  => 'pending',
+                'delivery_status' => 'pending',
+                'payment_method'  => $request->payment_method,
+                'file'            => $path,
+            ]);
+
+            $total = 0;
+
+            /** =========================
+             *  Tambahkan Products
+             *  ========================= */
+            if ($request->has('products')) {
+                foreach ($request->products as $item) {
+                    $product = Product::findOrFail($item['id']);
+                    $qty     = $item['qty'];
+                    $price   = $product->pricing;
+                    $subtotal = $qty * $price;
+
+                    $order->products()->attach($product->id, [
+                        'quantity' => $qty,
+                        'price'    => $price,
+                        'subtotal' => $subtotal,
+                        'discount' => 0,
+                    ]);
+
+                    $total += $subtotal;
                 }
-                $order->payment_status = 'pending';
-                $order->delivery_status = 'pending';
-                $order->payment_method = $request->payment_method; // Karena menggunakan Midtrans
-                $order->total = $grandTotal;
-                $order->save();
+            }
 
-                // Simpan order items
-                foreach ($carts as $index => $cart) {
-                    $orderItem = new OrderItem();
-                    $orderItem->order_id = $order->id;
-                    $orderItem->product_id = $cart['id'];
-                    $orderItem->price = $cart['price'];
-                    $orderItem->quantity = 1;
-                    $orderItem->subtotal = $cart['price'];
-                    $orderItem->discount = 0;
-                    $orderItem->save();
+            /** =========================
+             *  Tambahkan Venues / Bookings
+             *  ========================= */
+            if ($request->has('venues')) {
+                foreach ($request->venues as $venue) {
+                    $bookingDate = \Carbon\Carbon::createFromFormat('d-m-Y', $venue['date'])->format('Y-m-d');
+                    $order->bookings()->create([
+                        'venue_id' => $venue['id'],
+                        'price'    => $venue['price'],
+                        'table_id' => $venue['table_id'] ?? 1,
+                        'user_id'  => $user->id,
+                        'booking_date' => $bookingDate,
+                        'start_time'   => $venue['start'],
+                        'end_time'     => $venue['end'],
+                    ]);
+
+                    $total += $venue['price'];
                 }
+            }
 
-                // Simpan sparring jika ada
-                $sparrings = [];
-                if (Cookie::has('sparring')) {
-                    $sparringData = Cookie::get('sparring');
-                    $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
+            /** =========================
+             *  Tambahkan Sparring
+             *  ========================= */
+            if ($request->has('sparrings')) {
+                foreach ($request->sparrings as $sparring) {
+                    $order->orderSparrings()->create([
+                        'athlete_id'  => $sparring['athlete_id'],
+                        'schedule_id' => $sparring['schedule_id'],
+                        'price'       => $sparring['price'],
+                    ]);
 
-                    foreach ($sparrings as $sparring) {
-                        $orderSparring = new OrderSparring();
-                        $orderSparring->order_id = $order->id;
-                        $orderSparring->athlete_id = $sparring['athlete_id'];
-                        $orderSparring->schedule_id = $sparring['schedule_id'];
-                        $orderSparring->price = $sparring['price'];
-                        $orderSparring->save();
+                    $total += $sparring['price'];
 
-                        // Update schedule menjadi booked
-                        $schedule = SparringSchedule::find($sparring['schedule_id']);
-                        if ($schedule) {
-                            $schedule->is_booked = true;
-                            $schedule->save();
-                        }
+                    // Kirim email ke athlete
+                    $athlete = User::find($sparring['athlete_id']);
+                    $user    = auth()->user(); // pemesan
+                    if ($athlete && $athlete->email) {
+                        $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
+                            "Detail Pemesan:\n" .
+                            "- Nama: {$user->name}\n" .
+                            "- Email: {$user->email}\n" .
+                            "- Telepon: {$user->phone}\n\n" .
+                            "Detail Order:\n" .
+                            "- Order Number: {$order->order_number}\n" .
+                            "- Total: Rp " . number_format($order->total, 0, ',', '.');
+
+                        Mail::raw($messageBody, function ($message) use ($athlete) {
+                            $message->to($athlete->email)
+                                ->subject('Notifikasi Order Sparring Baru');
+                        });
                     }
                 }
-
-                return $order;
-            });
-
-            // Siapkan parameter untuk Midtrans
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $order->id,
-                    'gross_amount' => (int)$grandTotal,
-                ],
-                'customer_details' => [
-                    'first_name' => $validatedData['first_name'],
-                    'last_name' => $validatedData['last_name'],
-                    'email' => $validatedData['email'],
-                    'phone' => $validatedData['phone'],
-                    'billing_address' => [
-                        'address' => $validatedData['address'],
-                        'city' => $validatedData['city'],
-                        'postal_code' => $validatedData['zip'],
-                        'country_code' => 'IDN'
-                    ],
-                ],
-                'item_details' => array_map(function($cart) {
-                    return [
-                        'id' => $cart['id'],
-                        'price' => (int)$cart['price'],
-                        'quantity' => 1,
-                        'name' => $cart['name'],
-                    ];
-                }, $carts),
-                'enabled_payments' => [
-                    'credit_card', 'gopay', 'shopeepay', 'bca_va', 'bni_va', 'bri_va', 'other_va', 'dana'
-                ],
-            ];
-
-            // Tambahkan sparring ke item_details jika ada
-            if (!empty($sparrings)) {
-                foreach ($sparrings as $sparring) {
-                    $params['item_details'][] = [
-                        'id' => 'sparring-' . $sparring['athlete_id'] . '-' . $sparring['schedule_id'],
-                        'price' => (int)$sparring['price'],
-                        'quantity' => 1,
-                        'name' => 'Sparring with ' . $sparring['name'] . ' (' . $sparring['schedule'] . ')',
-                    ];
-                }
             }
 
-            // Tambahkan biaya pengiriman
-            $params['item_details'][] = [
-                'id' => 'shipping',
-                'price' => $shipping,
-                'quantity' => 1,
-                'name' => 'Shipping Cost (' . $validatedData['shipping_method'] . ')',
-            ];
+            // Update total order
+            $order->update(['total' => $total]);
 
-            // Tambahkan pajak
-            $params['item_details'][] = [
-                'id' => 'tax',
-                'price' => (int)$tax,
-                'quantity' => 1,
-                'name' => 'Tax (10%)',
-            ];
+            DB::commit();
 
-            // Buat Snap Token
-            if($request->payment_method == 'midtrans') {
-                $snapToken = Snap::getSnapToken($params);
-
-                // Simpan snap token ke database
-                $order->snap_token = $snapToken;
-                $order->save();
-
-                // Hapus cookie cart jika berhasil
-                Cookie::queue(Cookie::forget('cart'));
-
-                // Hapus cookie sparring jika berhasil
-                if (Cookie::has('sparring')) {
-                    Cookie::queue(Cookie::forget('sparring'));
-                }
-
-                // Kembalikan response dengan snap token
-                return response()->json([
-                    'status' => 'success',
-                    'snap_token' => $snapToken,
-                    'order_id' => $order->id,
-                ]);
-            } else {
-                $order->snap_token = 'MANUAL_PAYMENT';
-                $order->save();
-
-                 // Kembalikan response dengan snap token
-                return response()->json([
-                    'status' => 'success',
-                    'snap_token' => 'MANUAL_PAYMENT',
-                    'order_id' => $order->id,
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error creating order: ' . $e->getMessage());
             return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to create order: ' . $e->getMessage(),
+                'status'       => 'success',
+                'message'      => 'Order berhasil dibuat!',
+                'order_number' => $order->order_number,
+                'data'         => $order->load('products', 'orderSparrings', 'bookings'),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Checkout error', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Failed to process order',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -462,17 +361,18 @@ class OrderController extends Controller
 
     public function payment(Request $request)
     {
-        // Validasi input
         $request->validate([
-            'order_id' => 'required|string',
+            'order_number' => 'required|string',
         ]);
 
-        $order = Order::find($request->order_id);
+        $order = Order::where('order_number', $request->order_number)->firstOrFail();
 
         return view('public.checkout.payment', compact('order'));
     }
 
-    public function updatePayment(Request $request, Order $order) {
+
+    public function updatePayment(Request $request, Order $order)
+    {
         $data = $request->validate([
             'file' => 'required|file|mimes:jpg,jpeg,png,pdf', // Maksimal 2MB
         ]);

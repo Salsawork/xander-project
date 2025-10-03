@@ -17,12 +17,12 @@ return new class extends Migration
             $table->string('name', 100);
             $table->time('start_time');
             $table->time('end_time');
-            $table->string('days', 255)->nullable();
+            $table->json('days');
             $table->decimal('price', 10, 2);
+            $table->string('time_category', 50)->nullable();
             $table->boolean('is_active')->default(true);
             $table->string('tables_applicable')->nullable();
             $table->timestamps();
-            
             // Add index for better performance
             $table->index('venue_id');
             $table->index('is_active');

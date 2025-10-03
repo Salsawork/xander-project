@@ -43,6 +43,7 @@ class OrderSeeder extends Seeder
             // Create the order
             $order = Order::create([
                 'id' => $orderId,
+                'order_number' => 'ORD-' . date('ymd') . '-' . $i,
                 'user_id' => $users->random()->id,
                 'total' => 0, // Will be calculated later
                 'payment_status' => ['pending', 'paid'][$i > 0 ? 1 : 0],

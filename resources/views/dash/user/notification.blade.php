@@ -5,10 +5,10 @@
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 my-8">
                 @include('partials.topbar')
-                <h1 class="text-2xl md:text-3xl font-extrabold mb-8 mx-8 mt-20">Notification Settings</h1>
-                <section class="bg-[#2a2a2a] rounded-lg p-8 mx-8 space-y-8">
+                <h1 class="text-2xl md:text-3xl font-extrabold mb-8 mx-16 mt-16">Notification Settings</h1>
+                <section class="bg-[#2a2a2a] rounded-lg p-8 mx-16 space-y-8">
                     <div class="flex justify-between items-center">
                         <div>
                             <h2 class="font-bold text-lg md:text-xl">Order Updates</h2>

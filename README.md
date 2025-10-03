@@ -198,8 +198,8 @@ class OrderController extends Controller
                 'gross_amount' => (int)$order->total,
             ],
             'customer_details' => [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
+                'firstname' => $request->firstname,
+                'lastname' => $request->lastname,
                 'email' => $request->email,
                 'phone' => $request->phone,
             ],

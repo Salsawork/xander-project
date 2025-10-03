@@ -22,6 +22,7 @@ class Table extends Model
     protected $fillable = [
         'venue_id',
         'table_number',
+        'price_per_hour',
         'status',
     ];
 
