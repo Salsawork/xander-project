@@ -17,18 +17,20 @@ class AdminVenueController extends Controller
      */
     public function index()
     {
-        $venues = Venue::with('user')->when(
-            request('search'),
-            function ($query) {
-                $query->where('name', 'like', '%' . request('search') . '%')
-                      ->orWhereHas('user', function ($q) {
-                          $q->where('name', 'like', '%' . request('search') . '%')
-                            ->orWhere('username', 'like', '%' . request('search') . '%');
-                      });
-            }
-        )->get();
+        $venues = Venue::with('user')
+            ->when(request('search'), function ($query) {
+                $search = request('search');
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%");
+                    });
+            })
+            ->get();
+    
         return view('dash.admin.venue.index', compact('venues'));
     }
+    
 
     /**
      * Show the form for creating a new venue.

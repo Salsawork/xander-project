@@ -6,8 +6,8 @@
     </header>
     <ul class="space-y-6 text-sm font-semibold p-6">
         <li>
-            <a href="{{ route('venue.dashboard') }}"
-                class="block {{ request()->routeIs('venue.dashboard') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
+            <a href="{{ route('venue.index') }}"
+                class="block {{ request()->routeIs('venue.index') ? 'text-[#0a8aff]' : 'text-gray-300 hover:text-white' }}">
                 Dashboard
             </a>
         </li>
