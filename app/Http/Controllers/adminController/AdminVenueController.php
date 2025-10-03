@@ -66,7 +66,7 @@ class AdminVenueController extends Controller
                 'name' => $request->name,
                 'username' => $request->username,
                 'password' => Hash::make($request->password),
-                'role' => 'venue',
+                'roles' => 'venue',
             ]);
 
             // Buat venue baru terkait dengan user

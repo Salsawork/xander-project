@@ -257,22 +257,72 @@
   }
 
   // SweetAlert konfirmasi add to cart
-  const form = document.getElementById('addToCartForm');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
+  document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Tampilkan loading sebelum fetch
+    Swal.fire({
+      title: 'Mohon tunggu...',
+      text: 'Sedang memproses permintaan Anda.',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+      background: '#1E1E1F',
+      color: '#FFFFFF'
+    });
+
+    fetch(this.action, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: new FormData(this)
+    })
+    .then(res => res.json())
+    .then(data => {
+      Swal.close(); // tutup loading
+      if (data.success) {
+        Swal.fire({
+          title: 'Berhasil!',
+          text: 'Produk ditambahkan ke keranjang',
+          icon: 'success',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF',
+          iconColor: '#4BB543'
+        }).then(() => {
+          const badge = document.querySelector('.fixed.right-4.sm\\:right-6.top-\\[60\\%\\] > span');
+          if (badge) {
+            badge.textContent = data.cartCount;
+            badge.style.display = data.cartCount > 0 ? 'flex' : 'none';
+          }
+          location.reload();
+        });
+      } else {
+        Swal.fire({
+          title: 'Gagal!',
+          text: data.message || 'Terjadi kesalahan, coba lagi.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+      }
+    })
+    .catch(err => {
+      Swal.close(); // tutup loading
       Swal.fire({
-        title: 'Berhasil!',
-        text: 'Produk ditambahkan ke keranjang',
-        icon: 'success',
-        confirmButtonText: 'OK',
+        title: 'Error!',
+        text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+        icon: 'error',
         confirmButtonColor: '#3085d6',
         background: '#1E1E1F',
-        color: '#FFFFFF',
-        iconColor: '#4BB543'
-      }).then(() => this.submit());
+        color: '#FFFFFF'
+      });
     });
-  }
+  });
 
   // Panah prev/next untuk related (md+). Mobile pakai swipe/drag.
   function smoothScroll(el, left) {

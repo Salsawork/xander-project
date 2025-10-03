@@ -15,8 +15,8 @@ class BookingSeeder extends Seeder
     public function run(): void
     {
         // Pastikan data user dan venue ada
-        if (!\App\Models\User::whereIn('id', [3, 6])->exists() ||
-            !\App\Models\Venue::whereIn('id', [1, 2])->exists()) {
+        if (!\App\Models\User::whereIn('id', [3])->exists() ||
+            !\App\Models\Venue::whereIn('id', [1])->exists()) {
             $this->command->error('Required users or venues not found. Please run UserSeeder and VenueSeeder first.');
             return;
         }
@@ -39,25 +39,10 @@ class BookingSeeder extends Seeder
             ]
         );
 
-        // Buat order dummy untuk user 6
-        $orderUser6 = Order::firstOrCreate(
-            ['user_id' => 6],
-            [
-                'id' => (string) Str::uuid(),
-                'order_number' => 'ORD-' . strtoupper(uniqid()),
-                'total' => 0,
-                'payment_status' => 'pending',
-                'delivery_status' => 'pending',
-                'payment_method' => 'Gopay',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]
-        );
-
         $bookings = [];
 
         // Booking untuk user 3 (Venue 1)
-        for ($i = 1; $i <= 15; $i++) {
+        for ($i = 1; $i <= 6; $i++) {
             $bookings[] = [
                 'order_id' => $orderUser3->id,
                 'venue_id' => 1,
@@ -75,26 +60,7 @@ class BookingSeeder extends Seeder
             ];
         }
 
-        // Booking untuk user 6 (Venue 2)
-        for ($i = 1; $i <= 15; $i++) {
-            $bookings[] = [
-                'order_id' => $orderUser6->id,
-                'venue_id' => 2,
-                'table_id' => $i,
-                'user_id' => 6,
-                'booking_date' => $now->copy()->addDays(1)->format('Y-m-d'),
-                'start_time' => '13:00:00',
-                'end_time' => '15:00:00',
-                'price' => 120000,
-                'discount' => 0,
-                'payment_method' => 'Gopay',
-                'status' => $statusList[array_rand($statusList)],
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        foreach ($bookings as $booking) {
+       foreach ($bookings as $booking) {
             Booking::create($booking);
         }
 
