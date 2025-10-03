@@ -57,40 +57,40 @@
             <div>
                 <h2 class="text-lg font-bold mb-4">Venue</h2>
                 @if(isset($venues) && count($venues) > 0)
-                    @foreach($venues as $venue)
-                        <div class="flex items-center space-x-4 mb-4">
-                            <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" 
-                                 alt="{{ $venue['name'] }}" 
-                                 class="w-16 h-16 object-cover rounded">
-                            <div class="flex-1">
-                                <h3 class="font-semibold">{{ $venue['name'] }}</h3>
-                                
-                                {{-- Jadwal (start_time - end_time) --}}
-                                @if(isset($venue['start_time']) && isset($venue['end_time']))
-                                    <p class="text-gray-400">{{ $venue['start_time'] }} - {{ $venue['end_time'] }}</p>
-                                @elseif(isset($venue['schedule']))
-                                    <p class="text-gray-400">{{ $venue['schedule'] }}</p>
-                                @endif
-            
-                                {{-- Tanggal --}}
-                                @if(isset($venue['date']))
-                                    <p class="text-gray-400">{{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
-                                @endif
-            
-                                {{-- Harga --}}
-                                @if(isset($venue['price']))
-                                    <p class="text-gray-400">
-                                        Rp. {{ number_format($venue['price'], 0, ',', '.') }},-
-                                    </p>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
+                @foreach($venues as $venue)
+                <div class="flex items-center space-x-4 mb-4">
+                    <img src="{{ $venue['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}"
+                        alt="{{ $venue['name'] }}"
+                        class="w-16 h-16 object-cover rounded">
+                    <div class="flex-1">
+                        <h3 class="font-semibold">{{ $venue['name'] }}</h3>
+
+                        {{-- Jadwal (start_time - end_time) --}}
+                        @if(isset($venue['start_time']) && isset($venue['end_time']))
+                        <p class="text-gray-400">{{ $venue['start_time'] }} - {{ $venue['end_time'] }}</p>
+                        @elseif(isset($venue['schedule']))
+                        <p class="text-gray-400">{{ $venue['schedule'] }}</p>
+                        @endif
+
+                        {{-- Tanggal --}}
+                        @if(isset($venue['date']))
+                        <p class="text-gray-400">{{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
+                        @endif
+
+                        {{-- Harga --}}
+                        @if(isset($venue['price']))
+                        <p class="text-gray-400">
+                            Rp. {{ number_format($venue['price'], 0, ',', '.') }},-
+                        </p>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
                 @else
-                    <p class="text-gray-400">No venue selected</p>
+                <p class="text-gray-400">No venue selected</p>
                 @endif
             </div>
-            
+
         </div>
     </div>
 
@@ -99,10 +99,9 @@
         <h1 class="text-3xl font-bold mb-8">Checkout</h1>
 
         <hr class="my-4 border-gray-600">
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Form Checkout -->
-            <div class="md:col-span-1 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Kolom Kiri: Form Checkout -->
+            <div class="bg-[#2a2a2a] rounded-2xl shadow-xl p-6 space-y-6">
                 <form id="checkout-form" enctype="multipart/form-data" method="POST">
                     @csrf
 
@@ -166,36 +165,40 @@
                         </select>
                     </div>
 
-                    <!-- FIle -->
+                    <!-- File -->
                     <div class="mb-6">
                         <label class="block font-semibold mb-1">File</label>
                         <input type="file" name="file" class="w-full border rounded p-2" required>
                     </div>
 
-                    <!-- Order Summary -->
-                    <div class="mb-6">
-                        <h2 class="text-xl font-semibold mb-2">Order Summary</h2>
-                        <p>Subtotal: Rp {{ number_format($total, 0, ',', '.') }}</p>
-                        <p>Shipping: Rp {{ number_format($shipping, 0, ',', '.') }}</p>
-                        <p>Tax: Rp {{ number_format($tax, 0, ',', '.') }}</p>
-                        <p class="font-bold">Grand Total: Rp {{ number_format($grandTotal, 0, ',', '.') }}</p>
-                    </div>
-
-                    <!-- Kebijakan Pengembalian -->
-                    <div class="bg-[#2D2D2D] rounded-lg p-6">
-                        <h2 class="text-xl font-bold mb-2">Return Policy</h2>
-                        <p class="text-gray-400 text-sm">
-                            If you need to return an item, you may do so within <span class="text-white font-medium">7 days of delivery</span>, provided it is unused, in its original packaging, and accompanied by proof of purchase.
-                        </p>
-                    </div>
-                    <div class="p-6">
+                    <!-- Place Order Button -->
+                    <div>
                         <button type="button" id="pay-button"
                             class="w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700">
                             Place Order
                         </button>
                     </div>
-
                 </form>
+            </div>
+
+            <!-- Kolom Kanan: Order Summary & Return Policy -->
+            <div class="space-y-6">
+                <!-- Order Summary -->
+                <div class="bg-[#2a2a2a] rounded-2xl ring-1 ring-white/10 shadow-xl p-6">
+                    <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+                    <p>Subtotal: Rp {{ number_format($total, 0, ',', '.') }}</p>
+                    <p>Shipping: Rp {{ number_format($shipping, 0, ',', '.') }}</p>
+                    <p>Tax: Rp {{ number_format($tax, 0, ',', '.') }}</p>
+                    <p class="font-bold mt-2">Grand Total: Rp {{ number_format($grandTotal, 0, ',', '.') }}</p>
+                </div>
+
+                <!-- Return Policy -->
+                <div class="bg-[#2D2D2D] rounded-lg p-6">
+                    <h2 class="text-xl font-bold mb-2">Return Policy</h2>
+                    <p class="text-gray-400 text-sm">
+                        If you need to return an item, you may do so within <span class="text-white font-medium">7 days of delivery</span>, provided it is unused, in its original packaging, and accompanied by proof of purchase.
+                    </p>
+                </div>
             </div>
         </div>
     </div>

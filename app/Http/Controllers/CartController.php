@@ -23,9 +23,16 @@ class CartController extends Controller
             'price' => $product->pricing,
         ];
 
-        return redirect()->back()->withCookie(cookie('cartProducts', json_encode($cartProduct), 60 * 24 * 7));
-    }
+        Cookie::queue('cartProducts', json_encode($cartProduct), 60 * 24 * 7);
 
+        return response()->json([
+            'success' => true,
+            'message' => 'Product added to cart',
+            'cartCount' => count($cartProduct),
+            'products' => $cartProduct,
+        ]);
+    }
+    
     public function addVenueToCart(Request $request)
     {
         $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
@@ -34,38 +41,47 @@ class CartController extends Controller
         $date = date('d-m-Y', strtotime($request->date));
         $startTime = $request->input('schedule.start');
         $endTime   = $request->input('schedule.end');
+        $price = $request->input('price');
+        $table = $request->input('table');
 
-        $exists = collect($cartVenues)->contains(function ($item) use ($venue, $date, $startTime, $endTime) {
-            return $item['id'] === $venue->id
-                && $item['date'] === $date
-                && $item['start'] === $startTime
-                && $item['end'] === $endTime;
+        $exists = collect($cartVenues)->contains(function ($item) use ($date, $startTime) {
+            return isset($item['date'], $item['start']) && $item['date'] === $date && $item['start'] === $startTime;
         });
 
-        if (!$exists) {
-            $cartVenues[] = [
-                'id'    => $venue->id,
-                'name'  => $venue->name,
-                'price' => $venue->price,
-                'date'  => $date,
-                'start' => $startTime,
-                'end'   => $endTime,
-            ];
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => "Venue with start time {$startTime} on {$date} already in cart",
+            ], 400);
         }
 
-        return redirect()->back()->withCookie(cookie('cartVenues', json_encode($cartVenues), 60 * 24 * 7));
-    }
+        $cartVenues[] = [
+            'id'    => $venue->id,
+            'name'  => $venue->name,
+            'price' => $price,
+            'date'  => $date,
+            'start' => $startTime,
+            'end'   => $endTime,
+            'table' => $table,
+        ];
 
+        Cookie::queue('cartVenues', json_encode($cartVenues), 60 * 24 * 7);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Venue added to cart',
+            'cartCount' => count($cartVenues),
+            'venues' => $cartVenues,
+        ]);
+    }
 
     public function addSparringToCart(Request $request)
     {
-        // Validasi request
         $request->validate([
             'athlete_id' => 'required|exists:users,id',
             'schedule_id' => 'required|exists:sparring_schedules,id',
         ]);
 
-        // Ambil data atlet dan jadwal
         $athlete = User::where('id', $request->athlete_id)
             ->with('athleteDetail')
             ->firstOrFail();
@@ -74,14 +90,23 @@ class CartController extends Controller
             ->where('is_booked', false)
             ->firstOrFail();
 
-        // Ambil data sparring dari cookie
         $sparrings = [];
-        if (Cookie::has('cartSparring')) {
-            $sparringData = Cookie::get('cartSparring');
+        if (Cookie::has('cartSparrings')) {
+            $sparringData = Cookie::get('cartSparrings');
             $sparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
         }
 
-        // Buat data sparring baru
+        $exists = collect($sparrings)->contains(function ($item) use ($schedule) {
+            return $item['schedule_id'] == $schedule->id;
+        });
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sparring session with the same schedule already in cart'
+            ], 400);
+        }
+
         $newSparring = [
             'athlete_id' => $athlete->id,
             'name' => $athlete->name,
@@ -91,22 +116,17 @@ class CartController extends Controller
             'price' => $athlete->athleteDetail->price_per_session,
         ];
 
-        // Cek apakah sparring dengan schedule_id yang sama sudah ada di cart
-        $existingIndex = array_search($schedule->id, array_column($sparrings, 'schedule_id'));
+        $sparrings[] = $newSparring;
+        Cookie::queue('cartSparrings', json_encode($sparrings), 60 * 24 * 7);
 
-        if ($existingIndex !== false) {
-            // Update sparring yang sudah ada
-            $sparrings[$existingIndex] = $newSparring;
-        } else {
-            // Tambahkan sparring baru
-            $sparrings[] = $newSparring;
-        }
-
-        // Simpan kembali ke cookie
-        Cookie::queue('cartSparrings', json_encode($sparrings), 60 * 24 * 7); // 1 minggu
-
-        return redirect()->back()->with('success', 'Sparring session added to cart');
+        return response()->json([
+            'success' => true,
+            'message' => 'Sparring session added to cart',
+            'cartCount' => count($sparrings),
+            'sparrings' => $sparrings,
+        ]);
     }
+
 
     public function removeProductFromCart(Request $request)
     {

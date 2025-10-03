@@ -19,31 +19,14 @@
             : (is_iterable($athletes ?? []) ? $athletes : [])
     );
 
-    // ===== Tambah dummy sampai MINIMAL 12 item (tanpa mengubah data asli) =====
-    $need = max(0, 12 - $existingItems->count());
-    $dummies = collect(range(1, $need))->map(function($i) use ($existingItems){
-        $idx = (($existingItems->count() + $i - 1) % 6) + 1; // rotasi 1..6
-        $id  = $existingItems->count() + $i;
-        return (object)[
-            'id'   => $id,
-            'name' => "Athlete #$id",
-            'athleteDetail' => (object)[
-                'image'             => "athlete-$idx.png",
-                'price_per_session' => 100000 * $idx,
-            ],
-        ];
-    });
-
-    $allItems = $existingItems->values()->merge($dummies->values());
-
     // ===== Pagination adaptif via query 'pp' (per page): desktop 8 / mobile 4 ====
     $pp   = (int) (request('pp') ?: 8);   // default 8; JS akan set 4 di mobile
     $page = (int) (request('page') ?: 1);
 
-    $slice    = $allItems->forPage($page, $pp)->values();
+    $slice    = $existingItems->forPage($page, $pp)->values();
     $athletes = new \Illuminate\Pagination\LengthAwarePaginator(
         $slice,
-        $allItems->count(),
+        $existingItems->count(),
         $pp,
         $page,
         ['path' => request()->url(), 'query' => request()->query()]

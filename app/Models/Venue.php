@@ -42,6 +42,16 @@ class Venue extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function priceSchedules()
+    {
+        return $this->hasMany(PriceSchedule::class);
+    }
+
+    public function tables()
+    {
+        return $this->hasMany(Table::class);
+    }
+
     public function vouchers()
     {
         return $this->hasMany(Voucher::class);
@@ -51,5 +61,4 @@ class Venue extends Model
     {
         return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
     }
-
 }

@@ -14,8 +14,8 @@ class BilliardSessionSeeder extends Seeder
     public function run(): void
     {
         // Pastikan venue yang dibutuhkan sudah ada
-        if (!\App\Models\Venue::whereIn('id', [1, 2])->exists()) {
-            $this->command->error('Required venues not found. Please run VenueSeeder first.');
+        if (!\App\Models\Venue::where('id', 1)->exists()) {
+            $this->command->error('Required venue not found. Please run VenueSeeder first.');
             return;
         }
 
@@ -74,9 +74,9 @@ class BilliardSessionSeeder extends Seeder
                 'updated_at' => now(),
             ],
 
-            // Sessions untuk venue 2 (Billiard Master)
+            // Sessions untuk venue 1 (Billiard Master)
             [
-                'venue_id' => 2,
+                'venue_id' => 1,
                 'title' => 'Pro Training',
                 'session_code' => 'XB' . strtoupper(substr(uniqid(), -8)),
                 'game_type' => $gameTypes[3],
@@ -92,7 +92,7 @@ class BilliardSessionSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'venue_id' => 2,
+                'venue_id' => 1,
                 'title' => 'Casual Play',
                 'session_code' => 'XB' . strtoupper(substr(uniqid(), -8)),
                 'game_type' => $gameTypes[4],
@@ -108,7 +108,7 @@ class BilliardSessionSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'venue_id' => 2,
+                'venue_id' => 1,
                 'title' => 'Weekend Championship',
                 'session_code' => 'XB' . strtoupper(substr(uniqid(), -8)),
                 'game_type' => $gameTypes[2],

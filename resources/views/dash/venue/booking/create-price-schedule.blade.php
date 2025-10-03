@@ -45,12 +45,46 @@
                             <input name="end_time" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" required id="end_time" type="time" required>
                         </div>
                          <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="days">Days</label>
-                            <select name="days" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" required id="days" required>
-                                <option disabled selected>Choose applicable days</option>
-                                <option value="Weekday">Weekday</option>
-                                <option value="Weekend">Weekend</option>
-                                <option value="Everyday">Everyday</option>
+                            <div class="space-y-2">
+                                <label class="block text-xs text-gray-400 mb-1">Days</label>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="monday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Monday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="tuesday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Tuesday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="wednesday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Wednesday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="thursday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Thursday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="friday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Friday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="saturday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Saturday</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 text-sm">
+                                        <input type="checkbox" name="days[]" value="sunday" class="rounded bg-[#262626] border-gray-600">
+                                        <span>Sunday</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                         <div>
+                            <label class="block text-xs text-gray-400 mb-1" for="time_category">Time Category</label>
+                            <select name="time_category" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" required id="time_category" required>
+                                <option disabled selected>Choose time category</option>
+                                <option value="peak-hours">Peak Hours</option>
+                                <option value="normal-hours">Normal Hours</option>
                             </select>
                         </div>
                         <div>

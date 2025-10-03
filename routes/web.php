@@ -71,7 +71,8 @@ Route::prefix('products')->group(function () {
 
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
-    Route::get('/{venue}', [VenueController::class, 'detail'])->name('venues.detail');
+    Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
+    Route::get('/venues/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
@@ -200,6 +201,126 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
     });
 
+    Route::middleware('auth')->prefix('venue')->group(function () {
+        // Venue Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('venue.dashboard');
+
+
+        // Venue Booking Management
+        Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
+
+        // Create table
+        Route::get('/booking/create-table', [BookingController::class, 'createTable'])->name('venue.booking.create-table');
+        Route::post('/booking/create-table', [BookingController::class, 'storeTable'])->name('venue.booking.store-table');
+
+        // Delete table
+        Route::delete('/booking/delete-table/{table}', function ($table) {
+            try {
+                $table = \App\Models\Table::findOrFail($table);
+                $table->delete();
+                return redirect()->route('venue.booking')->with('success', 'Table deleted successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('venue.booking')->with('error', 'Failed to delete table: ' . $e->getMessage());
+            }
+        })->name('venue.booking.delete-table');
+
+        // Venue price-schedule.destroy
+        Route::delete('/booking/delete-price-schedule/{priceSchedule}', function ($priceSchedule) {
+            try {
+                $priceSchedule = \App\Models\PriceSchedule::findOrFail($priceSchedule);
+                $priceSchedule->delete();
+                return redirect()->route('venue.booking')->with('success', 'Price schedule deleted successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('venue.booking')->with('error', 'Failed to delete price schedule: ' . $e->getMessage());
+            }
+        })->name('price-schedule.destroy');
+
+        // price-schedule.create
+        Route::get('/booking/create-price-schedule', function () {
+            // Get all tables for the venue
+            $venueId = \App\Models\Venue::where('user_id', Auth::id())->value('id');
+            $tables = \App\Models\Table::where('venue_id', $venueId)->get();
+            return view('dash.venue.booking.create-price-schedule', compact('tables'));
+        })->name('price-schedule.create');
+
+        // price-schedule.store
+        Route::post('/booking/create-price-schedule', function (Request $request) {
+            $data = $request->validate([
+                'name' => 'required',
+                'start_time' => 'required',
+                'end_time' => 'required',
+                'days' => 'required',
+                'time_category' => 'required',
+                'price' => 'required',
+                'is_active' => 'required',
+                'tables_applicable' => 'nullable',
+            ]);
+
+            try {
+                $priceSchedule = new \App\Models\PriceSchedule();
+                $priceSchedule->venue_id = \App\Models\Venue::where('user_id', Auth::id())->value('id');
+                $priceSchedule->name = $request->name;
+                $priceSchedule->start_time = $request->start_time;
+                $priceSchedule->end_time = $request->end_time;
+                $priceSchedule->days = json_encode($request->days);
+                $priceSchedule->time_category = $request->time_category;
+                $priceSchedule->price = $request->price;
+                $priceSchedule->is_active = $request->is_active ?? false;
+                $priceSchedule->tables_applicable = $request->tables_applicable; 
+                $priceSchedule->save();
+                return redirect()->route('venue.booking')->with('success', 'Price schedule created successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('venue.booking')->with('error', 'Failed to create price schedule: ' . $e->getMessage());
+            }
+        })->name('price-schedule.store');
+
+        // Venue Promo Management
+        Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
+
+        // Create Promo
+        Route::get('/promo/create', function () {
+            return view('dash.venue.promo.create');
+        })->name('venue.promo.create');
+
+        // Store Promo
+        Route::post('/promo/create', function (Request $request) {
+            $data = $request->validate([
+                'name' => 'required',
+                'code' => 'required',
+                'type' => 'required',
+                'discount_percentage' => 'nullable',
+                'discount_amount' => 'nullable',
+                'minimum_purchase' => 'nullable',
+                'quota' => 'nullable',
+                'start_date' => 'required',
+                'end_date' => 'required',
+            ]);
+
+            $data['venue_id'] = \App\Models\Venue::where('user_id', Auth::id())->value('id');
+            $data['is_active'] = true; // Default to active
+
+            try {
+                $voucher = \App\Models\Voucher::create($data);
+                return redirect()->route('venue.promo')->with('success', 'Promo created successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('venue.promo.create')->with('error', 'Failed to create promo: ' . $e->getMessage());
+            }
+        })->name('venue.promo.store');
+
+        Route::get('/promo/delete/{voucher}', function ($voucher) {
+            try {
+                $voucher = \App\Models\Voucher::findOrFail($voucher);
+                $voucher->delete();
+                return redirect()->route('venue.promo')->with('success', 'Promo deleted successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('venue.promo')->with('error', 'Failed to delete promo: ' . $e->getMessage());
+            }
+        })->name('venue.promo.delete');
+        // Venue Transaction History
+        Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
+    });
+
+
     Route::prefix('dashboard/athlete')->group(function () {
         Route::get('/', [AdminAthleteController::class, 'index'])->name('athlete.index');
         Route::get('/create', [AdminAthleteController::class, 'create'])->name('athlete.create');
@@ -212,22 +333,22 @@ Route::middleware('auth')->group(function () {
     // Route::middleware('auth')->prefix('athlete')->group(function () {
     //     // Athlete Dashboard
     //     Route::get('/dashboard', [App\Http\Controllers\athleteController\DashboardController::class, 'index'])->name('athlete.dashboard');
-    
+
     //     // Athlete Sparring - Create Session
     //     Route::get('/sparring/create', function () {
     //         return view('dash.athlete.sparring.create');
     //     })->name('athlete.sparring.create');
-    
-    
+
+
     //     // Athlete Match History (BARU)
     //     Route::get('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'index'])->name('athlete.match');
     //     // Create Session
     //     Route::get('/match/create', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'create'])->name('athlete.match.create');
     //     Route::post('/match', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'store'])->name('athlete.match.store');
-    
+
     //     // Athlete Calendar
     //     Route::get('/calendar/{year}/{month}', [App\Http\Controllers\athleteController\DashboardController::class, 'getCalendar']);
-    
+
     //     // Athlete Match History (BARU)
     //     Route::get('/match/{id}', [App\Http\Controllers\athleteController\MatchHistoryController::class, 'show'])->name('athlete.match.show');
     // });

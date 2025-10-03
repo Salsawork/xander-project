@@ -40,35 +40,6 @@ class VoucherSeeder extends Seeder
                 'end_date' => Carbon::now()->addWeeks(2),
                 'is_active' => true
             ],
-            // Voucher untuk venue_id 2
-            [
-                'venue_id' => 2,
-                'name' => 'Weekend Special',
-                'code' => 'WEEKEND15',
-                'type' => 'percentage',
-                'discount_percentage' => 15,
-                'discount_amount' => null,
-                'minimum_purchase' => 200000,
-                'quota' => 40,
-                'claimed' => 0,
-                'start_date' => Carbon::now(),
-                'end_date' => Carbon::now()->addMonth(),
-                'is_active' => true
-            ],
-            [
-                'venue_id' => 2,
-                'name' => 'Potongan Akhir Pekan',
-                'code' => 'AKHIRPEKAN',
-                'type' => 'fixed_amount',
-                'discount_percentage' => null,
-                'discount_amount' => 50000,
-                'minimum_purchase' => 300000,
-                'quota' => 20,
-                'claimed' => 0,
-                'start_date' => Carbon::now(),
-                'end_date' => Carbon::now()->addWeeks(3),
-                'is_active' => true
-            ]
         ];
 
         foreach ($vouchers as $voucher) {
