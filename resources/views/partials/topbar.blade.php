@@ -5,6 +5,7 @@
                 <i class="fas fa-chevron-left mr-2"></i>Home
             </a>
         </p>
+
     </div>
 
     <div class="flex-1 flex justify-end relative">

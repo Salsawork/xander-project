@@ -58,4 +58,37 @@ class PromoController extends Controller
             'endedCount'
         ));
     }
+
+    public function create()
+    {
+        return view('dash.venue.promo.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required',
+            'code' => 'required',
+            'type' => 'required',
+            'discount_percentage' => 'nullable|numeric',
+            'discount_amount' => 'nullable|numeric',
+            'minimum_purchase' => 'nullable|numeric',
+            'quota' => 'nullable|numeric',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+        ]);
+
+        $data['venue_id'] = Venue::where('user_id', Auth::id())->value('id');
+        $data['is_active'] = true;
+
+        Voucher::create($data);
+
+        return redirect()->route('venue.promo')->with('success', 'Promo created successfully.');
+    }
+
+    public function delete(Voucher $voucher)
+    {
+        $voucher->delete();
+        return redirect()->route('venue.promo')->with('success', 'Promo deleted successfully.');
+    }
 }

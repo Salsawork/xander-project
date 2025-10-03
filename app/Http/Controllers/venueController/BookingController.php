@@ -48,4 +48,10 @@ class BookingController extends Controller
 
         return redirect()->route('venue.booking')->with('success', 'Table created successfully.');
     }
+
+    public function deleteTable(Table $table)
+    {
+        $table->delete();
+        return redirect()->route('venue.booking')->with('success', 'Table deleted successfully.');
+    }
 }

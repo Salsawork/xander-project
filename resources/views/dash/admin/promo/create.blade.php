@@ -45,7 +45,8 @@
                                 <label class="block text-sm font-medium mb-2">Voucher Type</label>
                                 <select name="type"
                                     class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
-                                    <option value="percentage" {{ old('type') == 'percentage' ? 'selected' : '' }}>Percentage
+                                    <option value="percentage" {{ old('type') == 'percentage' ? 'selected' : '' }}>
+                                        Percentage
                                     </option>
                                     <option value="fixed_amount" {{ old('type') == 'fixed_amount' ? 'selected' : '' }}>Fixed
                                         Amount</option>
@@ -105,24 +106,28 @@
                                 <select name="is_active"
                                     class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
                                     <option value="1" {{ old('is_active') == '1' ? 'selected' : '' }}>Active</option>
-                                    <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>Inactive</option>
+                                    <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>Inactive
+                                    </option>
+                                </select>
+                            </div>
+                            {{-- Venue --}}
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Venue</label>
+                                <select name="venue_id" required
+                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
+                                    @foreach ($venues as $venue)
+                                        <option value="{{ $venue->id }}">{{ $venue->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
-                            <select name="venue_id" required class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
-                                @foreach ($venues as $venue)
-                                    <option value="{{ $venue->id }}">{{ $venue->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Submit --}}
-                        <div class="flex justify-end">
-                            <a href="{{ route('promo.index') }}"
-                                class="px-4 py-2 bg-neutral-700 rounded-lg hover:bg-neutral-600 mr-2">Cancel</a>
-                            <button type="submit"
-                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700">Save</button>
-                        </div>
+                            {{-- Submit --}}
+                            <div class="flex justify-end md:col-span-2">
+                                <a href="{{ route('promo.index') }}"
+                                    class="px-4 py-2 bg-neutral-700 rounded-lg hover:bg-neutral-600 mr-2">Cancel</a>
+                                <button type="submit"
+                                    class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700">Save</button>
+                            </div>
                     </form>
                 </div>
             </main>
