@@ -1,4 +1,4 @@
-<header class="bg-[#161617] h-16 flex items-center justify-between px-10 fixed top-0 w-5/6">
+<header class="bg-[#161617] h-16 flex items-center justify-between fixed top-0 w-5/6" style="padding: 0 24px">
     <div class="flex-1 flex justify-start">
         <p class="text-sm text-gray-400">
             <a href="{{ route('index') }}" class="cursor-pointer hover:text-white">

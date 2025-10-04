@@ -93,7 +93,7 @@ class LoginController extends Controller
             if ($user->roles === 'admin') {
                 return redirect()->route('dashboard');
             } elseif ($user->roles === 'venue') {
-                return redirect()->route('venue.index');
+                return redirect()->route('venue.dashboard');
             } elseif ($user->roles === 'athlete') {
                 return redirect()->route('athlete.dashboard');
             } else {

@@ -32,7 +32,7 @@
                         </div>
                     @endif
 
-                    <div class="hidden sm:block overflow-x-auto">
+                    <div class="overflow-x-auto">
                         <div class="flex items-center gap-4 mb-6 border-b border-neutral-700 pb-2 text-sm">
                             <a href="{{ route('promo.index', ['status' => 'all']) }}"
                                 class="pb-2 {{ $status == 'all' ? 'border-b-2 border-[#1e90ff] text-white' : 'text-gray-400' }}">
