@@ -16,11 +16,9 @@
             <a href="{{ route('dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 <i class="fas fa-user mr-2"></i> Profile
             </a>
-
             <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
                 @csrf
             </form>
-
             <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
