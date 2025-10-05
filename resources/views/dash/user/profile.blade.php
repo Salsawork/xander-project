@@ -100,9 +100,9 @@
                     class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-400 mb-1">Username / Email / Phone</label>
-                  <input type="text" name="username"
-                    value="{{ old('username', auth()->user()->username ?? auth()->user()->email ?? '') }}"
+                  <label class="block text-xs text-gray-400 mb-1">Email / Phone</label>
+                  <input type="text" name="email"
+                    value="{{ old('email"', auth()->user()->email" ?? auth()->user()->email ?? '') }}"
                     class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
               </div>

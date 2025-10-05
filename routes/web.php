@@ -159,7 +159,7 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
     Route::post('profile/update', function (Request $request) {
-        Auth::user()->update($request->only('name', 'username'));
+        Auth::user()->update($request->only('name', 'email'));
         return back()->with('success', 'Profile updated successfully');
     })->name('profile.update');
 

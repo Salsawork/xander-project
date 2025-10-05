@@ -30,13 +30,13 @@
                                 @enderror
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1" for="username">
+                                <label class="block text-xs text-gray-400 mb-1" for="email">
                                     Email
                                 </label>
-                                <input name="username" value="{{ old('username') }}"
+                                <input name="email" value="{{ old('email') }}"
                                     class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    id="username" type="email" placeholder="Masukkan email" />
-                                @error('username')
+                                    id="email" type="email" placeholder="Masukkan email" />
+                                @error('email')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
                             </div>

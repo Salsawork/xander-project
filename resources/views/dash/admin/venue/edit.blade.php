@@ -45,13 +45,13 @@
                                     </div>
                                     
                                     <div>
-                                        <label class="block text-xs text-gray-400 mb-1" for="username">
+                                        <label class="block text-xs text-gray-400 mb-1" for="email">
                                             Email
                                         </label>
                                         <input
                                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            name="username" id="username" type="email" value="{{ $venue->user->username }}" />
-                                        @error('username')
+                                            name="email" id="email" type="email" value="{{ $venue->user->email }}" />
+                                        @error('email')
                                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                         @enderror
                                     </div>
