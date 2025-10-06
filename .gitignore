@@ -26,3 +26,4 @@ yarn-error.log
 *.tar.bz2
 *.DS_Store
 *.sql
+node_modules
