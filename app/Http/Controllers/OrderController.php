@@ -273,7 +273,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
+    
     /**
      * Handle notification from Midtrans
      */

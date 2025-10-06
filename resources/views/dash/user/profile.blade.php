@@ -18,9 +18,9 @@
               class="h-20 w-20 rounded-full object-cover ring-2 ring-white/10 mb-4 md:mb-0">
 
             <div class="flex-1">
-              <h2 class="text-xl font-extrabold">{{ auth()->user()->name ?? 'Alex Murphy' }}</h2>
+              <h2 class="text-xl font-extrabold">{{ auth()->user()->name ?? 'User Name' }}</h2>
               <p class="text-gray-300 text-sm leading-6">
-                {{ auth()->user()->email ?? 'alex@example.com' }}<br>
+                {{ auth()->user()->email ?? 'user@example.com' }}<br>
                 {{ auth()->user()->phone ?? 'no phone' }}
               </p>
             </div>
@@ -102,7 +102,7 @@
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Email / Phone</label>
                   <input type="text" name="email"
-                    value="{{ old('email"', auth()->user()->email" ?? auth()->user()->email ?? '') }}"
+                    value="{{ old('email', auth()->user()->email ?? '') }}"
                     class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
               </div>

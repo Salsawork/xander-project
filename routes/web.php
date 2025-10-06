@@ -388,3 +388,16 @@ Route::middleware('auth')->prefix('dashboard/tournament')->group(function () {
 Route::get('/championships', [TreeController::class, 'index'])->name('tree.index');
 Route::post('/championships/{championship}/trees', [TreeController::class, 'store'])->name('tree.store');
 Route::put('/championships/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
+
+/* ===== Company pages (static Blade) ===== */
+Route::prefix('company')->group(function () {
+    Route::view('/careers', 'careers')->name('company.careers');
+    Route::view('/partners', 'partners')->name('company.partners');
+    Route::view('/press-media', 'press-media')->name('company.press');
+});
+
+/* ===== Blog (static template – bisa diganti controller/DB nanti) ===== */
+Route::prefix('blog')->group(function () {
+    Route::view('/', 'blog.index')->name('blog.index');
+    Route::view('/{slug}', 'blog.show')->name('blog.show');
+});

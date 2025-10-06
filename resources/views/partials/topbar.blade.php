@@ -31,16 +31,17 @@
                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
                 <i class="fas fa-gear w-4 shrink-0 text-gray-300"></i>
                 <span>Settings</span>
+
             </a> --}}
 
             <form method="POST" action="{{ route('logout') }}">
+
                 @csrf
-                <button type="submit"
-                    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap text-left">
-                    <i class="fas fa-sign-out-alt w-4 shrink-0 text-gray-300"></i>
-                    <span>Logout</span>
-                </button>
             </form>
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </a>
             @endauth
         </div>
     </div>
