@@ -210,35 +210,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
         
     });
-    // Route::prefix('venue')->group(function () {
-        // Booking
-        Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
-        Route::get('/booking/create-table', [BookingController::class, 'createTable'])->name('venue.booking.create-table');
-        Route::post('/booking/create-table', [BookingController::class, 'storeTable'])->name('venue.booking.store-table');
-        Route::delete('/booking/delete-table/{table}', [BookingController::class, 'deleteTable'])->name('venue.booking.delete-table');
-    
-        // Tampilkan form
-        Route::get('/booking/create-price-schedule', [PriceScheduleController::class, 'create'])->name('price-schedule.create');
-
-        // Simpan data
-        Route::post('/booking/price-schedule', [PriceScheduleController::class, 'store'])->name('price-schedule.store');
-
-        // Hapus data
-        Route::delete('/booking/price-schedule/{priceSchedule}', [PriceScheduleController::class, 'destroy'])->name('price-schedule.destroy');
-
-        // Promo
-        Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
-        Route::get('/promo/create', [PromoController::class, 'create'])->name('venue.promo.create');
-        Route::post('/promo/create', [PromoController::class, 'store'])->name('venue.promo.store');
-        Route::get('/promo/delete/{voucher}', [PromoController::class, 'delete'])->name('venue.promo.delete');
-    
-        // Transaction
-        Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
-    // });
 
     Route::middleware('auth')->prefix('venue')->group(function () {
         // Venue Dashboard
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('venue.dashboard');
+        Route::get('/dashboard', [VenueDashboardController::class, 'index'])->name('venue.dashboard');
 
 
         // Venue Booking Management

@@ -65,22 +65,19 @@
                     <div class="flex-1">
                         <h3 class="font-semibold">{{ $venue['name'] }}</h3>
 
-                        {{-- Jadwal (start_time - end_time) --}}
-                        @if(isset($venue['start_time']) && isset($venue['end_time']))
-                        <p class="text-gray-400">{{ $venue['start_time'] }} - {{ $venue['end_time'] }}</p>
-                        @elseif(isset($venue['schedule']))
-                        <p class="text-gray-400">{{ $venue['schedule'] }}</p>
+                        @if(isset($venue['table']))
+                        <p class="text-gray-400">Table {{ $venue['table'] }}</p>
                         @endif
 
-                        {{-- Tanggal --}}
-                        @if(isset($venue['date']))
-                        <p class="text-gray-400">{{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
+                        {{-- Jadwal dan Tanggal --}}
+                        @if(isset($venue['date']) && isset($venue['start']) && isset($venue['end']))
+                        <p class="text-gray-400">{{ $venue['start'] }} - {{ $venue['end'] }} - {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
                         @endif
 
                         {{-- Harga --}}
                         @if(isset($venue['price']))
                         <p class="text-gray-400">
-                            Rp. {{ number_format($venue['price'], 0, ',', '.') }},-
+                            Rp. {{ number_format($venue['price'], 0, ',', '.') }}
                         </p>
                         @endif
                     </div>
@@ -125,6 +122,7 @@
                     <input type="hidden" name="venues[0][id]" value="{{ $venue['id'] }}">
                     <input type="hidden" name="venues[0][price]" value="{{ $venue['price'] }}">
                     <input type="hidden" name="venues[0][date]" value="{{ $venue['date'] }}">
+                    <input type="hidden" name="venues[0][table]" value="{{ $venue['table'] }}"> 
                     <input type="hidden" name="venues[0][start]" value="{{ $venue['start'] }}">
                     <input type="hidden" name="venues[0][end]" value="{{ $venue['end'] }}">
                     @endif

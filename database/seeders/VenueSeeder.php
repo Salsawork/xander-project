@@ -17,7 +17,9 @@ class VenueSeeder extends Seeder
     public function run()
     {
         $this->command->info('Venues seeding!');
-        DB::table('venue')->delete();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('venues')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // Pastikan user dengan ID 3 sudah ada
         if (!\App\Models\User::whereIn('id', [3])->exists()) {

@@ -18,7 +18,8 @@ class TournamentSeeder extends Seeder
     {
         $venues = Venue::all()->pluck('id')->toArray();
 
-        Tournament::truncate();
+        // Tournament::truncate();
+        Tournament::query()->delete();
         $faker = \Faker\Factory::create();
         $dateIni = $faker->dateTimeBetween('now', '+2 weeks')->format('Y-m-d');
 
@@ -37,7 +38,8 @@ class TournamentSeeder extends Seeder
 
         ]);
 
-        Championship::truncate();
+        // Championship::truncate();
+        Championship::query()->delete();
         factory(Championship::class)->create(['tournament_id' => 1, 'category_id' => 1]);
         factory(Championship::class)->create(['tournament_id' => 1, 'category_id' => 2]);
     }
