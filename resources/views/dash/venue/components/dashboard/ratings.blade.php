@@ -1,4 +1,4 @@
-<div class="bg-[#292929] rounded-lg shadow-md flex flex-col w-full">
+<div class="flex flex-col w-full">
     <span class="text-white text-lg font-semibold mb-2 ">Ratings</span>
     <div class="flex justify-center items-center mb-1">
         <span class="text-3xl font-bold">{{ $venue->rating }}/5</span>
