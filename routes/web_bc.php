@@ -174,7 +174,7 @@ Route::middleware('auth')->group(function () {
     })->middleware('auth')->name('dashboard');
     Route::post('profile/update', function (Request $request) {
         $user = Auth::user();
-        $user->update($request->only('name', 'username'));
+        $user->update($request->only('name', 'email'));
         return redirect()->back()->with('success', 'Profile updated successfully');
     })->name('profile.update');
 });
@@ -256,7 +256,7 @@ Route::middleware('auth')->prefix('dashboard/order')->group(function () {
             function ($query) {
                 $query->whereHas('user', function ($q) {
                           $q->where('name', 'like', '%' . request('search') . '%')
-                            ->orWhere('username', 'like', '%' . request('search') . '%');
+                            ->orWhere('email', 'like', '%' . request('search') . '%');
                       });
             }
         )->when(

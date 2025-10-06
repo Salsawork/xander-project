@@ -48,7 +48,7 @@ class AdminVenueController extends Controller
         // Validasi input
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'venue_name' => 'required|string|max:255',
             'address' => 'required|string',
@@ -64,7 +64,7 @@ class AdminVenueController extends Controller
             // Buat user baru dengan role venue
             $user = User::create([
                 'name' => $request->name,
-                'username' => $request->username,
+                'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'roles' => 'venue',
             ]);
@@ -111,7 +111,7 @@ class AdminVenueController extends Controller
         // Validasi input
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => [
+            'email' => [
                 'required',
                 'string',
                 'email',
@@ -133,7 +133,7 @@ class AdminVenueController extends Controller
             // Update data user
             $user = User::find($venue->user_id);
             $user->name = $request->name;
-            $user->username = $request->username;
+            $user->email = $request->email;
 
             // Update password jika diisi
             if ($request->filled('password')) {

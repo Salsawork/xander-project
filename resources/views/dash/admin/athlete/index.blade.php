@@ -83,7 +83,7 @@
                                         {{ $athlete->name }}
                                     </td>
                                     <td class="px-4 py-3 text-gray-300">
-                                        {{ $athlete->username }}
+                                        {{ $athlete->email }}
                                     </td>
                                     <td class="px-4 py-3 text-gray-300">
                                         {{ $athlete->athleteDetail ? $athlete->athleteDetail->specialty : '-' }}

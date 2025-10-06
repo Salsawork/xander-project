@@ -17,7 +17,7 @@ class OrderController extends Controller
     $orders = Order::when($request->search, function ($query) use ($request) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('username', 'like', '%' . $request->search . '%');
+                  ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         })
         ->when($request->status, function ($query) use ($request) {

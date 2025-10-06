@@ -51,7 +51,7 @@ class AthleteDetailSeeder extends Seeder
         // Buat athlete details untuk setiap atlet
         foreach ($athleteData as $username => $data) {
             // Cari user berdasarkan username
-            $athlete = User::where('username', $username)->first();
+            $athlete = User::where('email', $username)->first();
             
             if ($athlete) {
                 // Buat atau update athlete detail

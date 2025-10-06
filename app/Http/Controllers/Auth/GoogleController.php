@@ -46,7 +46,7 @@ class GoogleController extends Controller
                 'firstname' => $first ?: 'firstname',
                 'lastname'  => $last  ?: 'lastname',
                 'email'     => $email,        // kolom email kamu tidak unique — tetap boleh diisi
-                'username'  => $email,        // ← kunci unik di tabel kamu
+                // 'username'  => $email,        // ← kunci unik di tabel kamu
                 'password'  => bcrypt(Str::random(40)), // tidak dipakai utk OAuth
                 'roles'     => 'user',        // default role
             ]);

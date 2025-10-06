@@ -43,7 +43,7 @@ class AdminAthleteController extends Controller
         // Validasi input
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'handicap' => 'nullable|string|max:255',
             'experience_years' => 'nullable|integer',
@@ -61,7 +61,7 @@ class AdminAthleteController extends Controller
             // Buat user baru dengan role athlete
             $user = User::create([
                 'name' => $request->name,
-                'username' => $request->username,
+                'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'roles' => 'athlete',
             ]);
@@ -122,7 +122,7 @@ class AdminAthleteController extends Controller
         // Validasi input
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => [
+            'email' => [
                 'required',
                 'string',
                 'email',
@@ -146,7 +146,7 @@ class AdminAthleteController extends Controller
             // Update data user
             $user = User::find($athlete->user_id);
             $user->name = $request->name;
-            $user->username = $request->username;
+            $user->email = $request->email;
             
             // Update password jika diisi
             if ($request->filled('password')) {

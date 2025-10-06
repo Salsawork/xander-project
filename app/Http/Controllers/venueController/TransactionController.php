@@ -43,7 +43,7 @@ class TransactionController extends Controller
                             })
                             ->orWhereHas('user', function ($q) {
                                 $q->where('name', 'like', '%' . request('search') . '%')
-                                    ->orWhere('username', 'like', '%' . request('search') . '%');
+                                    ->orWhere('email', 'like', '%' . request('search') . '%');
                             });
                     });
                 })

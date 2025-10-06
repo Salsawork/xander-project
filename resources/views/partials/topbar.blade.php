@@ -1,4 +1,4 @@
-<header class="bg-[#161617] h-16 flex items-center justify-between px-10 fixed top-0 w-5/6">
+<header class="bg-[#161617] h-16 flex items-center justify-between fixed top-0 w-5/6" style="padding: 0 24px">
     <div class="flex-1 flex justify-start">
         <p class="text-sm text-gray-400">
             <a href="{{ route('index') }}" class="cursor-pointer hover:text-white">
@@ -31,15 +31,13 @@
                 <i class="fas fa-gear w-4 shrink-0 text-gray-300"></i>
                 <span>Settings</span>
             </a>
-
-            <form method="POST" action="{{ route('logout') }}">
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
                 @csrf
-                <button type="submit"
-                    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap text-left">
-                    <i class="fas fa-sign-out-alt w-4 shrink-0 text-gray-300"></i>
-                    <span>Logout</span>
-                </button>
             </form>
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </a>
             @endauth
         </div>
     </div>
