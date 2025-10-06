@@ -10,6 +10,7 @@ use App\Models\OrderSparring;
 use App\Models\SparringSchedule;
 use App\Models\OrderVenue;
 use App\Models\Product;
+use App\Models\Table;
 use App\Models\Venue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
@@ -35,7 +36,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        
+
         // Logging untuk debugging
         Log::info('Checkout page accessed');
         $carts = $venues = $sparrings = [];
@@ -119,7 +120,7 @@ class OrderController extends Controller
             'venues.*.date'     => 'required',
             'venues.*.start'    => 'required',
             'venues.*.end'      => 'required',
-            'venues.*.table' => 'nullable|exists:table'
+            'venues.*.table' => 'nullable|exists:tables,table_number'
         ]);
 
         if (!auth()->check()) {
@@ -183,19 +184,26 @@ class OrderController extends Controller
             if ($request->has('venues')) {
                 foreach ($request->venues as $venue) {
                     $bookingDate = \Carbon\Carbon::createFromFormat('d-m-Y', $venue['date'])->format('Y-m-d');
-                    
-                    // Cara yang lebih aman untuk mendapatkan venue id
-                    if (isset($venue['table'])) {
-                        $venueId = Venue::where('table_number', $venue['table'])->firstOrFail()->id;
-                    } elseif (isset($venue['id'])) {
-                        $venueId = $venue['id'];
+
+                    // Cara yang lebih aman untuk mendapatkan table id
+                    if (isset($venue['table']) && isset($venue['id'])) {
+                        $tableId = DB::table('tables')  
+                            ->where('table_number', $venue['table'])
+                            ->where('venue_id', $venue['id'])
+                            ->value('id');
+
+                        if (!$tableId) {
+                            throw new \Exception('Table not found for venue: ' . $venue['id']);
+                        }
                     } else {
-                        throw new \Exception('Venue ID is required');
+                        throw new \Exception('Venue ID and Table number are required');
                     }
+
+
                     $order->bookings()->create([
-                        'venue_id' => $venueId,
+                        'venue_id' => $venue['id'],
                         'price'    => $venue['price'],
-                        'table_id' => $venueId,
+                        'table_id' => $tableId,
                         'user_id'  => $user->id,
                         'booking_date' => $bookingDate,
                         'start_time'   => $venue['start'],

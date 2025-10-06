@@ -22,7 +22,8 @@ class CategorySeeder extends Seeder
             ['name' => 'Accessories']
         ]);
 
-        Category::truncate();
+        // Category::truncate();
+        Category::query()->delete();
         // Presets
 
         Category::create(['name' => 'categories.junior', 'gender' => 'X', 'isTeam' => 0, 'ageCategory' => 5, 'ageMin' => '13', 'ageMax' => '15', 'gradeCategory' => 0]);

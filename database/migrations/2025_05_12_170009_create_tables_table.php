@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('venue_id')->constrained('venues')->onDelete('cascade');
             $table->string('table_number', 20);
             $table->enum('status', ['available', 'booked'])->default('available');
-            $table->decimal('price_per_hour', 10, 2)->nullable()->after('venue_id');
             $table->timestamps();
             
             // Add index for better performance on frequently queried columns

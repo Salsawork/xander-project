@@ -42,7 +42,7 @@ class BookingSeeder extends Seeder
         $bookings = [];
 
         // Booking untuk user 3 (Venue 1)
-        for ($i = 1; $i <= 6; $i++) {
+        for ($i = 1; $i <= 1; $i++) {
             $bookings[] = [
                 'order_id' => $orderUser3->id,
                 'venue_id' => 1,
