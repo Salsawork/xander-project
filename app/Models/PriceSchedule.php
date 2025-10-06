@@ -35,7 +35,7 @@ class PriceSchedule extends Model
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'tables_applicable' => 'array',
-
+        'days' => 'array',
     ];
 
     /**

@@ -64,19 +64,19 @@ class PromoController extends Controller
         return view('dash.venue.promo.create');
     }
 
-   public function store(Request $request)
-{
-    $data = $request->validate([
-        'name' => 'required|string|max:255',
-        'code' => 'required|string|max:50|unique:vouchers,code',
-        'type' => 'required|string|in:percentage,fixed_amount,free_time',
-        'discount_percentage' => 'nullable|numeric|min:0|max:100',
-        'discount_amount' => 'nullable|numeric|min:0',
-        'minimum_purchase' => 'nullable|numeric|min:0',
-        'quota' => 'nullable|integer|min:1',
-        'start_date' => 'required|date',
-        'end_date' => 'required|date|after_or_equal:start_date',
-    ]);
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required',
+            'code' => 'required|string|max:50|unique:vouchers,code',
+            'type' => 'required',
+            'discount_percentage' => 'nullable|numeric',
+            'discount_amount' => 'nullable|numeric',
+            'minimum_purchase' => 'nullable|numeric',
+            'quota' => 'nullable|numeric',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+        ]);
 
     $data['venue_id'] = Venue::where('user_id', Auth::id())->value('id');
     $data['is_active'] = true;

@@ -18,10 +18,10 @@
                 <span class="h-3 w-3 rounded-full {{ $table->status === 'available' ? 'bg-green-400' : 'bg-red-400' }}"></span>
                 <span class="font-medium text-sm sm:text-base">Table #{{ $table->table_number }}</span>
             </div>
-            <form action="{{ route('venue.booking.delete-table', $table->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this table?');">
+            <form id="delete-form-{{ $table->id }}" action="{{ route('venue.booking.delete-table', $table->id) }}" method="POST" class="inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="text-red-500 hover:text-red-700 text-sm transition">
+                <button type="button" onclick="confirmDelete({{ $table->id }})" class="text-red-500 hover:text-red-700 text-sm transition">
                     Delete
                 </button>
             </form>
@@ -29,3 +29,22 @@
         @endforeach
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Yakin anda akan menghapus data ini?',
+            text: "Data yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, hapus!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form-' + id).submit();
+            }
+        })
+    }
+</script>

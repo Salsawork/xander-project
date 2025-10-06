@@ -26,12 +26,11 @@
                         <label
                             class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div> --}}
-                    <form action="{{ route('price-schedule.destroy', $schedule->id) }}" method="POST"
-                        onsubmit="return confirm('Are you sure you want to delete this schedule?');">
+                    <form action="{{ route('price-schedule.destroy', $schedule->id) }}" method="POST" id="delete-form-{{ $schedule->id }}">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="ml-2 text-red-500 hover:text-red-700 transition"
-                            title="Delete">
+                        <button type="button" class="ml-2 text-red-500 hover:text-red-700 transition"
+                            title="Delete" onclick="confirmDelete({{ $schedule->id }})">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -42,9 +41,7 @@
                 </div>
             </div>
             <div class="text-right text-xs mt-2">
-                {{ collect(json_decode($schedule->days, true))
-    ->map(fn($d) => ucfirst($d))
-    ->implode(', ') }}
+                {{ collect($schedule->days)->map(fn($d) => ucfirst($d))->sort()->values()->implode(', ') }}
             </div>
         </div>
         <div class="bg-black bg-opacity-20 p-3 flex justify-between items-center">
@@ -73,3 +70,21 @@
         background-color: #68D391;
     }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Yakin anda akan menghapus data ini?',
+            text: "Data yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, hapus!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form-' + id).submit();
+            }
+        })
+    }
+</script>
