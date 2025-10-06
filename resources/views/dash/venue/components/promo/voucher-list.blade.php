@@ -43,41 +43,64 @@
                 </thead>
                 <tbody>
                     @forelse ($vouchers as $voucher)
-                        <tr class="border-b border-gray-700">
-                            <td class="py-3 px-4">{{ $voucher->name }}</td>
-                            <td class="py-3 px-4">{{ $voucher->type }}</td>
-                            <td class="py-3 px-4">
-                                <div class="whitespace-nowrap">
-                                    {{ $voucher->start_date->format('d/m/Y H:i') }} -
-                                    {{ $voucher->end_date->format('d/m/Y H:i') }}
-                                </div>
-                            </td>
-                            <td class="py-3 px-4">
-                                @if ($voucher->discount_percentage)
-                                    {{ $voucher->discount_percentage }}%
-                                @else
-                                    Rp {{ number_format($voucher->discount_amount, 0, ',', '.') }}
-                                @endif
-                            </td>
-                            <td class="py-3 px-4">{{ $voucher->quota }}</td>
-                            <td class="py-3 px-4">{{ $voucher->claimed }}</td>
-                            <td class="py-3 px-4">
-                                <div class="flex space-x-2">
-                                    <a href="{{ route('venue.promo.delete', $voucher->id) }}" class="text-red-500 hover:text-red-400" onclick="return confirm('Are you sure you want to delete this voucher?')">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
+                    <tr class="border-b border-gray-700">
+                        <td class="py-3 px-4">{{ $voucher->name }}</td>
+                        <td class="py-3 px-4">{{ $voucher->type }}</td>
+                        <td class="py-3 px-4">
+                            <div class="whitespace-nowrap">
+                                {{ $voucher->start_date->format('d/m/Y H:i') }} -
+                                {{ $voucher->end_date->format('d/m/Y H:i') }}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            @if ($voucher->discount_percentage)
+                            {{ $voucher->discount_percentage }}%
+                            @else
+                            Rp {{ number_format($voucher->discount_amount, 0, ',', '.') }}
+                            @endif
+                        </td>
+                        <td class="py-3 px-4">{{ $voucher->quota }}</td>
+                        <td class="py-3 px-4">{{ $voucher->claimed }}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex space-x-2">
+                                <form id="delete-form-{{ $voucher->id }}" action="{{ route('venue.promo.delete', $voucher->id) }}" method="POST" style="display: none;">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                                <a href="#" class="text-red-500 hover:text-red-400" onclick="confirmDelete('{{ $voucher->id }}'); return false;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
                     @empty
-                        <tr>
-                            <td colspan="7" class="py-4 px-4 text-center text-gray-400">No vouchers found</td>
-                        </tr>
+                    <tr>
+                        <td colspan="7" class="py-4 px-4 text-center text-gray-400">No vouchers found</td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Yakin anda akan menghapus data ini?',
+            text: "Data yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, hapus!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form-' + id).submit();
+            }
+        })
+    }
+</script>

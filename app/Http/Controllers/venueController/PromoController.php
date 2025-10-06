@@ -68,7 +68,7 @@ class PromoController extends Controller
     {
         $data = $request->validate([
             'name' => 'required',
-            'code' => 'required',
+            'code' => 'required|string|max:50|unique:vouchers,code',
             'type' => 'required',
             'discount_percentage' => 'nullable|numeric',
             'discount_amount' => 'nullable|numeric',

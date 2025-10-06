@@ -8,6 +8,15 @@
         <main class="flex-1 overflow-y-auto min-w-0 my-4 sm:my-8 md:my-8">
             @include('partials.topbar')
             <h1 class="text-2xl md:text-3xl font-extrabold mb-4 sm:mb-6 md:mb-8 mx-4 sm:mx-8 md:mx-16 mt-20 sm:mt-12 md:mt-16">Promo Detail</h1>
+            @if ($errors->any())
+            <div class="mb-4 sm:mb-6 md:mb-8 mx-4 sm:mx-8 md:mx-16 mt-4 bg-red-700 rounded p-3 sm:p-4">
+                <ul class="list-disc list-inside text-xs sm:text-sm">
+                    @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
             <form method="POST" action="{{ route('venue.promo.store') }}"
                 class="mx-4 sm:mx-8 md:mx-16 space-y-4 sm:space-y-6 md:space-y-8">
                 @csrf

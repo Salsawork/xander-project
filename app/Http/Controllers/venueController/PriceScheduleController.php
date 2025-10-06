@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\venueController;
 
 use App\Http\Controllers\Controller;
@@ -23,22 +24,22 @@ class PriceScheduleController extends Controller
     {
         $validated = $request->validate([
             'name'   => 'required|string|max:255',
-            'price'  => 'required|numeric',
+            'price'  => 'required',
             'start_time' => 'required',
             'end_time'   => 'required',
-            'days'   => 'required|string',
+            'time_category' => 'required',
+            'days'   => 'required|array',
             'tables_applicable' => 'required|array',
             'is_active' => 'required|boolean',
         ]);
 
         $validated['venue_id'] = Venue::where('user_id', Auth::id())->value('id');
-        $validated['tables_applicable'] = json_encode($validated['tables_applicable']);
 
         PriceSchedule::create($validated);
 
         return redirect()->route('venue.booking')->with('success', 'Price schedule created successfully.');
     }
-    
+
     public function destroy(PriceSchedule $priceSchedule)
     {
         $priceSchedule->delete();
