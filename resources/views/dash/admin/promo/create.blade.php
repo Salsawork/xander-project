@@ -30,14 +30,22 @@
                             <div>
                                 <label class="block text-sm font-medium mb-2">Voucher Name</label>
                                 <input type="text" name="name" value="{{ old('name') }}"
-                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white focus:outline-none focus:ring focus:ring-green-600">
+                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
                             </div>
 
                             {{-- Code --}}
                             <div>
-                                <label class="block text-sm font-medium mb-2">Voucher Code</label>
-                                <input type="text" name="code" value="{{ old('code') }}"
-                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white focus:outline-none focus:ring focus:ring-green-600">
+                                <label for="code" class="block text-sm font-medium mb-2">Voucher Code</label>
+                                <input type="text" name="code" id="code" value="{{ old('code') }}"
+                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white"
+                                    required>
+
+                                <p class="text-xs text-gray-400 mt-1">Note: Voucher code harus unik, tidak boleh sama dengan
+                                    kode voucher lain.</p>
+
+                                @error('code')
+                                    <span class="text-red-400 text-sm">{{ $message }}</span>
+                                @enderror
                             </div>
 
                             {{-- Type --}}
@@ -100,16 +108,6 @@
                                     class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white focus:outline-none">
                             </div>
 
-                            {{-- Active --}}
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Status</label>
-                                <select name="is_active"
-                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
-                                    <option value="1" {{ old('is_active') == '1' ? 'selected' : '' }}>Active</option>
-                                    <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>Inactive
-                                    </option>
-                                </select>
-                            </div>
                             {{-- Venue --}}
                             <div>
                                 <label class="block text-sm font-medium mb-2">Venue</label>
@@ -121,13 +119,26 @@
                                 </select>
                             </div>
 
-                            {{-- Submit --}}
-                            <div class="flex justify-end md:col-span-2">
-                                <a href="{{ route('promo.index') }}"
-                                    class="px-4 py-2 bg-neutral-700 rounded-lg hover:bg-neutral-600 mr-2">Cancel</a>
-                                <button type="submit"
-                                    class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700">Save</button>
+                            {{-- Active Status --}}
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Status</label>
+                                <select name="is_active"
+                                    class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-white">
+                                    <option value="1" {{ old('is_active') == '1' ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>Inactive
+                                    </option>
+                                </select>
                             </div>
+
+                        </div>
+
+                        {{-- Submit Buttons --}}
+                        <div class="flex flex-col sm:flex-row gap-4 justify-end mt-6">
+                            <a href="{{ route('promo.index') }}"
+                                class="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition text-center">Cancel</a>
+                            <button type="submit"
+                                class="px-6 py-2 bg-[#0a8cff] rounded-md hover:bg-[#0077e6] transition">Save</button>
+                        </div>
                     </form>
                 </div>
             </main>

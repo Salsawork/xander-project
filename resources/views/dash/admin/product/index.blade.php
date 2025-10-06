@@ -6,21 +6,21 @@
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
 
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8 container mx-auto px-4 sm:px-8">
+            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
 
-                <div class="p-8 mt-12">
+                <div class="mt-20 sm:mt-28 px-4 sm:px-8">
 
                     <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">My Product</h1>
 
                     @if (session('success'))
-                        <div class="mx-0 sm:mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
+                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
                             {{ session('success') }}
                         </div>
                     @endif
 
                     @if (session('error'))
-                        <div class="mx-0 sm:mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
+                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
                             {{ session('error') }}
                         </div>
                     @endif
@@ -32,19 +32,17 @@
                             onchange="window.location.href = '{{ route('products.index') }}?search=' + this.value + '&status=' + document.getElementById('statusFilter').value + '&category=' + document.getElementById('categoryFilter').value;"
                             value="{{ request('search') }}" placeholder="Search" type="search" />
 
-                        <div class="flex flex-wrap gap-2 items-center">
+                        <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
                             <select id="statusFilter"
                                 onchange="window.location.href = '{{ route('products.index') }}?search=' + document.querySelector('input[type=search]').value + '&status=' + this.value + '&category=' + document.getElementById('categoryFilter').value;"
-                                class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-2 py-1 cursor-pointer">
+                                class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-2 py-2 cursor-pointer">
                                 <option value="">-- Status --</option>
-                                <option value="in-stock" {{ request('status') == 'in-stock' ? 'selected' : '' }}>In Stock
-                                </option>
-                                <option value="out-of-stock" {{ request('status') == 'out-of-stock' ? 'selected' : '' }}>Out
-                                    of Stock</option>
+                                <option value="in-stock" {{ request('status') == 'in-stock' ? 'selected' : '' }}>In Stock</option>
+                                <option value="out-of-stock" {{ request('status') == 'out-of-stock' ? 'selected' : '' }}>Out of Stock</option>
                             </select>
                             <select id="categoryFilter"
                                 onchange="window.location.href = '{{ route('products.index') }}?search=' + document.querySelector('input[type=search]').value + '&status=' + document.getElementById('statusFilter').value + '&category=' + this.value;"
-                                class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-2 py-1 cursor-pointer">
+                                class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-2 py-2 cursor-pointer">
                                 <option value="">-- Category --</option>
                                 @foreach ($categories as $category)
                                     <option value="{{ $category->id }}"
@@ -54,16 +52,16 @@
                                 @endforeach
                             </select>
                             <a href="{{ route('products.create') }}"
-                                class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition">
+                                class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
                                 <i class="fas fa-plus"></i>
                                 Add Product
                             </a>
                         </div>
                     </div>
 
-                    <!-- Desktop Table -->
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
+                    <!-- Desktop & Tablet Table -->
+                    <div class="hidden sm:block overflow-x-auto">
+                        <table class="min-w-full text-left text-sm border border-gray-700 rounded-md">
                             <thead class="bg-[#2c2c2c] text-gray-300">
                                 <tr>
                                     <th class="px-4 py-3">Product</th>
@@ -77,61 +75,60 @@
                             <tbody class="divide-y divide-gray-700">
                                 @foreach ($products as $product)
                                     <tr>
-                                        <td class="flex items-center gap-4 px-4 py-3">
-                                            <div
-                                                class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                                @php
-                                                    $imagePath = 'https://placehold.co/600x400';
-                                                    if (!empty($product->images) && is_array($product->images)) {
-                                                        foreach ($product->images as $img) {
-                                                            if (!empty($img)) {
-                                                                if (
-                                                                    !str_starts_with($img, 'http') &&
-                                                                    !str_starts_with($img, '/storage/')
-                                                                ) {
-                                                                    $imagePath = asset('storage/uploads/' . $img);
-                                                                } else {
-                                                                    $imagePath = $img;
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-4">
+                                                <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
+                                                    @php
+                                                        $imagePath = 'https://placehold.co/600x400';
+                                                        if (!empty($product->images) && is_array($product->images)) {
+                                                            foreach ($product->images as $img) {
+                                                                if (!empty($img)) {
+                                                                    if (
+                                                                        !str_starts_with($img, 'http') &&
+                                                                        !str_starts_with($img, '/storage/')
+                                                                    ) {
+                                                                        $imagePath = asset('storage/uploads/' . $img);
+                                                                    } else {
+                                                                        $imagePath = $img;
+                                                                    }
+                                                                    break;
                                                                 }
-                                                                break;
                                                             }
                                                         }
-                                                    }
-                                                @endphp
-                                                <img class="w-10 h-10 object-cover rounded" src="{{ $imagePath }}"
-                                                    alt="{{ $product->name }}"
-                                                    onerror="this.src='https://placehold.co/600x400'" />
-                                            </div>
-                                            <div>
-                                                <a href="{{ route('products.edit', $product->id) }}"
-                                                    class="hover:text-blue-400 font-medium">{{ $product->name }}</a>
-                                                <p class="text-xs text-gray-500">{{ $product->brand }}</p>
+                                                    @endphp
+                                                    <img class="w-10 h-10 object-cover rounded" src="{{ $imagePath }}"
+                                                        alt="{{ $product->name }}"
+                                                        onerror="this.src='https://placehold.co/600x400'" />
+                                                </div>
+                                                <div>
+                                                    <a href="{{ route('products.edit', $product->id) }}"
+                                                        class="hover:text-blue-400 font-medium">{{ $product->name }}</a>
+                                                    <p class="text-xs text-gray-500">{{ $product->brand }}</p>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="px-4 py-3">
-                                            <span
-                                                class="inline-block border border-gray-600 rounded-full px-2 text-xs text-gray-300">
+                                            <span class="inline-block border border-gray-600 rounded-full px-2 text-xs text-gray-300">
                                                 {{ $product->category->name }}
                                             </span><br>
-                                            <span
-                                                class="inline-block border border-gray-600 rounded-full px-2 text-xs text-gray-300">
+                                            <span class="inline-block border border-gray-600 rounded-full px-2 text-xs text-gray-300 mt-1">
                                                 {{ $product->condition }}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3">Rp {{ number_format($product->pricing, 0, ',', '.') }}</td>
                                         <td class="px-4 py-3">{{ $product->quantity }}</td>
                                         <td class="px-4 py-3">
-                                            <span
-                                                class="inline-block {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }} rounded-full px-3 py-1 text-xs font-semibold">
+                                            <span class="inline-block {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }} rounded-full px-3 py-1 text-xs font-semibold">
                                                 {{ $product->quantity > 0 ? 'In Stock' : 'Out of Stock' }}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 flex gap-3 text-gray-400">
-                                            <a href="{{ route('products.edit', $product->id) }}" aria-label="Edit"
-                                                class="hover:text-gray-200"><i class="fas fa-pen"></i></a>
-                                            <button aria-label="Delete" class="hover:text-gray-200"
-                                                onclick="deleteProduct({{ $product->id }})"><i
-                                                    class="fas fa-trash"></i></button>
+                                        <td class="px-4 py-3">
+                                            <div class="flex gap-3 text-gray-400">
+                                                <a href="{{ route('products.edit', $product->id) }}" aria-label="Edit"
+                                                    class="hover:text-gray-200"><i class="fas fa-pen"></i></a>
+                                                <button aria-label="Delete" class="hover:text-gray-200"
+                                                    onclick="deleteProduct({{ $product->id }})"><i class="fas fa-trash"></i></button>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -142,29 +139,66 @@
                     <!-- Mobile Cards -->
                     <div class="sm:hidden space-y-4">
                         @foreach ($products as $product)
-                            <div class="bg-[#1f1f1f] border border-gray-700 rounded-lg p-4 shadow-md">
-                                <div class="flex items-center gap-3 mb-3">
-                                    <img class="w-12 h-12 object-cover rounded"
-                                        src="{{ !empty($product->images[0]) ? (str_starts_with($product->images[0], 'http') ? $product->images[0] : asset('storage/uploads/' . $product->images[0])) : 'https://placehold.co/600x400' }}"
-                                        alt="{{ $product->name }}">
-                                    <div class="flex-1">
-                                        <h2 class="font-semibold">{{ $product->name }}</h2>
-                                        <p class="text-xs text-gray-500">{{ $product->brand }}</p>
+                            <div class="bg-[#2c2c2c] border border-gray-700 rounded-lg p-4">
+                                <div class="flex items-start gap-3 mb-3">
+                                    <div class="w-16 h-16 bg-gray-600 rounded flex items-center justify-center shrink-0">
+                                        @php
+                                            $imagePath = 'https://placehold.co/600x400';
+                                            if (!empty($product->images) && is_array($product->images)) {
+                                                foreach ($product->images as $img) {
+                                                    if (!empty($img)) {
+                                                        if (!str_starts_with($img, 'http') && !str_starts_with($img, '/storage/')) {
+                                                            $imagePath = asset('storage/uploads/' . $img);
+                                                        } else {
+                                                            $imagePath = $img;
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        @endphp
+                                        <img class="w-full h-full object-cover rounded" src="{{ $imagePath }}"
+                                            alt="{{ $product->name }}" onerror="this.src='https://placehold.co/600x400'" />
                                     </div>
-                                    <span
-                                        class="px-2 py-1 rounded text-xs {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }}">
-                                        {{ $product->quantity > 0 ? 'In Stock' : 'Out of Stock' }}
-                                    </span>
+                                    <div class="flex-1 min-w-0">
+                                        <h2 class="font-semibold text-sm mb-1">{{ $product->name }}</h2>
+                                        <p class="text-xs text-gray-500">{{ $product->brand }}</p>
+                                        <span class="inline-block mt-2 px-2 py-1 rounded text-xs font-semibold {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }}">
+                                            {{ $product->quantity > 0 ? 'In Stock' : 'Out of Stock' }}
+                                        </span>
+                                    </div>
                                 </div>
-                                <p class="text-sm text-gray-400 mb-1">Category: {{ $product->category->name }}</p>
-                                <p class="text-sm text-gray-400 mb-1">Condition: {{ $product->condition }}</p>
-                                <p class="text-sm text-gray-400 mb-1">Price: Rp
-                                    {{ number_format($product->pricing, 0, ',', '.') }}</p>
-                                <p class="text-sm text-gray-400 mb-2">Stock: {{ $product->quantity }}</p>
-                                <div class="flex gap-3 text-gray-400 text-lg">
-                                    <a href="{{ route('products.edit', $product->id) }}"><i class="fas fa-pen"></i></a>
-                                    <button onclick="deleteProduct({{ $product->id }})"><i
-                                            class="fas fa-trash"></i></button>
+                                
+                                <div class="space-y-2 text-sm mb-3 pb-3 border-b border-gray-700">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Category:</span>
+                                        <span class="text-xs">{{ $product->category->name }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Condition:</span>
+                                        <span class="text-xs">{{ $product->condition }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Price:</span>
+                                        <span class="font-medium">Rp {{ number_format($product->pricing, 0, ',', '.') }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Stock:</span>
+                                        <span class="font-medium">{{ $product->quantity }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex gap-2">
+                                    <a href="{{ route('products.edit', $product->id) }}" 
+                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                        <i class="fas fa-pen text-xs"></i>
+                                        Edit
+                                    </a>
+                                    <button onclick="deleteProduct({{ $product->id }})"
+                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                        <i class="fas fa-trash text-xs"></i>
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
                         @endforeach
