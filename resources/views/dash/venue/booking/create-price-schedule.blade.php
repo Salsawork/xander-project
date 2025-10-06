@@ -5,21 +5,19 @@
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-8">
+        <main class="flex-1 overflow-y-auto min-w-0 my-4 sm:my-8 md:my-8">
             @include('partials.topbar')
-            <h1 class="text-3xl font-extrabold my-8 px-8">
-                Create New Price Schedule
-            </h1>
+            <h1 class="text-2xl md:text-3xl font-extrabold mb-4 sm:mb-6 md:mb-8 mx-4 sm:mx-8 md:mx-16 mt-20 sm:mt-12 md:mt-16">Create New Price Schedule</h1>
 
             @if (session('success'))
-                <div class="px-8 mb-4">
-                    <div class="bg-green-500 text-white text-sm font-bold px-4 py-3 rounded-md" role="alert">
-                        <p>{{ session('success') }}</p>
-                    </div>
+            <div class="px-8 mb-4">
+                <div class="bg-green-500 text-white text-sm font-bold px-4 py-3 rounded-md" role="alert">
+                    <p>{{ session('success') }}</p>
                 </div>
+            </div>
             @endif
 
-            <form method="POST" action="{{ route('price-schedule.store') }}" class="flex flex-col px-8">
+            <form method="POST" action="{{ route('price-schedule.store') }}" class="mx-4 sm:mx-8 md:mx-16 space-y-4 sm:space-y-6 md:space-y-8">
                 @csrf
                 <section class="bg-[#262626] rounded-lg p-8 space-y-8 w-full">
                     <h2 class="text-lg font-bold border-b border-gray-600 pb-2">
@@ -44,7 +42,7 @@
                             <label class="block text-xs text-gray-400 mb-1" for="end_time">End Time</label>
                             <input name="end_time" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" required id="end_time" type="time" required>
                         </div>
-                         <div>
+                        <div>
                             <div class="space-y-2">
                                 <label class="block text-xs text-gray-400 mb-1">Days</label>
                                 <div class="flex flex-wrap gap-4">
@@ -79,7 +77,7 @@
                                 </div>
                             </div>
                         </div>
-                         <div>
+                        <div>
                             <label class="block text-xs text-gray-400 mb-1" for="time_category">Time Category</label>
                             <select name="time_category" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" required id="time_category" required>
                                 <option disabled selected>Choose time category</option>
@@ -91,7 +89,7 @@
                             <label class="block text-xs text-gray-400 mb-1" for="tables_applicable">Applicable Tables</label>
                             <select name="tables_applicable[]" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-1.5 text-sm" multiple required id="tables_applicable" required>
                                 @foreach ($tables as $table)
-                                    <option value="{{ $table->table_number }}">{{ $table->table_number }}</option>
+                                <option value="{{ $table->table_number }}">{{ $table->table_number }}</option>
                                 @endforeach
                             </select>
                         </div>

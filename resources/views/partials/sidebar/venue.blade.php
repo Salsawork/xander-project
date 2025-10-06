@@ -112,7 +112,7 @@
                 <a href="{{ route('venue.dashboard') }}"
                     class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
                   {{ request()->routeIs('venue.dashboard') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
-                    <i class="fas fa-user w-5 text-gray-400"></i>
+                    <i class="fas fa-chart-line w-5 text-gray-400"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
@@ -121,7 +121,7 @@
                 <a href="{{ route('venue.booking') }}"
                     class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
                   {{ request()->routeIs('venue.booking') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
-                    <i class="fas fa-bell w-5 text-gray-400"></i>
+                    <i class="fas fa-calendar-alt w-5 text-gray-400"></i>
                     <span>Booking Management</span>
                 </a>
             </li>
@@ -139,7 +139,7 @@
                 <a href="{{ route('venue.transaction') }}"
                     class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
                   {{ request()->routeIs('venue.transaction') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
-                    <i class="fas fa-calendar-check w-5 text-gray-400"></i>
+                    <i class="fas fa-shopping-cart w-5 text-gray-400"></i>
                     <span>Transaction Management</span>
                 </a>
             </li>
