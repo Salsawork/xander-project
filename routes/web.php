@@ -18,6 +18,7 @@ use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\ServiceController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController; 
@@ -87,6 +88,11 @@ Route::prefix('venues')->group(function () {
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/event/{event:name}', [EventController::class, 'show'])->name('events.show');
 Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->name('events.bracket');
+
+/** Services */
+Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
+
 
 /** Sparring */
 Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
