@@ -232,23 +232,28 @@
                                 </div>
 
                                 <!-- Actions -->
-                                <div class="flex gap-2 pt-3 border-t border-gray-700">
+                                <div class="flex gap-2">
+                                    <!-- Tombol Edit -->
                                     <a href="{{ route('promo.edit', $voucher->id) }}"
-                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                        class="w-1/2 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition h-10">
                                         <i class="fas fa-pen text-xs"></i>
-                                        Edit
+                                        <span>Edit</span>
                                     </a>
+
+                                    <!-- Tombol Delete -->
                                     <form id="delete-form-{{ $voucher->id }}"
-                                        action="{{ route('promo.destroy', $voucher->id) }}" method="POST" class="inline">
+                                        action="{{ route('promo.destroy', $voucher->id) }}" method="POST" class="w-1/2">
                                         @csrf
                                         @method('DELETE')
                                         <button type="button" onclick="deleteProduct({{ $voucher->id }})"
-                                            class="hover:text-gray-200">
-                                            <i class="fas fa-trash"></i>
+                                            class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition h-10">
+                                            <i class="fas fa-trash text-xs"></i>
+                                            <span>Delete</span>
                                         </button>
                                     </form>
-
                                 </div>
+
+
                             </div>
                         @empty
                             <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
