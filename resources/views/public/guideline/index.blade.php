@@ -556,4 +556,30 @@
             })();
         })();
     </script>
+    {{-- ===================== NEWSLETTER SECTION ===================== --}}
+    <section class="bg-[#1E1E1F] text-white py-16 px-6 md:px-20 border-t border-gray-800">
+        <div class="max-w-3xl mx-auto text-center">
+        <h2 class="text-3xl font-semibold mb-4 text-white">Subscribe</h2>
+        <p class="text-gray-400 mb-8 text-sm md:text-base">
+            Stay up to date with the latest updates, events, and community stories from Xander Billiard.
+        </p>
+    
+        <form action="{{ route('subscribe.store') }}" method="POST" class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            @csrf
+            <input 
+            type="email" 
+            name="email" 
+            placeholder="Enter your email address" 
+            required
+            class="w-full sm:w-auto flex-grow px-5 py-3 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <button 
+            type="submit" 
+            class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-full transition duration-200">
+            Subscribe
+            </button>
+        </form>
+        </div>
+    </section>
+  
 @endsection

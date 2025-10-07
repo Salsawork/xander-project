@@ -17,6 +17,7 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\Auth\GoogleController;
 
 // Venue Controllers
@@ -107,6 +108,8 @@ Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('gu
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
 
+
+Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
 /*
 |--------------------------------------------------------------------------
 | Cart & Checkout
