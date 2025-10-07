@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Bank;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -75,7 +76,8 @@ class OrderController extends Controller
         $grandTotal = $total + $shipping + $tax;
 
         $user = $request->user();
-        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user'));
+        $banks = Bank::all();
+        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user', 'banks'));
     }
 
 
@@ -86,7 +88,7 @@ class OrderController extends Controller
      */
     public function create()
     {
-        //
+       
     }
 
     /**
@@ -100,6 +102,9 @@ class OrderController extends Controller
             'email'          => 'required|email',
             'phone'          => 'required|string|max:20',
             'payment_method' => 'required|in:transfer_manual',
+            'bank_id'       => 'required|exists:mst_bank,id_bank',
+            'no_rekening'   => 'required|string|max:50',
+            'atas_nama'     => 'required|string|max:255',
             'file'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
 
             // products
@@ -147,11 +152,14 @@ class OrderController extends Controller
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
+                'bank_id'         => $request->bank_id,
                 'order_number'    => $orderNumber,
                 'total'           => 0, // update setelah item masuk
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
+                'no_rekening'     => $request->no_rekening,
+                'atas_nama'       => $request->atas_nama,
                 'file'            => $path,
             ]);
 

@@ -163,6 +163,31 @@
                         </select>
                     </div>
 
+                    <!-- Bank Selection -->
+                    <div class="mb-6">
+                        <label for="bank_id" class="block font-semibold mb-1">Select Bank</label>
+                        <select name="bank_id" id="bank_id" class="w-full border rounded p-2" required>
+                            <option value="">-- Choose Bank --</option>
+                            @foreach($banks as $bank)
+                                <option value="{{ $bank->id_bank }}">{{ $bank->nama_bank }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Account Number -->
+                    <div class="mb-6">
+                        <label for="no_rekening" class="block font-semibold mb-1">Account Number</label>
+                        <input type="text" name="no_rekening" id="no_rekening" class="w-full border rounded p-2"
+                            value="{{ old('no_rekening') }}" required>
+                    </div>
+
+                    <!-- Account Holder -->
+                    <div class="mb-6">
+                        <label for="atas_nama" class="block font-semibold mb-1">Account Holder Name</label>
+                        <input type="text" name="atas_nama" id="atas_nama" class="w-full border rounded p-2"
+                            value="{{ old('atas_nama') }}" required>
+                    </div>
+
                     <!-- File -->
                     <div class="mb-6">
                         <label class="block font-semibold mb-1">File</label>
