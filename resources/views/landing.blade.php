@@ -39,11 +39,10 @@
             .hero--tight .hero-bg { object-position: center !important; }
         }
 
-        /* ===== Slider Top Picks (mobile) ===== */
+        /* ===== Slider Top Picks (mobile slider khusus — kalau dipakai) ===== */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Hapus fade shadow di kiri/kanan */
         .tp-fade-left::before,
         .tp-fade-right::before { content: none !important; }
 
@@ -63,7 +62,8 @@
         .tp-prev { left: .5rem; }
         .tp-next { right: .5rem; }
 
-        .tp-card { width: 75vw; max-width: 360px; }
+        /* HANYA untuk mode slider horizontal (bukan grid) */
+        .tp-card { width: 75vw; max-width: 360px; } 
         @media (min-width: 420px) and (max-width: 767px) {
             .tp-card { width: 68vw; }
         }
@@ -74,6 +74,24 @@
             overscroll-behavior-x: contain;
             touch-action: pan-x;
         }
+
+        /* ===============================
+           Konsistensi warna kartu Top Picks
+        ================================*/
+        :root{
+            --page-bg: #0f0f0f;
+            --card-bg: #161616;
+            --card-border: #2a2a2a;
+        }
+        .tp-card-ui{
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        }
+        .tp-imgwrap{ background: var(--card-bg); }
+        .tp-meta{ background: var(--card-bg); }
     </style>
 @endpush
 
@@ -94,7 +112,7 @@
             document.documentElement.style.setProperty('--svh', svh + 'px');
         }
 
-        // ====== Top Picks slider (mobile) ======
+        // ====== Top Picks slider (mobile) — optional ======
         function initTopPicksSlider() {
             const scroller = document.getElementById('topPicksScroller');
             const prevBtn  = document.getElementById('tpPrev');
@@ -178,151 +196,158 @@
         <!-- Top Picks -->
         <section class="relative bg-cover bg-center bg-no-repeat vh-section px-6 md:px-20 py-12 md:py-16 bg-neutral-900"
                  style="background-image: url('/images/bg/background_1.png')">
-            <div class="relative z-10 text-white h-full flex flex-col">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl md:text-3xl font-bold">Top Picks</h2>
-                </div>
-
-                <!-- Filter Buttons -->
-                <div class="flex flex-wrap gap-3 mb-8">
-                    <a href="{{ route('level', ['level' => 'professional']) }}">
-                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                            Professional Grade
-                        </button>
-                    </a>
-                    <a href="{{ route('level', ['level' => 'beginner']) }}">
-                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                            Beginner-Friendly
-                        </button>
-                    </a>
-                    <a href="{{ route('level', ['level' => 'under50']) }}">
-                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                            Under $50
-                        </button>
-                    </a>
-                    <a href="{{ route('level', ['level' => 'cue-cases']) }}">
-                        <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">
-                            Cue Cases
-                        </button>
-                    </a>
-                </div>
-
-                @php $items = $products; @endphp
-
-                <!-- ===== MOBILE: Horizontal Slider (tanpa fade/shadow) ===== -->
-                <div class="relative md:hidden -mx-6 px-6 tp-fade-left tp-fade-right">
-                    <button id="tpPrev" class="tp-nav tp-prev" aria-label="Previous">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button id="tpNext" class="tp-nav tp-next" aria-label="Next">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-
-                    <div id="topPicksScroller"
-                         class="flex overflow-x-auto no-scrollbar gap-4 snap-x snap-mandatory pb-2">
-                        @forelse ($items as $product)
-                            @php
-                                $images = $product->images
-                                    ? (is_array($product->images) ? $product->images : json_decode($product->images, true))
-                                    : [];
-                                $firstImage = !empty($images) ? $images[0] : null;
-                                $idx = ($loop->index % 5) + 1;
-                                $defaultImg = asset("images/products/{$idx}.png");
-                                if ($firstImage) {
-                                    $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-                                    $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-                                } else {
-                                    $src = $defaultImg;
-                                }
-                            @endphp
-
-                            <article class="group tp-card snap-start shrink-0">
-                                <a href="{{ route('products.detail', $product->id) }}" class="block">
-                                    <div class="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-neutral-800">
-                                        <img src="{{ $src }}" alt="{{ $product->name }}"
-                                             class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                                             onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
-                                    </div>
-                                </a>
-                                <div class="mt-3">
-                                    <a href="{{ route('products.detail', $product->id) }}" class="hover:text-blue-400">
-                                        <h3 class="font-bold tracking-tight line-clamp-2">{{ $product->name }}</h3>
-                                    </a>
-                                    <p class="text-sm text-white/80 mt-1">
-                                        @if (!empty($product->discount) && $product->discount > 0)
-                                            <span class="line-through text-gray-400">
-                                                Rp {{ number_format($product->pricing, 0, ',', '.') }}
-                                            </span>
-                                            @php $final = $product->pricing - $product->pricing * $product->discount; @endphp
-                                            Rp {{ number_format($final, 0, ',', '.') }}
-                                        @else
-                                            Rp {{ number_format($product->pricing, 0, ',', '.') }}
-                                        @endif
-                                    </p>
-                                </div>
-                            </article>
-                        @empty
-                            <div class="snap-start shrink-0 w-[80vw] text-center py-8">
-                                <p>Tidak ada produk yang tersedia saat ini.</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- ===== DESKTOP/TABLET: Grid normal ===== -->
-                <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
-                    @forelse ($items as $product)
-                        @php
-                            $images = $product->images
-                                ? (is_array($product->images) ? $product->images : json_decode($product->images, true))
-                                : [];
-                            $firstImage = !empty($images) ? $images[0] : null;
-                            $idx = ($loop->index % 5) + 1;
-                            $defaultImg = asset("images/products/{$idx}.png");
-                            if ($firstImage) {
-                                $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-                                $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-                            } else {
-                                $src = $defaultImg;
-                            }
-                        @endphp
-
-                        <article class="group">
-                            <a href="{{ route('products.detail', $product->id) }}" class="block">
-                                <div class="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-neutral-800">
-                                    <img src="{{ $src }}" alt="{{ $product->name }}"
-                                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                                         onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
-                                </div>
-                            </a>
-                            <div class="mt-3">
-                                <a href="{{ route('products.detail', $product->id) }}" class="hover:text-blue-400">
-                                    <h3 class="font-bold tracking-tight">{{ $product->name }}</h3>
-                                </a>
-                                <p class="text-sm text-white/80 mt-1">
-                                    @if (!empty($product->discount) && $product->discount > 0)
-                                        <span class="line-through text-gray-400">
-                                            Rp {{ number_format($product->pricing, 0, ',', '.') }}
-                                        </span>
-                                        @php $final = $product->pricing - $product->pricing * $product->discount; @endphp
-                                        Rp {{ number_format($final, 0, ',', '.') }}
-                                    @else
-                                        Rp {{ number_format($product->pricing, 0, ',', '.') }}
-                                    @endif
-                                </p>
-                            </div>
-                        </article>
-                    @empty
-                        <div class="col-span-4 text-center py-8">
-                            <p>Tidak ada produk yang tersedia saat ini.</p>
-                        </div>
-                    @endforelse
-                </div>
+          <div class="relative z-10 text-white h-full flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl md:text-3xl font-bold">Top Picks</h2>
             </div>
+
+            <!-- Filter Buttons (opsional; tetap) -->
+            <div class="flex flex-wrap gap-3 mb-8">
+              <a href="{{ route('level', ['level' => 'professional']) }}">
+                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Professional Grade</button>
+              </a>
+              <a href="{{ route('level', ['level' => 'beginner']) }}">
+                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Beginner-Friendly</button>
+              </a>
+              <a href="{{ route('level', ['level' => 'under50']) }}">
+                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Under $50</button>
+              </a>
+              <a href="{{ route('level', ['level' => 'cue-cases']) }}">
+                <button class="px-4 py-1 border border-[#616161] text-[#616161] rounded-full text-sm">Cue Cases</button>
+              </a>
+            </div>
+
+            @php $items = $products; @endphp
+
+            <!-- ========== MOBILE: Grid 2 kolom (FIX: tanpa .tp-card) ========== -->
+            <div class="md:hidden">
+              <div class="grid grid-cols-2 gap-4 px-2">
+                @forelse ($items as $product)
+                  @php
+                    // Ambil gambar pertama / fallback
+                    $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
+                    $firstImage = !empty($images) ? $images[0] : null;
+                    $idx = ($loop->index % 5) + 1;
+                    $defaultImg = asset("images/products/{$idx}.png");
+                    if ($firstImage) {
+                      $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
+                      $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
+                    } else {
+                      $src = $defaultImg;
+                    }
+
+                    // Harga & diskon
+                    $hasDisc = !empty($product->discount) && $product->discount > 0;
+                    $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
+                    $final   = $hasDisc
+                      ? ($product->pricing - ($product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount/100)))
+                      : $product->pricing;
+                  @endphp
+
+                  <article class="tp-card-ui">
+                    <a href="{{ route('products.detail', $product->id) }}" class="block">
+                      <div class="relative w-full aspect-[3/4] tp-imgwrap">
+                        <img src="{{ $src }}" alt="{{ $product->name }}" class="absolute inset-0 h-full w-full object-cover"
+                             onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+                        @if ($hasDisc)
+                          <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full">
+                            -{{ number_format($discPct, 0) }}%
+                          </span>
+                        @endif
+                      </div>
+                    </a>
+
+                    <div class="tp-meta px-4 py-3">
+                      <a href="{{ route('products.detail', $product->id) }}">
+                        <h3 class="text-[14px] font-semibold tracking-tight line-clamp-1">
+                          {{ $product->name }}
+                        </h3>
+                      </a>
+
+                      <div class="mt-1">
+                        @if ($hasDisc)
+                          <div class="text-gray-400 text-[12px] leading-none mb-1">
+                            <span class="opacity-80">Rp</span>
+                            <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
+                          </div>
+                        @endif
+                        <div class="text-white font-extrabold text-[16px] leading-tight">
+                          Rp {{ number_format($final, 0, ',', '.') }}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                @empty
+                  <div class="col-span-2 text-center py-8 text-white/80">
+                    <p>Tidak ada produk yang tersedia saat ini.</p>
+                  </div>
+                @endforelse
+              </div>
+            </div>
+
+            <!-- ========== DESKTOP/TABLET: Grid 2/4 kolom ========== -->
+            <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
+              @forelse ($items as $product)
+                @php
+                  $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
+                  $firstImage = !empty($images) ? $images[0] : null;
+                  $idx = ($loop->index % 5) + 1;
+                  $defaultImg = asset("images/products/{$idx}.png");
+                  if ($firstImage) {
+                    $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
+                    $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
+                  } else {
+                    $src = $defaultImg;
+                  }
+
+                  $hasDisc = !empty($product->discount) && $product->discount > 0;
+                  $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
+                  $final   = $hasDisc
+                    ? ($product->pricing - ($product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount/100)))
+                    : $product->pricing;
+                @endphp
+
+                <article class="tp-card-ui">
+                  <a href="{{ route('products.detail', $product->id) }}" class="block">
+                    <div class="relative aspect-[3/4] w-full tp-imgwrap">
+                      <img src="{{ $src }}" alt="{{ $product->name }}"
+                           class="absolute inset-0 h-full w-full object-cover"
+                           onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+                      @if ($hasDisc)
+                        <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full">
+                          -{{ number_format($discPct, 0) }}%
+                        </span>
+                      @endif
+                    </div>
+                  </a>
+
+                  <div class="tp-meta px-4 py-3">
+                    <a href="{{ route('products.detail', $product->id) }}">
+                      <h3 class="text-[15px] font-semibold tracking-tight line-clamp-1">
+                        {{ $product->name }}
+                      </h3>
+                    </a>
+
+                    <div class="mt-1">
+                      @if ($hasDisc)
+                        <div class="text-gray-400 text-[13px] leading-none mb-1">
+                          <span class="opacity-80">Rp</span>
+                          <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
+                        </div>
+                      @endif
+                      <div class="text-white font-extrabold text-[18px] leading-tight">
+                        Rp {{ number_format($final, 0, ',', '.') }}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              @empty
+                <div class="col-span-4 text-center py-8">
+                  <p>Tidak ada produk yang tersedia saat ini.</p>
+                </div>
+              @endforelse
+            </div>
+          </div>
         </section>
 
         <!-- Jumbotron 2 - Guidelines (tanpa overlay/shadow) -->
