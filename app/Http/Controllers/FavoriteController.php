@@ -13,28 +13,31 @@ class FavoriteController extends Controller
 {
     public function toggle(Venue $venue, Request $request)
     {
-        $guestId = $request->session()->getId();
+        // Pastikan hanya user login yang bisa favorit
+        if (!Auth::check()) {
+            return response()->json([
+                'status' => 'unauthenticated',
+                'message' => 'Silakan login untuk menambahkan ke favorit.'
+            ], 401);
+        }
+
+        $userId = Auth::id();
 
         $favorite = Favorite::where('venue_id', $venue->id)
-            ->where('guest_id', $guestId)
+            ->where('user_id', $userId)
             ->first();
 
         if ($favorite) {
-            Favorite::where('venue_id', $venue->id)
-                ->where('guest_id', $guestId)
-                ->delete();
-
+            $favorite->delete();
             return response()->json(['status' => 'removed']);
         } else {
-            Favorite::insert([
-                'venue_id'  => $venue->id,
-                'guest_id'  => $guestId,
-                'created_at'=> now(),
-                'updated_at'=> now(),
+            Favorite::create([
+                'venue_id' => $venue->id,
+                'user_id'  => $userId,
             ]);
-
             return response()->json(['status' => 'added']);
         }
     }
-
+    
+    
 }

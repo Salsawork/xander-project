@@ -16,15 +16,14 @@ class Order extends Model
     protected $fillable = [
         'id',
         'user_id',
+        'bank_id',
         'order_number',
-        'firstname',
-        'lastname',
-        'email',
         'total',
-        'phone',
         'payment_status',
         'delivery_status',
         'payment_method',
+        'no_rekening',
+        'atas_nama',
         'file',
 
     ];
@@ -44,6 +43,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function bank()
+    {
+        return $this->belongsTo(Bank::class);
     }
 
     public function products()

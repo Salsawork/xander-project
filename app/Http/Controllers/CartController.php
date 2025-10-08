@@ -13,6 +13,13 @@ class CartController extends Controller
 {
     public function addProductToCart(Request $request)
     {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.'
+            ], 401);
+        }
+    
         $cartProduct = json_decode($request->cookie('cartProducts') ?? '[]', true);
         $product = Product::findOrFail($request->id);
 
@@ -35,6 +42,13 @@ class CartController extends Controller
     
     public function addVenueToCart(Request $request)
     {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu untuk menambahkan venue.'
+            ], 401);
+        }
+
         $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
         $venue = Venue::findOrFail($request->id);
 
@@ -77,6 +91,13 @@ class CartController extends Controller
 
     public function addSparringToCart(Request $request)
     {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu untuk menambahkan sparring ke keranjang.'
+            ], 401);
+        }
+
         $request->validate([
             'athlete_id' => 'required|exists:users,id',
             'schedule_id' => 'required|exists:sparring_schedules,id',

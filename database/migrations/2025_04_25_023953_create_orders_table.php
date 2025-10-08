@@ -33,6 +33,9 @@ return new class extends Migration
                 'returned'
             ])->default('pending')->index();
             $table->string('payment_method')->nullable();
+            $table->unsignedBigInteger('bank_id')->nullable();
+            $table->string('no_rekening')->nullable();
+            $table->string('atas_nama')->nullable();
             $table->string('file')->nullable();
             $table->string('snap_token')->nullable();
             $table->timestamp('expired_at')->nullable(); 

@@ -17,7 +17,9 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\ServiceController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController; 
@@ -80,13 +82,22 @@ Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
     Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
     Route::get('/venues/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
-    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+    // Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+});
+Route::middleware('auth')->prefix('venues')->group(function () {
+Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
 /** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
+// Route-model binding by NAME
 Route::get('/event/{event:name}', [EventController::class, 'show'])->name('events.show');
 Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->name('events.bracket');
+
+/** Services */
+Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
+
 
 /** Sparring */
 Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
@@ -107,12 +118,15 @@ Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('gu
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
 
+
+Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
+
 /*
 |--------------------------------------------------------------------------
 | Cart & Checkout
 |--------------------------------------------------------------------------
 */
-Route::prefix('cart')->group(function () {
+Route::middleware('auth')->prefix('cart')->group(function () {
     Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
     Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
     Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');

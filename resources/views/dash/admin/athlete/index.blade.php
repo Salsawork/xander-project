@@ -7,9 +7,11 @@
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
+
                 
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
                     <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">
+
                         Daftar Athlete
                     </h1>
 
