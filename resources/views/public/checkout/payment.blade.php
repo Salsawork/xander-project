@@ -28,7 +28,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Payment Method:</span>
-                        <span>{{ ucfirst($order->payment_method) }}</span>
+                        <span>{{ $order->payment_method === 'transfer_manual' ? 'Transfer manual' : ucfirst($order->payment_method) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Payment Status:</span>
@@ -36,34 +36,56 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Total:</span>
-                        <span class="font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }},-</span>
+                        <span class="font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }}</span>
                     </div>
                 </div>
-                {{-- Uplaod file --}}
-                <form action="{{ route('checkout.updatePayment', $order) }}" method="POST" enctype="multipart/form-data" class="mt-6">
-                    @method('PUT')
-                    @csrf
-                    <div class="mb-4">
-                        {{-- Show image --}}
-                        @if($order->file)
-                            <div class="mb-4">
-                                <label class="block text-gray-400 mb-2">Current Proof of Payment</label>
-                                <img src="{{ asset('storage/' . $order->file) }}" alt="Proof of Payment" class="w-full h-auto rounded-md">
-                            </div>
-                        @endif
-                        <label for="proof_of_payment" class="block text-gray-400 mb-2">Upload Proof of Payment</label>
-                        <input type="file" name="file" id="file" accept=".jpg,.jpeg,.png,.pdf" required class="bg-[#333333] text-white rounded-md p-2 w-full">
-                    </div>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-md">
-                        Upload Proof
-                    </button>
-                </form>
             </div>
 
             <div class="flex justify-center space-x-4">
                 <a href="{{ route('index') }}" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-md">
                     Back to Home
                 </a>
+                <button onclick="showUploadModal()" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-md">
+                    Payment
+                </button>
+
+                <!-- Upload Payment Modal -->
+                <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                    <div class="bg-[#2D2D2D] rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 class="text-lg font-bold mb-4 text-center">Upload Proof of Payment</h3>
+                        <form action="{{ route('checkout.updatePayment', $order) }}" method="POST" enctype="multipart/form-data">
+                            @method('PUT')
+                            @csrf
+                            <div class="mb-4">
+                                @if($order->file)
+                                    <div class="mb-4">
+                                        <label class="block text-gray-400 mb-2">Current Proof of Payment</label>
+                                        <img src="{{ asset('storage/' . $order->file) }}" alt="Proof of Payment" class="w-full h-auto rounded-md">
+                                    </div>
+                                @endif
+                                <label for="proof_of_payment" class="block text-gray-400 mb-2">Choose File</label>
+                                <input type="file" name="file" id="file" accept=".jpg,.jpeg,.png,.pdf" required class="bg-[#333333] text-white rounded-md p-2 w-full">
+                            </div>
+                            <div class="flex justify-center space-x-4">
+                                <button type="button" onclick="hideUploadModal()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md">
+                                    Upload
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    function showUploadModal() {
+                        document.getElementById('uploadModal').classList.remove('hidden');
+                    }
+                    function hideUploadModal() {
+                        document.getElementById('uploadModal').classList.add('hidden');
+                    }
+                </script>
             </div>
         </div>
     </div>

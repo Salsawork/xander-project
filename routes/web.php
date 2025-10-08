@@ -20,7 +20,7 @@ use App\Http\Controllers\UploadController;
 use App\Http\Controllers\Auth\GoogleController;
 
 // Venue Controllers
-use App\Http\Controllers\venueController\DashboardController as VenueDashboardController; 
+use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
 use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\PriceScheduleController;
@@ -42,6 +42,7 @@ use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
+use App\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -112,13 +113,15 @@ Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->na
 | Cart & Checkout
 |--------------------------------------------------------------------------
 */
-Route::prefix('cart')->group(function () {
-    Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
-    Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
-    Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
-    Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
-    Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
-    Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
+Route::middleware('auth')->group(function () {
+    Route::prefix('cart')->group(function () {
+        Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
+        Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
+        Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
+        Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
+        Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
+        Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
+    });
 });
 
 /** Checkout (auth required) */
@@ -130,6 +133,18 @@ Route::prefix('checkout')->group(function () {
     Route::get('/finish', [OrderController::class, 'finish'])->name('checkout.finish');
     Route::get('/success', [OrderController::class, 'success'])->name('checkout.success');
 });
+
+// Detail order & booking
+Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
+Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
+Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
+
+// Rajaongkir
+Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
+Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
+Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
+Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
+Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
 
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::get('/', [DashboardOrderController::class, 'index'])->name('order.index');
@@ -148,7 +163,6 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
 */
 
 Route::middleware('auth')->group(function () {
-
     /** General Dashboard */
     Route::redirect('dashboard', 'dashboard/overview');
     Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
@@ -208,7 +222,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/{venue}/edit', [AdminVenueController::class, 'edit'])->name('venue.edit');
         Route::put('/{venue}', [AdminVenueController::class, 'update'])->name('venue.update');
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
-        
     });
 
     Route::middleware('auth')->prefix('venue')->group(function () {
@@ -251,22 +264,22 @@ Route::middleware('auth')->group(function () {
     Route::prefix('athlete')->group(function () {
         // Athlete Dashboard
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-    
+
         // Athlete Sparring - Create Session
         Route::get('/sparring/create', function () {
             return view('dash.athlete.sparring.create');
         })->name('athlete.sparring.create');
-    
-    
+
+
         // Athlete Match History (BARU)
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         // Create Session
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-    
+
         // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-    
+
         // Athlete Match History (BARU)
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });

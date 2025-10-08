@@ -21,6 +21,7 @@ class CartController extends Controller
             'name' => $product->name,
             'image' => $product->images[0] ?? null,
             'price' => $product->pricing,
+            'weight' => $product->weight,
         ];
 
         Cookie::queue('cartProducts', json_encode($cartProduct), 60 * 24 * 7);

@@ -20,7 +20,6 @@ class UserSeeder extends Seeder
         DB::table('users')->insert([
             [
             'name' => 'Admin',
-            'username' => 'admin@8ball.com',
             'email' => 'admin@8ball.com',
             'password' => Hash::make('password123'),
             'roles' => 'admin',
@@ -30,7 +29,6 @@ class UserSeeder extends Seeder
             ],
             [
             'name' => 'Random User 1',
-            'username' => 'user@8ball.com',
             'email' => 'user@8ball.com',
             'password' => Hash::make('qweqwe'),
             'roles' => 'user',
@@ -40,7 +38,6 @@ class UserSeeder extends Seeder
             ],
             [
             'name' => 'Venue Owner 1',
-            'username' => 'venue1@8ball.com',
             'email' => 'venue1@8ball.com',
             'password' => Hash::make('qweqwe'),
             'roles' => 'venue',
@@ -50,7 +47,6 @@ class UserSeeder extends Seeder
             ],
             [
             'name' => 'Alex Murphy',
-            'username' => 'alex@athlete.com',
             'email' => 'alex@athlete.com',
             'password' => Hash::make('qweqwe'),
             'roles' => 'athlete',

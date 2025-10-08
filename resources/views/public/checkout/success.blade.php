@@ -28,7 +28,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Payment Method:</span>
-                        <span>{{ ucfirst($order->payment_method) }}</span>
+                        <span>{{ $order->payment_method === 'transfer_manual' ? 'Transfer manual' : ucfirst($order->payment_method) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Payment Status:</span>
@@ -36,7 +36,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Total:</span>
-                        <span class="font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }},-</span>
+                        <span class="font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -45,7 +45,7 @@
                 <a href="{{ route('index') }}" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-md">
                     Back to Home
                 </a>
-                <a href="#" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-md">
+                <a href="{{ route('order.detail', ['order' => $order->id]) }}" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-md">
                     View Order Details
                 </a>
             </div>
