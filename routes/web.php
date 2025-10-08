@@ -87,6 +87,7 @@ Route::prefix('venues')->group(function () {
 
 /** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
+// Route-model binding by NAME
 Route::get('/event/{event:name}', [EventController::class, 'show'])->name('events.show');
 Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->name('events.bracket');
 

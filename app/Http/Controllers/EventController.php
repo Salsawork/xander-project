@@ -15,6 +15,7 @@ class EventController extends Controller
         return view('public.event.index', compact('events'));
     }
 
+    // Karena route: /event/{event:name}, param ini otomatis resolve by 'name'
     public function show(Event $event)
     {
         return view('public.event.detail', compact('event'));

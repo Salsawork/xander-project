@@ -535,70 +535,171 @@
             </div>
         </section>
 
-        <!-- Latest News & Events -->
-        <section
-            class="relative bg-cover bg-center bg-no-repeat text-white vh-section px-6 md:px-16 py-12 md:py-16 bg-neutral-900"
-            style="background-image: url('/images/bg/background_3.png')">
-            <div class="mx-auto max-w-7xl relative z-10 h-full flex flex-col">
-                <h2 class="text-2xl md:text-3xl font-bold mb-8">Latest News &amp; Events</h2>
+      <!-- Latest News & Events (dinamis dari tabel events) -->
+<section
+    class="relative bg-cover bg-center bg-no-repeat text-white vh-section px-6 md:px-16 py-12 md:py-16 bg-neutral-900"
+    style="background-image: url('/images/bg/background_3.png')">
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <article
-                        class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800">
-                        <img src="{{ asset('images/latest-event/1.png') }}" alt="Master the Game Workshop"
-                            class="absolute inset-0 w-full h-full object-cover" />
-                        <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                            <h3 class="text-xl md:text-2xl font-semibold">
-                                Master the Game: A Comprehensive Billiard Workshop with Experts
-                            </h3>
-                            <p class="mt-2 text-sm md:text-base text-gray-200 max-w-3xl">
-                                Take your billiard skills to the next level with our in-depth workshop led by
-                                professional players and coaches. Learn advanced cue control, strategic shot
-                                selection, and table management from experts.
+    @php
+        use Illuminate\Support\Str;
+        use App\Models\Event;
+        use Carbon\Carbon;
+
+        // ====== Utility kecil untuk amanin URL gambar ======
+        $imgUrl = function ($path) {
+            if (!$path) return asset('images/placeholder/event-hero.png'); // siapkan placeholder
+            return Str::startsWith($path, ['http://', 'https://', '/']) ? $path : asset($path);
+        };
+
+        // ====== Ambil 4 event terbaru. Ubah logika jika mau upcoming duluan ======
+        // Contoh alternatif (ambil upcoming duluan):
+        // $latest = Event::whereDate('end_date', '>=', now())->orderBy('start_date')->take(4)->get();
+        $latest = Event::orderByDesc('start_date')->take(4)->get();
+
+        $featured = $latest->first();
+        $side     = $latest->skip(1);
+
+        // Helper format tanggal ringkas: "Jan 12 - Jan 15, 2025"
+        $fmtRange = function($e) {
+            try {
+                $sd = $e->start_date instanceof Carbon ? $e->start_date : ($e->start_date ? Carbon::parse($e->start_date) : null);
+                $ed = $e->end_date   instanceof Carbon ? $e->end_date   : ($e->end_date   ? Carbon::parse($e->end_date)   : null);
+                if (!$sd && !$ed) return '';
+                if ($sd && $ed && $sd->format('M') === $ed->format('M')) {
+                    return $sd->format('M d') . ' - ' . $ed->format('d, Y');
+                }
+                if ($sd && $ed) return $sd->format('M d, Y') . ' - ' . $ed->format('M d, Y');
+                return $sd ? $sd->format('M d, Y') : $ed->format('M d, Y');
+            } catch (\Throwable $th) {
+                return '';
+            }
+        };
+
+        // ====== FIX PENTING: Kirim objek Event ke route, karena {event:name} ======
+        $showUrl = function($e) {
+            return route('events.show', $e);
+        };
+
+        // Helper deskripsi pendek: pakai kolom description/summary jika ada
+        $shortDesc = function($e, $limit = 160) {
+            $text = $e->summary ?? $e->short_description ?? $e->description ?? '';
+            $text = strip_tags($text);
+            return Str::limit($text, $limit);
+        };
+    @endphp
+
+    <div class="mx-auto max-w-7xl relative z-10 h-full flex flex-col">
+        <div class="flex items-center justify-between gap-4 mb-8">
+            <h2 class="text-2xl md:text-3xl font-bold">Latest News &amp; Events</h2>
+
+            <a href="{{ route('events.index') }}#all-events"
+               class="hidden md:inline-flex items-center gap-2 text-sm font-medium text-blue-300 hover:text-white transition">
+                See All Events
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor"
+                     stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+
+        @if($featured)
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- FEATURED CARD -->
+            <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
+                <img src="{{ $imgUrl($featured->image_url) }}"
+                     alt="{{ $featured->name }}"
+                     class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500" />
+                <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
+
+                <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                    <div class="flex flex-wrap items-center gap-3 text-xs md:text-sm mb-3 text-gray-300">
+                        @if($featured->status)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $featured->status }}
+                            </span>
+                        @endif
+                        @if($featured->start_date || $featured->end_date)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $fmtRange($featured) }}
+                            </span>
+                        @endif
+                        @if($featured->location)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $featured->location }}
+                            </span>
+                        @endif
+                    </div>
+
+                    <h3 class="text-xl md:text-2xl font-semibold">
+                        {{ $featured->name }}
+                    </h3>
+                    <p class="mt-2 text-sm md:text-base text-gray-200 max-w-3xl">
+                        {{ $shortDesc($featured, 190) }}
+                    </p>
+                </div>
+
+                <!-- seluruh kartu bisa diklik -->
+                <a href="{{ $showUrl($featured) }}"
+                   class="absolute inset-0 z-10"
+                   aria-label="Open {{ $featured->name }}"></a>
+            </article>
+
+            <!-- SIDE LIST -->
+            <aside class="flex flex-col gap-6">
+                @forelse ($side as $e)
+                    <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition min-h-[108px] group">
+                        <img src="{{ $imgUrl($e->image_url) }}"
+                             alt="{{ $e->name }}"
+                             class="w-32 md:w-36 h-40 object-cover rounded-md bg-neutral-700 flex-shrink-0" />
+                        <div class="flex flex-col justify-center pr-8">
+                            <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline">
+                                {{ $e->name }}
+                            </h4>
+
+                            <div class="mt-1 flex flex-wrap gap-2 text-[11px] md:text-xs text-gray-300">
+                                @if($e->status)
+                                    <span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $e->status }}</span>
+                                @endif
+                                @if($e->start_date || $e->end_date)
+                                    <span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $fmtRange($e) }}</span>
+                                @endif
+                                @if($e->location)
+                                    <span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $e->location }}</span>
+                                @endif
+                            </div>
+
+                            <p class="text-xs md:text-sm text-gray-300 mt-2">
+                                {{ $shortDesc($e, 120) }}
                             </p>
                         </div>
+
+                        <!-- seluruh baris bisa diklik -->
+                        <a href="{{ $showUrl($e) }}"
+                           class="absolute inset-0 z-10"
+                           aria-label="Open {{ $e->name }}"></a>
                     </article>
-
-                    <aside class="flex flex-col gap-6">
-                        @php
-                            $events = [
-                                [
-                                    'img' => 'images/latest-event/2.png',
-                                    'title' =>
-                                        'The Road to Glory: National Billiard Championship 2025 Kicks Off This Summer',
-                                    'desc' =>
-                                        'Experience the pinnacle of billiard excellence as top players from across the country compete for the prestigious championship title.',
-                                ],
-                                [
-                                    'img' => 'images/latest-event/3.png',
-                                    'title' =>
-                                        'Building Connections Through Billiards: Community Cue Night for All Skill Levels',
-                                    'desc' =>
-                                        'Join us for an evening of camaraderie, casual matches, and friendly competition. Friendly for beginners—challenging for regulars. All are welcome!',
-                                ],
-                                [
-                                    'img' => 'images/latest-event/4.png',
-                                    'title' => 'Regional Doubles Tournament Offers Thrilling Prizes',
-                                    'desc' =>
-                                        'Test your partnership and precision in this high-energy doubles tournament. Face teams from around the region for exciting rewards and recognition.',
-                                ],
-                            ];
-                        @endphp
-
-                        @foreach ($events as $e)
-                            <article
-                                class="flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition min-h-[108px]">
-                                <img src="{{ asset($e['img']) }}" alt="{{ $e['title'] }}"
-                                    class="w-32 md:w-36 h-40 object-cover rounded-md bg-neutral-700 flex-shrink-0" />
-                                <div class="flex flex-col justify-center">
-                                    <h4 class="text-sm md:text-base font-semibold leading-snug">{{ $e['title'] }}</h4>
-                                    <p class="text-xs md:text-sm text-gray-300 mt-1">{{ $e['desc'] }}</p>
-                                </div>
-                            </article>
-                        @endforeach
-                    </aside>
-                </div>
+                @empty
+                    <div class="text-gray-400">Belum ada event lain.</div>
+                @endforelse
+            </aside>
+        </div>
+        @else
+            <div class="rounded-xl bg-neutral-800/60 p-8 text-gray-300">
+                Belum ada event untuk ditampilkan.
             </div>
-        </section>
+        @endif
+
+        <!-- CTA mobile ke All Events -->
+        <div class="mt-8 md:hidden">
+            <a href="{{ route('events.index') }}#all-events"
+               class="inline-flex items-center gap-2 bg-transparent border border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition">
+                See All Events
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor"
+                     stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+
     </div>
 @endsection
