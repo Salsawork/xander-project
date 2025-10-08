@@ -116,6 +116,7 @@ Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->na
 
 
 Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
+
 /*
 |--------------------------------------------------------------------------
 | Cart & Checkout

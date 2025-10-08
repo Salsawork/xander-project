@@ -15,19 +15,30 @@ use Xoco70\LaravelTournaments\Models\Tournament;
 
 class TournamentController extends Controller
 {
-    public function index() {
-        // Get all tournaments
-        $tournaments = Tournament::all();
+    public function index(Request $request)
+    {
+        $query = Tournament::query();
+
+        // Jika ada parameter search, filter berdasarkan nama tournament
+        if ($request->has('search') && $request->search != '') {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Urutkan data terbaru
+        $tournaments = $query->orderBy('created_at', 'desc')->get();
 
         return view('dash.admin.tournament.index', compact('tournaments'));
     }
 
-    public function create() {
+
+    public function create()
+    {
         // Show the form to create a new tournament
         return view('dash.admin.tournament.create');
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $data = $request->validate([
             'name' => 'required|string|max:255',
         ]);
@@ -51,7 +62,8 @@ class TournamentController extends Controller
         return redirect()->route('tournament.edit', $tournament->slug);
     }
 
-    public function edit(Tournament $tournament) {
+    public function edit(Tournament $tournament)
+    {
         $tournament->load(
             'competitors',
             'championships.settings',
@@ -61,7 +73,8 @@ class TournamentController extends Controller
         return view('dash.admin.tournament.edit', compact('tournament'));
     }
 
-    public function update(Tournament $tournament, Championship $championship, Request $request) {
+    public function update(Tournament $tournament, Championship $championship, Request $request)
+    {
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'hasPreliminary' => 'required',
@@ -95,7 +108,8 @@ class TournamentController extends Controller
             ->with('isTeam', $isTeam);
     }
 
-    private function deleteEverything($championshipId) {
+    private function deleteEverything($championshipId)
+    {
         // Get fighters groups and delete them
         $fightersGroups = DB::table('fighters_groups')->where('championship_id', $championshipId)->get();
         foreach ($fightersGroups as $fightersGroup) {
@@ -108,7 +122,8 @@ class TournamentController extends Controller
         DB::table('team')->where('championship_id', $championshipId)->delete();
     }
 
-    protected function provisionObjects(Request $request, $isTeam, $numFighters, Tournament $tournament) {
+    protected function provisionObjects(Request $request, $isTeam, $numFighters, Tournament $tournament)
+    {
         if ($isTeam) {
             $championship = Championship::find($tournament->championships[1]->id);
             factory(Team::class, (int) $numFighters)->create(['championship_id' => $championship->id]);
@@ -117,7 +132,8 @@ class TournamentController extends Controller
             $users = factory(User::class, (int) $numFighters)->create();
             foreach ($users as $user) {
                 factory(Competitor::class)->create(
-                    ['championship_id' => $championship->id,
+                    [
+                        'championship_id' => $championship->id,
                         'user_id'      => $user->id,
                         'confirmed'    => 1,
                         'short_id'     => $user->id,
@@ -130,7 +146,8 @@ class TournamentController extends Controller
         return $championship;
     }
 
-    public function destroy(Tournament $tournament) {
+    public function destroy(Tournament $tournament)
+    {
         $tournament->delete();
 
         return redirect()->route('tournament.index')
