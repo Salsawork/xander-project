@@ -13,13 +13,13 @@
 
 <body>
     <div class="w-full">
-        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*'))
+        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
             @include('partials.navbar')
         @endif
 
         @yield('content')
 
-        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*'))
+        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
             @include('partials.footer')
         @endif
 

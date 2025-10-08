@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('restrict');
             $table->integer('quantity');
             $table->decimal('price', 10, 0);
+            $table->decimal('shipping', 10, 0)->default(0);
+            $table->decimal('tax', 10, 0)->default(0);
             $table->decimal('subtotal', 10, 0);
             $table->decimal('discount', 10, 0)->default(0);
             $table->timestamps();
