@@ -17,15 +17,23 @@ class AdminAthleteController extends Controller
     /**
      * Display a listing of the athletes.
      */
-    public function index()
-    {
-        // Ambil semua user dengan role athlete beserta detail athletenya
-        $athletes = User::where('roles', 'athlete')
-            ->with('athleteDetail')
-            ->get();
+  public function index()
+{
+    $athletes = User::where('roles', 'athlete')
+        ->with('athleteDetail')
+        ->when(request('search'), function ($query) {
+            $search = request('search');
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhereHas('athleteDetail', function ($q) use ($search) {
+                    $q->where('specialty', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%");
+                });
+        })
+        ->get();
 
-        return view('dash.admin.athlete.index', compact('athletes'));
-    }
+    return view('dash.admin.athlete.index', compact('athletes'));
+}
 
     /**
      * Show the form for creating a new athlete.

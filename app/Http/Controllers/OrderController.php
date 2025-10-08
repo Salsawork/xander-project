@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Bank;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -78,7 +79,8 @@ class OrderController extends Controller
         $grandTotal = $total + $shipping + $tax;
 
         $user = $request->user();
-        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user'));
+        $banks = Bank::all();
+        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user', 'banks'));
     }
 
 
@@ -89,7 +91,7 @@ class OrderController extends Controller
      */
     public function create()
     {
-        //
+       
     }
 
     /**
@@ -143,6 +145,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
+                'bank_id'         => $request->bank_id,
                 'order_number'    => $orderNumber,
                 'total'           => 0, // update setelah item masuk
                 'payment_status'  => 'pending',

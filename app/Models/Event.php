@@ -50,11 +50,13 @@ class Event extends Model
         return $query->where('status', 'Ended');
     }
 
+    // Route key pakai kolom 'name' (pastikan unik)
     public function getRouteKeyName()
     {
         return 'name';
     }
 
+    // Aksesori slug (opsional, tidak dipakai route di setup ini)
     public function getSlugAttribute()
     {
         return str_replace(' ', '-', strtolower($this->name));

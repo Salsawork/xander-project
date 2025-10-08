@@ -2,9 +2,51 @@
 @section('title', $event->name . ' - Xander Billiard')
 
 @section('content')
+    {{-- ====== Anti "putih-putih" saat scroll (iOS Safari & browser lain) ====== --}}
+    <style>
+        :root { color-scheme: dark; }
+
+        /* Pastikan latar global selalu gelap */
+        html, body {
+            height: 100%;
+            min-height: 100%;
+            background: #0a0a0a;          /* warna gelap global */
+            overscroll-behavior-y: none;  /* cegah bounce/scroll chaining (Chrome/Firefox/Edge/iOS 16+) */
+            overscroll-behavior-x: none;
+        }
+
+        /* Beberapa layout pakai wrapper #app/main – samakan warna untuk jaga-jaga */
+        #app, main { background: #0a0a0a; }
+
+        /* iOS Safari lama tidak full support overscroll-behavior:
+           trik: bentangkan kanvas gelap tak terlihat di belakang viewport */
+        body::before{
+            content: "";
+            position: fixed;
+            /* "inset" negatif untuk menutupi area elastis saat rubber-banding */
+            inset: -40vh -40vw;
+            background: #0a0a0a;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Smooth touch scrolling tetap aktif */
+        body { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+
+        /* Hindari flash putih pada gambar PNG transparan */
+        img { display: block; background: transparent; }
+    </style>
+
     <div class="min-h-screen bg-neutral-900 text-white">
+        <!-- HERO / BREADCRUMB -->
         <div class="mb-8 bg-cover bg-center p-24" style="background-image: url('/images/bg/product_breadcrumb.png');">
-            <p class="text-sm text-gray-400 mt-1">Home / Event / {{ $event->name }}</p>
+            <nav class="text-sm text-gray-400 mt-1" aria-label="Breadcrumb">
+                <a href="{{ route('index') }}" class="hover:text-white transition">Home</a>
+                <span class="mx-1 opacity-60">/</span>
+                <a href="{{ route('events.index') }}" class="hover:text-white transition">Event</a>
+                <span class="mx-1 opacity-60">/</span>
+                <span class="text-gray-200" aria-current="page">{{ $event->name }}</span>
+            </nav>
             <h2 class="text-4xl font-bold uppercase text-white">{{ $event->name }}</h2>
         </div>
 
@@ -17,8 +59,10 @@
                     <div class="bg-neutral-800 rounded-xl p-6 h-auto">
                         <!-- Foto event -->
                         <div class="mb-6 rounded-lg overflow-hidden">
-                            <img src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/1200x600' }}"
-                                alt="{{ $event->name }}" class="w-full h-auto object-cover rounded-lg">
+                            <img
+                                src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/1200x600' }}"
+                                alt="{{ $event->name }}"
+                                class="w-full h-auto object-cover rounded-lg">
                         </div>
                         
                         <!-- Deskripsi dan detail utama -->
@@ -40,7 +84,9 @@
                                 <!-- Tanggal -->
                                 <div>
                                     <p class="text-gray-400 text-sm mb-1 uppercase">Date:</p>
-                                    <p class="font-semibold">{{ $event->start_date->format('M d') }} - {{ $event->end_date->format('M d, Y') }}</p>
+                                    <p class="font-semibold">
+                                        {{ $event->start_date->format('M d') }} - {{ $event->end_date->format('M d, Y') }}
+                                    </p>
                                 </div>
                                 
                                 <!-- Lokasi -->
@@ -139,7 +185,8 @@
                             </div>
                         </div>
                         <div class="mt-4">
-                            <a href="{{ route('events.bracket', $event) }}" class="block text-center bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <a href="{{ route('events.bracket', $event) }}"
+                               class="block text-center bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
                                 View Tournament Bracket
                             </a>
                         </div>
@@ -158,7 +205,10 @@
                             an unforgettable experience for every billiards fan.
                         </p>
                         <p class="text-gray-300">
-                            Follow us for updates: <a href="https://twitter.com/{{ $event->social_media_handle }}" class="text-blue-400 hover:underline">{{ $event->social_media_handle }}</a>
+                            Follow us for updates:
+                            <a href="https://twitter.com/{{ $event->social_media_handle }}" class="text-blue-400 hover:underline">
+                                {{ $event->social_media_handle }}
+                            </a>
                         </p>
                     </div>
                 </div>
