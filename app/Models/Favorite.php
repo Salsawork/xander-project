@@ -9,7 +9,7 @@ class Favorite extends Model
     protected $table = 'favorites';
 
     protected $fillable = [
-        'guest_id',
+        'user_id',
         'venue_id',
     ];
 
@@ -18,8 +18,8 @@ class Favorite extends Model
         return $this->belongsTo(Venue::class);
     }
 
-    // public function user()
-    // {
-    //     return $this->belongsTo(User::class);
-    // }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

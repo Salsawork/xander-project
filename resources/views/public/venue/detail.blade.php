@@ -187,6 +187,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
     document.addEventListener("DOMContentLoaded", function() {
         const datePicker = document.getElementById("datePicker");
         const scheduleList = document.getElementById("scheduleList");
@@ -301,6 +302,25 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
     // submit handler (tidak diubah selain tetap menggunakan FormData(this))
     document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
+
+
+        // 🛑 Cek login dulu sebelum validasi lainnya
+        if (!isLoggedIn) {
+            Swal.fire({
+                title: 'Belum Login!',
+                text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+                icon: 'warning',
+                confirmButtonText: 'Login Sekarang',
+                confirmButtonColor: '#3085d6',
+                background: '#1E1E1F',
+                color: '#FFFFFF'
+            }).then(() => {
+                window.location.href = '/login'; // arahkan ke halaman login
+            });
+            return;
+        }
+
+        // ✅ Setelah login, baru validasi form
         const date = document.getElementById('datePicker')?.value;
         const schedule = document.querySelector('input[name="schedule_id"]:checked');
         const table = document.querySelector('input[name="table"]:checked');
@@ -313,6 +333,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
             });
             return;
         }
+
         if (!schedule) {
             Swal.fire({
                 title: 'Oops!',
@@ -321,6 +342,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
             });
             return;
         }
+
         if (!table) {
             Swal.fire({
                 title: 'Oops!',
@@ -330,6 +352,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
             return;
         }
 
+        // 🌀 Proses kirim data ke backend
         Swal.fire({
             title: 'Mohon tunggu...',
             text: 'Sedang memproses permintaan Anda.',
@@ -338,43 +361,45 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
         });
 
         fetch(this.action, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: new FormData(this)
-            })
-            .then(res => res.json())
-            .then(data => {
-                Swal.close();
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Venue ditambahkan ke keranjang',
-                        icon: 'success'
-                    });
-                    this.reset();
-                    document.getElementById('scheduleList').innerHTML = '';
-                    document.getElementById('tableList').innerHTML = '';
-                    location.reload();
-                } else {
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: data.message || 'Terjadi kesalahan, coba lagi.',
-                        icon: 'error'
-                    });
-                }
-            })
-            .catch(err => {
-                Swal.close();
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: new FormData(this)
+        })
+        .then(res => res.json())
+        .then(data => {
+            Swal.close();
+            if (data.success) {
                 Swal.fire({
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan.',
+                    title: 'Berhasil!',
+                    text: 'Venue berhasil ditambahkan ke keranjang.',
+                    icon: 'success'
+                });
+
+                this.reset();
+                document.getElementById('scheduleList').innerHTML = '';
+                document.getElementById('tableList').innerHTML = '';
+                location.reload();
+            } else {
+                Swal.fire({
+                    title: 'Gagal!',
+                    text: data.message || 'Terjadi kesalahan, coba lagi.',
                     icon: 'error'
                 });
+            }
+        })
+        .catch(err => {
+            Swal.close();
+            Swal.fire({
+                title: 'Error!',
+                text: 'Terjadi kesalahan jaringan.',
+                icon: 'error'
             });
-    });
+        });
+});
+
 </script>
 @endpush

@@ -82,7 +82,10 @@ Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
     Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
     Route::get('/venues/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
-    Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+    // Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+});
+Route::middleware('auth')->prefix('venues')->group(function () {
+Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
 /** Events */
@@ -123,7 +126,7 @@ Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscri
 | Cart & Checkout
 |--------------------------------------------------------------------------
 */
-Route::prefix('cart')->group(function () {
+Route::middleware('auth')->prefix('cart')->group(function () {
     Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
     Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
     Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');

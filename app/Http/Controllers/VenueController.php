@@ -32,6 +32,10 @@ class VenueController extends Controller
                         ->orWhere('description', 'like', "%{$request->search}%");
                 });
             })
+            ->when(!empty($favorites), function ($q) use ($favorites) {
+                $ids = implode(',', $favorites);
+                $q->orderByRaw("FIELD(id, $ids) DESC");
+            })
             ->paginate(5)
             ->withQueryString();
 

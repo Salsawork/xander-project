@@ -279,9 +279,27 @@
       },
       body: new FormData(this)
     })
-    .then(res => res.json())
-    .then(data => {
-      Swal.close(); // tutup loading
+    .then(async res => {
+      Swal.close();
+
+      if (res.status === 401) {
+        // 🟥 User belum login
+        Swal.fire({
+          title: 'Belum Login!',
+          text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+          icon: 'warning',
+          confirmButtonText: 'Login Sekarang',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        }).then(() => {
+          window.location.href = '/login'; // arahkan ke halaman login
+        });
+        return;
+      }
+
+      const data = await res.json();
+
       if (data.success) {
         Swal.fire({
           title: 'Berhasil!',
@@ -312,7 +330,7 @@
       }
     })
     .catch(err => {
-      Swal.close(); // tutup loading
+      Swal.close();
       Swal.fire({
         title: 'Error!',
         text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
@@ -322,6 +340,7 @@
         color: '#FFFFFF'
       });
     });
+
   });
 
   // Panah prev/next untuk related (md+). Mobile pakai swipe/drag.

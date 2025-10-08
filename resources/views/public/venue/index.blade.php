@@ -218,8 +218,11 @@
                             <div class="flex justify-between items-start lg:mb-8">
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
                                 <div class="flex justify-center items-end sm:mt-2">
-                                    <i data-id="{{ $venue->id }}" class="fa-regular fa-bookmark text-gray-400 text-xl sm:text-2xl sm cursor-pointer hover:text-blue-500 transition"></i>
-                                </div>
+                                    @auth
+                                        <i data-id="{{ $venue->id }}"
+                                           class="fa-regular fa-bookmark text-gray-400 text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition"></i>
+                                    @endauth
+                                </div>                                
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
