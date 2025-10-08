@@ -11,7 +11,7 @@
                     <a href="{{ route('admin.guidelines.index') }}" class="text-gray-400 hover:text-white mr-4">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <h1 class="text-3xl font-extrabold">
+                    <h1 class="text-3xl font-extrabold mt-20">
                         Edit Guideline
                     </h1>
                 </div>

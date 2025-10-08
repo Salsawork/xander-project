@@ -2,138 +2,176 @@
 @section('title', 'Admin Dashboard - Daftar Athlete')
 
 @section('content')
-    <div class="flex flex-col min-h-screen bg-[#1E1E1F] text-white font-sans">
+    <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
-                <div class="p-4 sm:p-8 mt-12">
-                    <h1 class="text-3xl font-extrabold mb-6">
+
+                
+                <div class="mt-20 sm:mt-28 px-4 sm:px-8">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">
+
                         Daftar Athlete
                     </h1>
 
                     @if (session('success'))
-                        <div class="mx-8 mb-4 bg-green-500 text-white px-4 py-2 rounded">
+                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
                             {{ session('success') }}
                         </div>
                     @endif
 
                     @if (session('error'))
-                        <div class="mx-8 mb-4 bg-red-500 text-white px-4 py-2 rounded">
+                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
                             {{ session('error') }}
                         </div>
                     @endif
 
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 px-8">
-                    <form action="{{ route('athlete.index') }}" method="GET" class="flex w-full sm:w-auto gap-2">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                         <input
                             class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-                            name="search" value="{{ request('search') }}" placeholder="Cari athlete..." type="search" />
-                        <button type="submit"
-                            class="px-3 py-2 rounded-md border border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff] hover:text-white transition text-sm">
-                            Cari
-                        </button>
-                    </form>
+                            name="search" value="{{ request('search') }}" placeholder="Cari athlete..." type="search"
+                            onchange="window.location.href='{{ route('athlete.index') }}?search=' + this.value" />
 
-                    <div class="flex gap-2 items-center">
                         <a href="{{ route('athlete.create') }}"
-                            class="flex items-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-1 text-sm hover:bg-[#1e90ff] hover:text-white transition">
-                            <i class="fas fa-plus">
-                            </i>
+                            class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
+                            <i class="fas fa-plus"></i>
                             Tambah Athlete
                         </a>
                     </div>
-                </div>
-                <div class="px-8 overflow-x-auto">
-                    <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
-                        <thead class="bg-[#2c2c2c] text-gray-300">
-                            <tr>
-                                <th class="px-4 py-3">
-                                    Foto
-                                </th>
-                                <th class="px-4 py-3">
-                                    Nama
-                                </th>
-                                <th class="px-4 py-3">
-                                    Email
-                                </th>
-                                <th class="px-4 py-3">
-                                    Spesialisasi
-                                </th>
-                                <th class="px-4 py-3">
-                                    Lokasi
-                                </th>
-                                <th class="px-4 py-3">
-                                    Harga/Sesi
-                                </th>
-                                <th class="px-4 py-3 text-right">
-                                    Aksi
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-800">
-                            @forelse ($athletes as $athlete)
-                                <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
-                                    <td class="px-4 py-3">
-                                        @if (
-                                            $athlete->athleteDetail &&
-                                                $athlete->athleteDetail->image &&
-                                                Storage::disk('public')->exists($athlete->athleteDetail->image))
-                                            <img src="{{ asset('storage/' . $athlete->athleteDetail->image) }}"
-                                                alt="{{ $athlete->name }}" class="h-10 w-10 rounded-full object-cover">
-                                        @elseif ($athlete->athleteDetail && $athlete->athleteDetail->image)
-                                            <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}"
-                                                alt="{{ $athlete->name }}" class="h-10 w-10 rounded-full object-cover">
-                                        @else
-                                            <div
-                                                class="h-10 w-10 rounded-full bg-gray-700 flex items-center justify-center">
-                                                <span class="text-xs text-gray-300">No Img</span>
+
+                    <!-- Desktop & Tablet Table View -->
+                    <div class="hidden sm:block overflow-x-auto">
+                        <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
+                            <thead class="bg-[#2c2c2c] text-gray-300">
+                                <tr>
+                                    <th class="px-4 py-3">Foto</th>
+                                    <th class="px-4 py-3">Nama</th>
+                                    <th class="px-4 py-3">Email</th>
+                                    <th class="px-4 py-3">Spesialisasi</th>
+                                    <th class="px-4 py-3">Lokasi</th>
+                                    <th class="px-4 py-3">Harga/Sesi</th>
+                                    <th class="px-4 py-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                @forelse ($athletes as $athlete)
+                                    <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
+                                        <td class="px-4 py-3">
+                                            @if ($athlete->athleteDetail && $athlete->athleteDetail->image && Storage::disk('public')->exists($athlete->athleteDetail->image))
+                                                <img src="{{ asset('storage/' . $athlete->athleteDetail->image) }}"
+                                                    alt="{{ $athlete->name }}" class="h-10 w-10 rounded-full object-cover">
+                                            @elseif ($athlete->athleteDetail && $athlete->athleteDetail->image)
+                                                <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}"
+                                                    alt="{{ $athlete->name }}" class="h-10 w-10 rounded-full object-cover">
+                                            @else
+                                                <div class="h-10 w-10 rounded-full bg-gray-700 flex items-center justify-center">
+                                                    <span class="text-xs text-gray-300">No Img</span>
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 font-medium">{{ $athlete->name }}</td>
+                                        <td class="px-4 py-3 text-gray-300">{{ $athlete->email }}</td>
+                                        <td class="px-4 py-3 text-gray-300">
+                                            {{ $athlete->athleteDetail ? $athlete->athleteDetail->specialty : '-' }}
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-300">
+                                            {{ $athlete->athleteDetail ? $athlete->athleteDetail->location : '-' }}
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-300">
+                                            Rp {{ number_format($athlete->athleteDetail ? $athlete->athleteDetail->price_per_session : 0, 0, ',', '.') }}
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex gap-3 text-gray-400 justify-end">
+                                                @if ($athlete->athleteDetail?->id)
+                                                    <a href="{{ route('athlete.edit', $athlete->athleteDetail->id) }}"
+                                                        class="hover:text-gray-200" title="Edit">
+                                                        <i class="fas fa-pen"></i>
+                                                    </a>
+                                                @endif
+                                                @if ($athlete->athleteDetail?->id)
+                                                    <button class="hover:text-gray-200 delete-btn"
+                                                        data-id="{{ $athlete->athleteDetail->id }}"
+                                                        data-name="{{ $athlete->name }}" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                @endif
                                             </div>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 font-medium">
-                                        {{ $athlete->name }}
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-300">
-                                        {{ $athlete->email }}
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-300">
-                                        {{ $athlete->athleteDetail ? $athlete->athleteDetail->specialty : '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-300">
-                                        {{ $athlete->athleteDetail ? $athlete->athleteDetail->location : '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-300">
-                                        Rp
-                                        {{ number_format($athlete->athleteDetail ? $athlete->athleteDetail->price_per_session : 0, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right space-x-2">
-                                        @if ($athlete->athleteDetail?->id)
-                                            <a href="{{ route('athlete.edit', $athlete->athleteDetail->id) }}"
-                                                class="text-blue-400 hover:text-blue-300">
-                                                <i class="fas fa-edit"></i>
-                                                Edit
-                                            </a>
-                                        @endif
-                                        @if ($athlete->athleteDetail?->id)
-                                            <button class="text-red-400 hover:text-red-300 delete-btn"
-                                                data-id="{{ $athlete->athleteDetail->id }}"
-                                                data-name="{{ $athlete->name }}">
-                                                <i class="fas fa-trash"></i>
-                                                Hapus
-                                            </button>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="bg-[#1c1c1c]">
-                                    <td colspan="7" class="px-4 py-3 text-center text-gray-400">
-                                        Tidak ada data athlete.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr class="bg-[#1c1c1c]">
+                                        <td colspan="7" class="px-4 py-6 text-center text-gray-400">
+                                            Tidak ada data athlete.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card View -->
+                    <div class="sm:hidden space-y-4">
+                        @forelse ($athletes as $athlete)
+                            <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
+                                <!-- Header with Photo and Name -->
+                                <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
+                                    @if ($athlete->athleteDetail && $athlete->athleteDetail->image && Storage::disk('public')->exists($athlete->athleteDetail->image))
+                                        <img src="{{ asset('storage/' . $athlete->athleteDetail->image) }}"
+                                            alt="{{ $athlete->name }}" class="h-16 w-16 rounded-full object-cover shrink-0">
+                                    @elseif ($athlete->athleteDetail && $athlete->athleteDetail->image)
+                                        <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}"
+                                            alt="{{ $athlete->name }}" class="h-16 w-16 rounded-full object-cover shrink-0">
+                                    @else
+                                        <div class="h-16 w-16 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
+                                            <span class="text-xs text-gray-300">No Img</span>
+                                        </div>
+                                    @endif
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold text-base mb-1">{{ $athlete->name }}</h3>
+                                        <p class="text-xs text-gray-400 break-all">{{ $athlete->email }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Details -->
+                                <div class="space-y-2 text-sm mb-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Spesialisasi:</span>
+                                        <span class="text-xs text-right">{{ $athlete->athleteDetail ? $athlete->athleteDetail->specialty : '-' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Lokasi:</span>
+                                        <span class="text-xs text-right">{{ $athlete->athleteDetail ? $athlete->athleteDetail->location : '-' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Harga/Sesi:</span>
+                                        <span class="text-xs font-medium">Rp {{ number_format($athlete->athleteDetail ? $athlete->athleteDetail->price_per_session : 0, 0, ',', '.') }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                @if ($athlete->athleteDetail?->id)
+                                    <div class="flex gap-2 pt-3 border-t border-gray-700">
+                                        <a href="{{ route('athlete.edit', $athlete->athleteDetail->id) }}" 
+                                            class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                            <i class="fas fa-pen text-xs"></i>
+                                            Edit
+                                        </a>
+                                        <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition delete-btn"
+                                            data-id="{{ $athlete->athleteDetail->id }}"
+                                            data-name="{{ $athlete->name }}">
+                                            <i class="fas fa-trash text-xs"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
+                                <p class="text-gray-400">Tidak ada data athlete.</p>
+                            </div>
+                        @endforelse
+                    </div>
                 </div>
             </main>
         </div>
@@ -141,11 +179,9 @@
 @endsection
 
 @push('scripts')
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi tombol hapus
             const deleteButtons = document.querySelectorAll('.delete-btn');
 
             deleteButtons.forEach(button => {
@@ -162,11 +198,10 @@
                         cancelButtonColor: '#3085d6',
                         confirmButtonText: 'Ya, Hapus!',
                         cancelButtonText: 'Batal',
-                        background: '#262626',
+                        background: '#222',
                         color: '#fff'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Buat form untuk delete request
                             const form = document.createElement('form');
                             form.method = 'POST';
                             form.action = "{{ url('dashboard/athlete') }}/" + id;
@@ -192,7 +227,6 @@
                 });
             });
 
-            // Tampilkan SweetAlert untuk pesan sukses
             @if (session('success'))
                 Swal.fire({
                     icon: 'success',
@@ -200,12 +234,11 @@
                     text: '{{ session('success') }}',
                     timer: 3000,
                     showConfirmButton: false,
-                    background: '#262626',
+                    background: '#222',
                     color: '#fff'
                 });
             @endif
 
-            // Tampilkan SweetAlert untuk pesan error
             @if (session('error'))
                 Swal.fire({
                     icon: 'error',
@@ -213,7 +246,7 @@
                     text: '{{ session('error') }}',
                     timer: 3000,
                     showConfirmButton: false,
-                    background: '#262626',
+                    background: '#222',
                     color: '#fff'
                 });
             @endif
