@@ -21,6 +21,7 @@ use App\Http\Controllers\OpinionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\FavoriteController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -28,7 +29,6 @@ use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\PriceScheduleController;
 use App\Http\Controllers\venueController\TransactionController;
-use App\Http\Controllers\FavoriteController;
 
 // Athlete Controllers
 use App\Http\Controllers\athleteController\DashboardController as AthleteDashboardController;
@@ -84,9 +84,20 @@ Route::prefix('products')->group(function () {
 /** Venues */
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
+
+    // DETAIL PAGE (menampilkan review)
     Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
-    Route::get('/venues/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
+
+    // API price schedule (untuk JS)
+    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
+
+    // FAVORITE toggle (opsional)
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+
+    // REVIEW venue
+    Route::post('/{venue}/reviews', [VenueController::class, 'storeReview'])
+        ->middleware('auth')
+        ->name('venues.reviews.store');
 });
 
 /** Events */
@@ -106,6 +117,8 @@ Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.in
 Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
 Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
 Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
+
+// REVIEW atlet -> ke tabel `reviews` (tanpa migration)
 Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
 
 /** Community (Public) */
@@ -175,6 +188,9 @@ Route::middleware('auth')->group(function () {
     /** Profile */
     Route::get('dashboard/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+    /** Favorite */
+    Route::get('dashboard/favorite', [FavoriteController::class, 'index'])->name('favorite.index');
 
     /** Admin: Products */
     Route::prefix('dashboard/products')->group(function () {
@@ -262,23 +278,12 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('athlete')->group(function () {
-        // Athlete Dashboard
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-
-        // Athlete Sparring - Create Session
-        Route::get('/sparring/create', function () {
-            return view('dash.athlete.sparring.create');
-        })->name('athlete.sparring.create');
-
-        // Athlete Match History
+        Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-
-        // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-
-        // Athlete Match Detail
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
@@ -325,14 +330,14 @@ Route::get('/championships', [TreeController::class, 'index'])->name('tree.index
 Route::post('/championships/{championship}/trees', [TreeController::class, 'store'])->name('tree.store');
 Route::put('/championships/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
 
-/* ===== Company pages (static Blade) ===== */
+/* Company pages */
 Route::prefix('company')->group(function () {
     Route::view('/careers', 'careers')->name('company.careers');
     Route::view('/partners', 'partners')->name('company.partners');
     Route::view('/press-media', 'press-media')->name('company.press');
 });
 
-/* ===== Blog (static template) ===== */
+/* Blog */
 Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');

@@ -27,6 +27,14 @@
   .pager-next{background:#2563eb;color:#fff;}
   .pager-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(20%);}
   @media (max-width:640px){.pager{padding:4px 8px;gap:8px}.pager-btn{width:40px;height:40px}.pager-label{min-width:80px;font-size:.9rem}}
+
+  /* Badge diskon */
+  .disc-badge{
+    position:absolute; top:.5rem; left:.5rem;
+    background:#ef4444; color:#fff; font-weight:700;
+    font-size:.75rem; line-height:1; padding:.4rem .5rem; border-radius:.5rem;
+    box-shadow:0 6px 14px rgba(0,0,0,.35);
+  }
 </style>
 @endpush
 
@@ -66,7 +74,7 @@
           <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
         </div>
 
-        <form method="GET" action="{{ route('products.landing') }}" class="space-y-4">
+        <form method="GET" action="{{ route('products.landing') }} " class="space-y-4">
           {{-- SEARCH --}}
           <div>
             <input type="text" name="search" placeholder="Search products, SKU or description" value="{{ request('search') }}"
@@ -189,16 +197,37 @@
 
     {{-- PRODUCT GRID --}}
     <section class="lg:col-span-4 flex flex-col gap-6">
+      @php
+        // Helper sama seperti di landing:
+        $normDisc = function($d){
+          $d = (float)($d ?? 0);
+          if ($d <= 0) return 0.0;
+          return $d <= 1 ? $d * 100.0 : $d;
+        };
+        $finalPrice = function($price, $discPercent){
+          if ($discPercent <= 0) return (int) round((float)$price, 0);
+          $final = (float)$price - ((float)$price * ($discPercent / 100.0));
+          return (int) round($final, 0);
+        };
+      @endphp
+
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         @forelse ($products as $product)
           @php
-            $slug = \Illuminate\Support\Str::slug($product->name);
-            $img  = $product->first_image_url; // <-- accessor dari model
+            $slug  = \Illuminate\Support\Str::slug($product->name);
+            $img   = $product->first_image_url; // accessor dari model
+            $praw  = (float) ($product->pricing ?? 0);
+            $dp    = $normDisc($product->discount ?? 0);     // persen 0–100
+            $hasD  = $dp > 0;
+            $final = $finalPrice($praw, $dp);                // integer
           @endphp
 
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="cursor-pointer">
             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow h-full">
-              <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
+              <div class="relative aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
+                @if($hasD)
+                  <span class="disc-badge">-{{ rtrim(rtrim(number_format($dp, 2, ',', '.'), '0'), ',') }}%</span>
+                @endif
                 <img
                   src="{{ $img }}"
                   alt="{{ $product->name }}"
@@ -210,9 +239,22 @@
               </div>
               <h4 class="text-xs sm:text-sm font-medium line-clamp-2">{{ $product->name }}</h4>
               <p class="text-[11px] sm:text-xs text-gray-400 mt-0.5">{{ $product->brand }} • {{ ucfirst($product->condition) }}</p>
-              <p class="text-xs sm:text-sm text-gray-200 mt-1">
-                Rp {{ number_format((float) $product->pricing, 0, ',', '.') }}
-              </p>
+
+              {{-- HARGA: jika ada diskon, tampilkan final & coret harga asli --}}
+              @if($hasD)
+                <div class="mt-1">
+                  <div class="text-xs sm:text-sm text-white font-semibold">
+                    Rp {{ number_format($final, 0, ',', '.') }}
+                  </div>
+                  <div class="text-[11px] sm:text-xs text-gray-400 line-through">
+                    Rp {{ number_format($praw, 0, ',', '.') }}
+                  </div>
+                </div>
+              @else
+                <p class="text-xs sm:text-sm text-gray-200 mt-1">
+                  Rp {{ number_format($praw, 0, ',', '.') }}
+                </p>
+              @endif
             </div>
           </a>
         @empty
@@ -264,7 +306,7 @@
   <button
     aria-label="Shopping cart with {{ $cartCount }} items"
     onclick="showCart?.()"
-    class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
+    class="fixed right-6 top:[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
   >
     <i class="fas fa-shopping-cart text-white text-3xl"></i>
     @if ($cartCount > 0)
