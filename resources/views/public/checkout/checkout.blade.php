@@ -271,9 +271,7 @@
         const payButton = document.getElementById('pay-button');
         const weightInput = document.getElementById('weight');
         const courierSelect = document.getElementById('courier');
-
         const hasProduct = {{count($carts) > 0 ? 'true' : 'false'}};
-
         if (hasProduct) {
             try {
                 const res = await fetch('{{ route("rajaongkir.provinces") }}');
@@ -416,7 +414,6 @@
                         const grandTotalElement = document.querySelector('.grand-total');
                         const currentSubtotal = {{$total}};
                         const currentTax = {{$tax}};
-
                         const grandTotal = currentSubtotal + currentTax + shippingCost;
 
                         if (shippingValue) shippingValue.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(shippingCost)}`;
