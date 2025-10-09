@@ -114,7 +114,7 @@
         @php
             use Illuminate\Support\Str;
             use Illuminate\Support\Facades\Storage;
-            $resolveImage = function (?string $rawPath, string $default = '/images/hero/guideline-main.jpg') {
+            $resolveImage = function (?string $rawPath, string $default = '/images/guidelines/placeholder.jpg') {
                 if (!empty($rawPath)) {
                     $path = $rawPath;
                     if (Str::startsWith($path, 'guidelines/')) return Storage::url($path);
@@ -420,7 +420,7 @@
             const order = Array.isArray(window.CAT_ORDER) ? window.CAT_ORDER : ['BEGINNER','INTERMEDIATE','MASTER','GENERAL'];
 
             function esc(s) {
-                return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
             }
             function buildCard(it) {
                 const pillCls = (window.PILL_CLASS && window.PILL_CLASS[it.category]) || 'badge-gray';
@@ -440,12 +440,7 @@
                         <div class="mt-3 flex items-center justify-between text-xs text-white/70 mt-auto">
                             <span>${esc(it.dateText)}</span>
                             <div class="flex items-center gap-2 opacity-95">
-                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-md ring-1 ring-white/10 hover:bg-white/10">
-                                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path d="M7 4h10a2 2 0 0 1 2 2v14l-7-4-7 4V6a2 2 0 0 1 2-2z"/>
-                                    </svg>
-                                    <span class="sr-only">Bookmark</span>
-                                </span>
+                                <!-- Bookmark/Simpan DIHAPUS -->
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-md ring-1 ring-white/10 hover:bg-white/10">
                                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <circle cx="18" cy="8" r="2.25"></circle>

@@ -8,8 +8,8 @@ use App\Models\AthleteDetail;
 use App\Models\AthleteReview;
 use App\Models\SparringSchedule;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class SparringController extends Controller
 {
@@ -27,9 +27,9 @@ class SparringController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhereHas('athleteDetail', function ($q2) use ($request) {
-                        $q2->where('location', 'like', '%' . $request->search . '%');
-                    });
+                  ->orWhereHas('athleteDetail', function ($q2) use ($request) {
+                      $q2->where('location', 'like', '%' . $request->search . '%');
+                  });
             });
         }
 
@@ -92,7 +92,6 @@ class SparringController extends Controller
         ));
     }
 
-
     /**
      * Display the specified athlete.
      */
@@ -111,30 +110,30 @@ class SparringController extends Controller
             ->orderBy('start_time')
             ->get()
             ->map(fn($item) => [
-                'id' => $item->id,
+                'id'         => $item->id,
                 'athlete_id' => $item->athlete_id,
-                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'), 
-                'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'), 
-                'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'), 
-                'is_booked' => $item->is_booked,
+                'date'       => Carbon::parse($item->date)->format('Y-m-d'),
+                'start_time' => Carbon::parse($item->start_time)->format('H:i'),
+                'end_time'   => Carbon::parse($item->end_time)->format('H:i'),
+                'is_booked'  => $item->is_booked,
             ]);
 
         // Ambil tanggal unik untuk date picker
-        $availableDates = $schedules->pluck('date')->unique();
+        $availableDates = $schedules->pluck('date')->unique()->values();
 
-        // --- Review dan cart tetap seperti sebelumnya ---
+        // ===== Reviews: pakai tabel athlete_reviews =====
         $reviews = AthleteReview::where('athlete_id', $athlete->id)
             ->with('user')
             ->latest()
             ->get();
 
-        $totalReviews = $reviews->count();
+        $totalReviews  = $reviews->count();
         $averageRating = $totalReviews ? round($reviews->avg('rating'), 1) : 0.0;
 
-        $counts = [];
+        $counts  = [];
         $percents = [];
         for ($i = 5; $i >= 1; $i--) {
-            $counts[$i] = $reviews->where('rating', $i)->count();
+            $counts[$i]   = $reviews->where('rating', $i)->count();
             $percents[$i] = $totalReviews ? round($counts[$i] / $totalReviews * 100) : 0;
         }
 
@@ -142,8 +141,8 @@ class SparringController extends Controller
             ? AthleteReview::where('athlete_id', $athlete->id)->where('user_id', auth()->id())->exists()
             : false;
 
-        $cartProducts = json_decode(Cookie::get('cartProducts') ?? '[]', true);
-        $cartVenues = json_decode(Cookie::get('cartVenues') ?? '[]', true);
+        $cartProducts  = json_decode(Cookie::get('cartProducts')  ?? '[]', true);
+        $cartVenues    = json_decode(Cookie::get('cartVenues')    ?? '[]', true);
         $cartSparrings = json_decode(Cookie::get('cartSparrings') ?? '[]', true);
 
         return view('public.sparring.detail', compact(
@@ -162,10 +161,13 @@ class SparringController extends Controller
         ));
     }
 
+    /**
+     * Store review atlet (gunakan tabel athlete_reviews)
+     */
     public function storeReview(Request $request, $id)
     {
         $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
+            'rating'  => 'required|integer|min:1|max:5',
             'comment' => 'required|string|max:2000',
         ]);
 
@@ -182,12 +184,25 @@ class SparringController extends Controller
         }
 
         AthleteReview::create([
-            'athlete_id' => $id,
-            'user_id' => Auth::id(),
-            'rating' => $request->rating,
-            'comment' => $request->comment,
+            'athlete_id' => (int) $id,
+            'user_id'    => Auth::id(),
+            'rating'     => (int) $request->rating,
+            'comment'    => $request->comment,
         ]);
 
-        return back()->with('success', 'AthleteReview berhasil dikirim.');
+        return back()->with('success', 'Review berhasil dikirim.');
+    }
+
+    // Tambahan opsional: biarkan method addToCart/removeFromCart versi project-mu
+    public function addToCart(Request $request)
+    {
+        // Implementasi sesuai project-mu
+        return back();
+    }
+
+    public function removeFromCart(Request $request)
+    {
+        // Implementasi sesuai project-mu
+        return back();
     }
 }
