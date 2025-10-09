@@ -62,7 +62,7 @@
             .filter-trigger-btn { display: flex !important; }   /* Show filter button */
         }
         @media (min-width: 768px) {
-            .filter-modal, .filter-modal-overlay, .filter-trigger-btn { display: none !important; }
+            .filter-modal, .filter-modal-overlay, .filter-trigger-btn { display: none !Important; }
             #filterForm { display: block !important; }
         }
         /* Filter button */

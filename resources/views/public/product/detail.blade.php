@@ -2,6 +2,8 @@
 @section('title', 'Products Page - Xander Billiard')
 
 @php
+    use Illuminate\Support\Str;
+
     $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
     $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
     $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
@@ -26,7 +28,6 @@
   body { -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   img { color:transparent; }
 
-  /* --- Kartu produk kecil (related) --- */
   .product-card { background:#2a2a2a; border-radius:14px; overflow:hidden; transition:transform .25s ease, box-shadow .25s ease; }
   .product-card:hover { transform:translateY(-4px); box-shadow:0 10px 24px rgba(0,0,0,.45); }
   .product-image-wrapper { width:100%; height:280px; background:#1a1a1a; }
@@ -35,31 +36,27 @@
   .product-title { font-size:1rem; font-weight:700; color:#fff; margin:0 0 .45rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .product-price { font-size:.9rem; color:#9ca3af; }
 
-  /* ====== Related: jarak kecil (tanpa perlu rebuild Tailwind) ====== */
-  .related-section { margin-top: 1.25rem !important; }              /* ~20px */
-  @media (min-width:768px){ .related-section { margin-top: 1.5rem !important; } }  /* ~24px */
-  @media (min-width:1024px){ .related-section { margin-top: 2rem !important; } }   /* ~32px */
+  .related-section { margin-top: 1.25rem !important; }
+  @media (min-width:768px){ .related-section { margin-top: 1.5rem !important; } }
+  @media (min-width:1024px){ .related-section { margin-top: 2rem !important; } }
 
-  /* ====== Slider Related (mobile-first) ====== */
   .rel-wrapper { position:relative; }
   .no-scrollbar::-webkit-scrollbar { display:none; }
   .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
 
-  /* Track: horizontal scroll + snap di mobile */
   .rel-track{
     overflow-x:auto;
     scroll-snap-type:x mandatory;
     -webkit-overflow-scrolling:touch;
-    padding: 0 8px 2px 8px;      /* sedikit padding kiri/kanan */
+    padding: 0 8px 2px 8px;
   }
   .rel-row{ display:flex; gap:16px; }
   .rel-card{
-    flex:0 0 76vw;               /* lebar kartu ~76% layar agar terlihat kartu berikutnya */
+    flex:0 0 76vw;
     max-width:76vw;
     scroll-snap-align:start;
   }
 
-  /* Tombol panah (muncul hanya di md+) */
   .rel-nav{
     display:none;
     position:absolute; top:50%; transform:translateY(-50%);
@@ -71,7 +68,6 @@
   .rel-nav.left{ left:-10px; }
   .rel-nav.right{ right:-10px; }
 
-  /* Desktop: jadi grid 3/5 kolom, panah aktif untuk scroll satu layar */
   @media (min-width:768px){
     .rel-track{ overflow:visible; padding:0; }
     .rel-row{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
@@ -82,7 +78,6 @@
     .rel-row{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:24px; }
   }
 
-  /* Sedikit penyesuaian mobile detail */
   @media (max-width:767px){
     .product-image-wrapper { height:250px; }
     .product-title { font-size:.98rem; }
@@ -102,7 +97,7 @@
       <nav class="text-[11px] sm:text-xs text-gray-400 mb-1 md:mb-3 self-start">
         <a href="{{ route('index') }}">Home</a> /
         <a href="{{ route('products.landing') }}">Product</a> /
-        <a href="{{ route('products.detail', $detail->id) }}">{{ $detail->name }}</a>
+        <a href="{{ route('products.detail', ['id'=>$detail->id, 'slug'=>Str::slug($detail->name)]) }}">{{ $detail->name }}</a>
       </nav>
 
       @php
@@ -152,7 +147,6 @@
       </div>
     </div>
 
-    <!-- Teks informasi kanan (dipakai persis sesuai permintaan) -->
     <section class="flex-1 mt-8 md:mt-0">
       <h1 class="text-white font-extrabold text-xl md:text-2xl leading-tight">
         {{ $detail->name }}
@@ -192,7 +186,7 @@
     </section>
   </div>
 
-  <!-- Related Products (mobile = slider; desktop = grid) -->
+  <!-- Related Products -->
   <section class="related-section mb-20">
     <div class="flex justify-between items-center mb-5 md:mb-8">
       <h2 class="text-white font-bold text-xl sm:text-2xl">Related products</h2>
@@ -200,7 +194,6 @@
     </div>
 
     <div class="rel-wrapper">
-      <!-- tombol panah (muncul di md+) -->
       <button class="rel-nav left" type="button" aria-label="Scroll left" data-rel-prev="#relTrack">
         <i class="fas fa-chevron-left"></i>
       </button>
@@ -208,7 +201,6 @@
         <i class="fas fa-chevron-right"></i>
       </button>
 
-      <!-- Track -->
       <div id="relTrack" class="rel-track no-scrollbar">
         <div class="rel-row">
           @foreach ($dummyRelatedProducts as $product)
@@ -245,7 +237,6 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  // Ganti gambar utama dari thumbnail
   function changeMainImage(imageUrl, clickedThumb) {
     const main = document.getElementById('mainImage');
     if (main) main.src = imageUrl;
@@ -256,27 +247,13 @@
     clickedThumb.classList.add('border-blue-600');
   }
 
-  // SweetAlert konfirmasi add to cart
   document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
-
-    // Tampilkan loading sebelum fetch
-    Swal.fire({
-      title: 'Mohon tunggu...',
-      text: 'Sedang memproses permintaan Anda.',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-      background: '#1E1E1F',
-      color: '#FFFFFF'
-    });
+    Swal.fire({ title: 'Mohon tunggu...', text: 'Sedang memproses permintaan Anda.', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#1E1E1F', color: '#FFFFFF' });
 
     fetch(this.action, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-      },
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
       body: new FormData(this)
     })
     .then(async res => {
@@ -301,36 +278,14 @@
       const data = await res.json();
 
       if (data.success) {
-        Swal.fire({
-          title: 'Berhasil!',
-          text: 'Produk ditambahkan ke keranjang',
-          icon: 'success',
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#3085d6',
-          background: '#1E1E1F',
-          color: '#FFFFFF',
-          iconColor: '#4BB543'
-        }).then(() => {
-          const badge = document.querySelector('.fixed.right-4.sm\\:right-6.top-\\[60\\%\\] > span');
-          if (badge) {
-            badge.textContent = data.cartCount;
-            badge.style.display = data.cartCount > 0 ? 'flex' : 'none';
-          }
-          location.reload();
-        });
+        Swal.fire({ title: 'Berhasil!', text: 'Produk ditambahkan ke keranjang', icon: 'success', confirmButtonText: 'OK', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF', iconColor: '#4BB543' })
+          .then(() => location.reload());
       } else {
-        Swal.fire({
-          title: 'Gagal!',
-          text: data.message || 'Terjadi kesalahan, coba lagi.',
-          icon: 'error',
-          confirmButtonColor: '#3085d6',
-          background: '#1E1E1F',
-          color: '#FFFFFF'
-        });
+        Swal.fire({ title: 'Gagal!', text: data.message || 'Terjadi kesalahan, coba lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
       }
     })
     .catch(err => {
-      Swal.close();
+      Swal.close(); // tutup loading
       Swal.fire({
         title: 'Error!',
         text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
@@ -343,11 +298,7 @@
 
   });
 
-  // Panah prev/next untuk related (md+). Mobile pakai swipe/drag.
-  function smoothScroll(el, left) {
-    if (!el) return;
-    el.scrollTo({ left, behavior: 'smooth' });
-  }
+  function smoothScroll(el, left) { if (!el) return; el.scrollTo({ left, behavior: 'smooth' }); }
   document.querySelectorAll('[data-rel-prev]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const track = document.querySelector(btn.getAttribute('data-rel-prev'));

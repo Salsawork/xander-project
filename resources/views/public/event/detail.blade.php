@@ -2,40 +2,32 @@
 @section('title', $event->name . ' - Xander Billiard')
 
 @section('content')
-    {{-- ====== Anti "putih-putih" saat scroll (iOS Safari & browser lain) ====== --}}
     <style>
         :root { color-scheme: dark; }
-
-        /* Pastikan latar global selalu gelap */
         html, body {
             height: 100%;
             min-height: 100%;
-            background: #0a0a0a;          /* warna gelap global */
-            overscroll-behavior-y: none;  /* cegah bounce/scroll chaining (Chrome/Firefox/Edge/iOS 16+) */
+            background: #0a0a0a;
+            overscroll-behavior-y: none;
             overscroll-behavior-x: none;
         }
-
-        /* Beberapa layout pakai wrapper #app/main – samakan warna untuk jaga-jaga */
         #app, main { background: #0a0a0a; }
-
-        /* iOS Safari lama tidak full support overscroll-behavior:
-           trik: bentangkan kanvas gelap tak terlihat di belakang viewport */
         body::before{
             content: "";
             position: fixed;
-            /* "inset" negatif untuk menutupi area elastis saat rubber-banding */
             inset: -40vh -40vw;
             background: #0a0a0a;
             z-index: -1;
             pointer-events: none;
         }
-
-        /* Smooth touch scrolling tetap aktif */
         body { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
-
-        /* Hindari flash putih pada gambar PNG transparan */
         img { display: block; background: transparent; }
     </style>
+
+    @php
+        use Illuminate\Support\Str;
+        $pretty = Str::slug($event->name);
+    @endphp
 
     <div class="min-h-screen bg-neutral-900 text-white">
         <!-- HERO / BREADCRUMB -->
@@ -53,56 +45,45 @@
         <!-- Layout utama -->
         <div class="container mx-auto px-8 pb-16">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Layout Kiri (2/3 lebar pada desktop) -->
+                <!-- Kiri -->
                 <div class="lg:col-span-2">
-                    <!-- Card foto dan deskripsi (tinggi sesuai 4 card kanan) -->
                     <div class="bg-neutral-800 rounded-xl p-6 h-auto">
-                        <!-- Foto event -->
                         <div class="mb-6 rounded-lg overflow-hidden">
                             <img
                                 src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/1200x600' }}"
                                 alt="{{ $event->name }}"
                                 class="w-full h-auto object-cover rounded-lg">
                         </div>
-                        
-                        <!-- Deskripsi dan detail utama -->
+
                         <div>
-                            <!-- Judul dan status -->
                             <div class="flex justify-between items-center mb-6">
                                 <h1 class="text-3xl font-bold">{{ $event->name }}</h1>
-                                <span class="px-4 py-1 rounded-full text-sm 
-                                    @if($event->status == 'Upcoming') bg-red-600 
-                                    @elseif($event->status == 'Ongoing') bg-green-600 
-                                    @else bg-gray-600 @endif 
+                                <span class="px-4 py-1 rounded-full text-sm
+                                    @if($event->status == 'Upcoming') bg-red-600
+                                    @elseif($event->status == 'Ongoing') bg-green-600
+                                    @else bg-gray-600 @endif
                                     text-white">
                                     {{ $event->status }}
                                 </span>
                             </div>
-                            
-                            <!-- Informasi dasar dalam grid -->
+
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-neutral-700 p-6 rounded-lg">
-                                <!-- Tanggal -->
                                 <div>
                                     <p class="text-gray-400 text-sm mb-1 uppercase">Date:</p>
                                     <p class="font-semibold">
                                         {{ $event->start_date->format('M d') }} - {{ $event->end_date->format('M d, Y') }}
                                     </p>
                                 </div>
-                                
-                                <!-- Lokasi -->
                                 <div>
                                     <p class="text-gray-400 text-sm mb-1 uppercase">Location:</p>
                                     <p class="font-semibold">{{ $event->location }}</p>
                                 </div>
-                                
-                                <!-- Game Types -->
                                 <div>
                                     <p class="text-gray-400 text-sm mb-1 uppercase">Game Types:</p>
                                     <p class="font-semibold">{{ $event->game_types }}</p>
                                 </div>
                             </div>
-                            
-                            <!-- Registration & Tickets -->
+
                             <div class="mb-8">
                                 <h3 class="text-xl font-bold mb-4">Registration & Tickets</h3>
                                 <div class="space-y-4 bg-neutral-700 p-6 rounded-lg">
@@ -124,23 +105,29 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="mt-4">
+                                {{-- Link bracket pakai rute kanonik (ID) --}}
+                                <a href="{{ route('events.bracket', ['event'=>$event->id, 'name'=>$pretty]) }}"
+                                   class="inline-flex items-center gap-2 bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                                    View Tournament Bracket
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Layout Kanan (1/3 lebar pada desktop) -->
+
+                <!-- Kanan -->
                 <div class="space-y-6">
-                    <!-- Card 1: About the Event -->
                     <div class="bg-neutral-800 rounded-xl p-6">
                         <h3 class="text-xl font-bold mb-4">About the Event</h3>
                         <p class="text-gray-300">
-                            The {{ $event->name }} is the ultimate battleground for elite billiard players across the country. 
-                            This annual event brings together top-ranked professionals, rising stars, and passionate cue sports 
+                            The {{ $event->name }} is the ultimate battleground for elite billiard players across the country.
+                            This annual event brings together top-ranked professionals, rising stars, and passionate cue sports
                             enthusiasts to compete for national glory and a prize pool of over ${{ number_format($event->total_prize_money, 0) }}.
                         </p>
                     </div>
-                    
-                    <!-- Card 2: Prize Pool & Awards -->
+
                     <div class="bg-neutral-800 rounded-xl p-6">
                         <h3 class="text-xl font-bold mb-4">Prize Pool & Awards</h3>
                         <div class="space-y-2">
@@ -166,8 +153,7 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Card 3: Tournament Format -->
+
                     <div class="bg-neutral-800 rounded-xl p-6">
                         <h3 class="text-xl font-bold mb-4">Tournament Format</h3>
                         <div class="space-y-2">
@@ -185,23 +171,22 @@
                             </div>
                         </div>
                         <div class="mt-4">
-                            <a href="{{ route('events.bracket', $event) }}"
+                            <a href="{{ route('events.bracket', ['event'=>$event->id, 'name'=>$pretty]) }}"
                                class="block text-center bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
                                 View Tournament Bracket
                             </a>
                         </div>
                     </div>
-                    
-                    <!-- Card 4: Broadcast & Live Streaming -->
+
                     <div class="bg-neutral-800 rounded-xl p-6">
                         <h3 class="text-xl font-bold mb-4">Broadcast & Live Streaming</h3>
                         <p class="text-gray-300 mb-4">
-                            Can't make it in person? Catch all the action live on major sports 
+                            Can't make it in person? Catch all the action live on major sports
                             networks and online streaming platforms.
                         </p>
                         <p class="text-gray-300 mb-4">
                             Don't miss the chance to witness history in the making! Whether you're
-                            here to compete, watch, or learn, {{ $event->name }} promises 
+                            here to compete, watch, or learn, {{ $event->name }} promises
                             an unforgettable experience for every billiards fan.
                         </p>
                         <p class="text-gray-300">

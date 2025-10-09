@@ -4,140 +4,143 @@
 @push('styles')
 <style>
   :root { color-scheme: dark; }
+  html, body { height: 100%; background:#0a0a0a; }
 
-  /* ===== Anti-overscroll (atas-bawah) & cegah tepi hitam/putih ===== */
-  html, body {
-    height: 100%;
-    background:#0a0a0a;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
-    overflow-x: hidden;
-    -webkit-text-size-adjust: 100%;
-  }
-  body::before{
-    content:"";
-    position: fixed;
-    inset: -50vh;
-    background:#0a0a0a;
-    z-index:-1;
-    pointer-events:none;
+  /* Tag chip */
+  .chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.35rem .7rem; border-radius:999px;
+    border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.06);
+    font-size:.8rem;
   }
 
-  /* ===== (Asli) ===== */
-  html, body { background:#0a0a0a; }
-  .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .7rem; border-radius:999px;
-         border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); font-size:.8rem; }
+  /* Panel umum */
+  .panel{
+    border:1px solid rgba(255,255,255,.10);
+    background:#1f1f1f;
+    border-radius:16px;
+  }
+
+  /* Kolom agar panel bisa grow hingga bawah */
+  .col-stack{ display:flex; flex-direction:column; min-height:100%; }
+  .grow-panel{ flex:1 1 auto; }
+
+  /* Item related (tanpa gambar) */
+  .rel-item{
+    display:flex; flex-direction:column; gap:.25rem;
+    padding:.75rem .5rem; border-radius:.75rem;
+    transition:.2s ease; text-decoration:none;
+  }
+  .rel-item:hover{ background:rgba(255,255,255,.05); }
+  .rel-title{ font-weight:600; }
+  .rel-desc{ font-size:.85rem; color:rgba(255,255,255,.75); }
+
+  /* CTA */
+  .btn{ display:inline-flex; align-items:center; border-radius:.6rem; padding:.6rem 1rem; font-weight:500; }
+  .btn-primary{ background:#3b82f6; color:#fff; }
+  .btn-primary:hover{ background:#2563eb; }
+  .btn-ghost{ border:1px solid rgba(255,255,255,.2); color:#fff; }
+  .btn-ghost:hover{ background:rgba(255,255,255,.08); }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-  // Set --svh agar tinggi viewport akurat pada mobile
-  (function(){
-    function setSVH(){ document.documentElement.style.setProperty('--svh', (window.innerHeight*0.01)+'px'); }
-    setSVH();
-    window.addEventListener('resize', setSVH, {passive:true});
-    window.addEventListener('orientationchange', setSVH, {passive:true});
-  })();
+  // Samakan posisi vertikal teks "Related Services" dengan judul service (H1)
+  function alignRelatedHeading(){
+    const title = document.getElementById('svcTitle');
+    const rel   = document.getElementById('relTitle');
+    if(!title || !rel) return;
+
+    // Desktop saja
+    const isDesktop = window.matchMedia('(min-width:1024px)').matches;
+    if(!isDesktop){ rel.style.marginTop = ''; return; }
+
+    rel.style.marginTop = ''; // reset
+    const titleTop = title.getBoundingClientRect().top + window.scrollY;
+    const relTop   = rel.getBoundingClientRect().top   + window.scrollY;
+    const delta    = titleTop - relTop;
+
+    if (Math.abs(delta) > 1) rel.style.marginTop = delta + 'px';
+  }
+
+  window.addEventListener('load',   alignRelatedHeading, {passive:true});
+  window.addEventListener('resize', alignRelatedHeading, {passive:true});
 </script>
 @endpush
 
 @section('content')
 <div class="bg-neutral-900 text-white min-h-screen">
-  <!-- Hero -->
+
+  <!-- Satu section: header + konten; aside disejajarkan dengan TITLE -->
   <section class="relative bg-neutral-900">
-    <div class="relative max-w-7xl mx-auto px-6 md:px-16 pt-8 pb-4">
-      <a href="{{ route('services.index') }}" class="text-sm text-white/70 hover:text-white">← All Services</a>
-      <h1 class="mt-3 text-3xl md:text-4xl font-extrabold">{{ $service->title }}</h1>
+    <div class="relative max-w-7xl mx-auto px-6 md:px-16 pt-8 pb-16">
+      <!-- items-stretch penting supaya grid item punya tinggi sama -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
-      <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="rounded-xl overflow-hidden border border-white/10 bg-neutral-800">
-          <img src="{{ asset($service->image ?: 'images/placeholder/service.png') }}"
-               alt="{{ $service->title }}" class="w-full h-[360px] md:h-[440px] object-cover"
-               onerror="this.onerror=null;this.src='{{ asset('images/placeholder/service.png') }}'">
-        </div>
+        <!-- Kolom kiri: header + about -->
+        <div class="lg:col-span-2 col-stack">
+          <a href="{{ route('services.index') }}" class="text-sm text-white/70 hover:text-white">← All Services</a>
+          <h1 id="svcTitle" class="mt-3 text-3xl md:text-4xl font-extrabold">{{ $service->title }}</h1>
 
-        <div class="p-0 lg:p-2">
-          <p class="text-white/85">{{ $service->short_description }}</p>
+          @php
+            $waNumber = '628123456789'; // ganti nomor WA
+            $waText = rawurlencode("Halo, saya ingin request layanan: {$service->title}. Mohon info lebih lanjut. Terima kasih.");
+          @endphp
 
-          <div class="mt-4 flex flex-wrap gap-2">
-            @if(!empty($service->tags))
+          @if(!empty($service->short_description))
+            <p class="mt-3 text-white/85 max-w-2xl">{{ $service->short_description }}</p>
+          @endif
+
+          @if(!empty($service->tags))
+            <div class="mt-4 flex flex-wrap gap-2">
               @foreach($service->tags as $t)
                 <span class="chip">#{{ $t }}</span>
               @endforeach
-            @endif
-          </div>
-
-          <div class="mt-6 grid grid-cols-2 gap-4 text-sm">
-            <div class="rounded-xl border border-white/10 bg-neutral-800 p-4">
-              <div class="text-white/60">Estimasi Harga</div>
-              <div class="mt-1 font-semibold">
-                @if(!empty($service->price_min))
-                  Rp {{ number_format($service->price_min,0,',','.') }}
-                  @if(!empty($service->price_max)) - Rp {{ number_format($service->price_max,0,',','.') }} @endif
-                @else
-                  Custom
-                @endif
-              </div>
             </div>
-            <div class="rounded-xl border border-white/10 bg-neutral-800 p-4">
-              <div class="text-white/60">Durasi</div>
-              <div class="mt-1 font-semibold">
-                @if(!empty($service->duration_min))
-                  {{ $service->duration_min }}–{{ $service->duration_max ?? $service->duration_min }} menit
-                @else
-                  -
-                @endif
-              </div>
-            </div>
-          </div>
+          @endif
 
           <div class="mt-6 flex gap-3">
-            <a href="{{ url('/contact') }}"
-               class="inline-flex items-center rounded-md bg-blue-500 px-4 py-2 text-sm font-medium hover:bg-blue-600">
+            <a href="https://wa.me/{{ $waNumber }}?text={{ $waText }}" target="_blank" rel="noopener" class="btn btn-primary">
               Request This Service
             </a>
-            <a href="{{ route('guideline.index') }}"
-               class="inline-flex items-center rounded-md border border-white/20 px-4 py-2 text-sm font-medium hover:bg-white/10">
+            <a href="{{ route('guideline.index') }}" class="btn btn-ghost">
               Read Guidelines
             </a>
           </div>
+
+          <!-- About -->
+          <h2 class="mt-10 text-xl font-semibold mb-3">About This Service</h2>
+          <div class="panel p-5 md:p-6 grow-panel">
+            <div class="prose prose-invert max-w-none">
+              {!! nl2br(e($service->description ?? 'Detail layanan akan segera tersedia.')) !!}
+            </div>
+          </div>
         </div>
+
+        <!-- Kolom kanan: judul related DI LUAR panel (disejajarkan) + panel grow hingga bawah -->
+        <aside class="lg:col-span-1 col-stack">
+          <h3 id="relTitle" class="text-lg font-semibold mb-3">Related Services</h3>
+          <div class="panel p-5 md:p-6 grow-panel">
+            <ul class="space-y-2">
+              @foreach($related as $r)
+                <li>
+                  <a href="{{ route('services.show', $r->slug) }}" class="rel-item">
+                    <span class="rel-title">{{ $r->title }}</span>
+                    @if(!empty($r->short_description))
+                      <span class="rel-desc">{{ $r->short_description }}</span>
+                    @endif
+                  </a>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        </aside>
+
       </div>
     </div>
   </section>
 
-  <!-- Description -->
-  <section class="mt-10 md:mt-14 max-w-7xl mx-auto px-6 md:px-16 pb-16">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div class="lg:col-span-2">
-        <h2 class="text-xl font-semibold mb-3">Service Details</h2>
-        <div class="prose prose-invert max-w-none">
-          {!! nl2br(e($service->description ?? 'Detail layanan akan segera tersedia.')) !!}
-        </div>
-      </div>
-
-      <aside class="lg:col-span-1">
-        <div class="rounded-xl border border-white/10 bg-neutral-800 p-5">
-          <h3 class="font-semibold mb-3">Related Services</h3>
-          <ul class="space-y-3">
-            @foreach($related as $r)
-              <li>
-                <a href="{{ route('services.show', $r->slug) }}" class="flex gap-3 group">
-                  <img src="{{ asset($r->image ?: 'images/placeholder/service.png') }}"
-                       class="w-14 h-14 rounded-md object-cover border border-white/10"
-                       onerror="this.onerror=null;this.src='{{ asset('images/placeholder/service.png') }}'">
-                  <div>
-                    <div class="font-medium group-hover:underline">{{ $r->title }}</div>
-                    <div class="text-xs text-white/70 line-clamp-2">{{ $r->short_description }}</div>
-                  </div>
-                </a>
-              </li>
-            @endforeach
-          </ul>
-        </div>
-      </aside>
-    </div>
-  </section>
 </div>
 @endsection
