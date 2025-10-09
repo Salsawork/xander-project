@@ -161,7 +161,7 @@
                                                     {{ $product->name }}
                                                 </p>
                                                 <p class="text-gray-300 text-xs mt-1">
-                                                    {{ $product->pivot->quantity }}x
+                                                    {{ $product->pivot->stock }}x
                                                 </p>
                                             </div>
 

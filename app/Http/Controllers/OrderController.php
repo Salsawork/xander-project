@@ -52,7 +52,7 @@ class OrderController extends Controller
                 $price = (int) $c['price'];
                 $discountPercent = $c['discount'] ?? 0;
                 $discount = $price * $discountPercent;
-                $subtotal = ($price - $discount) * $c['quantity'];
+                $subtotal = ($price - $discount) * $c['stock'];
                 $total += $subtotal;
                 $tax += $subtotal * 0.1;
             }
@@ -112,7 +112,7 @@ class OrderController extends Controller
             // products
             'products'             => 'array',
             'products.*.id'        => 'required|exists:products,id',
-            'products.*.quantity'  => 'required|integer|min:1',
+            'products.*.stock'  => 'required|integer|min:1',
 
 
             // sparrings
@@ -167,7 +167,11 @@ class OrderController extends Controller
 
                 foreach ($request->products as $item) {
                     $product = Product::findOrFail($item['id']);
-                    $qty     = $item['quantity'];
+                    $qty     = $item['stock'];
+                    if ($product->stock < $qty) {
+                        throw new \Exception("Stok produk {$product->name} tidak mencukupi.");
+                    }
+                    $product->decrement('stock', $qty);
                     $price   = $product->pricing;
                     $tax      = $request->tax ?? 0;
                     $shipping = $request->shipping ?? 0;
@@ -182,7 +186,7 @@ class OrderController extends Controller
                     ]));
 
                     $order->products()->attach($product->id, [
-                        'quantity' => $qty,
+                        'stock' => $qty,
                         'price'    => $price,
                         'subtotal' => $subtotal,
                         'discount' => $discount * $qty,

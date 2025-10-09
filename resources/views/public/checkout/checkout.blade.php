@@ -30,7 +30,7 @@
                         @else
                         <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }}</p>
                         @endif
-                        <p class="text-gray-400">Quantity: {{ $cart['quantity'] }}</p>
+                        <p class="text-gray-400">Quantity: {{ $cart['stock'] }}</p>
                     </div>
                 </div>
                 @empty
@@ -113,7 +113,7 @@
                     <!-- Hidden input untuk produk -->
                     @foreach($carts as $index => $cart)
                     <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
-                    <input type="hidden" name="products[{{ $index }}][quantity]" value="{{ $cart['quantity'] }}">
+                    <input type="hidden" name="products[{{ $index }}][stock]" value="{{ $cart['stock'] }}">
                     @endforeach
 
                     <!-- Hidden input untuk sparring -->

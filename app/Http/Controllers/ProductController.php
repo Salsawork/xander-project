@@ -29,9 +29,9 @@ class ProductController extends Controller
     //     })->when($request->has('status'), function ($query) use ($request) {
     //         $status = $request->input('status');
     //         if ($status == 'in-stock') {
-    //             $query->where('quantity', '>', 0);
+    //             $query->where('stock', '>', 0);
     //         } elseif ($status == 'out-of-stock') {
-    //             $query->where('quantity', 0);
+    //             $query->where('stock', 0);
     //         }
     //     })->orderBy('created_at', 'desc')->get();
 
@@ -76,9 +76,9 @@ class ProductController extends Controller
         // 🔹 Filter Status
         if ($request->has('status')) {
             if ($request->status === 'in-stock') {
-                $query->where('quantity', '>', 0);
+                $query->where('stock', '>', 0);
             } elseif ($request->status === 'out-of-stock') {
-                $query->where('quantity', '=', 0);
+                $query->where('stock', '=', 0);
             }
         }
 
@@ -147,7 +147,7 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'quantity'    => 'required|integer|min:0',
+            'stock'    => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku',
             'images'      => 'nullable|array',
             'images.*'    => 'nullable|string',
@@ -185,7 +185,7 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'quantity'    => 'required|integer|min:0',
+            'stock'    => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku,' . $id,
             'images'      => 'nullable|array',
             'images.*'    => 'nullable|string',

@@ -142,7 +142,7 @@
                         @endif
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            Quantity: {{ $cart['quantity'] ?? 1 }}
+                            Quantity: {{ $cart['stock'] ?? 1 }}
                         </p>
                     </div>
                     <form action="{{ route('cart.del.product') }}" method="POST" class="delete-form">
@@ -269,7 +269,7 @@
                                         discountInput = document.getElementById('discount-' + checkbox.value);
                                     }
 
-                                    // Cek quantity (khusus product)
+                                    // Cek stock (khusus product)
                                     const qtyText = checkbox.closest('li').querySelector('.cart-meta')?.textContent || '';
                                     const qtyMatch = qtyText.match(/Quantity:\s*(\d+)/);
                                     if (qtyMatch) qty = parseInt(qtyMatch[1], 10);

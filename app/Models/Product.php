@@ -15,7 +15,7 @@ class Product extends Model
         'brand',
         'level',
         'condition',
-        'quantity',
+        'stock',
         'sku',
         'images',
         'weight',
@@ -35,7 +35,7 @@ class Product extends Model
     protected $attributes = [
         'brand'     => 'Other',
         'condition' => 'new',
-        'quantity'  => 0,
+        'stock'  => 0,
         'weight'    => 0,
         'length'    => 0,
         'breadth'   => 0,
@@ -51,7 +51,7 @@ class Product extends Model
     public function orders()
     {
         return $this->belongsToMany(Order::class, 'order_items')
-            ->withPivot('quantity', 'price', 'subtotal', 'discount')
+            ->withPivot('stock', 'price', 'subtotal', 'discount')
             ->withTimestamps();
     }
 }

@@ -87,7 +87,7 @@
                                             </div>
                                         </td>
                                         <td class="px-4 py-3">Rp. {{ number_format($product->pivot->price, 0, ',', '.') }}</td>
-                                        <td class="px-4 py-3">{{ $product->pivot->quantity }}</td>
+                                        <td class="px-4 py-3">{{ $product->pivot->stock }}</td>
                                         <td class="px-4 py-3">Rp. {{ number_format($product->pivot->subtotal, 0, ',', '.') }}</td>
                                     </tr>
                                 @empty
@@ -140,7 +140,7 @@
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-400">Quantity:</span>
-                                        <span>{{ $product->pivot->quantity }}</span>
+                                        <span>{{ $product->pivot->stock }}</span>
                                     </div>
                                     <div class="flex justify-between font-medium">
                                         <span class="text-gray-400">Subtotal:</span>
