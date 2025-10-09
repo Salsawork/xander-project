@@ -175,7 +175,7 @@
             </h1>
             @if($pubDate)
                 <p class="text-sm sm:text-base text-gray-400">{{ $pubDate }}</p>
-            @endif>
+            @endif
         </div>
     </header>
 
