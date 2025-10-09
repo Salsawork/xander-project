@@ -24,6 +24,7 @@
         </div>
 
         <!-- Main Grid -->
+        @foreach($order->items as $item)
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Left: Order Info -->
             <div class="md:col-span-2 space-y-5">
@@ -33,7 +34,6 @@
                     <hr class="border-neutral-700 mb-4">
                     <div class="space-y-4 mb-4">
                         <!-- Product 1 -->
-                        @foreach($order->items as $item)
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4">
                                 <img src="{{ $item->product->image_url ?? '/images/elite-cue.png' }}" alt="{{ $item->product->name ?? 'Product' }}" class="w-16 h-16 rounded-md object-cover">
@@ -43,9 +43,8 @@
                                     <p class="text-gray-400 text-sm">{{ $item->quantity }}x</p>
                                 </div>
                             </div>
-                            <p class="font-medium">Rp. {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</p>
+                            <p class="font-medium">Rp. {{ number_format($item->price * $item->quantity - $item->discount , 0, ',', '.') }}</p>
                         </div>
-                        @endforeach
                     </div>
 
                     <h2 class="text-lg font-semibold mb-3">Delivery Details</h2>
@@ -54,12 +53,12 @@
                         <div class="flex items-center gap-3">
                             <img src="/images/fedex.png" alt="FedEx" class="w-20">
                             <div>
-                                <p class="font-medium">FedEx</p>
+                                <p class="font-medium">{{ $item->courier }}</p>
                                 <p class="text-gray-400 text-sm">Standard Shipping (3–5 Business Days)</p>
                                 <a href="#" class="text-blue-400 text-sm hover:underline">FD123456789US</a>
                             </div>
                         </div>
-                        <p class="font-medium">Rp. 50.000</p>
+                        <p class="font-medium">Rp. {{ number_format($item->shipping, 0, ',', '.') }}</p>
                     </div>
                 </div>
 
@@ -70,17 +69,21 @@
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between">
                             <span>Subtotal</span>
-                            <span>Rp. 2.550.000</span>
+                            <span>Rp. {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Tax 10%</span>
-                            <span>Rp. 255.000</span>
+                            <span>Rp. {{ number_format($item->tax, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Discount</span>
+                            <span>- Rp. {{ number_format($item->discount, 0, ',', '.') }}</span>
                         </div>
                     </div>
                     <hr class="border-neutral-700 my-2">
                     <div class="flex justify-between text-base font-semibold">
                         <span>Grand Total</span>
-                        <span class="text-white">Rp. 2.805.000</span>
+                        <span class="text-white">Rp. {{ number_format($item->price * $item->quantity - $item->discount + $item->tax + $item->shipping, 0, ',', '.') }}</span>
                     </div>
                 </div>
 
@@ -173,6 +176,7 @@
                 </div>
             </div>
         </div>
+        @endforeach
     </div>
 </div>
 @endsection

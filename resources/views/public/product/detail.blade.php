@@ -164,13 +164,23 @@
       <form id="addToCartForm" action="{{ route('cart.add.product') }}" method="POST">
         @csrf
         <input type="hidden" name="id" value="{{ $detail->id }}">
-        <button
-          type="submit"
-          class="mt-6 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-medium py-2 px-4 rounded"
-        >
-          <i class="fas fa-shopping-cart mr-2"></i>
-          Add to cart
-        </button>
+        <div class="flex items-center gap-3 mt-4">
+          <!-- Quantity Controls -->
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepDown()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">-</button>
+            <input type="number" name="quantity" value="1" min="1" readonly class="w-14 text-center rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm pl-4">
+            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepUp()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">+</button>
+          </div>
+
+          <!-- Add to Cart Button -->
+          <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition"
+          >
+            <i class="fas fa-shopping-cart mr-2"></i>
+            Add to cart
+          </button>
+        </div>
       </form>
 
       <hr class="border-gray-700 my-6" />

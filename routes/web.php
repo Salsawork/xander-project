@@ -45,6 +45,7 @@ use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
+use App\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -335,3 +336,16 @@ Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');
 });
+
+
+// Detail order & booking
+Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
+Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
+Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
+
+// Rajaongkir
+Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
+Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
+Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
+Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
+Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
