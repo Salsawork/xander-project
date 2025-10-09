@@ -20,6 +20,11 @@ $shareText   = 'Sparring dengan ' . ($athlete->name ?? 'Athlete') . ' di Xander 
 $fbShareUrl  = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrlAbs);
 $xShareUrl   = 'https://twitter.com/intent/tweet?text=' . urlencode($shareText) . '&url=' . urlencode($shareUrlAbs);
 
+// === WhatsApp (ganti dari Instagram) ===
+$waPhone     = '6281284679921'; // +62 812-8467-9921 -> 6281284679921
+$waMessage   = $shareText . ' ' . $shareUrlAbs;
+$waShareUrl  = 'https://wa.me/' . $waPhone . '?text=' . urlencode($waMessage);
+
 // Available dates
 $availableDates = $availableDates ?? [];
 
@@ -149,9 +154,16 @@ $fullStars = floor((float)($averageRating ?? 0));
       <div>
         <span class="text-sm text-gray-300">Share :</span>
         <div class="mt-4 flex items-center gap-3">
-          <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on Facebook" title="Share on Facebook"><i class="fab fa-facebook-f text-white"></i></a>
-          <a href="{{ $xShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on X" title="Share on X"><i class="fab fa-x-twitter text-white"></i></a>
-          <button type="button" id="igShareBtn" class="btn-share" aria-label="Share to Instagram" title="Share to Instagram"><i class="fab fa-instagram text-white"></i></button>
+          <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on Facebook" title="Share on Facebook">
+            <i class="fab fa-facebook-f text-white"></i>
+          </a>
+          <a href="{{ $xShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on X" title="Share on X">
+            <i class="fab fa-x-twitter text-white"></i>
+          </a>
+          {{-- GANTI: Instagram -> WhatsApp --}}
+          <a href="{{ $waShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Chat on WhatsApp" title="Chat on WhatsApp">
+            <i class="fab fa-whatsapp text-white"></i>
+          </a>
         </div>
       </div>
       <hr class="border-white/30 mt-6">
@@ -489,43 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  (function() {
-    const igBtn = document.getElementById('igShareBtn');
-    if (!igBtn) return;
-    const shareData = { title: @json($shareText), text: @json($shareText), url: @json($shareUrlAbs) };
-    igBtn.addEventListener('click', async () => {
-      try {
-        if (navigator.share) await navigator.share(shareData);
-        else if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-          Swal.fire({ toast:true, position:'top-end', timer:2200, showConfirmButton:false, icon:'success', title:'Link disalin. Buka Instagram dan tempel tautannya.' });
-        } else {
-          const t = document.createElement('textarea');
-          t.value = `${shareData.text} ${shareData.url}`;
-          document.body.appendChild(t);
-          t.select();
-          document.execCommand('copy');
-          document.body.removeChild(t);
-          alert('Link disalin. Buka Instagram dan tempel tautannya.');
-        }
-      } catch (e) {}
-    });
-  })();
-
-  // Bintang rating interaktif (form create)
-  (function(){
-    const box = document.getElementById('ratingBox');
-    const input = document.getElementById('ratingInput');
-    if (!box || !input) return;
-    const stars = box.querySelectorAll('i[data-value]');
-    function setActive(val){ stars.forEach(s => s.classList.toggle('active', Number(s.dataset.value) <= val)); }
-    stars.forEach(s=>{
-      s.addEventListener('click', ()=>{ const v = Number(s.dataset.value); input.value=v; setActive(v); });
-      s.addEventListener('mouseenter', ()=> setActive(Number(s.dataset.value)));
-    });
-    box.addEventListener('mouseleave', ()=> setActive(Number(input.value || 0)));
-    setActive(Number(input.value || 0));
-  })();
+  // HAPUS handler Instagram lama — tidak diperlukan untuk WhatsApp
 });
 </script>
 @endpush

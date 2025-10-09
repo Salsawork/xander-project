@@ -10,6 +10,7 @@ use App\Models\SparringSchedule;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class SparringController extends Controller
 {
@@ -58,28 +59,14 @@ class SparringController extends Controller
         // Lokasi unik
         $locations = AthleteDetail::distinct('location')->pluck('location');
 
-        // Harga min dan max (supaya bisa jadi placeholder di filter)
+        // Harga min dan max (placeholder di filter)
         $minPrice = AthleteDetail::min('price_per_session');
         $maxPrice = AthleteDetail::max('price_per_session');
 
         // Data cart dari cookie
-        $cartProducts = [];
-        if (Cookie::has('cartProducts')) {
-            $cartData = Cookie::get('cartProducts');
-            $cartProducts = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-        }
-
-        $cartVenues = [];
-        if (Cookie::has('cartVenues')) {
-            $cartData = Cookie::get('cartVenues');
-            $cartVenues = is_array($cartData) ? $cartData : json_decode($cartData, true) ?? [];
-        }
-
-        $cartSparrings = [];
-        if (Cookie::has('cartSparrings')) {
-            $sparringData = Cookie::get('cartSparrings');
-            $cartSparrings = is_array($sparringData) ? $sparringData : json_decode($sparringData, true) ?? [];
-        }
+        $cartProducts  = json_decode(Cookie::get('cartProducts')  ?? '[]', true);
+        $cartVenues    = json_decode(Cookie::get('cartVenues')    ?? '[]', true);
+        $cartSparrings = json_decode(Cookie::get('cartSparrings') ?? '[]', true);
 
         return view('public.sparring.index', compact(
             'athletes',
@@ -93,14 +80,20 @@ class SparringController extends Controller
     }
 
     /**
-     * Display the specified athlete.
+     * Display the specified athlete (dengan slug). Redirect 301 ke URL kanonik kalau slug salah/hilang.
      */
-    public function show($id)
+    public function show(Request $request, $id, $slug = null)
     {
         $athlete = User::where('roles', 'athlete')
             ->where('id', $id)
             ->with('athleteDetail')
             ->firstOrFail();
+
+        // Pastikan slug kanonik
+        $expectedSlug = Str::slug($athlete->name ?? 'athlete');
+        if ($slug !== $expectedSlug) {
+            return redirect()->route('sparring.detail', ['id' => $id, 'slug' => $expectedSlug], 301);
+        }
 
         // Ambil semua schedule yang belum booked
         $schedules = SparringSchedule::where('athlete_id', $id)
@@ -121,7 +114,7 @@ class SparringController extends Controller
         // Ambil tanggal unik untuk date picker
         $availableDates = $schedules->pluck('date')->unique()->values();
 
-        // ===== Reviews: pakai tabel athlete_reviews =====
+        // Reviews
         $reviews = AthleteReview::where('athlete_id', $athlete->id)
             ->with('user')
             ->latest()
@@ -193,7 +186,6 @@ class SparringController extends Controller
         return back()->with('success', 'Review berhasil dikirim.');
     }
 
-    // Tambahan opsional: biarkan method addToCart/removeFromCart versi project-mu
     public function addToCart(Request $request)
     {
         // Implementasi sesuai project-mu

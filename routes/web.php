@@ -85,16 +85,20 @@ Route::prefix('products')->group(function () {
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
 
-    // DETAIL PAGE (menampilkan review)
-    Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
+    // API price schedule (JANGAN DI BAWAH DETAIL)
+    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])
+        ->where(['venueId' => '[0-9]+'])
+        ->name('venues.priceSchedules');
 
-    // API price schedule (untuk JS)
-    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
+    // DETAIL PAGE: /venues/{id}/{slug?}
+    Route::get('/{venue}/{slug?}', [VenueController::class, 'showDetail'])
+        ->where(['venue' => '[0-9]+'])
+        ->name('venues.detail');
 
     // FAVORITE toggle (opsional)
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 
-    // REVIEW venue
+    // REVIEW venue (opsional)
     Route::post('/{venue}/reviews', [VenueController::class, 'storeReview'])
         ->middleware('auth')
         ->name('venues.reviews.store');
@@ -112,14 +116,21 @@ Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByNam
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
 
-/** Sparring */
-Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
-Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
-Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
-Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
+/** Sparring (PAKAI SLUG) */
+Route::prefix('sparring')->group(function () {
+    Route::get('/', [SparringController::class, 'index'])->name('sparring.index');
 
-// REVIEW atlet -> ke tabel `reviews` (tanpa migration)
-Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
+    // DETAIL: /sparring/{id}/{slug?}
+    Route::get('/{id}/{slug?}', [SparringController::class, 'show'])
+        ->where(['id' => '[0-9]+'])
+        ->name('sparring.detail');
+
+    Route::post('/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
+    Route::delete('/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
+
+    // Reviews
+    Route::post('/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
+});
 
 /** Community (Public) */
 Route::prefix('community')->name('community.')->withoutMiddleware(['auth', 'verified'])->group(function () {
@@ -294,22 +305,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
 });
-
-Route::middleware('auth')->group(function () {
-    
-    // Detail order & booking
-    Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
-    Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
-    Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
-
-});
-
-    // Rajaongkir
-    Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
-    Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
-    Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
-    Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
-    Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
 
 /*
 |--------------------------------------------------------------------------
