@@ -23,13 +23,27 @@ class CartController extends Controller
         $cartProduct = json_decode($request->cookie('cartProducts') ?? '[]', true);
         $product = Product::findOrFail($request->id);
 
-        $cartProduct[] = [
-            'id' => $product->id,
-            'name' => $product->name,
-            'image' => $product->images[0] ?? null,
-            'price' => $product->pricing,
-            'weight' => $product->weight,
-        ];
+        $foundKey = null;
+        foreach ($cartProduct as $key => $item) {
+            if ($item['id'] === $product->id) {
+                $foundKey = $key;
+                break;
+            }
+        }
+
+        if ($foundKey !== null) {
+            $cartProduct[$foundKey]['quantity'] += $request->quantity;
+        } else {
+            $cartProduct[] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'image' => $product->images[0] ?? null,
+                'price' => $product->pricing,
+                'weight' => $product->weight,
+                'quantity' => $request->quantity,
+                'discount' => $product->discount,
+            ];
+        }
 
         Cookie::queue('cartProducts', json_encode($cartProduct), 60 * 24 * 7);
 

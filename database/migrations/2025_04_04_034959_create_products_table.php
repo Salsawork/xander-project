@@ -24,7 +24,7 @@ return new class extends Migration
             $table->integer('breadth')->nullable()->default(0);
             $table->integer('width')->nullable()->default(0);
             $table->decimal('pricing', 10, 0);
-            $table->integer('discount')->nullable()->default(0);
+            $table->decimal('discount', 3, 1)->nullable()->default(0);
             $table->timestamps();
             $table->foreign('category_id')
                 ->references('id')
