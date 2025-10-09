@@ -83,9 +83,6 @@ class OrderController extends Controller
         return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user', 'banks'));
     }
 
-
-
-
     /**
      * Show the form for creating a new resource.
      */
@@ -107,12 +104,17 @@ class OrderController extends Controller
             'payment_method' => 'required|in:transfer_manual',
             'shipping'       => 'nullable|numeric|min:0',
             'tax'            => 'nullable|numeric|min:0',
-
+            'province_name'       => 'nullable|string|max:255',
+            'city_name'           => 'nullable|string|max:255',
+            'district_name'       => 'nullable|string|max:255',
+            'subdistrict_name'       => 'nullable|string|max:255',
+            
             // products
             'products'        => 'array',
             'products.*.id'   => 'required|exists:products,id',
             'products.*.qty'  => 'required|integer|min:1',
 
+            
             // sparrings
             'sparrings'                => 'array',
             'sparrings.*.athlete_id'   => 'required|exists:users,id',
@@ -145,9 +147,8 @@ class OrderController extends Controller
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
-                'bank_id'         => $request->bank_id,
                 'order_number'    => $orderNumber,
-                'total'           => 0, // update setelah item masuk
+                'total'           => 0, // akan diupdate setelah item masuk
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
@@ -166,6 +167,12 @@ class OrderController extends Controller
                     $tax      = $request->tax ?? 0;
                     $shipping = $request->shipping ?? 0;
                     $subtotal = $qty * $price + $tax + $shipping;
+                    $address = implode(', ', array_filter([
+                        $request->input('subdistrict_name'),
+                        $request->input('district_name'),
+                        $request->input('city_name'),
+                        $request->input('province_name'),
+                    ]));
 
                     $order->products()->attach($product->id, [
                         'quantity' => $qty,
@@ -174,6 +181,7 @@ class OrderController extends Controller
                         'discount' => 0,
                         'tax'      => $tax,
                         'shipping' => $shipping,
+                        'address'  => $address,
                     ]);
 
                     $total += $subtotal;
@@ -394,23 +402,30 @@ class OrderController extends Controller
         ]);
 
         $order = Order::where('order_number', $request->order_number)->firstOrFail();
+        $bank = Bank::all();
 
-        return view('public.checkout.payment', compact('order'));
+        return view('public.checkout.payment', compact('order', 'bank'));
     }
 
 
     public function updatePayment(Request $request, Order $order)
     {
         $data = $request->validate([
-            'file' => 'required|file|mimes:jpg,jpeg,png,pdf', // Maksimal 2MB
+            'bank_id' => 'required|integer',
+            'no_rekening' => 'required|string',
+            'atas_nama' => 'required|string',
+            'file' => 'required|file|mimes:jpg,jpeg,png,pdf',
         ]);
 
         // Save file
         $filePath = $data['file']->store('payment_proofs', 'public');
 
         // Update order with file path
+        $order->bank_id = $data['bank_id'];
+        $order->no_rekening = $data['no_rekening'];
+        $order->atas_nama = $data['atas_nama'];
         $order->file = $filePath;
-        $order->payment_status = 'paid';
+        $order->payment_status = 'processing';
         $order->save();
 
         return redirect()->route('checkout.success', ['order_id' => $order->id])->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');

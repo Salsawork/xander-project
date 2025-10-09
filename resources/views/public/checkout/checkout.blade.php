@@ -166,24 +166,28 @@
                                 <select id="province" class="bg-neutral-800 text-white rounded p-2 w-full border">
                                     <option value="">Select Province</option>
                                 </select>
+                                <input type="hidden" name="province_name" id="province_name">
                             </div>
                             <div>
                                 <label for="city" class="block font-semibold mb-1">City</label>
                                 <select name="city" id="city" class="w-full border rounded p-2 bg-neutral-800 text-white">
                                     <option value="" disabled selected>Select City</option>
                                 </select>
+                                <input type="hidden" name="city_name" id="city_name">
                             </div>
                             <div>
                                 <label for="district" class="block font-semibold mb-1">District</label>
                                 <select id="district" class="bg-neutral-800 text-white rounded p-2 w-full border">
                                     <option value="">Select District</option>
                                 </select>
+                                <input type="hidden" name="district_name" id="district_name">
                             </div>
                             <div>
                                 <label for="subdistrict" class="block font-semibold mb-1">Subdistrict</label>
                                 <select name="subdistrict" id="subdistrict" class="w-full border rounded p-2 bg-neutral-800 text-white">
                                     <option value="" disabled selected>Select Subdistrict</option>
                                 </select>
+                                <input type="hidden" name="subdistrict_name" id="subdistrict_name">
                             </div>
                         </div>
                         <div class="mt-4 grid grid-cols-2 gap-4">
@@ -249,6 +253,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener("DOMContentLoaded", async () => {
         const provinceSelect = document.getElementById('province');
@@ -261,147 +266,188 @@
         const weightInput = document.getElementById('weight');
         const courierSelect = document.getElementById('courier');
 
-        try {
-            const res = await fetch('{{ route("rajaongkir.provinces") }}');
-            const provinces = await res.json();
-            console.log(provinces);
-            provinceSelect.innerHTML = '<option value="">Pilih Provinsi Tujuan</option>';
-            provinces.forEach(prov => {
-                const opt = document.createElement('option');
-                opt.value = prov.id;
-                opt.textContent = prov.name;
-                provinceSelect.appendChild(opt);
-            });
-        } catch (error) {
-            console.error('Gagal memuat provinsi:', error);
-            provinceSelect.innerHTML = '<option value="">Gagal memuat provinsi</option>';
-        }
+        const hasProduct = {{count($carts) > 0 ? 'true' : 'false'}};
 
-        provinceSelect.addEventListener('change', async () => {
-            const provinceId = provinceSelect.value;
-
-            if (!provinceId) {
-                destinationSelect.innerHTML = '<option value="">Pilih provinsi terlebih dahulu</option>';
-                return;
-            }
-
+        if (hasProduct) {
             try {
-                const res = await fetch(`{{ route("rajaongkir.cities") }}?province=${provinceId}`);
-                const cities = await res.json();
-
-                destinationSelect.innerHTML = '<option value="">Pilih Kota Tujuan</option>';
-                cities.forEach(city => {
+                const res = await fetch('{{ route("rajaongkir.provinces") }}');
+                const provinces = await res.json();
+                provinceSelect.innerHTML = '<option value="">Select Province</option>';
+                provinces.forEach(prov => {
                     const opt = document.createElement('option');
-                    opt.value = city.id;
-                    opt.textContent = city.name;
-                    destinationSelect.appendChild(opt);
+                    opt.value = prov.id;
+                    opt.setAttribute('data-province', prov.name);
+                    opt.textContent = prov.name;
+                    provinceSelect.appendChild(opt);
                 });
             } catch (error) {
-                console.error('Gagal memuat kota:', error);
-                destinationSelect.innerHTML = '<option value="">Gagal memuat kota</option>';
-            }
-        });
-
-        destinationSelect.addEventListener('change', async () => {
-            const cityId = destinationSelect.value;
-
-            if (!cityId) {
-                districtSelect.innerHTML = '<option value="">Pilih kota terlebih dahulu</option>';
-                return;
+                console.error('Gagal memuat provinsi:', error);
+                provinceSelect.innerHTML = '<option value="">Failed to load provinces</option>';
             }
 
-            try {
-                const res = await fetch(`{{ route("rajaongkir.districts") }}?city=${cityId}`);
-                const districts = await res.json();
+            provinceSelect.addEventListener('change', async () => {
+                const provinceId = provinceSelect.value;
+                const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.getAttribute('data-province') || '';
 
-                districtSelect.innerHTML = '<option value="">Pilih distrik</option>';
-                districts.forEach(district => {
-                    const opt = document.createElement('option');
-                    opt.value = district.id;
-                    opt.textContent = district.name;
-                    districtSelect.appendChild(opt);
-                });
-            } catch (error) {
-                console.error('Gagal memuat distrik:', error);
-                districtSelect.innerHTML = '<option value="">Gagal memuat distrik</option>';
-            }
-        });
+                document.getElementById('province_name').value = provinceName;
 
-        districtSelect.addEventListener('change', async () => {
-            const districtId = districtSelect.value;
-            if (!districtId) {
-                subdistrictSelect.innerHTML = '<option value="">Pilih distrik terlebih dahulu</option>';
-                return;
-            }
-
-            try {
-                const res = await fetch(`{{ route("rajaongkir.subdistricts") }}?district=${districtId}`);
-                const subdistricts = await res.json();
-
-                subdistrictSelect.innerHTML = '<option value="">Pilih sub distrik</option>';
-                subdistricts.forEach(subdistrict => {
-                    const opt = document.createElement('option');
-                    opt.value = subdistrict.id;
-                    opt.textContent = subdistrict.name;
-                    subdistrictSelect.appendChild(opt);
-                });
-            } catch (error) {
-                console.error('Gagal memuat sub distrik:', error);
-                subdistrictSelect.innerHTML = '<option value="">Gagal memuat sub distrik</option>';
-            }
-        });
-
-        courierSelect.addEventListener('change', async () => {
-            const courier = courierSelect.value;
-            const districtId = districtSelect.value;
-            const weight = weightInput.value;
-
-            if (!courier || !districtId) return;
-
-            try {
-                const res = await fetch('{{ route("rajaongkir.cost") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        origin: 1391,
-                        destination: districtId,
-                        weight,
-                        courier
-                    })
-                });
-
-                const data = await res.json();
-
-                if (data?.status === 'success' && Array.isArray(data.data) && data.data.length) {
-                    const firstService = data.data[0];
-                    const shippingCost = firstService.cost ?? 0;
-
-                    // Update tampilan
-                    const shippingValue = document.querySelector('.shipping-value');
-                    const grandTotalElement = document.querySelector('.grand-total');
-                    const currentSubtotal = {{$total}};
-                    const currentTax = {{$tax}};
-
-                    const grandTotal = currentSubtotal + currentTax + shippingCost;
-
-                    if (shippingValue) shippingValue.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(shippingCost)}`;
-                    if (grandTotalElement) grandTotalElement.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(grandTotal)}`;
-
-                    document.getElementById('shipping').value = shippingCost;
-                } else {
-                    alert('Tidak ada layanan pengiriman tersedia untuk kurir ini.');
+                if (!provinceId) {
+                    destinationSelect.innerHTML = '<option value="">Select province first</option>';
+                    return;
                 }
-            } catch (error) {
-                console.error('Gagal menghitung ongkir:', error);
-                alert('Terjadi kesalahan saat menghitung ongkir.');
-            }
-        });
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.cities") }}?province=${provinceId}`);
+                    const cities = await res.json();
+
+                    destinationSelect.innerHTML = '<option value="">Select City</option>';
+                    cities.forEach(city => {
+                        const opt = document.createElement('option');
+                        opt.value = city.id;
+                        opt.setAttribute('data-city', city.name);
+                        opt.textContent = city.name;
+                        destinationSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat kota:', error);
+                    destinationSelect.innerHTML = '<option value="">Failed to load cities</option>';
+                }
+            });
+
+            destinationSelect.addEventListener('change', async () => {
+                const cityId = destinationSelect.value;
+                const cityName = destinationSelect.options[destinationSelect.selectedIndex]?.getAttribute('data-city') || '';
+
+                document.getElementById('city_name').value = cityName;
+
+                if (!cityId) {
+                    districtSelect.innerHTML = '<option value="">Select city first</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.districts") }}?city=${cityId}`);
+                    const districts = await res.json();
+
+                    districtSelect.innerHTML = '<option value="">Select district</option>';
+                    districts.forEach(district => {
+                        const opt = document.createElement('option');
+                        opt.value = district.id;
+                        opt.setAttribute('data-district', district.name);
+                        opt.textContent = district.name;
+                        districtSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat distrik:', error);
+                    districtSelect.innerHTML = '<option value="">Failed to load districts</option>';
+                }
+            });
+
+            districtSelect.addEventListener('change', async () => {
+                const districtId = districtSelect.value;
+                const districtName = districtSelect.options[districtSelect.selectedIndex]?.getAttribute('data-district') || '';
+
+                document.getElementById('district_name').value = districtName;
+
+                if (!districtId) {
+                    subdistrictSelect.innerHTML = '<option value="">Select district first</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.subdistricts") }}?district=${districtId}`);
+                    const subdistricts = await res.json();
+
+                    subdistrictSelect.innerHTML = '<option value="">Select subdistrict</option>';
+                    subdistricts.forEach(subdistrict => {
+                        const opt = document.createElement('option');
+                        opt.value = subdistrict.id;
+                        opt.setAttribute('data-subdistrict', subdistrict.name);
+                        opt.textContent = subdistrict.name;
+                        subdistrictSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat sub distrik:', error);
+                    subdistrictSelect.innerHTML = '<option value="">Failed to load subdistricts</option>';
+                }
+            });
+
+            subdistrictSelect.addEventListener('change', () => {
+                const subdistrictName = subdistrictSelect.options[subdistrictSelect.selectedIndex]?.getAttribute('data-subdistrict') || '';
+                document.getElementById('subdistrict_name').value = subdistrictName;
+            });
+
+            courierSelect.addEventListener('change', async () => {
+                const courier = courierSelect.value;
+                const districtId = districtSelect.value;
+                const weight = weightInput.value;
+
+                if (!courier || !districtId) return;
+
+                try {
+                    const res = await fetch('{{ route("rajaongkir.cost") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            origin: 1391,
+                            destination: districtId,
+                            weight,
+                            courier
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (data?.status === 'success' && Array.isArray(data.data) && data.data.length) {
+                        const firstService = data.data[0];
+                        const shippingCost = firstService.cost ?? 0;
+
+                        // Update tampilan
+                        const shippingValue = document.querySelector('.shipping-value');
+                        const grandTotalElement = document.querySelector('.grand-total');
+                        const currentSubtotal = {{$total}};
+                        const currentTax = {{$tax}};
+
+                        const grandTotal = currentSubtotal + currentTax + shippingCost;
+
+                        if (shippingValue) shippingValue.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(shippingCost)}`;
+                        if (grandTotalElement) grandTotalElement.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(grandTotal)}`;
+
+                        document.getElementById('shipping').value = shippingCost;
+                    } else {
+                        alert('Tidak ada layanan pengiriman tersedia untuk kurir ini.');
+                    }
+                } catch (error) {
+                    console.error('Gagal menghitung ongkir:', error);
+                    alert('Terjadi kesalahan saat menghitung ongkir.');
+                }
+            });
+        }
 
         if (payButton) {
             payButton.addEventListener('click', async function() {
+                if (hasProduct) {
+                    const province = document.getElementById('province').value;
+                    const city = document.getElementById('city').value;
+                    const district = document.getElementById('district').value;
+                    const subdistrict = document.getElementById('subdistrict').value;
+                    const courier = document.getElementById('courier').value;
+                    const shipping = document.getElementById('shipping').value;
+
+                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Shipping Required',
+                            text: 'Please complete shipping information before placing order.',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        return;
+                    }
+                }
+
                 const btn = this;
                 btn.disabled = true;
                 btn.textContent = 'Processing...';
