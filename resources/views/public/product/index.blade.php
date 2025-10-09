@@ -2,6 +2,8 @@
 @section('title', 'Products Page - Xander Billiard')
 
 @php
+    use Illuminate\Support\Str;
+
     // === Data keranjang dari cookie (produk, venue, sparring) ===
     $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
     $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
@@ -9,19 +11,15 @@
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     /**
-     * ===== Dummy 15 products (nama mengikuti yang diminta) =====
-     * Mobile: 4 item / halaman
-     * Desktop: 12 item / halaman
+     * ===== Dummy 15 products =====
      */
     use Illuminate\Pagination\LengthAwarePaginator;
 
     $names = [
-        // nama-nama yang “tetap pakai itu”
         'Testing ya',
         'Pool Cue Stick',
         'Billiard Balls Set',
         'Chalk Box',
-        // sisanya dilengkapi agar total 15 item
         'Cue Case',
         'Tip Shaper',
         'Cue Tip Glue',
@@ -35,7 +33,6 @@
         'Measuring Tape',
     ];
 
-    // bentuk koleksi produk dummy (15 item)
     $allProducts = collect($names)->values()->map(function ($name, $idx) {
         $i = $idx + 1;
         return (object) [
@@ -65,31 +62,18 @@
 
 @push('styles')
     <style>
-        /* ===== Anti white overscroll (global) ===== */
         :root { color-scheme: dark; }
         html, body {
             height: 100%;
-            background-color: #0a0a0a;   /* pastikan root gelap */
-            overscroll-behavior-y: none; /* nonaktifkan chain overscroll (Chrome/Android, Edge, Firefox) */
+            background-color: #0a0a0a;
+            overscroll-behavior-y: none;
         }
-        /* Pastikan wrapper utama dari layout juga gelap */
         #app, main { background-color: #0a0a0a; }
+        body::before { content: ""; position: fixed; inset: 0; background: #0a0a0a; pointer-events: none; z-index: -1; }
 
-        /* iOS Safari fix: kanvas hitam fixed di balik konten saat rubber-band bounce */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: #0a0a0a;
-            pointer-events: none;
-            z-index: -1;  /* di belakang semua */
-        }
-
-        /* ===== Style bawaan halaman ===== */
         .max-h-0 { max-height: 0 !important; }
         @media (min-width: 1024px) { .lg-hidden { display: none !important; } }
 
-        /* Mobile filter toggle */
         @media (max-width: 1023px) {
             .sm-hidden { display: none !important; }
             .mobile-filter-overlay {
@@ -106,17 +90,14 @@
             .mobile-filter-sidebar.open { left:0; }
         }
 
-        /* ===== Pill Pagination (mobile & desktop) ===== */
         .pager {
             display:inline-flex; align-items:center; gap:10px;
-            background:#1f2937; /* slate-800 */
+            background:#1f2937;
             border:1px solid rgba(255,255,255,.06);
             border-radius:9999px; padding:6px 10px;
             box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25);
         }
-        .pager-label {
-            min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px;
-        }
+        .pager-label { min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px; }
         .pager-btn {
             width:44px; height:44px; display:grid; place-items:center;
             border-radius:9999px; line-height:0; text-decoration:none;
@@ -265,7 +246,8 @@
             <section class="lg:col-span-4 flex flex-col gap-6">
                 <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                     @forelse ($products as $product)
-                        <div onclick="window.location='{{ route('products.detail', $product->id) }}'" class="cursor-pointer">
+                        @php $slug = Str::slug($product->name); @endphp
+                        <div onclick="window.location='{{ route('products.detail', ['id'=>$product->id,'slug'=>$slug]) }}'" class="cursor-pointer">
                             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow">
                                 <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
                                     @php
@@ -298,7 +280,6 @@
                     @endforelse
                 </div>
 
-                <!-- Pagination (custom pill untuk mobile & desktop) -->
                 @php
                     $current = $products->currentPage();
                     $last    = $products->lastPage();
@@ -307,7 +288,6 @@
                 @endphp
                 <div class="flex justify-center mt-6">
                     <nav class="pager" role="navigation" aria-label="Pagination">
-                        {{-- Prev --}}
                         @if ($prevUrl)
                             <a class="pager-btn pager-prev" href="{{ $prevUrl }}" aria-label="Previous page">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -322,10 +302,8 @@
                             </span>
                         @endif
 
-                        {{-- Label tengah: "X of Y" (page of pages) --}}
                         <span class="pager-label">{{ $current }} of {{ $last }}</span>
 
-                        {{-- Next --}}
                         @if ($nextUrl)
                             <a class="pager-btn pager-next" href="{{ $nextUrl }}" aria-label="Next page">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -341,11 +319,9 @@
                         @endif
                     </nav>
                 </div>
-                <!-- /Pagination -->
             </section>
         </div>
 
-        <!-- === Floating Cart (sesuai contoh) === -->
         <button
             aria-label="Shopping cart with {{ $cartCount }} items"
             onclick="showCart()"
@@ -359,38 +335,25 @@
             @endif
         </button>
 
-        {{-- Modal/Drawer keranjang + fungsi showCart() biasanya ada di partial berikut --}}
         @include('public.cart')
     </div>
 
     <script>
         function formatNumberInput(input) {
-            let value = input.value.replace(/\D/g, ""); // hapus non digit
-            if (!value) {
-                input.value = "";
-                return;
-            }
+            let value = input.value.replace(/\D/g, "");
+            if (!value) { input.value = ""; return; }
             input.value = new Intl.NumberFormat("id-ID").format(value);
         }
-
-        function unformatNumberInput(input) {
-            return input.value.replace(/\./g, ""); // hilangkan titik pemisah
-        }
+        function unformatNumberInput(input) { return input.value.replace(/\./g, ""); }
 
         document.addEventListener("DOMContentLoaded", () => {
             const minInput = document.getElementById("price_min");
             const maxInput = document.getElementById("price_max");
-
-            // format langsung saat load jika ada value
-            if (minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
-            if (maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
-
-            // format ketika user ketik
-            minInput.addEventListener("input", () => formatNumberInput(minInput));
-            maxInput.addEventListener("input", () => formatNumberInput(maxInput));
-
-            // sebelum submit, balikin ke angka biasa (biar server bisa baca)
-            minInput.form.addEventListener("submit", () => {
+            if (minInput?.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
+            if (maxInput?.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
+            minInput?.addEventListener("input", () => formatNumberInput(minInput));
+            maxInput?.addEventListener("input", () => formatNumberInput(maxInput));
+            minInput?.form?.addEventListener("submit", () => {
                 minInput.value = unformatNumberInput(minInput);
                 maxInput.value = unformatNumberInput(maxInput);
             });
@@ -401,7 +364,6 @@
 @push('scripts')
    <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Toggle collapsible filter sections
             document.querySelectorAll(".toggleBtn").forEach((btn) => {
                 const content = btn.parentElement.nextElementSibling;
                 btn.addEventListener("click", () => {
@@ -413,7 +375,6 @@
                 });
             });
 
-            // Mobile filter sidebar
             const mobileFilterBtn   = document.getElementById("mobileFilterBtn");
             const filterProduct     = document.getElementById("filterProduct");
             const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
@@ -434,6 +395,4 @@
             mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
         });
    </script>
-
-   
 @endpush

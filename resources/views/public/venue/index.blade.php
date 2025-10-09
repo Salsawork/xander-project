@@ -218,8 +218,13 @@
                             <div class="flex justify-between items-start lg:mb-8">
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
                                 <div class="flex justify-center items-end sm:mt-2">
-                                    <i data-id="{{ $venue->id }}" class="fa-regular fa-bookmark text-gray-400 text-xl sm:text-2xl sm cursor-pointer hover:text-blue-500 transition"></i>
-                                </div>
+                                    @auth
+                                    <i data-id="{{ $venue->id }}"
+                                       class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
+                                           ? 'fa-solid text-blue-500' : 'fa-regular text-gray-400' }}
+                                           fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition"></i>
+                                @endauth                                
+                                </div>                                
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
@@ -326,42 +331,73 @@
         window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
         window.location.reload();
     }
-
     document.addEventListener("DOMContentLoaded", () => {
-        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-        const params = new URLSearchParams(window.location.search);
+        document.querySelectorAll('.fa-bookmark').forEach(icon => {
+            icon.addEventListener('click', function (e) {
+                e.stopPropagation(); // biar gak klik card
 
-        if (favorites.length > 0 && !params.has("favorites")) {
-            params.set("favorites", favorites.join(","));
-            window.location.href = `${window.location.pathname}?${params.toString()}`;
-            return;
-        }
-
-        document.querySelectorAll("i[data-id]").forEach(icon => {
-            const venueId = icon.getAttribute("data-id");
-
-            if (favorites.includes(venueId)) {
-                icon.classList.remove("fa-regular", "text-gray-400");
-                icon.classList.add("fa-solid", "text-blue-500");
-            }
-
-            icon.addEventListener("click", function (e) {
-                e.stopPropagation();
-
-                if (favorites.includes(venueId)) {
-                    favorites = favorites.filter(id => id !== venueId);
-                    this.classList.remove("fa-solid", "text-blue-500");
-                    this.classList.add("fa-regular", "text-gray-400");
-                } else {
-                    favorites.push(venueId);
-                    this.classList.remove("fa-regular", "text-gray-400");
-                    this.classList.add("fa-solid", "text-blue-500");
+                const venueId = this.dataset.id;
+                if (!venueId) {
+                    Swal.fire({
+                        title: 'Oops!',
+                        text: 'ID venue tidak ditemukan.',
+                        icon: 'error',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    });
+                    return;
                 }
 
-                localStorage.setItem("favorites", JSON.stringify(favorites));
-                syncFavoritesToUrl();
+                fetch(`/venues/${venueId}/favorite`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Ubah tampilan ikon sesuai action
+                        if (data.action === 'added') {
+                            this.classList.remove('fa-regular', 'text-gray-400');
+                            this.classList.add('fa-solid', 'text-blue-500');
+                        } else if (data.action === 'removed') {
+                            this.classList.remove('fa-solid', 'text-blue-500');
+                            this.classList.add('fa-regular', 'text-gray-400');
+                        }
+
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: data.message,
+                            icon: 'success',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF',
+                            timer: 1200,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Oops!',
+                            text: data.message || 'Terjadi kesalahan.',
+                            icon: 'error',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF'
+                        });
+                    }
+                })
+                .catch(() => {
+                    Swal.fire({
+                        title: 'Oops!',
+                        text: 'Terjadi kesalahan jaringan.',
+                        icon: 'error',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    });
+                });
             });
         });
+
     });
 </script>
 

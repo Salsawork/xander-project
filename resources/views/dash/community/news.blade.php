@@ -37,11 +37,36 @@
         </div>
     </div>
 
+    <!-- Mobile Search (TOP) -->
+    <div class="lg:hidden bg-[#2D2D2D] border-b border-[#3A3A3A]">
+      <div class="max-w-7xl mx-auto px-4 pt-4 pb-3">
+        <form id="newsSearchFormMobile" action="{{ route('community.news.index') }}" method="GET" autocomplete="off">
+          <div class="flex rounded-md overflow-hidden ring-1 ring-inset ring-white/10">
+            <input
+              type="text"
+              name="search"
+              id="newsSearchInputMobile"
+              value="{{ request('search') }}"
+              placeholder="Search news..."
+              class="flex-grow bg-[#1E1E1E] text-white px-4 py-2.5 outline-none"
+              autocomplete="off"
+            >
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- News Content Section -->
-    <div class="bg-[#2D2D2D] py-12">
+    <div class="bg-[#2D2D2D] py-6 lg:py-12">
         <div class="container mx-auto px-4">
             <div class="flex flex-col lg:flex-row gap-8">
-                <!-- Main News Grid -->
+                <!-- Main News Column -->
                 <div class="lg:w-3/4">
                     {{-- FILTER KATEGORI --}}
                     @php
@@ -54,7 +79,9 @@
                         ['key'=>'event',        'label'=>'Event',        'param'=>'Event'],
                       ];
                     @endphp
-                    <div class="mb-6 flex flex-wrap items-center gap-3">
+
+                    <!-- Mobile: filter pills berada setelah search -->
+                    <div class="mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
                       @foreach($filters as $f)
                         @php
                           $isActive = $active === $f['key'];
@@ -66,7 +93,7 @@
                         <a
                           href="{{ route('community.news.index', $query) }}"
                           aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                          class="px-4 py-1.5 rounded-full text-sm border transition
+                          class="px-3 py-1.5 rounded-full text-sm border transition
                                  {{ $isActive
                                     ? 'bg-blue-600 text-white border-transparent'
                                     : 'bg-[#1E1E1E] text-gray-200 border-[#3A3A3A] hover:bg-[#242424]' }}"
@@ -76,10 +103,12 @@
                       @endforeach
                     </div>
 
+                    <!-- Desktop: optional search bar inline (tetap pakai sidebar, jadi tidak ditampilkan di sini) -->
+
+                    <!-- News Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         @forelse($allNews as $news)
                         @php $shareUrl = route('community.news.show', $news); @endphp
-                        <!-- CARD: seluruh card (foto + teks) bisa diklik -->
                         <a href="{{ $shareUrl }}"
                            aria-label="{{ $news->title }}"
                            class="group block rounded-lg overflow-hidden shadow-md transition-transform hover:scale-105 flex flex-col relative
@@ -107,7 +136,7 @@
                                 <p class="text-sm text-gray-300 mb-3">{{ Str::limit($news->content, 100) }}</p>
                             </div>
 
-                            <!-- Share button (transparan, pojok kanan bawah) -->
+                            <!-- Share button -->
                             <button type="button"
                                     class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30"
                                     style="right:12px; bottom:12px; background:transparent"
@@ -138,17 +167,17 @@
                     @endif
                 </div>
 
-                <!-- Sidebar -->
-                <div class="lg:w-1/4">
-                    <!-- Search (card abu) -->
-                    <div class="rounded-lg p-5 mb-6 bg-[#2D2D2D] border border-[#3A3A3A]">
+                <!-- Sidebar (Desktop only) -->
+                <div class="lg:w-1/4 space-y-6">
+                    <!-- Search (card) -->
+                    <div class="rounded-lg p-5 bg-[#2D2D2D] border border-[#3A3A3A] hidden lg:block">
                         <h2 class="text-xl font-bold text-white mb-4">SEARCH</h2>
                         <form id="newsSearchForm" action="{{ route('community.news.index') }}" method="GET" autocomplete="off">
                             <div class="flex">
                                 <input type="text" name="search" id="newsSearchInput" placeholder="Search news..."
                                     value="{{ request('search') }}"
                                     class="flex-grow bg-[#1E1E1E] border border-[#3A3A3A] rounded-l-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    autocomplete="off" autofocus>
+                                    autocomplete="off">
                                 <button type="submit"
                                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -161,8 +190,8 @@
                         </form>
                     </div>
 
-                    <!-- Recent Posts (card abu) -->
-                    <div class="rounded-lg p-5 mb-6 bg-[#2D2D2D] border border-[#3A3A3A]">
+                    <!-- Recent Posts -->
+                    <div class="rounded-lg p-5 bg-[#2D2D2D] border border-[#3A3A3A]">
                         <h2 class="text-xl font-bold text-white mb-4">RECENT POSTS</h2>
                         <div class="space-y-4">
                             @foreach($recentNews as $recent)
@@ -194,7 +223,7 @@
                         </div>
                     </div>
 
-                    <!-- Tags (card abu) -->
+                    <!-- Tags -->
                     <div class="rounded-lg p-5 bg-[#2D2D2D] border border-[#3A3A3A]">
                         <h2 class="text-xl font-bold text-white mb-4">TAGS</h2>
                         <div class="flex flex-wrap gap-2">
@@ -288,30 +317,22 @@
     setTimeout(() => { t.style.opacity = '0'; }, 1600);
   }
 
-  // Auto search on input, keep and restore caret position after reload
+  // Auto-search: desktop & mobile
   document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('newsSearchInput');
-    const form = document.getElementById('newsSearchForm');
-    let timer = null;
+    const forms = [
+      { input: document.getElementById('newsSearchInput'), form: document.getElementById('newsSearchForm') },
+      { input: document.getElementById('newsSearchInputMobile'), form: document.getElementById('newsSearchFormMobile') },
+    ].filter(Boolean);
 
-    const caret = localStorage.getItem('newsSearchCaret');
-    if (input && caret !== null) {
-      input.focus();
-      try { input.setSelectionRange(Number(caret), Number(caret)); } catch(e) {}
-      localStorage.removeItem('newsSearchCaret');
-    } else if (input) {
-      input.focus();
-    }
-
-    if (input && form){
+    forms.forEach(({input, form}) => {
+      if (!input || !form) return;
+      let timer = null;
       input.addEventListener('input', function() {
         clearTimeout(timer);
-        timer = setTimeout(function() {
-          localStorage.setItem('newsSearchCaret', input.selectionStart ?? 0);
-          form.submit();
-        }, 600);
+        timer = setTimeout(() => form.submit(), 600);
       });
-    }
+    });
   });
 </script>
 @endpush
+  

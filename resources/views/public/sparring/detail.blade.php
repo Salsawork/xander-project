@@ -558,6 +558,7 @@ $fullStars = floor((float)($averageRating ?? 0));
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
         // ===== Ratakan judul & kartu booking =====
         function alignTitleAndCard() {
             const mq = window.matchMedia('(min-width: 768px)');
@@ -641,6 +642,23 @@ $fullStars = floor((float)($averageRating ?? 0));
         document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // 🧠 Cek apakah user sudah login dulu
+            if (!isLoggedIn) {
+                Swal.fire({
+                    title: 'Belum Login!',
+                    text: 'Silakan login terlebih dahulu untuk memesan atau menambahkan ke keranjang.',
+                    icon: 'warning',
+                    confirmButtonText: 'Login Sekarang',
+                    confirmButtonColor: '#3085d6',
+                    background: '#1E1E1F',
+                    color: '#FFFFFF'
+                }).then(() => {
+                    window.location.href = '/login';
+                });
+                return;
+            }
+
+            // ✅ Kalau sudah login, lanjut validasi form
             const date = document.getElementById('dateInput')?.value;
             const schedule = document.querySelector('input[name="schedule_id"]:checked');
 
@@ -668,7 +686,7 @@ $fullStars = floor((float)($averageRating ?? 0));
                 return;
             }
 
-            // Tampilkan loading sebelum fetch
+            // 🌀 Tampilkan loading
             Swal.fire({
                 title: 'Mohon tunggu...',
                 text: 'Sedang memproses permintaan Anda.',
@@ -679,61 +697,77 @@ $fullStars = floor((float)($averageRating ?? 0));
             });
 
             fetch(this.action, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: new FormData(this)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    Swal.close(); // tutup loading
-                    if (data.success) {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: 'Sparring ditambahkan ke keranjang',
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#3085d6',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF',
-                            iconColor: '#4BB543'
-                        }).then(() => {
-                            // Update cart counter
-                            const badge = document.querySelector('.fixed.right-6.top-\\[60\\%\\] > span');
-                            if (badge) {
-                                badge.textContent = data.cartCount;
-                                badge.style.display = data.cartCount > 0 ? 'flex' : 'none';
-                            }
-                            // Reset form
-                            this.reset();
-                            document.getElementById('scheduleGrid').innerHTML = '';
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Gagal!',
-                            text: data.message || 'Terjadi kesalahan, coba lagi.',
-                            icon: 'error',
-                            confirmButtonColor: '#3085d6',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF'
-                        });
-                    }
-                })
-                .catch(err => {
-                    Swal.close(); // tutup loading
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: new FormData(this)
+            })
+            .then(async res => {
+                // 🛡️ Jika session habis atau belum login (401)
+                if (res.status === 401) {
+                    Swal.close();
                     Swal.fire({
-                        title: 'Error!',
-                        text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
-                        icon: 'error',
-                            confirmButtonColor: '#3085d6',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF'
+                        title: 'Belum Login!',
+                        text: 'Silakan login terlebih dahulu untuk menambahkan ke keranjang.',
+                        icon: 'warning',
+                        confirmButtonText: 'Login Sekarang',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    }).then(() => {
+                        window.location.href = '/login';
                     });
+                    return;
+                }
+
+                const data = await res.json();
+                Swal.close();
+
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Sparring ditambahkan ke keranjang',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF',
+                        iconColor: '#4BB543'
+                    }).then(() => {
+                        const badge = document.querySelector('.fixed.right-6.top-\\[60\\%\\] > span');
+                        if (badge) {
+                            badge.textContent = data.cartCount;
+                            badge.style.display = data.cartCount > 0 ? 'flex' : 'none';
+                        }
+                        this.reset();
+                        document.getElementById('scheduleGrid').innerHTML = '';
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: data.message || 'Terjadi kesalahan, coba lagi.',
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.close();
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6',
+                    background: '#1E1E1F',
+                    color: '#FFFFFF'
                 });
+            });
         });
 
         // Instagram share

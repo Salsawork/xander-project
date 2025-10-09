@@ -20,6 +20,7 @@ use App\Http\Controllers\UploadController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\ProfileController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -44,7 +45,6 @@ use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
-use App\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +61,7 @@ Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('authenticate');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-// Google OAuth Routes
+// Google OAuth
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('oauth.google.redirect');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('oauth.google.callback');
 
@@ -76,9 +76,12 @@ Route::post('/upload', [UploadController::class, 'store'])->name('upload.image')
 /** Products */
 Route::prefix('products')->group(function () {
     Route::get('/', [ProductController::class, 'landing'])->name('products.landing');
-    Route::get('/{product}', [ProductController::class, 'detail'])->name('products.detail');
+    Route::get('/{id}/{slug?}', [ProductController::class, 'detail'])
+        ->where('id', '[0-9]+')
+        ->name('products.detail');
 });
 
+/** Venues */
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
     Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
@@ -86,16 +89,33 @@ Route::prefix('venues')->group(function () {
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
-/** Events */
+/** Events
+ *  - /events            -> landing/hero (index)
+ *  - /events/all        -> katalog (list/show + filter)
+ *  - /event/{id}/{slug} -> detail
+ */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
-// Route-model binding by NAME
-Route::get('/event/{event:name}', [EventController::class, 'show'])->name('events.show');
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracket'])->name('events.bracket');
+Route::get('/events/all', [EventController::class, 'list'])->name('events.list');
+
+Route::get('/event/{event}/{name?}', [EventController::class, 'show'])
+    ->where('event', '[0-9]+')
+    ->name('events.show');
+
+/* Kompat lama: /event/{event:name} -> redirect ke kanonik ID */
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])
+    ->name('events.show.byname');
+
+/* Bracket */
+Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])
+    ->where('event', '[0-9]+')
+    ->name('events.bracket');
+
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
+    ->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
-
 
 /** Sparring */
 Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
@@ -116,7 +136,6 @@ Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('gu
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
 
-
 Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
 
 /*
@@ -124,15 +143,13 @@ Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscri
 | Cart & Checkout
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
-    Route::prefix('cart')->group(function () {
-        Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
-        Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
-        Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
-        Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
-        Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
-        Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
-    });
+Route::middleware('auth')->prefix('cart')->group(function () {
+    Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
+    Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
+    Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
+    Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
+    Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
+    Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
 });
 
 /** Checkout (auth required) */
@@ -144,18 +161,6 @@ Route::prefix('checkout')->group(function () {
     Route::get('/finish', [OrderController::class, 'finish'])->name('checkout.finish');
     Route::get('/success', [OrderController::class, 'success'])->name('checkout.success');
 });
-
-// Detail order & booking
-Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
-Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
-Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
-
-// Rajaongkir
-Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
-Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
-Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
-Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
-Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
 
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::get('/', [DashboardOrderController::class, 'index'])->name('order.index');
@@ -172,7 +177,6 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
 | Authenticated Dashboard Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('auth')->group(function () {
     /** General Dashboard */
     Route::redirect('dashboard', 'dashboard/overview');
@@ -183,10 +187,9 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/myorder', fn() => view('dash.user.myorder'))->name('myorder.index');
     Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
-    Route::post('profile/update', function (Request $request) {
-        Auth::user()->update($request->only('name', 'email'));
-        return back()->with('success', 'Profile updated successfully');
-    })->name('profile.update');
+    /** Profile */
+    Route::get('dashboard/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('profile/update', [ProfileController::class, 'update'])->name('profile.update');
 
     /** Admin: Products */
     Route::prefix('dashboard/products')->group(function () {
@@ -218,6 +221,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{guideline}', [AdminGuidelinesController::class, 'destroy'])->name('admin.guidelines.destroy');
     });
 
+    /** Admin: Promo/Vouchers */
     Route::prefix('dashboard/promo')->group(function () {
         Route::get('/', [VoucherController::class, 'index'])->name('promo.index');
         Route::get('/create', [VoucherController::class, 'create'])->name('promo.create');
@@ -226,6 +230,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/{voucher}', [VoucherController::class, 'update'])->name('promo.update');
         Route::delete('/{voucher}', [VoucherController::class, 'destroy'])->name('promo.destroy');
     });
+
+    /** Admin: Venues */
     Route::prefix('dashboard/venue')->group(function () {
         Route::get('/', [AdminVenueController::class, 'index'])->name('venue.index');
         Route::get('/create', [AdminVenueController::class, 'create'])->name('venue.create');
@@ -235,34 +241,32 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
     });
 
-    Route::middleware('auth')->prefix('venue')->group(function () {
-        // Venue Dashboard
+    /** Venue owner */
+    Route::prefix('venue')->group(function () {
         Route::get('/dashboard', [VenueDashboardController::class, 'index'])->name('venue.dashboard');
-        // Venue Booking Management
+
+        // Booking management
         Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
-        // Create table
         Route::get('/booking/create-table', [BookingController::class, 'createTable'])->name('venue.booking.create-table');
         Route::post('/booking/create-table', [BookingController::class, 'storeTable'])->name('venue.booking.store-table');
-        // Delete table
         Route::delete('/booking/delete-table/{table}', [BookingController::class, 'deleteTable'])->name('venue.booking.delete-table');
-        // Venue price-schedule.destroy
+
+        // Price schedules
         Route::delete('/booking/delete-price-schedule/{priceSchedule}', [PriceScheduleController::class, 'destroy'])->name('price-schedule.destroy');
-        // price-schedule.create
         Route::get('/booking/create-price-schedule', [PriceScheduleController::class, 'create'])->name('price-schedule.create');
-        // price-schedule.store
         Route::post('/booking/create-price-schedule', [PriceScheduleController::class, 'store'])->name('price-schedule.store');
-        // Venue Promo Management
+
+        // Promo
         Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
-        // Create Promo
         Route::get('/promo/create', [PromoController::class, 'create'])->name('venue.promo.create');
-        // Store Promo
         Route::post('/promo/create', [PromoController::class, 'store'])->name('venue.promo.store');
         Route::delete('/promo/delete/{voucher}', [PromoController::class, 'delete'])->name('venue.promo.delete');
-        // Venue Transaction History
+
+        // Transactions
         Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
     });
 
-
+    /** Admin: Athletes */
     Route::prefix('dashboard/athlete')->group(function () {
         Route::get('/', [AdminAthleteController::class, 'index'])->name('athlete.index');
         Route::get('/create', [AdminAthleteController::class, 'create'])->name('athlete.create');
@@ -275,30 +279,28 @@ Route::middleware('auth')->group(function () {
     Route::prefix('athlete')->group(function () {
         // Athlete Dashboard
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-
+    
         // Athlete Sparring - Create Session
         Route::get('/sparring/create', function () {
             return view('dash.athlete.sparring.create');
         })->name('athlete.sparring.create');
-
-
+    
+    
         // Athlete Match History (BARU)
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         // Create Session
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-
+    
         // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-
+    
         // Athlete Match History (BARU)
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
     Route::prefix('dashboard/partner')->group(function () {
-        Route::get('/', function () {
-            return view('dash.admin.partner');
-        })->name('partner.index');
+        Route::get('/', fn() => view('dash.admin.partner'))->name('partner.index');
     });
 });
 
@@ -328,7 +330,7 @@ Route::prefix('company')->group(function () {
     Route::view('/press-media', 'press-media')->name('company.press');
 });
 
-/* ===== Blog (static template – bisa diganti controller/DB nanti) ===== */
+/* ===== Blog (static template) ===== */
 Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');
