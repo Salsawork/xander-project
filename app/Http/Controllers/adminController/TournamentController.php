@@ -12,6 +12,8 @@ use Xoco70\LaravelTournaments\Models\ChampionshipSettings;
 use Xoco70\LaravelTournaments\Models\Competitor;
 use Xoco70\LaravelTournaments\Models\Team;
 use Xoco70\LaravelTournaments\Models\Tournament;
+use App\Models\Event;
+
 
 class TournamentController extends Controller
 {
@@ -41,6 +43,7 @@ class TournamentController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            // Tambahkan validasi lain jika diperlukan
         ]);
 
         $data['user_id'] = auth()->id();
@@ -48,19 +51,40 @@ class TournamentController extends Controller
         $data['dateIni'] = now();
         $data['dateFin'] = now();
 
-        // Create a new tournament
+        // 1️⃣ Buat Tournament
         $tournament = Tournament::create($data);
-        // Create 2 championship
-        for ($i = 1; $i <= 2; $i++) {
-            $tournament->championships()->create([
-                'name' => 'Championship ' . $i,
-                'category_id' => $i,
-            ]);
-        }
 
-        // Redirect to edit page with success message
-        return redirect()->route('tournament.edit', $tournament->slug);
+        // 2️⃣ Buat Championship (kalau masih diperlukan)
+        $tournament->championships()->create([
+            'name' => $tournament->name . ' Championship',
+            'category_id' => 1,
+        ]);
+
+        // 3️⃣ Buat Event otomatis dari Tournament
+        Event::create([
+            'tournament_id' => $tournament->id,
+            'name' => $tournament->name,
+            'image_url' => 'default.jpg', // nanti bisa diganti dari input
+            'start_date' => now(),
+            'end_date' => now()->addDays(7),
+            'location' => 'Belum ditentukan',
+            'game_types' => 'Unknown',
+            'description' => 'Event otomatis dari tournament: ' . $tournament->name,
+            'total_prize_money' => 0,
+            'champion_prize' => 0,
+            'runner_up_prize' => 0,
+            'third_place_prize' => 0,
+            'match_style' => 'Unknown',
+            'finals_format' => 'Single Elimination',
+            'divisions' => 'General',
+            'social_media_handle' => '@officialtournament',
+            'status' => 'Upcoming',
+        ]);
+
+        return redirect()->route('tournament.edit', $tournament->slug)
+            ->with('success', 'Tournament dan Event berhasil dibuat!');
     }
+
 
     public function edit(Tournament $tournament)
     {

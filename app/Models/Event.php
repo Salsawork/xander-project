@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Xoco70\LaravelTournaments\Models\Tournament;
+
 
 class Event extends Model
 {
@@ -60,5 +62,10 @@ class Event extends Model
     public function getSlugAttribute()
     {
         return str_replace(' ', '-', strtolower($this->name));
+    }
+
+    public function tournament()
+    {
+        return $this->belongsTo(Tournament::class, 'tournament_id');
     }
 }

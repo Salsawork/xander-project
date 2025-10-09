@@ -4,6 +4,7 @@ namespace Xoco70\LaravelTournaments\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Event;
 
 /**
  * @property mixed type
@@ -280,5 +281,10 @@ class Tournament extends Model
             ->categories()
             ->where('isTeam', '1')
             ->count();
+    }
+
+    public function event()
+    {
+        return $this->hasOne(Event::class, 'tournament_id');
     }
 }
