@@ -6,18 +6,18 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
     /**
-     * Mass assignable fields — sesuaikan dengan kolom yang ADA di tabel.
+     * Kolom yang bisa diisi mass assignment.
      */
     protected $fillable = [
         'name',
         'email',
+        'photo_profile',
         'password',
         'roles',
         'phone',
@@ -36,7 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Attribute casts.
+     * Cast attributes.
      */
     protected function casts(): array
     {
@@ -46,7 +46,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * ===== Relationships (biarkan seperti sebelumnya jika dipakai) =====
+     * ===== Relationships (opsional, sesuai kebutuhan) =====
      */
     public function athleteDetail()
     {
@@ -70,27 +70,19 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function favoriteVenues()
     {
-        return $this->belongsToMany(Venue::class, 'favorites', 'user_id', 'venue_id')
-            ->withTimestamps();
+        return $this->belongsToMany(Venue::class, 'favorites', 'user_id', 'venue_id')->withTimestamps();
     }
 
     public function favorites()
     {
         return $this->hasMany(Favorite::class);
-    }    /**
-     * ====== Accessor: avatar_url (tanpa kolom DB) ======
-     * Kita cari file di storage: public/avatars/{id}.(jpg|jpeg|png|webp)
+    }
+
+    /**
+     * Accessor: avatar_url dari kolom photo_profile (URL penuh).
      */
     public function getAvatarUrlAttribute(): ?string
     {
-        $id = $this->getKey();
-        $exts = ['jpg', 'jpeg', 'png', 'webp'];
-        foreach ($exts as $ext) {
-            $path = "avatars/{$id}.{$ext}";
-            if (Storage::disk('public')->exists($path)) {
-                return Storage::url($path);
-            }
-        }
-        return null;
+        return !empty($this->photo_profile) ? asset($this->photo_profile) : null;
     }
 }

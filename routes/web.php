@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 /**
  * Controllers
  */
-
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -46,7 +45,6 @@ use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
-use App\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -91,29 +89,13 @@ Route::prefix('venues')->group(function () {
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
 });
 
-/** Events
- *  - /events            -> landing/hero (index)
- *  - /events/all        -> katalog (list/show + filter)
- *  - /event/{id}/{slug} -> detail
- */
+/** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/events/all', [EventController::class, 'list'])->name('events.list');
-
-Route::get('/event/{event}/{name?}', [EventController::class, 'show'])
-    ->where('event', '[0-9]+')
-    ->name('events.show');
-
-/* Kompat lama: /event/{event:name} -> redirect ke kanonik ID */
-Route::get('/event/{event:name}', [EventController::class, 'showByName'])
-    ->name('events.show.byname');
-
-/* Bracket */
-Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])
-    ->where('event', '[0-9]+')
-    ->name('events.bracket');
-
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
-    ->name('events.bracket.byname');
+Route::get('/event/{event}/{name?}', [EventController::class, 'show'])->where('event', '[0-9]+')->name('events.show');
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])->name('events.show.byname');
+Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])->where('event', '[0-9]+')->name('events.bracket');
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
@@ -282,23 +264,21 @@ Route::middleware('auth')->group(function () {
     Route::prefix('athlete')->group(function () {
         // Athlete Dashboard
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-    
+
         // Athlete Sparring - Create Session
         Route::get('/sparring/create', function () {
             return view('dash.athlete.sparring.create');
         })->name('athlete.sparring.create');
-    
-    
-        // Athlete Match History (BARU)
+
+        // Athlete Match History
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
-        // Create Session
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-    
+
         // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-    
-        // Athlete Match History (BARU)
+
+        // Athlete Match Detail
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
@@ -341,16 +321,3 @@ Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');
 });
-
-
-// Detail order & booking
-Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
-Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
-Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
-
-// Rajaongkir
-Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
-Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
-Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
-Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
-Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
