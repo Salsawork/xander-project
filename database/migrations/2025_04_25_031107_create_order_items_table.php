@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('tax', 10, 0)->default(0);
             $table->decimal('subtotal', 10, 0);
             $table->decimal('discount', 10, 0)->default(0);
+            $table->text('address')->nullable();
             $table->timestamps();
 
             $table->foreign('order_id')
