@@ -8,15 +8,6 @@
     $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
     $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
-
-    // Dummy Related Products
-    $dummyRelatedProducts = [
-        ['id'=>1,'name'=>'CUELEES TU + CT + 12 MAX','pricing'=>6700000,'image'=>'https://images.unsplash.com/photo-1629077832449-2d4c7e95f677?w=800&h=800&fit=crop'],
-        ['id'=>2,'name'=>'MEZZ PBOI','pricing'=>2250000,'image'=>'https://images.unsplash.com/photo-1611068813580-7cbc98d72def?w=800&h=800&fit=crop'],
-        ['id'=>3,'name'=>'AIR RUSH GOLD SW','pricing'=>4750000,'image'=>'https://images.unsplash.com/photo-1604881991720-f91add269bed?w=800&h=800&fit=crop'],
-        ['id'=>4,'name'=>'EXCEED 16 N/LE + HP2','pricing'=>3500000,'image'=>'https://via.placeholder.com/800x800/666666/FFFFFF?text=No+Image'],
-        ['id'=>5,'name'=>'EXCEED 16 N/LE + HP2','pricing'=>3500000,'image'=>'https://via.placeholder.com/800x800/666666/FFFFFF?text=No+Image'],
-    ];
 @endphp
 
 @push('styles')
@@ -44,25 +35,14 @@
   .no-scrollbar::-webkit-scrollbar { display:none; }
   .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
 
-  .rel-track{
-    overflow-x:auto;
-    scroll-snap-type:x mandatory;
-    -webkit-overflow-scrolling:touch;
-    padding: 0 8px 2px 8px;
-  }
+  .rel-track{ overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding: 0 8px 2px 8px; }
   .rel-row{ display:flex; gap:16px; }
-  .rel-card{
-    flex:0 0 76vw;
-    max-width:76vw;
-    scroll-snap-align:start;
-  }
+  .rel-card{ flex:0 0 76vw; max-width:76vw; scroll-snap-align:start; }
 
   .rel-nav{
-    display:none;
-    position:absolute; top:50%; transform:translateY(-50%);
-    width:42px; height:42px; border-radius:9999px;
-    background:#1f2937; color:#e5e7eb; border:1px solid rgba(255,255,255,.15);
-    align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(0,0,0,.35);
+    display:none; position:absolute; top:50%; transform:translateY(-50%);
+    width:42px; height:42px; border-radius:9999px; background:#1f2937; color:#e5e7eb;
+    border:1px solid rgba(255,255,255,.15); align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(0,0,0,.35);
   }
   .rel-nav:hover{ background:#374151; }
   .rel-nav.left{ left:-10px; }
@@ -101,18 +81,32 @@
       </nav>
 
       @php
+        // Gambar utama: pakai index 0 dari kolom images (array/json), fallback placeholder
         $mainImagePath = 'https://placehold.co/400x600?text=No+Image';
-        if (!empty($detail->images) && is_array($detail->images) && !empty($detail->images[0])) {
-            $img = $detail->images[0];
-            $mainImagePath = (!str_starts_with($img,'http://') && !str_starts_with($img,'https://') && !str_starts_with($img,'/storage/'))
-                ? asset('storage/uploads/'.$img)
-                : $img;
+        $images = [];
+        if (is_array($detail->images)) {
+            $images = $detail->images;
+        } elseif (is_string($detail->images) && trim($detail->images) !== '') {
+            $decoded = json_decode($detail->images, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $images = $decoded;
+            }
         }
+        if (!empty($images) && !empty($images[0])) {
+            $img0 = $images[0];
+            $mainImagePath = preg_match('/^https?:\/\//i', $img0) ? $img0 : asset(ltrim($img0,'/'));
+        }
+
+        // Harga final & diskon (pakai variabel dari Controller)
+        $hasDisc  = $detailHasDiscount ?? false;
+        $discPct  = (float)($detailDiscountPercent ?? 0);
+        $final    = (int)($detailFinalPrice ?? $detail->pricing);
       @endphp
 
       <img id="mainImage" alt="{{ $detail->name }}"
            class="rounded-md w-full max-w-[320px] object-cover bg-neutral-800"
-           height="400" width="320" src="{{ $mainImagePath }}" loading="eager" decoding="async" />
+           height="400" width="320" src="{{ $mainImagePath }}" loading="eager" decoding="async"
+           onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image';" />
 
       <div class="flex items-center justify-between w-full max-w-[320px]">
         <button aria-label="Previous image" class="text-gray-400 hover:text-white focus:outline-none">
@@ -120,25 +114,21 @@
         </button>
 
         <div class="flex gap-2">
-          @if (!empty($detail->images) && is_array($detail->images))
-            @foreach ($detail->images as $index => $image)
-              @php
-                $thumbImagePath = 'https://placehold.co/400x600?text=No+Image';
-                if (!empty($image)) {
-                    $thumbImagePath = (!str_starts_with($image,'http://') && !str_starts_with($image,'https://') && !str_starts_with($image,'/storage/'))
-                        ? asset('storage/uploads/'.$image)
-                        : $image;
-                }
-              @endphp
-              <img
-                alt="{{ $detail->name.' #'.$index }}"
-                class="rounded-md w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] object-cover cursor-pointer border-2 {{ $index==0 ? 'border-blue-600' : 'border-gray-600' }} thumbnail-image bg-neutral-800"
-                height="60" width="60" src="{{ $thumbImagePath }}" loading="lazy" decoding="async"
-                onerror="this.src='https://placehold.co/400x600?text=No+Image'"
-                onclick="changeMainImage('{{ $thumbImagePath }}', this)"
-              />
-            @endforeach
-          @endif
+          @foreach ($images as $index => $image)
+            @php
+              $thumbImagePath = 'https://placehold.co/400x600?text=No+Image';
+              if (!empty($image)) {
+                  $thumbImagePath = preg_match('/^https?:\/\//i', $image) ? $image : asset(ltrim($image,'/'));
+              }
+            @endphp
+            <img
+              alt="{{ $detail->name.' #'.$index }}"
+              class="rounded-md w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] object-cover cursor-pointer border-2 {{ $index==0 ? 'border-blue-600' : 'border-gray-600' }} thumbnail-image bg-neutral-800"
+              height="60" width="60" src="{{ $thumbImagePath }}" loading="lazy" decoding="async"
+              onerror="this.src='https://placehold.co/400x600?text=No+Image'"
+              onclick="changeMainImage('{{ $thumbImagePath }}', this)"
+            />
+          @endforeach
         </div>
 
         <button aria-label="Next image" class="text-gray-400 hover:text-white focus:outline-none">
@@ -151,9 +141,27 @@
       <h1 class="text-white font-extrabold text-xl md:text-2xl leading-tight">
         {{ $detail->name }}
       </h1>
-      <p class="text-gray-300 mt-1 mb-6 text-sm md:text-base">
-        Rp. {{ number_format($detail->pricing, 0, ',', '.') }},-
-      </p>
+
+      {{-- ====== HARGA (tampilkan final, coret harga asli bila diskon) ====== --}}
+      <div class="mt-2 mb-6">
+        @if ($hasDisc)
+          <div class="inline-flex items-center gap-2">
+            <span class="text-gray-400 text-sm line-through">
+              Rp. {{ number_format($detail->pricing, 0, ',', '.') }}
+            </span>
+            <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[11px] font-bold px-2 py-0.5">
+              -{{ number_format($discPct, 0) }}%
+            </span>
+          </div>
+          <div class="text-white font-extrabold text-2xl leading-tight mt-1">
+            Rp. {{ number_format($final, 0, ',', '.') }},-
+          </div>
+        @else
+          <p class="text-gray-300 text-xl md:text-2xl">
+            Rp. {{ number_format($detail->pricing, 0, ',', '.') }},-
+          </p>
+        @endif
+      </div>
 
       <hr class="border-gray-700 mb-6" />
 
@@ -186,7 +194,7 @@
     </section>
   </div>
 
-  <!-- Related Products -->
+  <!-- Related Products (DB, harga final juga) -->
   <section class="related-section mb-20">
     <div class="flex justify-between items-center mb-5 md:mb-8">
       <h2 class="text-white font-bold text-xl sm:text-2xl">Related products</h2>
@@ -203,17 +211,63 @@
 
       <div id="relTrack" class="rel-track no-scrollbar">
         <div class="rel-row">
-          @foreach ($dummyRelatedProducts as $product)
-            <a href="#" class="rel-card product-card block">
+          @forelse ($relatedProducts as $product)
+            @php
+              $slug = Str::slug($product->name);
+
+              // gambar pertama
+              $rImages = [];
+              if (is_array($product->images)) {
+                  $rImages = $product->images;
+              } elseif (is_string($product->images) && trim($product->images) !== '') {
+                  $dec = json_decode($product->images, true);
+                  if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) $rImages = $dec;
+              }
+              $img  = 'https://placehold.co/800x800?text=No+Image';
+              if (!empty($rImages) && !empty($rImages[0])) {
+                  $img0 = $rImages[0];
+                  $img  = preg_match('/^https?:\/\//i', $img0) ? $img0 : asset(ltrim($img0,'/'));
+              }
+
+              // harga final related
+              $map   = $relatedPriceMap[$product->id] ?? ['has_discount'=>false, 'discount_percent'=>0, 'final_price'=>$product->pricing];
+              $rHas  = $map['has_discount'];
+              $rPct  = (float) $map['discount_percent'];
+              $rFin  = (int) $map['final_price'];
+            @endphp
+
+            <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}"
+               class="rel-card product-card block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
               <div class="product-image-wrapper">
-                <img src="{{ $product['image'] }}" alt="{{ $product['name'] }}" loading="lazy" />
+                <img src="{{ $img }}" alt="{{ $product->name }}" loading="lazy"
+                     onerror="this.onerror=null;this.src='https://placehold.co/800x800?text=No+Image';" />
               </div>
               <div class="product-info">
-                <h3 class="product-title" title="{{ $product['name'] }}">{{ $product['name'] }}</h3>
-                <p class="product-price">Rp. {{ number_format($product['pricing'], 0, ',', '.') }},-</p>
+                <h3 class="product-title" title="{{ $product->name }}">{{ $product->name }}</h3>
+
+                {{-- Harga related: tampilkan coret & badge jika diskon --}}
+                @if ($rHas)
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[12px] text-gray-400 line-through">
+                      Rp. {{ number_format($product->pricing, 0, ',', '.') }}
+                    </span>
+                    <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5">
+                      -{{ number_format($rPct, 0) }}%
+                    </span>
+                  </div>
+                  <p class="product-price text-white font-semibold">
+                    Rp. {{ number_format($rFin, 0, ',', '.') }},-
+                  </p>
+                @else
+                  <p class="product-price">
+                    Rp. {{ number_format($product->pricing, 0, ',', '.') }},-
+                  </p>
+                @endif
               </div>
             </a>
-          @endforeach
+          @empty
+            <div class="text-gray-400 text-sm">No related products.</div>
+          @endforelse
         </div>
       </div>
     </div>
@@ -260,7 +314,6 @@
       Swal.close();
 
       if (res.status === 401) {
-        // 🟥 User belum login
         Swal.fire({
           title: 'Belum Login!',
           text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
@@ -269,9 +322,7 @@
           confirmButtonColor: '#3085d6',
           background: '#1E1E1F',
           color: '#FFFFFF'
-        }).then(() => {
-          window.location.href = '/login'; // arahkan ke halaman login
-        });
+        }).then(() => { window.location.href = '/login'; });
         return;
       }
 
@@ -284,16 +335,9 @@
         Swal.fire({ title: 'Gagal!', text: data.message || 'Terjadi kesalahan, coba lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
       }
     })
-    .catch(err => {
-      Swal.close(); // tutup loading
-      Swal.fire({
-        title: 'Error!',
-        text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
-        icon: 'error',
-        confirmButtonColor: '#3085d6',
-        background: '#1E1E1F',
-        color: '#FFFFFF'
-      });
+    .catch(() => {
+      Swal.close();
+      Swal.fire({ title: 'Error!', text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
     });
 
   });
