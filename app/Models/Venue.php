@@ -61,4 +61,10 @@ class Venue extends Model
     {
         return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
     }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
 }

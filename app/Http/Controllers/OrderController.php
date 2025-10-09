@@ -41,7 +41,7 @@ class OrderController extends Controller
         // Logging untuk debugging
         Log::info('Checkout page accessed');
         $carts = $venues = $sparrings = [];
-        $total = $shipping = 0;
+        $total = $shipping = $tax = 0;
 
         $selectedItems = (array) $request->input('selected_items', []);
 
@@ -50,7 +50,9 @@ class OrderController extends Controller
             $cartData = json_decode(Cookie::get('cartProducts'), true) ?? [];
             $carts = array_values(array_filter($cartData, fn($cart) => in_array((string)$cart['id'], $selectedItems)));
             foreach ($carts as $c) {
-                $total += (int) $c['price'];
+                $price = (int) $c['price'];
+                $total += $price;
+                $tax += $price * 0.1; 
             }
         }
 
@@ -59,7 +61,8 @@ class OrderController extends Controller
             $venueData = json_decode(Cookie::get('cartVenues'), true) ?? [];
             $venues = array_values(array_filter($venueData, fn($venue) => in_array("venue-{$venue['id']}", $selectedItems)));
             foreach ($venues as $v) {
-                $total += (int) $v['price'];
+                $price = (int) $v['price'];
+                $total += $price;
             }
         }
 
@@ -68,20 +71,17 @@ class OrderController extends Controller
             $sparringData = json_decode(Cookie::get('cartSparrings'), true) ?? [];
             $sparrings = array_values(array_filter($sparringData, fn($sparring) => in_array("sparring-{$sparring['schedule_id']}", $selectedItems)));
             foreach ($sparrings as $s) {
-                $total += (int) $s['price'];
+                $price = (int) $s['price'];
+                $total += $price;
             }
         }
 
-        $tax = $total * 0.1;
         $grandTotal = $total + $shipping + $tax;
 
         $user = $request->user();
         $banks = Bank::all();
         return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user', 'banks'));
     }
-
-
-
 
     /**
      * Show the form for creating a new resource.
@@ -102,16 +102,19 @@ class OrderController extends Controller
             'email'          => 'required|email',
             'phone'          => 'required|string|max:20',
             'payment_method' => 'required|in:transfer_manual',
-            'bank_id'       => 'required|exists:mst_bank,id_bank',
-            'no_rekening'   => 'required|string|max:50',
-            'atas_nama'     => 'required|string|max:255',
-            'file'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-
+            'shipping'       => 'nullable|numeric|min:0',
+            'tax'            => 'nullable|numeric|min:0',
+            'province_name'       => 'nullable|string|max:255',
+            'city_name'           => 'nullable|string|max:255',
+            'district_name'       => 'nullable|string|max:255',
+            'subdistrict_name'       => 'nullable|string|max:255',
+            
             // products
             'products'        => 'array',
             'products.*.id'   => 'required|exists:products,id',
             'products.*.qty'  => 'required|integer|min:1',
 
+            
             // sparrings
             'sparrings'                => 'array',
             'sparrings.*.athlete_id'   => 'required|exists:users,id',
@@ -137,14 +140,6 @@ class OrderController extends Controller
         try {
             $user = auth()->user();
 
-            // Upload file bukti pembayaran
-            $path = null;
-            if ($request->hasFile('file')) {
-                $filename = time() . '_' . $request->file('file')->getClientOriginalName();
-                $path = $request->file('file')->storeAs('payments', $filename, 'public');
-            }
-
-
             // Generate order number
             $orderNumber = 'ORD-' . strtoupper(uniqid());
 
@@ -152,15 +147,11 @@ class OrderController extends Controller
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
-                'bank_id'         => $request->bank_id,
                 'order_number'    => $orderNumber,
-                'total'           => 0, // update setelah item masuk
+                'total'           => 0, // akan diupdate setelah item masuk
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
-                'no_rekening'     => $request->no_rekening,
-                'atas_nama'       => $request->atas_nama,
-                'file'            => $path,
             ]);
 
             $total = 0;
@@ -173,13 +164,24 @@ class OrderController extends Controller
                     $product = Product::findOrFail($item['id']);
                     $qty     = $item['qty'];
                     $price   = $product->pricing;
-                    $subtotal = $qty * $price;
+                    $tax      = $request->tax ?? 0;
+                    $shipping = $request->shipping ?? 0;
+                    $subtotal = $qty * $price + $tax + $shipping;
+                    $address = implode(', ', array_filter([
+                        $request->input('subdistrict_name'),
+                        $request->input('district_name'),
+                        $request->input('city_name'),
+                        $request->input('province_name'),
+                    ]));
 
                     $order->products()->attach($product->id, [
                         'quantity' => $qty,
                         'price'    => $price,
                         'subtotal' => $subtotal,
                         'discount' => 0,
+                        'tax'      => $tax,
+                        'shipping' => $shipping,
+                        'address'  => $address,
                     ]);
 
                     $total += $subtotal;
@@ -195,7 +197,7 @@ class OrderController extends Controller
 
                     // Cara yang lebih aman untuk mendapatkan table id
                     if (isset($venue['table']) && isset($venue['id'])) {
-                        $tableId = DB::table('tables')  
+                        $tableId = DB::table('tables')
                             ->where('table_number', $venue['table'])
                             ->where('venue_id', $venue['id'])
                             ->value('id');
@@ -256,6 +258,14 @@ class OrderController extends Controller
                 }
             }
 
+            if ($request->filled('shipping')) {
+                $total += $request->shipping;
+            }
+
+            if ($request->filled('tax')) {
+                $total += $request->tax;
+            }
+
             // Update total order
             $order->update(['total' => $total]);
 
@@ -265,7 +275,7 @@ class OrderController extends Controller
                 'status'       => 'success',
                 'message'      => 'Order berhasil dibuat!',
                 'order_number' => $order->order_number,
-                'data'         => $order->load('products', 'orderSparrings', 'bookings'),
+                'data'         => $order->load('user', 'products', 'orderSparrings', 'bookings'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -281,7 +291,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Handle notification from Midtrans
      */
@@ -392,25 +402,33 @@ class OrderController extends Controller
         ]);
 
         $order = Order::where('order_number', $request->order_number)->firstOrFail();
+        $bank = Bank::all();
 
-        return view('public.checkout.payment', compact('order'));
+        return view('public.checkout.payment', compact('order', 'bank'));
     }
 
 
     public function updatePayment(Request $request, Order $order)
     {
         $data = $request->validate([
-            'file' => 'required|file|mimes:jpg,jpeg,png,pdf', // Maksimal 2MB
+            'bank_id' => 'required|integer',
+            'no_rekening' => 'required|string',
+            'atas_nama' => 'required|string',
+            'file' => 'required|file|mimes:jpg,jpeg,png,pdf',
         ]);
 
         // Save file
         $filePath = $data['file']->store('payment_proofs', 'public');
 
         // Update order with file path
+        $order->bank_id = $data['bank_id'];
+        $order->no_rekening = $data['no_rekening'];
+        $order->atas_nama = $data['atas_nama'];
         $order->file = $filePath;
+        $order->payment_status = 'processing';
         $order->save();
 
-        return back()->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
+        return redirect()->route('checkout.success', ['order_id' => $order->id])->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
     }
 
     /**
@@ -431,9 +449,46 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function showDetailOrder(Order $order)
     {
-        //
+        if ($order->items()->exists()) {
+            $items = $order->items()->with('product')->get();
+            $products = $items->pluck('product')->unique();
+            
+            $hasBooking = $order->bookings()->exists();
+            $hasSparring = $order->orderSparrings()->exists();
+            return view('public.order.item', compact('order', 'items', 'products', 'hasBooking', 'hasSparring'));
+        }
+
+        if ($order->orderSparrings()->exists()) {
+            $sparrings = $order->orderSparrings()->get();
+            return view('public.order.sparring', compact('order', 'sparrings'));
+        }
+
+        if ($order->bookings()->exists()) {
+            $bookings = $order->bookings()->with(['venue', 'table'])->get();
+            $venues = $bookings->pluck('venue')->unique();
+            $tables = $bookings->pluck('table')->unique();
+            return view('public.order.booking', compact('order', 'bookings', 'venues', 'tables'));
+        }
+    }
+
+    public function showDetailBooking(Order $order)
+    {
+        if ($order->bookings()->exists()) {
+            $bookings = $order->bookings()->with(['venue', 'table'])->get();
+            $venues = $bookings->pluck('venue')->unique();
+            $tables = $bookings->pluck('table')->unique();
+            return view('public.order.booking', compact('order', 'bookings', 'venues', 'tables'));
+        }
+    }
+
+    public function showDetailSparring(Order $order)
+    {
+        if ($order->orderSparrings()->exists()) {
+            $sparrings = $order->orderSparrings()->get();
+            return view('public.order.sparring', compact('order', 'sparrings'));
+        }
     }
 
     /**

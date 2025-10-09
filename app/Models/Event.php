@@ -36,7 +36,6 @@ class Event extends Model
         'third_place_prize' => 'decimal:2',
     ];
 
-    // Scope untuk filter status
     public function scopeUpcoming($query)
     {
         return $query->where('status', 'Upcoming');
@@ -52,7 +51,7 @@ class Event extends Model
         return $query->where('status', 'Ended');
     }
 
-    // Route key pakai kolom 'name' (pastikan unik)
+    // Binding route default pakai kolom name (untuk /event/{event:name})
     public function getRouteKeyName()
     {
         return 'name';

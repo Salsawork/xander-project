@@ -7,6 +7,23 @@ use App\Models\Subscriber;
 
 class SubscriberController extends Controller
 {
+    
+
+    public function index(Request $request)
+    {
+        $query = Subscriber::query();
+
+        // Jika ada parameter search, filter berdasarkan email
+        if ($request->has('search') && $request->search != '') {
+            $query->where('email', 'like', '%' . $request->search . '%');
+        }
+
+        // Urutkan data terbaru
+        $subscribers = $query->orderBy('created_at', 'desc')->get();
+
+        return view('dash.admin.subscriber', compact('subscribers'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

@@ -102,6 +102,8 @@
                 <form id="checkout-form" enctype="multipart/form-data" method="POST">
                     @csrf
 
+                    <input type="hidden" name="tax" id="tax" value="{{ $tax }}">
+
                     <!-- Hidden input untuk produk -->
                     @foreach($carts as $index => $cart)
                     <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
@@ -122,7 +124,7 @@
                     <input type="hidden" name="venues[0][id]" value="{{ $venue['id'] }}">
                     <input type="hidden" name="venues[0][price]" value="{{ $venue['price'] }}">
                     <input type="hidden" name="venues[0][date]" value="{{ $venue['date'] }}">
-                    <input type="hidden" name="venues[0][table]" value="{{ $venue['table'] }}"> 
+                    <input type="hidden" name="venues[0][table]" value="{{ $venue['table'] }}">
                     <input type="hidden" name="venues[0][start]" value="{{ $venue['start'] }}">
                     <input type="hidden" name="venues[0][end]" value="{{ $venue['end'] }}">
                     @endif
@@ -155,43 +157,64 @@
                         </div>
                     </div>
 
+                    <!-- Shipping Information -->
+                    @if(count($carts) > 0)
+                    <div class="mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="province" class="block font-semibold mb-1">Province</label>
+                                <select id="province" class="bg-neutral-800 text-white rounded p-2 w-full border">
+                                    <option value="">Select Province</option>
+                                </select>
+                                <input type="hidden" name="province_name" id="province_name">
+                            </div>
+                            <div>
+                                <label for="city" class="block font-semibold mb-1">City</label>
+                                <select name="city" id="city" class="w-full border rounded p-2 bg-neutral-800 text-white">
+                                    <option value="" disabled selected>Select City</option>
+                                </select>
+                                <input type="hidden" name="city_name" id="city_name">
+                            </div>
+                            <div>
+                                <label for="district" class="block font-semibold mb-1">District</label>
+                                <select id="district" class="bg-neutral-800 text-white rounded p-2 w-full border">
+                                    <option value="">Select District</option>
+                                </select>
+                                <input type="hidden" name="district_name" id="district_name">
+                            </div>
+                            <div>
+                                <label for="subdistrict" class="block font-semibold mb-1">Subdistrict</label>
+                                <select name="subdistrict" id="subdistrict" class="w-full border rounded p-2 bg-neutral-800 text-white">
+                                    <option value="" disabled selected>Select Subdistrict</option>
+                                </select>
+                                <input type="hidden" name="subdistrict_name" id="subdistrict_name">
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="courier" class="block font-semibold mb-1">Courier</label>
+                                <select name="courier" id="courier" class="w-full border rounded p-2 bg-neutral-800 text-white">
+                                    <option value="">Select Courier</option>
+                                    <option value="jne">JNE</option>
+                                    <option value="sicepat">SiCepat</option>
+                                    <option value="jnt">JNT</option>
+                                    <option value="anteraja">AnterAja</option>
+                                    <option value="pos">POS</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Hidden input untuk cost -->
+                        <input type="hidden" name="weight" id="weight" value="{{ $cart['weight'] }}">
+                        <input type="hidden" name="shipping" id="shipping" value="0">
+                    </div>
+                    @endif
+
                     <!-- Payment Method -->
                     <div class="mb-6">
                         <label class="block font-semibold mb-1">Payment Method</label>
                         <select name="payment_method" class="w-full border rounded p-2" required>
                             <option value="transfer_manual">Bank Transfer (Manual)</option>
                         </select>
-                    </div>
-
-                    <!-- Bank Selection -->
-                    <div class="mb-6">
-                        <label for="bank_id" class="block font-semibold mb-1">Select Bank</label>
-                        <select name="bank_id" id="bank_id" class="w-full border rounded p-2" required>
-                            <option value="">-- Choose Bank --</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id_bank }}">{{ $bank->nama_bank }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Account Number -->
-                    <div class="mb-6">
-                        <label for="no_rekening" class="block font-semibold mb-1">Account Number</label>
-                        <input type="text" name="no_rekening" id="no_rekening" class="w-full border rounded p-2"
-                            value="{{ old('no_rekening') }}" required>
-                    </div>
-
-                    <!-- Account Holder -->
-                    <div class="mb-6">
-                        <label for="atas_nama" class="block font-semibold mb-1">Account Holder Name</label>
-                        <input type="text" name="atas_nama" id="atas_nama" class="w-full border rounded p-2"
-                            value="{{ old('atas_nama') }}" required>
-                    </div>
-
-                    <!-- File -->
-                    <div class="mb-6">
-                        <label class="block font-semibold mb-1">File</label>
-                        <input type="file" name="file" class="w-full border rounded p-2" required>
                     </div>
 
                     <!-- Place Order Button -->
@@ -210,10 +233,11 @@
                 <div class="bg-[#2a2a2a] rounded-2xl ring-1 ring-white/10 shadow-xl p-6">
                     <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
                     <p>Subtotal: Rp {{ number_format($total, 0, ',', '.') }}</p>
-                    <p>Shipping: Rp {{ number_format($shipping, 0, ',', '.') }}</p>
+                    <p>Shipping: <span class="shipping-value">Rp {{ number_format($shipping, 0, ',', '.') }}</span></p>
                     <p>Tax: Rp {{ number_format($tax, 0, ',', '.') }}</p>
-                    <p class="font-bold mt-2">Grand Total: Rp {{ number_format($grandTotal, 0, ',', '.') }}</p>
+                    <p class="font-bold mt-2">Grand Total: <span class="grand-total">Rp {{ number_format($grandTotal, 0, ',', '.') }}</span></p>
                 </div>
+
 
                 <!-- Return Policy -->
                 <div class="bg-[#2D2D2D] rounded-lg p-6">
@@ -226,46 +250,241 @@
         </div>
     </div>
 </div>
+@endsection
 
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    document.getElementById('pay-button').addEventListener('click', async function() {
-        const btn = this;
-        btn.disabled = true;
-        btn.textContent = 'Processing...';
+    document.addEventListener("DOMContentLoaded", async () => {
+        const provinceSelect = document.getElementById('province');
+        const destinationSelect = document.getElementById('city');
+        const districtSelect = document.getElementById('district');
+        const subdistrictSelect = document.getElementById('subdistrict');
+        const checkShippingBtn = document.getElementById('check-shipping');
+        const resultDiv = document.getElementById('shipping-result');
+        const payButton = document.getElementById('pay-button');
+        const weightInput = document.getElementById('weight');
+        const courierSelect = document.getElementById('courier');
 
-        const form = document.getElementById('checkout-form');
-        const formData = new FormData(form);
+        const hasProduct = {{count($carts) > 0 ? 'true' : 'false'}};
 
-        try {
-            const res = await fetch('{{ route("checkout.store") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: formData
+        if (hasProduct) {
+            try {
+                const res = await fetch('{{ route("rajaongkir.provinces") }}');
+                const provinces = await res.json();
+                provinceSelect.innerHTML = '<option value="">Select Province</option>';
+                provinces.forEach(prov => {
+                    const opt = document.createElement('option');
+                    opt.value = prov.id;
+                    opt.setAttribute('data-province', prov.name);
+                    opt.textContent = prov.name;
+                    provinceSelect.appendChild(opt);
+                });
+            } catch (error) {
+                console.error('Gagal memuat provinsi:', error);
+                provinceSelect.innerHTML = '<option value="">Failed to load provinces</option>';
+            }
+
+            provinceSelect.addEventListener('change', async () => {
+                const provinceId = provinceSelect.value;
+                const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.getAttribute('data-province') || '';
+
+                document.getElementById('province_name').value = provinceName;
+
+                if (!provinceId) {
+                    destinationSelect.innerHTML = '<option value="">Select province first</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.cities") }}?province=${provinceId}`);
+                    const cities = await res.json();
+
+                    destinationSelect.innerHTML = '<option value="">Select City</option>';
+                    cities.forEach(city => {
+                        const opt = document.createElement('option');
+                        opt.value = city.id;
+                        opt.setAttribute('data-city', city.name);
+                        opt.textContent = city.name;
+                        destinationSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat kota:', error);
+                    destinationSelect.innerHTML = '<option value="">Failed to load cities</option>';
+                }
             });
 
-            const data = await res.json();
+            destinationSelect.addEventListener('change', async () => {
+                const cityId = destinationSelect.value;
+                const cityName = destinationSelect.options[destinationSelect.selectedIndex]?.getAttribute('data-city') || '';
 
-            if (res.ok && data.status === 'success') {
-                console.log("Redirecting to payment page with order:", data.order_number);
-                const redirectUrl = '{{ route("checkout.payment") }}?order_number=' + data.order_number;
-                window.location.href = redirectUrl; // ✅ langsung redirect
-            } else {
-                alert(data.message || 'Order failed');
-                btn.disabled = false;
-                btn.textContent = 'Place Order';
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Something went wrong');
-            btn.disabled = false;
-            btn.textContent = 'Place Order';
+                document.getElementById('city_name').value = cityName;
+
+                if (!cityId) {
+                    districtSelect.innerHTML = '<option value="">Select city first</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.districts") }}?city=${cityId}`);
+                    const districts = await res.json();
+
+                    districtSelect.innerHTML = '<option value="">Select district</option>';
+                    districts.forEach(district => {
+                        const opt = document.createElement('option');
+                        opt.value = district.id;
+                        opt.setAttribute('data-district', district.name);
+                        opt.textContent = district.name;
+                        districtSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat distrik:', error);
+                    districtSelect.innerHTML = '<option value="">Failed to load districts</option>';
+                }
+            });
+
+            districtSelect.addEventListener('change', async () => {
+                const districtId = districtSelect.value;
+                const districtName = districtSelect.options[districtSelect.selectedIndex]?.getAttribute('data-district') || '';
+
+                document.getElementById('district_name').value = districtName;
+
+                if (!districtId) {
+                    subdistrictSelect.innerHTML = '<option value="">Select district first</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route("rajaongkir.subdistricts") }}?district=${districtId}`);
+                    const subdistricts = await res.json();
+
+                    subdistrictSelect.innerHTML = '<option value="">Select subdistrict</option>';
+                    subdistricts.forEach(subdistrict => {
+                        const opt = document.createElement('option');
+                        opt.value = subdistrict.id;
+                        opt.setAttribute('data-subdistrict', subdistrict.name);
+                        opt.textContent = subdistrict.name;
+                        subdistrictSelect.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Gagal memuat sub distrik:', error);
+                    subdistrictSelect.innerHTML = '<option value="">Failed to load subdistricts</option>';
+                }
+            });
+
+            subdistrictSelect.addEventListener('change', () => {
+                const subdistrictName = subdistrictSelect.options[subdistrictSelect.selectedIndex]?.getAttribute('data-subdistrict') || '';
+                document.getElementById('subdistrict_name').value = subdistrictName;
+            });
+
+            courierSelect.addEventListener('change', async () => {
+                const courier = courierSelect.value;
+                const districtId = districtSelect.value;
+                const weight = weightInput.value;
+
+                if (!courier || !districtId) return;
+
+                try {
+                    const res = await fetch('{{ route("rajaongkir.cost") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            origin: 1391,
+                            destination: districtId,
+                            weight,
+                            courier
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (data?.status === 'success' && Array.isArray(data.data) && data.data.length) {
+                        const firstService = data.data[0];
+                        const shippingCost = firstService.cost ?? 0;
+
+                        // Update tampilan
+                        const shippingValue = document.querySelector('.shipping-value');
+                        const grandTotalElement = document.querySelector('.grand-total');
+                        const currentSubtotal = {{$total}};
+                        const currentTax = {{$tax}};
+
+                        const grandTotal = currentSubtotal + currentTax + shippingCost;
+
+                        if (shippingValue) shippingValue.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(shippingCost)}`;
+                        if (grandTotalElement) grandTotalElement.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(grandTotal)}`;
+
+                        document.getElementById('shipping').value = shippingCost;
+                    } else {
+                        alert('Tidak ada layanan pengiriman tersedia untuk kurir ini.');
+                    }
+                } catch (error) {
+                    console.error('Gagal menghitung ongkir:', error);
+                    alert('Terjadi kesalahan saat menghitung ongkir.');
+                }
+            });
+        }
+
+        if (payButton) {
+            payButton.addEventListener('click', async function() {
+                if (hasProduct) {
+                    const province = document.getElementById('province').value;
+                    const city = document.getElementById('city').value;
+                    const district = document.getElementById('district').value;
+                    const subdistrict = document.getElementById('subdistrict').value;
+                    const courier = document.getElementById('courier').value;
+                    const shipping = document.getElementById('shipping').value;
+
+                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Shipping Required',
+                            text: 'Please complete shipping information before placing order.',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        return;
+                    }
+                }
+
+                const btn = this;
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+
+                const form = document.getElementById('checkout-form');
+                const formData = new FormData(form);
+
+                try {
+                    const res = await fetch('{{ route("checkout.store") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.status === 'success') {
+                        console.log("Redirecting to payment page with order:", data.order_number);
+                        const redirectUrl = '{{ route("checkout.payment") }}?order_number=' + data.order_number;
+                        window.location.href = redirectUrl; // redirect ke halaman pembayaran
+                    } else {
+                        alert(data.message || 'Order gagal diproses.');
+                        btn.disabled = false;
+                        btn.textContent = 'Place Order';
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Terjadi kesalahan saat memproses order.');
+                    btn.disabled = false;
+                    btn.textContent = 'Place Order';
+                }
+            });
         }
     });
 </script>
 
-
-
-@endsection
+@endpush

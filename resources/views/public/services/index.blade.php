@@ -51,7 +51,7 @@
       <a href="{{ route('index') }}" class="text-sm text-white/70 hover:text-white">← Back to Home</a>
     </div>
 
-    @if(empty($services))
+    @if(empty($services) || (is_iterable($services) && count($services) === 0))
       <p class="text-white/80">Belum ada layanan.</p>
     @else
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -66,19 +66,12 @@
               <h3 class="text-lg font-semibold mb-1">{{ $svc->title }}</h3>
               <p class="text-sm text-white/70 line-clamp-2">{{ $svc->short_description }}</p>
 
-              <div class="mt-4 flex items-center justify-between text-sm text-white/80">
-                <span>
-                  @if(!empty($svc->price_min))
-                    Rp {{ number_format($svc->price_min,0,',','.') }}
-                    @if(!empty($svc->price_max)) - Rp {{ number_format($svc->price_max,0,',','.') }} @endif
-                  @else
-                    Custom
-                  @endif
-                </span>
-                @if(!empty($svc->duration_min))
-                  <span>{{ $svc->duration_min }}–{{ $svc->duration_max ?? $svc->duration_min }} menit</span>
-                @endif
-              </div>
+              {{-- === HAPUS HARGA; TAMPILKAN HANYA DURASI JIKA ADA === --}}
+              @if(!empty($svc->duration_min) || !empty($svc->duration_max))
+                <div class="mt-4 text-sm text-white/80">
+                  {{ $svc->duration_min ?? '' }}@if(!empty($svc->duration_max))–{{ $svc->duration_max }}@endif menit
+                </div>
+              @endif
             </div>
           </a>
         @endforeach
