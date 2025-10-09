@@ -242,8 +242,9 @@
           We will send you our recent news and event right to your inbox
         </p>
 
-        <form class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
-          <input type="email" placeholder="Phone number or Email"
+        <form id="newsletterForm" action="{{ route('subscribe.store') }}" method="POST" class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
+          @csrf
+          <input type="email" name="email" placeholder="Enter your Email"
                  class="h-12 w-full sm:flex-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm
                         px-4 text-white placeholder-white/70 caret-white shadow
                         focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -251,9 +252,24 @@
                   class="h-12 shrink-0 rounded-md bg-gray-600 px-6 font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
             Subscribe
           </button>
-        </form>
+      </form>      
       </div>
     </div>
+    <script>
+      (function(){
+        const form = document.getElementById('newsletterForm');
+        if(!form) return;
+        form.addEventListener('submit', function(){
+          const btn = form.querySelector('[data-submit]');
+          const spinner = form.querySelector('[data-spinner]');
+          if(btn){
+            btn.disabled = true;
+            btn.classList.add('opacity-80','cursor-not-allowed');
+          }
+          if(spinner) spinner.classList.remove('hidden');
+        }, { passive:true });
+      })();
+    </script>
   </section>
 
   <!-- Latest News Section -->
@@ -371,10 +387,11 @@
           <div class="flex-1">
             <div class="h-full rounded-3xl border border-[#3A3A3A] bg-[#2D2D2D]
                         shadow-[0_25px_80px_rgba(0,0,0,.55)] p-6 md:p-8">
-              <form class="grid grid-cols-1 gap-5 h-full">
+              <form action="{{ route('opinion.store') }}" method="POST" class="grid grid-cols-1 gap-5 h-full">
+                @csrf
                 <label class="block">
                   <span class="mb-1 block text-sm text-white/80">Email</span>
-                  <input type="email" placeholder="AlexHunger185@gmail.com"
+                  <input type="email" name="email" placeholder="Enter your email address"
                          class="w-full h-12 rounded-xl border border-[#3A3A3A] bg-[#1E1E1E] px-4
                                 text-white placeholder-white/60
                                 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent" />
@@ -382,7 +399,7 @@
 
                 <label class="block">
                   <span class="mb-1 block text-sm text-white/80">Topic/Subject</span>
-                  <input type="text"
+                  <input type="text" name="subject" placeholder="Enter topic/subject"
                          class="w-full h-12 rounded-xl border border-[#3A3A3A] bg-[#1E1E1E] px-4
                                 text-white placeholder-white/60
                                 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent" />
@@ -390,7 +407,7 @@
 
                 <label class="block flex-1">
                   <span class="mb-1 block text-sm text-white/80">Description</span>
-                  <textarea rows="8"
+                  <textarea rows="8" name="description" placeholder="Enter your description"
                             class="h-full min-h-[200px] w-full rounded-xl border border-[#3A3A3A] bg-[#1E1E1E] px-4 py-3
                                    text-white placeholder-white/60
                                    focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent"></textarea>

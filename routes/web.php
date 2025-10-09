@@ -18,6 +18,7 @@ use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\SubscriberController;
+use App\Http\Controllers\OpinionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
@@ -137,6 +138,7 @@ Route::get('/guideline/category/{category}', [PublicGuidelinesController::class,
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
 
 Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
+Route::post('/opinion', [OpinionController::class, 'store'])->name('opinion.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -302,6 +304,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', fn() => view('dash.admin.partner'))->name('partner.index');
     });
+
+    Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
+    Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
 });
 
 /*
