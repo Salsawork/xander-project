@@ -53,6 +53,7 @@ class Tournament extends Model
         'event_id',
     ];
 
+ 
     protected $dates = ['dateIni', 'dateFin', 'registerDateLimit', 'created_at', 'updated_at', 'deleted_at'];
 
     protected static function boot()
@@ -111,7 +112,7 @@ class Tournament extends Model
      */
     public function championships()
     {
-        return $this->hasMany(Championship::class);
+        return $this->hasMany(Championship::class, 'tournament_id');
     }
 
     /**
@@ -286,6 +287,7 @@ class Tournament extends Model
 
     public function event()
     {
-        return $this->hasOne(Event::class, 'tournament_id');
+        return $this->belongsTo(Event::class, 'event_id', 'id');
     }
+   
 }

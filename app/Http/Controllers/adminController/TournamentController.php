@@ -12,7 +12,7 @@ use Xoco70\LaravelTournaments\Models\Championship;
 use Xoco70\LaravelTournaments\Models\ChampionshipSettings;
 use Xoco70\LaravelTournaments\Models\Competitor;
 use Xoco70\LaravelTournaments\Models\Team;
-use App\Models\Tournament;
+use Xoco70\LaravelTournaments\Models\Tournament;
 use App\Models\Event;
 
 
@@ -20,18 +20,22 @@ class TournamentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Tournament::query();
-
+        $query = Tournament::with('event'); // panggil relasi event
+    
         // Jika ada parameter search, filter berdasarkan nama tournament
-        if ($request->has('search') && $request->search != '') {
+        if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
-
+    
+        // Hanya ambil tournament yang punya event_id
+        $query->whereNotNull('event_id');
+    
         // Urutkan data terbaru
         $tournaments = $query->orderBy('created_at', 'desc')->get();
-
+    
         return view('dash.admin.tournament.index', compact('tournaments'));
     }
+    
 
     public function show(Tournament $tournament)
     {

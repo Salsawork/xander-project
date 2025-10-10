@@ -56,12 +56,13 @@
                                         <td class="px-4 py-3">
                                             <div class="flex items-center justify-end gap-3 text-gray-400">
                                                 <a href="{{ route('events.bracket', [
-                                                    'event' => $tournament->id,
-                                                    'name' => Str::slug($tournament->event->name)
-                                                ]) }}" 
+                                                    'event' => $tournament->event_id,
+                                                    'name' => $tournament->event ? Str::slug($tournament->event->name) : 'no-event'
+                                                ]) }}"
                                                 target="_blank" title="View">
                                                 <i class="fas fa-eye"></i>
                                                 </a>
+
 
                                                 <a href="{{ route('tournament.edit', $tournament->slug) }}"
                                                     class="hover:text-white" title="Edit">
