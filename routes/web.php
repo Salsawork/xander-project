@@ -361,7 +361,7 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
     Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
     Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
     Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
-
+});
     /** Tree Management (Public or Auth, depends on requirement) */
     Route::prefix('championships')->name('tree.')->group(function () {
         Route::get('/', [TreeController::class, 'index'])->name('index');
@@ -382,4 +382,3 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
         Route::view('/{slug}', 'blog.show')->name('blog.show');
     });
 
-});
