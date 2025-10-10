@@ -107,10 +107,23 @@ Route::prefix('venues')->group(function () {
 /** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/events/all', [EventController::class, 'list'])->name('events.list');
-Route::get('/event/{event}/{name?}', [EventController::class, 'show'])->where('event', '[0-9]+')->name('events.show');
-Route::get('/event/{event:name}', [EventController::class, 'showByName'])->name('events.show.byname');
-Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])->where('event', '[0-9]+')->name('events.bracket');
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])->name('events.bracket.byname');
+
+// Event Detail (Canonical with ID)
+Route::get('/event/{event}/{name?}', [EventController::class, 'show'])
+    ->where('event', '[0-9]+')
+    ->name('events.show');
+
+// Event Bracket (Canonical with ID)
+Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])
+    ->where('event', '[0-9]+')
+    ->name('events.bracket');
+
+// Backward Compatibility Routes (redirect ke canonical)
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])
+    ->name('events.show.byname');
+
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
+    ->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
@@ -326,20 +339,21 @@ Route::middleware('auth')->group(function () {
 | Tournament & Tree
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->prefix('dashboard/tournament')->group(function () {
-    Route::get('/', [TournamentController::class, 'index'])->name('tournament.index');
-    Route::get('/{id}/bracket', [EventController::class, 'bracketById'])->name('tournament.bracket');
-    Route::get('/create', [TournamentController::class, 'create'])->name('tournament.create');
-    Route::post('/', [TournamentController::class, 'store'])->name('tournament.store');
-    Route::get('/{tournament}/edit', [TournamentController::class, 'edit'])->name('tournament.edit');
-    Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('tournament.update');
-    Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('tournament.destroy');
-});
+Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->group(function () {
+    // Tournament CRUD
+    Route::get('/', [TournamentController::class, 'index'])->name('index');
+    Route::get('/create', [TournamentController::class, 'create'])->name('create');
+    Route::post('/', [TournamentController::class, 'store'])->name('store');
+    Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
+    Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
+    Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
 
-/** Tree (Public) */
-Route::get('/championships', [TreeController::class, 'index'])->name('tree.index');
-Route::post('/championships/{championship}/trees', [TreeController::class, 'store'])->name('tree.store');
-Route::put('/championships/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
+/** Tree Management (Public or Auth, depends on requirement) */
+Route::prefix('championships')->name('tree.')->group(function () {
+    Route::get('/', [TreeController::class, 'index'])->name('index');
+    Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
+    Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
+});
 
 /* Company pages */
 Route::prefix('company')->group(function () {
