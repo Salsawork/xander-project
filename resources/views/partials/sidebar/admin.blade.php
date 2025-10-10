@@ -107,6 +107,16 @@
                 </a>
             </li>
             <li>
+                <a href="{{ route('admin.event.index') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('admin.event.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Event</span>
+                    @if(request()->routeIs('admin.event.index'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
                 <a href="{{ route('tournament.index') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">

@@ -142,4 +142,6 @@ class EventController extends Controller
             'name'  => Str::slug($event->name),
         ], 301);
     }
+
+
 }

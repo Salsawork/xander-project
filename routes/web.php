@@ -22,6 +22,10 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ShippingController;
+
+// Event Admin
+use App\Http\Controllers\adminController\EventController as AdminEventController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -321,6 +325,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
     Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
     Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost'); 
+
+    Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
+        Route::get('/', [AdminEventController::class, 'index'])->name('index');
+        Route::get('/create', [AdminEventController::class, 'create'])->name('create');
+        Route::post('/', [AdminEventController::class, 'store'])->name('store');
+        Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
+        Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
+        Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
+        Route::get('/{event}', [AdminEventController::class, 'show'])->name('show');
+    });
 /*
 |--------------------------------------------------------------------------
 | Tournament & Tree
