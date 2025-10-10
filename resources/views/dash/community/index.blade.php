@@ -218,144 +218,163 @@
     </div>
   </section>
 
-  <!-- Newsletter Section -->
-  <section
-    class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
-           min-h-[55vh] md:min-h-[65vh] lg:min-h-[75vh]"
-    style="background-image: url('{{ asset('images/community/background-1.png') }}')">
-    <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
-         style="background:linear-gradient(to right,
-            rgba(0,0,0,.88) 0%,
-            rgba(0,0,0,.76) 18%,
-            rgba(0,0,0,.62) 36%,
-            rgba(0,0,0,.45) 55%,
-            rgba(0,0,0,.28) 74%,
-            rgba(0,0,0,.12) 88%,
-            rgba(0,0,0,0) 100%);"></div>
+  <!-- Newsletter Section (slightly bigger than before) -->
+<section
+  class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
+         min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
+  style="background-image: url('{{ asset('images/community/background-1.png') }}')">
 
-    <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-24 lg:py-28">
-      <div class="max-w-3xl">
-        <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-          Receive Our Latest News Daily!
-        </h2>
-        <p class="mt-3 text-white/85 text-base md:text-lg">
-          We will send you our recent news and event right to your inbox
-        </p>
+  <!-- Gradient overlay -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
+       style="background:linear-gradient(to right,
+          rgba(0,0,0,.88) 0%,
+          rgba(0,0,0,.76) 18%,
+          rgba(0,0,0,.62) 36%,
+          rgba(0,0,0,.45) 55%,
+          rgba(0,0,0,.28) 74%,
+          rgba(0,0,0,0) 100%);"></div>
 
-        <form id="newsletterForm" action="{{ route('subscribe.store') }}" method="POST" class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
-          @csrf
-          <input type="email" name="email" placeholder="Enter your Email"
-                 class="h-12 w-full sm:flex-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm
-                        px-4 text-white placeholder-white/70 caret-white shadow
-                        focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <button type="submit"
-                  class="h-12 shrink-0 rounded-md bg-gray-600 px-6 font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
-            Subscribe
-          </button>
-      </form>      
-      </div>
+  <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
+    <div class="max-w-3xl">
+      <h2 class="text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
+        Receive Our Latest News Daily!
+      </h2>
+      <p class="mt-3 text-white/85 text-base md:text-lg">
+        We will send you our recent news and event right to your inbox
+      </p>
+
+      <form id="newsletterForm"
+            action="{{ route('subscribe.store') }}"
+            method="POST"
+            class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
+        @csrf
+        <input type="email" name="email" placeholder="Enter your Email"
+               class="h-12 sm:h-[56px] w-full sm:flex-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm
+                      px-5 text-white placeholder-white/70 caret-white shadow
+                      focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <button type="submit"
+                class="h-12 sm:h-[56px] shrink-0 rounded-md bg-gray-600 px-8 font-semibold text-white transition-colors
+                       hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
+          Subscribe
+        </button>
+      </form>
     </div>
-    <script>
-      (function(){
-        const form = document.getElementById('newsletterForm');
-        if(!form) return;
-        form.addEventListener('submit', function(){
-          const btn = form.querySelector('[data-submit]');
-          const spinner = form.querySelector('[data-spinner]');
-          if(btn){
-            btn.disabled = true;
-            btn.classList.add('opacity-80','cursor-not-allowed');
-          }
-          if(spinner) spinner.classList.remove('hidden');
-        }, { passive:true });
-      })();
-    </script>
-  </section>
+  </div>
 
-  <!-- Latest News Section -->
-  <section class="relative bg-cover bg-center bg-no-repeat py-12"
-           style="background-image: url('{{ asset('images/bg/background_1.png') }}')">
-    <div class="container mx-auto px-4">
-      <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-white">LATEST NEWS</h2>
-        <a href="{{ route('community.news.index') }}" class="text-sm text-white hover:text-white/80">view all</a>
-      </div>
+  <script>
+    (function(){
+      const form = document.getElementById('newsletterForm');
+      if(!form) return;
+      form.addEventListener('submit', function(){
+        const btn = form.querySelector('button[type="submit"]');
+        if(btn){
+          btn.disabled = true;
+          btn.classList.add('opacity-80','cursor-not-allowed');
+        }
+      }, { passive:true });
+    })();
+  </script>
+</section>
 
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        @forelse($recentNews as $news)
-          @php $shareUrl = route('community.news.show', $news); @endphp
-          <a href="{{ $shareUrl }}"
-             class="group relative flex gap-4 rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] p-4 hover:bg-[#303030] transition">
-            <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md {{ $news->image_url ? '' : 'bg-gray-800 flex items-center justify-center' }}">
-              @if($news->image_url)
-                <img src="{{ asset(ltrim(str_starts_with($news->image_url,'storage/') ? $news->image_url : 'storage/uploads/'.$news->image_url, '/')) }}"
-                     alt="{{ $news->title }}" class="h-full w-full object-cover"
-                     onerror="this.onerror=null;this.src='{{ asset('images/community/community-1.png') }}'">
-              @else
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-600 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              @endif
-            </div>
-            <div class="flex-grow flex flex-col pr-12">
-              <h3 class="mb-2 text-lg font-semibold text-white group-hover:underline">{{ $news->title }}</h3>
-              <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
-            </div>
 
-            <!-- Share bottom-right (transparent) -->
-            <button type="button"
-                    class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
-                    style="right:12px;bottom:12px;background:transparent"
-                    aria-label="Share {{ $news->title }}"
-                    data-share-url="{{ $shareUrl }}"
-                    data-share-title="{{ $news->title }}"
-                    onclick="event.preventDefault(); event.stopPropagation(); handleShare(this);">
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="18" cy="8" r="2.25"></circle>
-                <circle cx="6"  cy="12" r="2.25"></circle>
-                <circle cx="18" cy="16" r="2.25"></circle>
-                <path d="M8.1 12.7l7.8 3.6M15.9 7.7L8.1 11.3"></path>
+<!-- Latest News Section -->
+<section class="relative bg-cover bg-center bg-no-repeat py-12"
+         style="background-image: url('{{ asset('images/bg/background_1.png') }}')">
+  <div class="container mx-auto px-4">
+    <div class="mb-6 flex items-center justify-between">
+      <h2 class="text-2xl font-bold text-white">LATEST NEWS</h2>
+      <a href="{{ route('community.news.index') }}" class="text-sm text-white hover:text-white/80">view all</a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      @forelse($recentNews as $news)
+        @php $shareUrl = route('community.news.show', $news); @endphp
+        <a href="{{ $shareUrl }}"
+           class="group relative flex gap-4 rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] p-4 hover:bg-[#303030] transition">
+          <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md {{ $news->image_url ? '' : 'bg-gray-800 flex items-center justify-center' }}">
+            @if($news->image_url)
+              <img src="{{ asset(ltrim(str_starts_with($news->image_url,'storage/') ? $news->image_url : 'storage/uploads/'.$news->image_url, '/')) }}"
+                   alt="{{ $news->title }}" class="h-full w-full object-cover"
+                   onerror="this.onerror=null;this.src='{{ asset('images/community/community-1.png') }}'">
+            @else
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-600 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-            </button>
-          </a>
-        @empty
-          <div class="col-span-2 text-center py-10">
-            <p class="text-gray-400">No recent news available at the moment.</p>
+            @endif
           </div>
-        @endforelse
-      </div>
-    </div>
-  </section>
+          <div class="flex-grow flex flex-col pr-12">
+            <h3 class="mb-2 text-lg font-semibold text-white group-hover:underline">{{ $news->title }}</h3>
+            <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
+          </div>
 
-  <!-- Chatroom Section -->
-  <section
-    class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
-           min-h-[55vh] md:min-h-[65vh] lg:min-h-[75vh]"
-    style="background-image: url('{{ asset('images/community/background-2.png') }}')">
-    <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
-         style="background:linear-gradient(to right,
-            rgba(0,0,0,.88) 0%,
-            rgba(0,0,0,.76) 18%,
-            rgba(0,0,0,.62) 36%,
-            rgba(0,0,0,.45) 55%,
-            rgba(0,0,0,.28) 74%,
-            rgba(0,0,0,.12) 88%,
-            rgba(0,0,0,0) 100%);"></div>
-
-    <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-24 lg:py-28">
-      <div class="flex flex-col items-center justify-between gap-8 md:flex-row">
-        <div class="md:w-1/2">
-          <h2 class="mb-4 text-2xl md:text-3xl font-bold text-white">JOIN OUR CHATROOM NOW!</h2>
-          <p class="mb-6 text-gray-200">Join a growing community of players with real-time discussions.</p>
-          <a href="#"
-             class="inline-block rounded-md bg-gray-600 px-6 py-2 font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
-            Chat Now
-          </a>
+          <!-- Share bottom-right (transparent) -->
+          <button type="button"
+                  class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
+                  style="right:12px;bottom:12px;background:transparent"
+                  aria-label="Share {{ $news->title }}"
+                  data-share-url="{{ $shareUrl }}"
+                  data-share-title="{{ $news->title }}"
+                  onclick="event.preventDefault(); event.stopPropagation(); handleShare(this);">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="8" r="2.25"></circle>
+              <circle cx="6"  cy="12" r="2.25"></circle>
+              <circle cx="18" cy="16" r="2.25"></circle>
+              <path d="M8.1 12.7l7.8 3.6M15.9 7.7L8.1 11.3"></path>
+            </svg>
+          </button>
+        </a>
+      @empty
+        <div class="col-span-2 text-center py-10">
+          <p class="text-gray-400">No recent news available at the moment.</p>
         </div>
+      @endforelse
+    </div>
+  </div>
+</section>
+
+
+  <!-- Chatroom Section (matched size to Newsletter) -->
+<section
+  class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
+         min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
+  style="background-image: url('{{ asset('images/community/background-2.png') }}')">
+
+  <!-- Gradient overlay -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
+       style="background:linear-gradient(to right,
+          rgba(0,0,0,.88) 0%,
+          rgba(0,0,0,.76) 18%,
+          rgba(0,0,0,.62) 36%,
+          rgba(0,0,0,.45) 55%,
+          rgba(0,0,0,.28) 74%,
+          rgba(0,0,0,0) 100%);"></div>
+
+  <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
+    <div class="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+      <div class="md:w-1/2">
+        <h2 class="mb-3 text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
+          JOIN OUR CHATROOM NOW!
+        </h2>
+        <p class="mb-6 text-white/90 text-base md:text-lg">
+          Join a growing community of players with real-time discussions.
+        </p>
+        <a href="#"
+           class="inline-block rounded-md bg-gray-600 px-8 py-3 font-semibold text-white
+                  hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
+          Chat Now
+        </a>
+      </div>
+
+      <!-- Optional right-side visual / placeholder (kept responsive & non-blocking) -->
+      <div class="md:w-1/2 hidden md:block">
+        <!-- Tambahkan gambar/ilustrasi jika ada -->
+        <!-- <img src="{{ asset('images/community/chat-illustration.png') }}" class="w-full h-auto rounded-lg" alt="Chatroom"> -->
       </div>
     </div>
-  </section>
+  </div>
+</section>
+
 
   <!-- Feedback Section -->
   <section class="relative isolate bg-cover bg-center bg-no-repeat py-12 md:py-16"

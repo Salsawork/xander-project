@@ -15,22 +15,20 @@
 
         /* Nonaktifkan overscroll glow/bounce menembus body */
         html, body {
-            overscroll-behavior-y: none;   /* Chrome/Android, sebagian desktop */
+            overscroll-behavior-y: none;
             overscroll-behavior-x: none;
-            touch-action: pan-y;           /* iOS Safari: tetap bisa scroll vertikal */
+            touch-action: pan-y;
             -webkit-text-size-adjust: 100%;
         }
 
-        /* Elemen kanvas gelap "di belakang segalanya"
-           Trick: extend melebihi viewport atas & bawah agar saat rubber-band,
-           yang terlihat tetap background gelap, bukan putih */
+        /* Elemen kanvas gelap "di belakang segalanya" */
         #antiBounceBg{
             position: fixed;
             left: 0; right: 0;
-            top: -120svh;                  /* pakai svh agar stabil di mobile */
+            top: -120svh;
             bottom: -120svh;
             background: #0a0a0a;
-            z-index: -1;                   /* DI BELAKANG semua konten */
+            z-index: -1;
             pointer-events: none;
         }
 
@@ -38,7 +36,6 @@
         #app, main { background:#0a0a0a; }
 
         /* ====== sisa CSS punyamu (dipertahankan) ====== */
-        /* Badge pills (custom CSS, aman dari purge) */
         .badge-pill {
             position: absolute; z-index: 10; display: inline-flex; align-items: center; justify-content: center;
             padding: .45rem .95rem; border-radius: 9999px; font-weight: 700; font-size: 13.5px; line-height: 1; letter-spacing: .2px;
@@ -201,8 +198,8 @@
             </section>
         @endif
 
-        {{-- ======================= FILTER & SORT ======================= --}}
-        <section class="px-4 lg:px-16 pt-7 ">
+        {{-- ======================= FILTER & SORT (dirapikan sejajar headings) ======================= --}}
+        <section class="px-6 lg:px-24 pt-7">
             <!-- Mobile filter button -->
             <button type="button" class="filter-trigger-btn" id="openFilterModal" style="font-size:1rem; padding:0.65rem 0; margin-top:2.5rem;">
                 <svg viewBox="0 0 20 20" fill="currentColor" style="width:1em;height:1em;margin-right:0.18em;">
@@ -213,33 +210,42 @@
 
             <!-- Desktop filter form -->
             <form id="filterForm" class="bg-neutral-800/60 ring-1 ring-white/10 rounded-xl p-3 md:p-4" onsubmit="return false;">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
-                    <label class="block">
-                        <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Category</span>
-                        <select id="category" class="input-dark select-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
+                <!-- Row disusun sama seperti heading kategori: kiri & kanan -->
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                    <!-- Kiri: Category + Search -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 w-full md:max-w-2xl">
+                        <label class="block">
+                            <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Category</span>
                             @php
                                 $catOptions = ['ALL'=>'All','BEGINNER'=>'Beginner','INTERMEDIATE'=>'Intermediate','MASTER'=>'Master','GENERAL'=>'General'];
                             @endphp
-                            @foreach ($catOptions as $val => $label)
-                                <option value="{{ $val }}" @selected($activeCategory === $val)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label class="block md:col-span-1">
-                        <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Search</span>
-                        <input id="q" type="search" value="{{ $q }}" placeholder="Search title or description…" class="input-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
-                    </label>
-                    <label class="block">
-                        <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Sort</span>
-                        <select id="sort" class="input-dark select-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
-                            <option value="newest" @selected($sort === 'newest')>Newest</option>
-                            <option value="oldest" @selected($sort === 'oldest')>Oldest</option>
-                            <option value="title-asc" @selected($sort === 'title-asc')>Title A–Z</option>
-                            <option value="title-desc" @selected($sort === 'title-desc')>Title Z–A</option>
-                        </select>
-                    </label>
+                            <select id="category" class="input-dark select-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
+                                @foreach ($catOptions as $val => $label)
+                                    <option value="{{ $val }}" @selected($activeCategory === $val)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Search</span>
+                            <input id="q" type="search" value="{{ $q }}" placeholder="Search title or description…" class="input-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
+                        </label>
+                    </div>
+
+                    <!-- Kanan: Sort -->
+                    <div class="w-full md:w-auto md:min-w-[220px]">
+                        <label class="block w-full">
+                            <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Sort</span>
+                            <select id="sort" class="input-dark select-dark w-full md:w-[220px]" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
+                                <option value="newest" @selected($sort === 'newest')>Newest</option>
+                                <option value="oldest" @selected($sort === 'oldest')>Oldest</option>
+                                <option value="title-asc" @selected($sort === 'title-asc')>Title A–Z</option>
+                                <option value="title-desc" @selected($sort === 'title-desc')>Title Z–A</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
-                <div class="mt-2 text-sm text-white/70">
+
+                <div class="mt-2 text-sm text-white/70 md:text-right">
                     Showing <strong id="resultCount">0</strong> results.
                 </div>
             </form>
@@ -255,6 +261,7 @@
                     <div class="grid grid-cols-1 gap-2">
                         <label class="block">
                             <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Category</span>
+                            @foreach ($catOptions as $val => $label) @endforeach
                             <select id="categoryMobile" class="input-dark select-dark w-full" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
                                 @foreach ($catOptions as $val => $label)
                                     <option value="{{ $val }}" @selected($activeCategory === $val)>{{ $label }}</option>
@@ -410,9 +417,7 @@
             const form = document.getElementById('filterForm');
             if (!form) return;
 
-            // Simpan instance Swiper per kategori
-            const catSwipers = {}; // { CAT: SwiperInstance }
-
+            const catSwipers = {};
             const selCat = form.querySelector('#category');
             const selSort = form.querySelector('#sort');
             const inpQ = form.querySelector('#q');
@@ -440,7 +445,6 @@
                         <div class="mt-3 flex items-center justify-between text-xs text-white/70 mt-auto">
                             <span>${esc(it.dateText)}</span>
                             <div class="flex items-center gap-2 opacity-95">
-                                <!-- Bookmark/Simpan DIHAPUS -->
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-md ring-1 ring-white/10 hover:bg-white/10">
                                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <circle cx="18" cy="8" r="2.25"></circle>
@@ -457,7 +461,6 @@
             }
             const buildSlide = (it) => `<div class="swiper-slide">${buildCard(it)}</div>`;
 
-            // Init / re-init Swiper mobile per kategori
             function initOrUpdateSwiper(cat, count) {
                 const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
                 const el = document.getElementById('swiper-' + cat);
@@ -515,7 +518,7 @@
 
                     let arr = (cat === 'ALL' || cat === C) ? base.filter(i=> i.category === C) : [];
                     arr.sort(cmp);
-                    arr = arr.slice(0, 3); // tampilkan max 3 item per kategori
+                    arr = arr.slice(0, 3);
 
                     grid.innerHTML = arr.map(buildCard).join('');
                     slidesWrap.innerHTML = arr.map(buildSlide).join('');
@@ -575,7 +578,6 @@
 
     {{-- ===================== NEWSLETTER SECTION (Enhanced) ===================== --}}
     <section class="relative isolate overflow-hidden bg-[#0f0f10] text-white py-16 px-6 md:px-20 border-t border-white/10">
-      {{-- Background mesh + glow --}}
       <div aria-hidden="true" class="pointer-events-none absolute inset-0">
         <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-25"
              style="background: radial-gradient(60% 60% at 50% 50%, #fb923c55 0%, #f9731655 35%, transparent 70%);">
