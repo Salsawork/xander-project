@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\SparringSchedule;
+use App\Models\Venue;
 use App\Models\Visit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,105 +15,77 @@ use Illuminate\Support\Facades\Log;
 class ProductController extends Controller
 {
 
-    // public function index(Request $request)
-    // {
-    //     $products = Product::when($request->has('search'), function ($query) use ($request) {
-    //         $search = $request->input('search');
-    //         $query->where(function ($q) use ($search) {
-    //             $q->where('name', 'like', '%' . $search . '%')
-    //                 ->orWhere('description', 'like', '%' . $search . '%')
-    //                 ->orWhere('sku', 'like', '%' . $search . '%');
-    //         });
-    //     })->when($request->has('category'), function ($query) use ($request) {
-    //         $categoryId = $request->input('category');
-    //         if ($categoryId) {
-    //             $query->where('category_id', $categoryId);
-    //         }
-    //     })->when($request->has('status'), function ($query) use ($request) {
-    //         $status = $request->input('status');
-    //         if ($status == 'in-stock') {
-    //             $query->where('quantity', '>', 0);
-    //         } elseif ($status == 'out-of-stock') {
-    //             $query->where('quantity', 0);
-    //         }
-    //     })->orderBy('created_at', 'desc')->get();
-
-    //     $categories = \App\Models\Category::all();
-
-    //     return view('dash.admin.product.index', compact('products', 'categories'));
-    // }
-
     public function index(Request $request)
-{
-    $query = Product::query();
+    {
+        $query = Product::query();
 
-    // 🔹 Filter Level
-    if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
-        $query->where('level', $request->level);
-    }
-
-    // 🔹 Filter Harga
-    if ($request->filter === 'under50') {
-        $query->where('pricing', '<', 50000);
-    }
-
-    // 🔹 Filter Kategori
-    if ($request->has('category') && $request->category) {
-        $query->where('category_id', $request->category);
-    }
-
-    // 🔹 Filter Search
-    if ($request->has('search') && $request->search) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', '%' . $search . '%')
-              ->orWhere('description', 'like', '%' . $search . '%')
-              ->orWhere('sku', 'like', '%' . $search . '%');
-        });
-    }
-
-    // 🔹 Filter Status
-    if ($request->has('status')) {
-        if ($request->status === 'in-stock') {
-            $query->where('quantity', '>', 0);
-        } elseif ($request->status === 'out-of-stock') {
-            $query->where('quantity', '=', 0);
+        // 🔹 Filter Level
+        if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
+            $query->where('level', $request->level);
         }
+
+        // 🔹 Filter Harga
+        if ($request->filter === 'under50') {
+            $query->where('pricing', '<', 50000);
+        }
+
+        // 🔹 Filter Kategori
+        if ($request->has('category') && $request->category) {
+            $query->where('category_id', $request->category);
+        }
+
+        // 🔹 Filter Search
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhere('sku', 'like', '%' . $search . '%');
+            });
+        }
+
+        // 🔹 Filter Status
+        if ($request->has('status')) {
+            if ($request->status === 'in-stock') {
+                $query->where('quantity', '>', 0);
+            } elseif ($request->status === 'out-of-stock') {
+                $query->where('quantity', '=', 0);
+            }
+        }
+
+        // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing)
+        if (!$request->hasAny(['level', 'filter', 'category', 'search', 'status'])) {
+            $products = $query->inRandomOrder()->limit(4)->get();
+        } else {
+            $products = $query->orderBy('created_at', 'desc')->paginate(10);
+        }
+
+        // 🔹 Track the visit (hanya sekali per hari per IP)
+        $ipAddress = $request->ip();
+        $visit = Visit::where('ip_address', $ipAddress)
+            ->whereDate('visit_date', today())
+            ->first();
+
+        if (!$visit) {
+            Visit::create([
+                'ip_address' => $ipAddress,
+                'visit'      => 1,
+                'visit_date' => now(),
+            ]);
+        } else {
+            $visit->increment('visit');
+        }
+
+        // 🔹 Ambil kategori untuk filter di view (dashboard)
+        $categories = \App\Models\Category::all();
+
+        // 🔹 Pilih view sesuai kebutuhan
+        if ($request->is('dashboard*')) {
+            return view('dash.admin.product.index', compact('products', 'categories'));
+        }
+
+        return view('landing', compact('products'));
     }
-
-    // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing)
-    if (!$request->hasAny(['level', 'filter', 'category', 'search', 'status'])) {
-        $products = $query->inRandomOrder()->limit(4)->get();
-    } else {
-        $products = $query->orderBy('created_at', 'desc')->paginate(10);
-    }
-
-    // 🔹 Track the visit (hanya sekali per hari per IP)
-    $ipAddress = $request->ip();
-    $visit = Visit::where('ip_address', $ipAddress)
-        ->whereDate('visit_date', today())
-        ->first();
-
-    if (!$visit) {
-        Visit::create([
-            'ip_address' => $ipAddress,
-            'visit'      => 1,
-            'visit_date' => now(),
-        ]);
-    } else {
-        $visit->increment('visit');
-    }
-
-    // 🔹 Ambil kategori untuk filter di view (dashboard)
-    $categories = \App\Models\Category::all();
-
-    // 🔹 Pilih view sesuai kebutuhan
-    if ($request->is('dashboard*')) {
-        return view('dash.admin.product.index', compact('products', 'categories'));
-    }
-
-    return view('landing', compact('products'));
-}
 
 
     public function filterByLevel(Request $request)
@@ -273,7 +248,6 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
-            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
             ->when($request->category, fn($q) => $q->where('category_id', $request->category))
             ->when($request->brand, fn($q) => $q->where('brand', $request->brand))
             ->when($request->condition, fn($q) => $q->where('condition', $request->condition))
@@ -283,20 +257,138 @@ class ProductController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
-        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
 
-        return view('public.product.index', compact('products', 'cartProducts', 'cartVenues', 'cartSparrings'));
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
+
+        return view('public.product.index', compact(
+            'products',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings'
+        ));
     }
+
+
 
     public function detail(Request $request, $product)
     {
         $detail = Product::findOrFail($product);
-        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
-        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
 
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
+
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
+        
         return view('public.product.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 }

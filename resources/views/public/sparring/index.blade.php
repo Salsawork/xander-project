@@ -3,10 +3,6 @@
 @section('title', 'Sparring')
 
 @php
-    // === Data keranjang dari cookie (produk, venue, sparring) ===
-    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
-    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     // ===== Jaga variabel $locations biar filter tidak error saat dummy =====

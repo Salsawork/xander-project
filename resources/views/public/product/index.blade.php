@@ -4,56 +4,18 @@
 @php
     use Illuminate\Support\Str;
 
-    // === Data keranjang dari cookie (produk, venue, sparring) ===
-    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
-    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
-    /**
-     * ===== Dummy 15 products =====
-     */
     use Illuminate\Pagination\LengthAwarePaginator;
-
-    $names = [
-        'Testing ya',
-        'Pool Cue Stick',
-        'Billiard Balls Set',
-        'Chalk Box',
-        'Cue Case',
-        'Tip Shaper',
-        'Cue Tip Glue',
-        'Bridge Head',
-        'Triangle Rack',
-        'Cue Glove',
-        'Table Brush',
-        'Table Cover',
-        'Scoreboard',
-        'Chalk Holder',
-        'Measuring Tape',
-    ];
-
-    $allProducts = collect($names)->values()->map(function ($name, $idx) {
-        $i = $idx + 1;
-        return (object) [
-            'id'      => $i,
-            'name'    => $name,
-            'pricing' => [39990, 49990, 89990, 129990, 299990, 499990, 999990, 1499990, 1999990, 2499990][array_rand([0,1,2,3,4,5,6,7,8,9])],
-            'images'  => ["https://placehold.co/600x900?text=" . urlencode($name)],
-        ];
-    });
-
     // deteksi sederhana mobile/desktop via User-Agent
     $ua       = request()->header('User-Agent', '');
     $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
     $perPage  = $isMobile ? 4 : 12;
-
     $page   = max((int) request('page', 1), 1);
-    $slice  = $allProducts->slice(($page - 1) * $perPage, $perPage)->values();
-
+    $products = $products ?? collect(); 
     $products = new LengthAwarePaginator(
-        $slice,
-        $allProducts->count(),
+        $products->slice(($page - 1) * $perPage, $perPage)->values(),
+        $products->count(),
         $perPage,
         $page,
         ['path' => request()->url(), 'query' => request()->query()]

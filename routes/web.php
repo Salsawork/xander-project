@@ -45,6 +45,7 @@ use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
+use App\Http\Controllers\CartItemController;
 use App\Http\Controllers\ShippingController;
 
 /*
@@ -145,12 +146,10 @@ Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscri
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->prefix('cart')->group(function () {
-    Route::post('/add/product', [CartController::class, 'addProductToCart'])->name('cart.add.product');
-    Route::post('/add/venue', [CartController::class, 'addVenueToCart'])->name('cart.add.venue');
-    Route::post('/add/sparring', [CartController::class, 'addSparringToCart'])->name('cart.add.sparring');
-    Route::post('/del/product', [CartController::class, 'removeProductFromCart'])->name('cart.del.product');
-    Route::post('/del/venue', [CartController::class, 'removeVenueFromCart'])->name('cart.del.venue');
-    Route::post('/del/sparring', [CartController::class, 'removeSparringFromCart'])->name('cart.del.sparring');
+    Route::post('/add/product', [CartItemController::class, 'addProductToCart'])->name('cart.add.product');
+    Route::post('/add/venue', [CartItemController::class, 'addVenueToCart'])->name('cart.add.venue');
+    Route::post('/add/sparring', [CartItemController::class, 'addSparringToCart'])->name('cart.add.sparring');
+    Route::post('/delete', [CartItemController::class, 'removeFromCart'])->name('cart.delete');
 });
 
 /** Checkout (auth required) */
