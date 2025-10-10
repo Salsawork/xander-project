@@ -201,7 +201,9 @@ $fullStars = floor((float)($averageRating ?? 0));
             <input type="text" name="promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
           </div>
 
+          @if (Auth::check() && Auth::user()->roles === 'user')
           <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">Add to cart</button>
+          @endif
         </form>
       </div>
     </div>
@@ -323,12 +325,14 @@ $fullStars = floor((float)($averageRating ?? 0));
   </div>
 
   <!-- Cart -->
+  @if (Auth::check() && Auth::user()->roles === 'user')
   <button aria-label="Shopping cart" onclick="showCart()" class="fixed right-6 top-[60%] bg-neutral-700/90 backdrop-blur rounded-full w-16 h-16 flex items-center justify-center shadow-xl ring-1 ring-black/30">
     <i class="fas fa-shopping-cart text-white text-2xl"></i>
     @if ($cartCount > 0)
       <span class="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">{{ $cartCount }}</span>
     @endif
   </button>
+  @endif
 
   @include('public.cart')
 </div>

@@ -181,10 +181,12 @@ $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparring
                                 placeholder="Ex. PROMO70%DAY">
                         </div>
 
+                        @if (Auth::check() && Auth::user()->roles === 'user')
                         <button type="submit"
                             class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
                             Add to cart
                         </button>
+                        @endif
                     </form>
                 </div>
 
@@ -200,6 +202,7 @@ $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparring
     </div>
 
     {{-- Floating Cart --}}
+    @if (Auth::check() && Auth::user()->roles === 'user')
     <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
         class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
         <i class="fas fa-shopping-cart text-white text-3xl"></i>
@@ -209,7 +212,7 @@ $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparring
         </span>
         @endif
     </button>
-
+    @endif
     @include('public.cart')
 </div>
 @endsection

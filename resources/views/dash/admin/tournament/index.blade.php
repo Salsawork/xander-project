@@ -55,11 +55,15 @@
                                         <td class="px-4 py-3 text-gray-400">{{ $tournament->created_at->format('d M Y') }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center justify-end gap-3 text-gray-400">
-                                                <a href="{{ route('events.show', $tournament->id) }}" target="_blank"
-                                                    class="hover:text-white" title="View">
-                                                    <i class="fas fa-eye"></i>
+                                                <a href="{{ route('events.bracket', [
+                                                    'event' => $tournament->id,
+                                                    'name' => Str::slug($tournament->event->name)
+                                                ]) }}" 
+                                                target="_blank" title="View">
+                                                <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('tournament.edit', $tournament) }}"
+
+                                                <a href="{{ route('tournament.edit', $tournament->slug) }}"
                                                     class="hover:text-white" title="Edit">
                                                     <i class="fas fa-pen"></i>
                                                 </a>
@@ -99,12 +103,12 @@
 
                                 <!-- Actions -->
                                 <div class="flex gap-2">
-                                    <a href="{{ route('guideline.show', $tournament->slug) }}" target="_blank"
+                                    <a href="{{ route('guideline.show', $tournament) }}" target="_blank"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-eye text-xs"></i>
                                         View
                                     </a>
-                                    <a href="{{ route('tournament.edit', $tournament) }}"
+                                    <a href="{{ route('tournament.edit', $tournament->slug) }}"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-pen text-xs"></i>
                                         Edit

@@ -14,6 +14,9 @@ class Event extends Model
         'start_date',
         'end_date',
         'location',
+        'price_ticket',
+        'stock',
+        
         'game_types',
         'description',
         'total_prize_money',
@@ -63,8 +66,9 @@ class Event extends Model
         return str_replace(' ', '-', strtolower($this->name));
     }
 
-    public function tournament()
+    public function tournaments()
     {
-        return $this->belongsTo(Tournament::class, 'tournament_id');
+        return $this->hasMany(Tournament::class, 'event_id');
     }
+
 }

@@ -253,6 +253,7 @@
         </div>
 
         <!-- Floating Cart -->
+        @if (Auth::check() && Auth::user()->roles === 'user')
         <button
             aria-label="Shopping cart with {{ $cartCount }} items"
             onclick="showCart()"
@@ -265,6 +266,7 @@
                 </span>
             @endif
         </button>
+        @endif
 
         @include('public.cart')
     </div>

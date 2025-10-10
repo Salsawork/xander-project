@@ -170,12 +170,18 @@
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
                                 <div class="flex justify-center items-end sm:mt-2">
                                     @auth
-                                    <i data-id="{{ $venue->id }}"
-                                       class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
-                                           ? 'fa-solid text-blue-500' : 'fa-regular text-gray-400' }}
-                                           fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition"></i>
+                                      @if (auth()->user()->roles === 'user')
+                                        <i
+                                          data-id="{{ $venue->id }}"
+                                          class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
+                                              ? 'fa-solid text-blue-500'
+                                              : 'fa-regular text-gray-400' }}
+                                              fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition">
+                                        </i>
+                                      @endif
                                     @endauth
-                                </div>
+                                  </div>
+                                  
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
@@ -236,7 +242,7 @@
 
     @include('public.cart')
 </div>
-
+@if (Auth::check() && Auth::user()->roles === 'user')
 <button
     aria-label="Shopping cart with {{ $cartCount }} items"
     onclick="showCart()"
@@ -249,6 +255,7 @@
         </span>
     @endif
 </button>
+@endif
 
 <script>
     (function ensurePP(){

@@ -35,6 +35,21 @@
                         </div>
 
                         <div>
+                            {{-- Price --}}
+                            <label class="block text-xs text-gray-400 mb-1" for="price_ticket">Biaya (Rp)</label>
+                            <input name="price_ticket" value="{{ old('price') }}" id="price_ticket" type="number" step="0.01"
+                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            @error('price_ticket') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Stock --}}
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1" for="stock">Stok</label>
+                            <input name="stock" value="{{ old('stock') }}" id="stock" type="number"
+                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            @error('stock') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
                             <label class="block text-xs text-gray-400 mb-1" for="start_date">Tanggal Mulai</label>
                             <input name="start_date" value="{{ old('start_date') }}" id="start_date" type="date"
                                 class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">

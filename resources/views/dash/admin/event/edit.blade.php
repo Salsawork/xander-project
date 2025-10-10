@@ -48,6 +48,31 @@
                                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+                                {{-- Price Ticket --}}
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1" for="price_ticket">
+                                        Biaya (Rp)
+                                    </label>
+                                    <input name="price_ticket" value="{{ old('price_ticket', $event->price_ticket) }}"
+                                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        id="price_ticket" type="number" step="0.01" placeholder="Masukkan biaya tiket" />
+                                    @error('price_ticket')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Stock --}}
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1" for="stock">
+                                        Stok
+                                    </label>
+                                    <input name="stock" value="{{ old('stock', $event->stock) }}"
+                                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        id="stock" type="number" placeholder="Masukkan stok tiket" />
+                                    @error('stock')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
 
                                 {{-- Deskripsi --}}
                                 <div>

@@ -303,18 +303,21 @@
   @php
     $cartCount = count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []);
   @endphp
-  <button
-    aria-label="Shopping cart with {{ $cartCount }} items"
-    onclick="showCart?.()"
-    class="fixed right-6 top:[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
-  >
-    <i class="fas fa-shopping-cart text-white text-3xl"></i>
-    @if ($cartCount > 0)
-      <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-        {{ $cartCount }}
-      </span>
-    @endif
-  </button>
+
+  @if (Auth::check() && Auth::user()->roles === 'user')
+    <button
+      aria-label="Shopping cart with {{ $cartCount }} items"
+      onclick="showCart?.()"
+      class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
+    >
+      <i class="fas fa-shopping-cart text-white text-3xl"></i>
+      @if ($cartCount > 0)
+        <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+          {{ $cartCount }}
+        </span>
+      @endif
+    </button>
+  @endif
 
   @include('public.cart')
 </div>

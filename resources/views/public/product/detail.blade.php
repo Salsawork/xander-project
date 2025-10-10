@@ -181,13 +181,17 @@
           </div>
 
           <!-- Add to Cart Button -->
-          <button
-            type="submit"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition"
-          >
-            <i class="fas fa-shopping-cart mr-2"></i>
-            Add to cart
-          </button>
+
+         @if (Auth::check() && Auth::user()->roles === 'user')
+            <button
+              type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition"
+            >
+              <i class="fas fa-shopping-cart mr-2"></i>
+              Add to cart
+            </button>
+          @endif
+
         </div>
       </form>
 
@@ -284,6 +288,7 @@
   </section>
 
   <!-- Floating Cart Button -->
+  @if (Auth::check() && Auth::user()->roles === 'user')
   <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
           class="fixed right-4 sm:right-6 top-[60%] bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
     <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
@@ -293,6 +298,7 @@
       </span>
     @endif
   </button>
+  @endif
 
   @include('public.cart')
 </main>

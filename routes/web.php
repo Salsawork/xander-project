@@ -353,22 +353,22 @@ Route::middleware('auth')->group(function () {
 | Tournament & Tree
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->group(function () {
-    // Tournament CRUD
-    Route::get('/', [TournamentController::class, 'index'])->name('index');
-    Route::get('/create', [TournamentController::class, 'create'])->name('create');
-    Route::post('/', [TournamentController::class, 'store'])->name('store');
-    Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
-    Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
-    Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
-});
-    /** Tree Management (Public or Auth, depends on requirement) */
-    Route::prefix('championships')->name('tree.')->group(function () {
-        Route::get('/', [TreeController::class, 'index'])->name('index');
-        Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
-        Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('update');
-    });
+    Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->group(function () {
+        // Tournament CRUD
+        Route::get('/', [TournamentController::class, 'index'])->name('index');
+        Route::get('/create', [TournamentController::class, 'create'])->name('create');
+        Route::post('/', [TournamentController::class, 'store'])->name('store');
+        Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
+        Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
+        Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
 
+        /** Tree Management (Public or Auth, depends on requirement) */
+        Route::prefix('championships')->name('tree.')->group(function () {
+            Route::get('/', [TreeController::class, 'index'])->name('index');
+            Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
+            Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('update');
+        });
+    });
     /* Company pages */
     Route::prefix('company')->group(function () {
         Route::view('/careers', 'careers')->name('company.careers');

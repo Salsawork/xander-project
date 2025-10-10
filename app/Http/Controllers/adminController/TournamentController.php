@@ -12,7 +12,7 @@ use Xoco70\LaravelTournaments\Models\Championship;
 use Xoco70\LaravelTournaments\Models\ChampionshipSettings;
 use Xoco70\LaravelTournaments\Models\Competitor;
 use Xoco70\LaravelTournaments\Models\Team;
-use Xoco70\LaravelTournaments\Models\Tournament;
+use App\Models\Tournament;
 use App\Models\Event;
 
 
