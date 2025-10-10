@@ -113,7 +113,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Jumlah Stok</label>
-                                    <input name="quantity" type="number" value="{{ $product->quantity }}"
+                                    <input name="stock" type="number" value="{{ $product->stock }}"
                                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                                 </div>
                                 <div>

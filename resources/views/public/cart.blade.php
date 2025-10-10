@@ -131,8 +131,18 @@
                             {{ $cart['name'] }}
                         </p>
                         <input type="hidden" id="price-{{ $cart['id'] }}" value="{{ $cart['price'] }}">
+                        <input type="hidden" id="discount-{{ $cart['id'] }}" value="{{ $cart['discount'] ?? 0 }}">
+
                         <p class="text-white text-sm mt-1 cart-price">
-                            Rp. {{ number_format($cart['price'], 0, ',', '.') }}
+                            @if(isset($cart['discount']) && $cart['discount'] > 0)
+                        <p class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</p>
+                        <p class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</p>
+                        @else
+                        <p class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</p>
+                        @endif
+                        </p>
+                        <p class="text-white text-xs mt-1 cart-meta">
+                            Quantity: {{ $cart['stock'] ?? 1 }}
                         </p>
                     </div>
                     <form action="{{ route('cart.del.product') }}" method="POST" class="delete-form">
@@ -240,21 +250,48 @@
                                 const scope = document.getElementById('cart');
                                 const checkboxes = scope.querySelectorAll('input[type="checkbox"]:checked');
                                 let total = 0;
+
                                 checkboxes.forEach(function(checkbox) {
-                                    const priceInput = document.getElementById('price-' + checkbox.value) ||
-                                        document.getElementById('price-venue-' + checkbox.value.split('-')[1]) ||
-                                        document.getElementById('price-sparring-' + checkbox.value.split('-')[1]);
+                                    let priceInput = null;
+                                    let discountInput = null;
+                                    let qty = 1;
+
+                                    // Deteksi tipe item (product, venue, sparring)
+                                    if (checkbox.value.startsWith('venue-')) {
+                                        const id = checkbox.value.split('-')[1];
+                                        priceInput = document.getElementById('price-venue-' + id);
+                                    } else if (checkbox.value.startsWith('sparring-')) {
+                                        const id = checkbox.value.split('-')[1];
+                                        priceInput = document.getElementById('price-sparring-' + id);
+                                    } else {
+                                        // default: product
+                                        priceInput = document.getElementById('price-' + checkbox.value);
+                                        discountInput = document.getElementById('discount-' + checkbox.value);
+                                    }
+
+                                    // Cek stock (khusus product)
+                                    const qtyText = checkbox.closest('li').querySelector('.cart-meta')?.textContent || '';
+                                    const qtyMatch = qtyText.match(/Quantity:\s*(\d+)/);
+                                    if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+
                                     if (priceInput) {
-                                        total += parseInt(priceInput.value) || 0;
+                                        const price = parseInt(priceInput.value) || 0;
+                                        const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+
+                                        // Hitung harga setelah diskon
+                                        const finalPrice = price - (price * discount);
+                                        total += finalPrice * qty;
                                     }
                                 });
+
+                                // Tampilkan total dalam format Rupiah
                                 document.getElementById('cart-total-display').textContent = 'Rp. ' + total.toLocaleString('id-ID');
                             }
-                            // Attach change listeners to all checkboxes
+
                             document.querySelectorAll('#cart input[type="checkbox"]').forEach(function(checkbox) {
                                 checkbox.addEventListener('change', updateCartTotal);
                             });
-                            // Initial call to set total on load
+
                             updateCartTotal();
                         </script>
                     </span>

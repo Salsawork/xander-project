@@ -24,7 +24,13 @@
                     <img src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
                     <div class="flex-1">
                         <h3 class="font-semibold">{{ $cart['name'] }}</h3>
+                        @if(isset($cart['discount']) && $cart['discount'] > 0)
+                        <p class="text-gray-400 line-through">Rp. {{ number_format($cart['price'], 0, ',', '.') }}</p>
+                        <p class="text-green-400">Rp. {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }}</p>
+                        @else
                         <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }}</p>
+                        @endif
+                        <p class="text-gray-400">Quantity: {{ $cart['stock'] }}</p>
                     </div>
                 </div>
                 @empty
@@ -107,7 +113,7 @@
                     <!-- Hidden input untuk produk -->
                     @foreach($carts as $index => $cart)
                     <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
-                    <input type="hidden" name="products[{{ $index }}][qty]" value="1">
+                    <input type="hidden" name="products[{{ $index }}][stock]" value="{{ $cart['stock'] }}">
                     @endforeach
 
                     <!-- Hidden input untuk sparring -->
@@ -265,9 +271,7 @@
         const payButton = document.getElementById('pay-button');
         const weightInput = document.getElementById('weight');
         const courierSelect = document.getElementById('courier');
-
         const hasProduct = {{count($carts) > 0 ? 'true' : 'false'}};
-
         if (hasProduct) {
             try {
                 const res = await fetch('{{ route("rajaongkir.provinces") }}');
@@ -410,7 +414,6 @@
                         const grandTotalElement = document.querySelector('.grand-total');
                         const currentSubtotal = {{$total}};
                         const currentTax = {{$tax}};
-
                         const grandTotal = currentSubtotal + currentTax + shippingCost;
 
                         if (shippingValue) shippingValue.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(shippingCost)}`;

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->enum('brand', ['Mezz', 'Predator', 'Cuetec', 'Other'])->default('Other');
             $table->enum('level', ['professional', 'beginner', 'under50', 'cue-cases']);
             $table->enum('condition', ['new', 'used'])->default('new');
-            $table->integer('quantity')->default(0);
+            $table->integer('stock')->default(0);
             $table->string('sku')->unique()->nullable();
             $table->json('images')->nullable();
             $table->integer('weight')->nullable()->default(0);
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->integer('breadth')->nullable()->default(0);
             $table->integer('width')->nullable()->default(0);
             $table->decimal('pricing', 10, 0);
-            $table->integer('discount')->nullable()->default(0);
+            $table->decimal('discount', 3, 1)->nullable()->default(0);
             $table->timestamps();
             $table->foreign('category_id')
                 ->references('id')

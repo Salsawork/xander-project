@@ -8,14 +8,12 @@
     color-scheme: dark;
     --page-bg:#0a0a0a;
   }
-  /* cegah “white glow” saat overscroll di iOS/Android */
   html, body{
     height:100%;
     background:var(--page-bg);
-    overscroll-behavior-y: none;   /* stop rubber-band to parent */
+    overscroll-behavior-y: none;
     overscroll-behavior-x: none;
   }
-  /* lapisan tetap agar tak pernah kelihatan putih */
   body::before{
     content:"";
     position:fixed;
@@ -24,11 +22,9 @@
     pointer-events:none;
     z-index:-1;
   }
-  /* pastikan semua container utama juga gelap */
   #app, main, .min-h-screen{ background:var(--page-bg); }
-  /* container scroll utama: momentum namun tanpa bounce */
   .prevent-bounce{
-    overscroll-behavior: contain;  /* contain within this scroller */
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     background:var(--page-bg);
   }
@@ -40,7 +36,6 @@
   <div class="flex min-h-[100dvh]">
     @include('partials.sidebar')
 
-    {{-- tambahkan prevent-bounce pada main --}}
     <main class="flex-1 overflow-y-auto min-w-0 my-8 prevent-bounce">
       @include('partials.topbar')
 
@@ -63,7 +58,7 @@
 
         @php
           $user = auth()->user();
-          $avatarUrl = $user?->avatar_url;
+          $avatarUrl = $user?->avatar_url; // dari accessor
           $nameRaw = trim($user->name ?? '');
           $parts = preg_split('/\s+/', $nameRaw, -1, PREG_SPLIT_NO_EMPTY);
           $initials = '';
@@ -97,10 +92,9 @@
                 @endif
               </button>
 
-              {{-- Popover solid (BG #1f1f1f) --}}
+              {{-- Popover --}}
               <div id="avatarMenu"
                    class="hidden absolute z-20 left-1/2 -translate-x-1/2 mt-3 w-56 rounded-2xl border border-white/10 bg-[#1f1f1f] shadow-[0_20px_60px_rgba(0,0,0,.5)] overflow-hidden">
-                {{-- Arrow solid --}}
                 <div class="absolute -top-2 left-1/2 -translate-x-1/2 h-4 w-4 rotate-45 bg-[#1f1f1f] border-t border-l border-white/10"></div>
 
                 <div class="py-1">
@@ -121,8 +115,8 @@
               </div>
 
               {{-- Inputs (terhubung ke form) --}}
-              <input id="avatarInput" type="file" name="avatar" form="profileForm" accept="image/*" class="hidden">
-              <input id="removeAvatarInput" type="hidden" name="remove_avatar" value="0" form="profileForm">
+              <input id="photoInput" type="file" name="photo_profile" form="profileForm" accept="image/*" class="hidden">
+              <input id="removePhotoInput" type="hidden" name="remove_photo" value="0" form="profileForm">
             </div>
 
             <div class="flex-1 mt-4 md:mt-0">
@@ -230,16 +224,14 @@
     const menu    = document.getElementById('avatarMenu');
     const upload  = document.getElementById('menuUpload');
     const remove  = document.getElementById('menuRemove');
-    const input   = document.getElementById('avatarInput');
-    const rmInput = document.getElementById('removeAvatarInput');
+    const input   = document.getElementById('photoInput');
+    const rmInput = document.getElementById('removePhotoInput');
     const preview = document.getElementById('avatarPreview');
     const holder  = document.getElementById('avatarPlaceholder');
 
-    const openMenu  = () => { if(menu){ menu.classList.remove('hidden'); trigger?.setAttribute('aria-expanded','true'); } };
     const closeMenu = () => { if(menu){ menu.classList.add('hidden'); trigger?.setAttribute('aria-expanded','false'); } };
     const toggleMenu= () => { if(menu){ menu.classList.toggle('hidden'); trigger?.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true'); } };
 
-    // open/close
     trigger?.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
 
     // Upload
@@ -255,6 +247,7 @@
       e.stopPropagation();
       closeMenu();
       if (rmInput) rmInput.value = '1';
+      // Sembunyikan preview & tampilkan placeholder
       if (preview) preview.classList.add('hidden');
       if (holder)  holder.classList.remove('hidden');
     });

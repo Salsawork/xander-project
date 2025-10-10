@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 /**
  * Controllers
  */
-
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -22,6 +21,7 @@ use App\Http\Controllers\OpinionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\FavoriteController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -29,7 +29,6 @@ use App\Http\Controllers\venueController\BookingController;
 use App\Http\Controllers\venueController\PromoController;
 use App\Http\Controllers\venueController\PriceScheduleController;
 use App\Http\Controllers\venueController\TransactionController;
-use App\Http\Controllers\FavoriteController;
 
 // Athlete Controllers
 use App\Http\Controllers\athleteController\DashboardController as AthleteDashboardController;
@@ -85,45 +84,53 @@ Route::prefix('products')->group(function () {
 /** Venues */
 Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
-    Route::get('/{venue}', [VenueController::class, 'showDetail'])->name('venues.detail');
-    Route::get('/venues/{venueId}/price-schedules', [VenueController::class, 'detail'])->name('venues.priceSchedules');
+
+    // API price schedule (JANGAN DI BAWAH DETAIL)
+    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])
+        ->where(['venueId' => '[0-9]+'])
+        ->name('venues.priceSchedules');
+
+    // DETAIL PAGE: /venues/{id}/{slug?}
+    Route::get('/{venue}/{slug?}', [VenueController::class, 'showDetail'])
+        ->where(['venue' => '[0-9]+'])
+        ->name('venues.detail');
+
+    // FAVORITE toggle (opsional)
     Route::post('/{venue}/favorite', [FavoriteController::class, 'toggle'])->name('venues.favorite');
+
+    // REVIEW venue (opsional)
+    Route::post('/{venue}/reviews', [VenueController::class, 'storeReview'])
+        ->middleware('auth')
+        ->name('venues.reviews.store');
 });
 
-/** Events
- *  - /events            -> landing/hero (index)
- *  - /events/all        -> katalog (list/show + filter)
- *  - /event/{id}/{slug} -> detail
- */
+/** Events */
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/events/all', [EventController::class, 'list'])->name('events.list');
-
-Route::get('/event/{event}/{name?}', [EventController::class, 'show'])
-    ->where('event', '[0-9]+')
-    ->name('events.show');
-
-/* Kompat lama: /event/{event:name} -> redirect ke kanonik ID */
-Route::get('/event/{event:name}', [EventController::class, 'showByName'])
-    ->name('events.show.byname');
-
-/* Bracket */
-Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])
-    ->where('event', '[0-9]+')
-    ->name('events.bracket');
-
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
-    ->name('events.bracket.byname');
+Route::get('/event/{event}/{name?}', [EventController::class, 'show'])->where('event', '[0-9]+')->name('events.show');
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])->name('events.show.byname');
+Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketById'])->where('event', '[0-9]+')->name('events.bracket');
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
 
-/** Sparring */
-Route::get('/sparring', [SparringController::class, 'index'])->name('sparring.index');
-Route::get('/sparring/{id}', [SparringController::class, 'show'])->name('sparring.detail');
-Route::post('/sparring/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
-Route::delete('/sparring/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
-Route::post('/sparring/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
+/** Sparring (PAKAI SLUG) */
+Route::prefix('sparring')->group(function () {
+    Route::get('/', [SparringController::class, 'index'])->name('sparring.index');
+
+    // DETAIL: /sparring/{id}/{slug?}
+    Route::get('/{id}/{slug?}', [SparringController::class, 'show'])
+        ->where(['id' => '[0-9]+'])
+        ->name('sparring.detail');
+
+    Route::post('/add-to-cart', [SparringController::class, 'addToCart'])->name('sparring.addToCart');
+    Route::delete('/remove-from-cart', [SparringController::class, 'removeFromCart'])->name('sparring.removeFromCart');
+
+    // Reviews
+    Route::post('/{id}/reviews', [SparringController::class, 'storeReview'])->name('sparring.review.store');
+});
 
 /** Community (Public) */
 Route::prefix('community')->name('community.')->withoutMiddleware(['auth', 'verified'])->group(function () {
@@ -192,6 +199,9 @@ Route::middleware('auth')->group(function () {
     /** Profile */
     Route::get('dashboard/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+    /** Favorite */
+    Route::get('dashboard/favorite', [FavoriteController::class, 'index'])->name('favorite.index');
 
     /** Admin: Products */
     Route::prefix('dashboard/products')->group(function () {
@@ -279,25 +289,12 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('athlete')->group(function () {
-        // Athlete Dashboard
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-    
-        // Athlete Sparring - Create Session
-        Route::get('/sparring/create', function () {
-            return view('dash.athlete.sparring.create');
-        })->name('athlete.sparring.create');
-    
-    
-        // Athlete Match History (BARU)
+        Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
-        // Create Session
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-    
-        // Athlete Calendar
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-    
-        // Athlete Match History (BARU)
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
@@ -309,6 +306,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
 });
 
+    Route::middleware('auth')->group(function () {
+        
+        // Detail order & booking
+        Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
+        Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
+        Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
+
+    });
+
+    // Rajaongkir
+    Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
+    Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
+    Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
+    Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
+    Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost'); 
 /*
 |--------------------------------------------------------------------------
 | Tournament & Tree
@@ -329,14 +341,14 @@ Route::get('/championships', [TreeController::class, 'index'])->name('tree.index
 Route::post('/championships/{championship}/trees', [TreeController::class, 'store'])->name('tree.store');
 Route::put('/championships/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
 
-/* ===== Company pages (static Blade) ===== */
+/* Company pages */
 Route::prefix('company')->group(function () {
     Route::view('/careers', 'careers')->name('company.careers');
     Route::view('/partners', 'partners')->name('company.partners');
     Route::view('/press-media', 'press-media')->name('company.press');
 });
 
-/* ===== Blog (static template) ===== */
+/* Blog */
 Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');

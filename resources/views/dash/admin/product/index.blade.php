@@ -116,10 +116,10 @@
                                             </span>
                                         </td>
                                         <td class="px-4 py-3">Rp {{ number_format($product->pricing, 0, ',', '.') }}</td>
-                                        <td class="px-4 py-3">{{ $product->quantity }}</td>
+                                        <td class="px-4 py-3">{{ $product->stock }}</td>
                                         <td class="px-4 py-3">
-                                            <span class="inline-block {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }} rounded-full px-3 py-1 text-xs font-semibold">
-                                                {{ $product->quantity > 0 ? 'In Stock' : 'Out of Stock' }}
+                                            <span class="inline-block {{ $product->stock > 0 ? 'bg-green-500' : 'bg-red-500' }} rounded-full px-3 py-1 text-xs font-semibold">
+                                                {{ $product->stock > 0 ? 'In Stock' : 'Out of Stock' }}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3">
@@ -163,8 +163,8 @@
                                     <div class="flex-1 min-w-0">
                                         <h2 class="font-semibold text-sm mb-1">{{ $product->name }}</h2>
                                         <p class="text-xs text-gray-500">{{ $product->brand }}</p>
-                                        <span class="inline-block mt-2 px-2 py-1 rounded text-xs font-semibold {{ $product->quantity > 0 ? 'bg-green-500' : 'bg-red-500' }}">
-                                            {{ $product->quantity > 0 ? 'In Stock' : 'Out of Stock' }}
+                                        <span class="inline-block mt-2 px-2 py-1 rounded text-xs font-semibold {{ $product->stock > 0 ? 'bg-green-500' : 'bg-red-500' }}">
+                                            {{ $product->stock > 0 ? 'In Stock' : 'Out of Stock' }}
                                         </span>
                                     </div>
                                 </div>
@@ -184,7 +184,7 @@
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-400">Stock:</span>
-                                        <span class="font-medium">{{ $product->quantity }}</span>
+                                        <span class="font-medium">{{ $product->stock }}</span>
                                     </div>
                                 </div>
                                 

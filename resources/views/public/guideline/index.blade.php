@@ -2,15 +2,42 @@
 @section('title', 'Guideline - Xander Billiard')
 
 @section('content')
+    {{-- ================= Anti white flash / rubber-band iOS ================= --}}
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
     {{-- Anti white flash + styles --}}
     <style>
-        :root,
-        html,
-        body { background-color: #0a0a0a; }
-        html, body { height: 100%; }
         :root { color-scheme: dark; }
-        body { overscroll-behavior-y: contain; touch-action: pan-y; }
 
+        /* Pastikan SEMUA root gelap */
+        :root, html, body { background-color: #0a0a0a; }
+        html, body { height: 100%; }
+
+        /* Nonaktifkan overscroll glow/bounce menembus body */
+        html, body {
+            overscroll-behavior-y: none;   /* Chrome/Android, sebagian desktop */
+            overscroll-behavior-x: none;
+            touch-action: pan-y;           /* iOS Safari: tetap bisa scroll vertikal */
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* Elemen kanvas gelap "di belakang segalanya"
+           Trick: extend melebihi viewport atas & bawah agar saat rubber-band,
+           yang terlihat tetap background gelap, bukan putih */
+        #antiBounceBg{
+            position: fixed;
+            left: 0; right: 0;
+            top: -120svh;                  /* pakai svh agar stabil di mobile */
+            bottom: -120svh;
+            background: #0a0a0a;
+            z-index: -1;                   /* DI BELAKANG semua konten */
+            pointer-events: none;
+        }
+
+        /* Jika ada wrapper utama dari layout, pastikan gelap juga */
+        #app, main { background:#0a0a0a; }
+
+        /* ====== sisa CSS punyamu (dipertahankan) ====== */
         /* Badge pills (custom CSS, aman dari purge) */
         .badge-pill {
             position: absolute; z-index: 10; display: inline-flex; align-items: center; justify-content: center;
@@ -65,7 +92,6 @@
             .filter-modal, .filter-modal-overlay, .filter-trigger-btn { display: none !Important; }
             #filterForm { display: block !important; }
         }
-        /* Filter button */
         .filter-trigger-btn{
             display:none; width:100%; margin:0 auto 1.5rem auto; background:#18181b; color:#fff; border:1px solid #444; border-radius:1rem;
             font-size:1.15rem; font-weight:600; padding:.85rem 0; justify-content:center; align-items:center; gap:.5rem; cursor:pointer; transition:background .18s;
@@ -75,7 +101,7 @@
 
         /* ====== MOBILE CATEGORY SWIPER ====== */
         @media (max-width: 767.98px){
-            .cat-swiper { padding: .25rem .25rem 2rem .25rem; } /* ruang untuk bullets */
+            .cat-swiper { padding: .25rem .25rem 2rem .25rem; }
         }
         .cat-pagination .swiper-pagination-bullet{ background:#e5e7eb; opacity:.7; }
         .cat-pagination .swiper-pagination-bullet-active{ background:#2563eb; opacity:1; }
@@ -88,7 +114,7 @@
         @php
             use Illuminate\Support\Str;
             use Illuminate\Support\Facades\Storage;
-            $resolveImage = function (?string $rawPath, string $default = '/images/hero/guideline-main.jpg') {
+            $resolveImage = function (?string $rawPath, string $default = '/images/guidelines/placeholder.jpg') {
                 if (!empty($rawPath)) {
                     $path = $rawPath;
                     if (Str::startsWith($path, 'guidelines/')) return Storage::url($path);
@@ -305,6 +331,16 @@
     @endphp
 
     <script>
+        /* Stabilkan unit tinggi viewport di mobile (fix toolbar resize) */
+        (function(){
+            function setSVH() {
+                const svh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--svh', svh + 'px');
+            }
+            setSVH();
+            window.addEventListener('resize', setSVH);
+        })();
+
         window.G_ITEMS   = @json($clientItems);
         window.PILL_CLASS= @json($pillClassMap);
         window.DISP_NAME = @json($displayNames);
@@ -384,7 +420,7 @@
             const order = Array.isArray(window.CAT_ORDER) ? window.CAT_ORDER : ['BEGINNER','INTERMEDIATE','MASTER','GENERAL'];
 
             function esc(s) {
-                return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
             }
             function buildCard(it) {
                 const pillCls = (window.PILL_CLASS && window.PILL_CLASS[it.category]) || 'badge-gray';
@@ -404,12 +440,7 @@
                         <div class="mt-3 flex items-center justify-between text-xs text-white/70 mt-auto">
                             <span>${esc(it.dateText)}</span>
                             <div class="flex items-center gap-2 opacity-95">
-                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-md ring-1 ring-white/10 hover:bg-white/10">
-                                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path d="M7 4h10a2 2 0 0 1 2 2v14l-7-4-7 4V6a2 2 0 0 1 2-2z"/>
-                                    </svg>
-                                    <span class="sr-only">Bookmark</span>
-                                </span>
+                                <!-- Bookmark/Simpan DIHAPUS -->
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-md ring-1 ring-white/10 hover:bg-white/10">
                                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <circle cx="18" cy="8" r="2.25"></circle>
@@ -428,25 +459,20 @@
 
             // Init / re-init Swiper mobile per kategori
             function initOrUpdateSwiper(cat, count) {
-                // Hanya jalan di mobile layout
                 const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
                 const el = document.getElementById('swiper-' + cat);
                 if (!el) return;
 
-                // Jika tidak ada item: destroy kalau ada
                 if (!count) {
                     if (catSwipers[cat]) { catSwipers[cat].destroy(true, true); delete catSwipers[cat]; }
                     return;
                 }
-                // Jika bukan mobile: destroy supaya tidak ganggu desktop
                 if (!isMobile) {
                     if (catSwipers[cat]) { catSwipers[cat].destroy(true, true); delete catSwipers[cat]; }
                     return;
                 }
-                // Jika Swiper sudah ada: update saja
                 if (catSwipers[cat]) { catSwipers[cat].update(); return; }
 
-                // Pastikan Swiper lib sudah tersedia
                 function create() {
                     if (!window.Swiper) { return setTimeout(create, 50); }
                     catSwipers[cat] = new Swiper('#swiper-' + cat, {
@@ -479,7 +505,7 @@
                 }[sort] || ((a,b)=> (b.dateTs||0) - (a.dateTs||0));
 
                 let totalShown = 0;
-                order.forEach(C=>{
+                (Array.isArray(window.CAT_ORDER) ? window.CAT_ORDER : ['BEGINNER','INTERMEDIATE','MASTER','GENERAL']).forEach(C=>{
                     const sec   = document.getElementById('section-' + C);
                     const grid  = document.getElementById('grid-' + C);
                     const empty = document.getElementById('empty-' + C);
@@ -491,13 +517,9 @@
                     arr.sort(cmp);
                     arr = arr.slice(0, 3); // tampilkan max 3 item per kategori
 
-                    // Desktop grid
                     grid.innerHTML = arr.map(buildCard).join('');
-
-                    // Mobile slider
                     slidesWrap.innerHTML = arr.map(buildSlide).join('');
 
-                    // Tampilkan/sembunyikan section & empty state
                     const show = arr.length > 0;
                     if (cat !== 'ALL' && C !== cat) {
                         sec.classList.add('hidden');
@@ -506,18 +528,15 @@
                         empty.classList.toggle('hidden', show);
                     }
 
-                    // Inisialisasi/Update swiper mobile
                     initOrUpdateSwiper(C, arr.length);
 
                     totalShown += arr.length;
                 });
 
                 countEl.textContent = String(totalShown);
-                // Update mobile result count
                 const resultCountMobile = document.getElementById('resultCountMobile');
                 if (resultCountMobile) resultCountMobile.textContent = countEl.textContent;
 
-                // Update URL (tanpa reload)
                 const params = new URLSearchParams();
                 if (cat && cat !== 'ALL') params.set('category', cat);
                 if (q) params.set('q', inpQ.value.trim());
@@ -534,13 +553,10 @@
             inpQ.addEventListener('input', debounced);
             inpQ.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); applyFilters(); } });
 
-            // Re-init swiper on resize breakpoint changes
             window.addEventListener('resize', () => applyFilters());
 
-            // Init pertama
             applyFilters();
 
-            // Init HERO swiper bila ada dan lib sudah tersedia
             (function initHero(){
                 if (!document.querySelector('.hero-swiper')) return;
                 function make(){
@@ -556,127 +572,111 @@
             })();
         })();
     </script>
+
     {{-- ===================== NEWSLETTER SECTION (Enhanced) ===================== --}}
-<section class="relative isolate overflow-hidden bg-[#0f0f10] text-white py-16 px-6 md:px-20 border-t border-white/10">
-  {{-- Background mesh + glow --}}
-  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-    <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-25"
-         style="background: radial-gradient(60% 60% at 50% 50%, #fb923c55 0%, #f9731655 35%, transparent 70%);">
-    </div>
-    <svg class="absolute inset-0 h-full w-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-          <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" stroke-width="0.5"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)"/>
-    </svg>
-  </div>
-
-  <div class="relative max-w-3xl mx-auto">
-    <div class="text-center">
-      <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-wide text-white/80">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 8l9 6 9-6" /><path d="M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8" />
+    <section class="relative isolate overflow-hidden bg-[#0f0f10] text-white py-16 px-6 md:px-20 border-t border-white/10">
+      {{-- Background mesh + glow --}}
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-25"
+             style="background: radial-gradient(60% 60% at 50% 50%, #fb923c55 0%, #f9731655 35%, transparent 70%);">
+        </div>
+        <svg class="absolute inset-0 h-full w-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)"/>
         </svg>
-        Newsletter
-      </span>
-      <h2 class="mt-4 text-3xl md:text-4xl font-bold leading-tight">
-        Subscribe & stay in the loop
-      </h2>
-      <p class="mt-3 text-sm md:text-base text-white/70">
-        Get updates on new gear, events, and community stories from Xander Billiard. No spam—unsubscribe anytime.
-      </p>
-    </div>
+      </div>
 
-    {{-- Alert success (opsional, tampil jika backend set session) --}}
-    @if(session('success'))
-      <div class="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 px-4 py-3">
-        <div class="flex items-start gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <p class="text-sm">{{ session('success') }}</p>
+      <div class="relative max-w-3xl mx-auto">
+        <div class="text-center">
+          <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-wide text-white/80">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 8l9 6 9-6" /><path d="M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8" />
+            </svg>
+            Newsletter
+          </span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-bold leading-tight">
+            Subscribe & stay in the loop
+          </h2>
+          <p class="mt-3 text-sm md:text-base text-white/70">
+            Get updates on new gear, events, and community stories from Xander Billiard. No spam—unsubscribe anytime.
+          </p>
+        </div>
+
+        @if(session('success'))
+          <div class="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 px-4 py-3">
+            <div class="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <p class="text-sm">{{ session('success') }}</p>
+            </div>
+          </div>
+        @endif
+
+        @error('email')
+          <div class="mt-6 rounded-xl border border-red-400/30 bg-red-500/10 text-red-200 px-4 py-3">
+            <div class="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-11.5a.75.75 0 011.5 0v5a.75.75 0 01-1.5 0v-5zm.75 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+              </svg>
+              <p class="text-sm">{{ $message }}</p>
+            </div>
+          </div>
+        @enderror
+
+        <div class="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/5 p-4 sm:p-5 md:p-6">
+          <form id="newsletterForm" action="{{ route('subscribe.store') }}" method="POST"
+                class="flex flex-col sm:flex-row items-center gap-3">
+            @csrf
+            <input type="text" name="website" class="hidden" tabindex="-1" autocomplete="off">
+            <label for="newsletter-email" class="sr-only">Email address</label>
+            <input id="newsletter-email" type="email" name="email" required inputmode="email" autocomplete="email"
+                   placeholder="Enter your email address"
+                   class="w-full flex-1 rounded-full bg-white text-gray-900 placeholder-gray-500 px-5 py-3
+                          focus:outline-none focus:ring-4 ring-orange-500/30 border border-white/10"/>
+            <button type="submit" data-submit
+              class="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3 font-semibold
+                     bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500
+                     hover:brightness-110 active:brightness-95 transition duration-200 shadow-lg shadow-orange-500/20">
+              <svg data-spinner class="h-5 w-5 animate-spin hidden" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+              </svg>
+              <span>Subscribe</span>
+            </button>
+          </form>
+
+          <div class="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs text-white/60">
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white/50" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1.75a7.25 7.25 0 00-7.25 7.25c0 5.5 7.25 13.25 7.25 13.25S19.25 14.5 19.25 9A7.25 7.25 0 0012 1.75zm0 9.75a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
+              </svg>
+              No spam, unsubscribe anytime.
+            </div>
+            <span class="hidden sm:inline-block">•</span>
+            <div>By subscribing you agree to our <a href="{{ url('/terms') }}" class="underline decoration-dotted hover:decoration-solid">Terms</a> &amp; <a href="{{ url('/privacy') }}" class="underline decoration-dotted hover:decoration-solid">Privacy</a>.</div>
+          </div>
         </div>
       </div>
-    @endif
 
-    {{-- Alert error email (opsional) --}}
-    @error('email')
-      <div class="mt-6 rounded-xl border border-red-400/30 bg-red-500/10 text-red-200 px-4 py-3">
-        <div class="flex items-start gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-11.5a.75.75 0 011.5 0v5a.75.75 0 01-1.5 0v-5zm.75 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-          </svg>
-          <p class="text-sm">{{ $message }}</p>
-        </div>
-      </div>
-    @enderror
-
-    {{-- Card form --}}
-    <div class="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/5 p-4 sm:p-5 md:p-6">
-      <form id="newsletterForm" action="{{ route('subscribe.store') }}" method="POST"
-            class="flex flex-col sm:flex-row items-center gap-3">
-        @csrf
-
-        {{-- Honeypot anti-spam (biarkan kosong) --}}
-        <input type="text" name="website" class="hidden" tabindex="-1" autocomplete="off">
-
-        <label for="newsletter-email" class="sr-only">Email address</label>
-        <input
-          id="newsletter-email"
-          type="email"
-          name="email"
-          required
-          inputmode="email"
-          autocomplete="email"
-          placeholder="Enter your email address"
-          class="w-full flex-1 rounded-full bg-white text-gray-900 placeholder-gray-500 px-5 py-3
-                 focus:outline-none focus:ring-4 ring-orange-500/30 border border-white/10"
-        />
-
-        <button type="submit" data-submit
-          class="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3 font-semibold
-                 bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500
-                 hover:brightness-110 active:brightness-95 transition duration-200 shadow-lg shadow-orange-500/20">
-          <svg data-spinner class="h-5 w-5 animate-spin hidden" viewBox="0 0 24 24" fill="none">
-            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
-          </svg>
-          <span>Subscribe</span>
-        </button>
-      </form>
-
-      <div class="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs text-white/60">
-        <div class="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white/50" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1.75a7.25 7.25 0 00-7.25 7.25c0 5.5 7.25 13.25 7.25 13.25S19.25 14.5 19.25 9A7.25 7.25 0 0012 1.75zm0 9.75a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
-          </svg>
-          No spam, unsubscribe anytime.
-        </div>
-        <span class="hidden sm:inline-block">•</span>
-        <div>By subscribing you agree to our <a href="{{ url('/terms') }}" class="underline decoration-dotted hover:decoration-solid">Terms</a> &amp; <a href="{{ url('/privacy') }}" class="underline decoration-dotted hover:decoration-solid">Privacy</a>.</div>
-      </div>
-    </div>
-  </div>
-
-  {{-- Disable double-submit + tampilkan spinner --}}
-  <script>
-    (function(){
-      const form = document.getElementById('newsletterForm');
-      if(!form) return;
-      form.addEventListener('submit', function(){
-        const btn = form.querySelector('[data-submit]');
-        const spinner = form.querySelector('[data-spinner]');
-        if(btn){
-          btn.disabled = true;
-          btn.classList.add('opacity-80','cursor-not-allowed');
-        }
-        if(spinner) spinner.classList.remove('hidden');
-      }, { passive:true });
-    })();
-  </script>
-</section>
-
-  
+      <script>
+        (function(){
+          const form = document.getElementById('newsletterForm');
+          if(!form) return;
+          form.addEventListener('submit', function(){
+            const btn = form.querySelector('[data-submit]');
+            const spinner = form.querySelector('[data-spinner]');
+            if(btn){
+              btn.disabled = true;
+              btn.classList.add('opacity-80','cursor-not-allowed');
+            }
+            if(spinner) spinner.classList.remove('hidden');
+          }, { passive:true });
+        })();
+      </script>
+    </section>
 @endsection

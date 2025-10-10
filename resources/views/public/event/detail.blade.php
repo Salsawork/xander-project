@@ -106,13 +106,12 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4">
-                                {{-- Link bracket pakai rute kanonik (ID) --}}
+                            {{-- <div class="mt-4">
                                 <a href="{{ route('events.bracket', ['event'=>$event->id, 'name'=>$pretty]) }}"
                                    class="inline-flex items-center gap-2 bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
                                     View Tournament Bracket
                                 </a>
-                            </div>
+                            </div> --}}
                         </div>
                     </div>
                 </div>

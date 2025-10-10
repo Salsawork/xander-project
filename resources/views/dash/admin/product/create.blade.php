@@ -96,10 +96,10 @@
                         </h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1" for="quantity">
+                                <label class="block text-xs text-gray-400 mb-1" for="stock">
                                     Quantity
                                 </label>
-                                <input name="quantity" id="quantity" type="number" placeholder="0"
+                                <input name="stock" id="stock" type="number" placeholder="0"
                                     class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                             </div>
                             <div>

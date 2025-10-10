@@ -37,7 +37,6 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-
         // Logging untuk debugging
         Log::info('Checkout page accessed');
         $carts = $venues = $sparrings = [];
@@ -51,8 +50,11 @@ class OrderController extends Controller
             $carts = array_values(array_filter($cartData, fn($cart) => in_array((string)$cart['id'], $selectedItems)));
             foreach ($carts as $c) {
                 $price = (int) $c['price'];
-                $total += $price;
-                $tax += $price * 0.1; 
+                $discountPercent = $c['discount'] ?? 0;
+                $discount = $price * $discountPercent;
+                $subtotal = ($price - $discount) * $c['stock'];
+                $total += $subtotal;
+                $tax += $subtotal * 0.1;
             }
         }
 
@@ -86,10 +88,7 @@ class OrderController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
-    {
-       
-    }
+    public function create() {}
 
     /**
      * Store a newly created resource in storage.
@@ -97,24 +96,25 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'firstname'      => 'required|string|max:255',
-            'lastname'       => 'required|string|max:255',
-            'email'          => 'required|email',
-            'phone'          => 'required|string|max:20',
-            'payment_method' => 'required|in:transfer_manual',
-            'shipping'       => 'nullable|numeric|min:0',
-            'tax'            => 'nullable|numeric|min:0',
-            'province_name'       => 'nullable|string|max:255',
-            'city_name'           => 'nullable|string|max:255',
-            'district_name'       => 'nullable|string|max:255',
-            'subdistrict_name'       => 'nullable|string|max:255',
-            
-            // products
-            'products'        => 'array',
-            'products.*.id'   => 'required|exists:products,id',
-            'products.*.qty'  => 'required|integer|min:1',
+            'firstname'         => 'required|string|max:255',
+            'lastname'          => 'required|string|max:255',
+            'email'             => 'required|email',
+            'phone'             => 'required|string|max:20',
+            'payment_method'    => 'required|in:transfer_manual',
+            'shipping'          => 'nullable|numeric|min:0',
+            'tax'               => 'nullable|numeric|min:0',
+            'province_name'     => 'nullable|string|max:255',
+            'city_name'         => 'nullable|string|max:255',
+            'district_name'     => 'nullable|string|max:255',
+            'subdistrict_name'  => 'nullable|string|max:255',
+            'courier'           => 'nullable|string|max:255',
 
-            
+            // products
+            'products'             => 'array',
+            'products.*.id'        => 'required|exists:products,id',
+            'products.*.stock'  => 'required|integer|min:1',
+
+
             // sparrings
             'sparrings'                => 'array',
             'sparrings.*.athlete_id'   => 'required|exists:users,id',
@@ -128,7 +128,7 @@ class OrderController extends Controller
             'venues.*.date'     => 'required',
             'venues.*.start'    => 'required',
             'venues.*.end'      => 'required',
-            'venues.*.table' => 'nullable|exists:tables,table_number'
+            'venues.*.table'    => 'nullable|exists:tables,table_number'
         ]);
 
         if (!auth()->check()) {
@@ -160,13 +160,24 @@ class OrderController extends Controller
              *  Tambahkan Products
              *  ========================= */
             if ($request->has('products')) {
+                $checkedIds = array_column($request->products, 'id');
+                $cartProducts = json_decode(Cookie::get('cartProducts'), true) ?? [];
+                $remaining = array_values(array_filter($cartProducts, fn($p) => !in_array($p['id'], $checkedIds)));
+                Cookie::queue('cartProducts', json_encode($remaining), 60 * 24 * 7);
+
                 foreach ($request->products as $item) {
                     $product = Product::findOrFail($item['id']);
-                    $qty     = $item['qty'];
+                    $qty     = $item['stock'];
+                    if ($product->stock < $qty) {
+                        throw new \Exception("Stok produk {$product->name} tidak mencukupi.");
+                    }
+                    $product->decrement('stock', $qty);
                     $price   = $product->pricing;
                     $tax      = $request->tax ?? 0;
                     $shipping = $request->shipping ?? 0;
-                    $subtotal = $qty * $price + $tax + $shipping;
+                    $discount = ($price * $product->discount);
+                    $subtotal = ($price - $discount) * $qty;
+                    $courier  = $request->courier;
                     $address = implode(', ', array_filter([
                         $request->input('subdistrict_name'),
                         $request->input('district_name'),
@@ -175,12 +186,13 @@ class OrderController extends Controller
                     ]));
 
                     $order->products()->attach($product->id, [
-                        'quantity' => $qty,
+                        'stock' => $qty,
                         'price'    => $price,
                         'subtotal' => $subtotal,
-                        'discount' => 0,
+                        'discount' => $discount * $qty,
                         'tax'      => $tax,
                         'shipping' => $shipping,
+                        'courier'  => $courier,
                         'address'  => $address,
                     ]);
 
@@ -192,10 +204,14 @@ class OrderController extends Controller
              *  Tambahkan Venues / Bookings
              *  ========================= */
             if ($request->has('venues')) {
+                $checkedIds = array_column($request->venues, 'id');
+                $cartVenues = json_decode(Cookie::get('cartVenues'), true) ?? [];
+                $remaining = array_values(array_filter($cartVenues, fn($v) => !in_array($v['id'], $checkedIds)));
+                Cookie::queue('cartVenues', json_encode($remaining), 60 * 24 * 7);
+
                 foreach ($request->venues as $venue) {
                     $bookingDate = \Carbon\Carbon::createFromFormat('d-m-Y', $venue['date'])->format('Y-m-d');
 
-                    // Cara yang lebih aman untuk mendapatkan table id
                     if (isset($venue['table']) && isset($venue['id'])) {
                         $tableId = DB::table('tables')
                             ->where('table_number', $venue['table'])
@@ -208,7 +224,6 @@ class OrderController extends Controller
                     } else {
                         throw new \Exception('Venue ID and Table number are required');
                     }
-
 
                     $order->bookings()->create([
                         'venue_id' => $venue['id'],
@@ -228,6 +243,11 @@ class OrderController extends Controller
              *  Tambahkan Sparring
              *  ========================= */
             if ($request->has('sparrings')) {
+                $checkedIds = array_column($request->sparrings, 'schedule_id');
+                $cartSparrings = json_decode(Cookie::get('cartSparrings'), true) ?? [];
+                $remaining = array_values(array_filter($cartSparrings, fn($s) => !in_array($s['schedule_id'], $checkedIds)));
+                Cookie::queue('cartSparrings', json_encode($remaining), 60 * 24 * 7);
+
                 foreach ($request->sparrings as $sparring) {
                     $order->orderSparrings()->create([
                         'athlete_id'  => $sparring['athlete_id'],
@@ -237,9 +257,8 @@ class OrderController extends Controller
 
                     $total += $sparring['price'];
 
-                    // Kirim email ke athlete
                     $athlete = User::find($sparring['athlete_id']);
-                    $user    = auth()->user(); // pemesan
+                    $user    = auth()->user();
                     if ($athlete && $athlete->email) {
                         $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
                             "Detail Pemesan:\n" .
@@ -248,7 +267,7 @@ class OrderController extends Controller
                             "- Telepon: {$user->phone}\n\n" .
                             "Detail Order:\n" .
                             "- Order Number: {$order->order_number}\n" .
-                            "- Total: Rp " . number_format($order->total, 0, ',', '.');
+                            "- Total: Rp " . number_format($total, 0, ',', '.');
 
                         Mail::raw($messageBody, function ($message) use ($athlete) {
                             $message->to($athlete->email)
@@ -257,7 +276,6 @@ class OrderController extends Controller
                     }
                 }
             }
-
             if ($request->filled('shipping')) {
                 $total += $request->shipping;
             }
@@ -265,6 +283,7 @@ class OrderController extends Controller
             if ($request->filled('tax')) {
                 $total += $request->tax;
             }
+
 
             // Update total order
             $order->update(['total' => $total]);
@@ -454,7 +473,7 @@ class OrderController extends Controller
         if ($order->items()->exists()) {
             $items = $order->items()->with('product')->get();
             $products = $items->pluck('product')->unique();
-            
+
             $hasBooking = $order->bookings()->exists();
             $hasSparring = $order->orderSparrings()->exists();
             return view('public.order.item', compact('order', 'items', 'products', 'hasBooking', 'hasSparring'));
