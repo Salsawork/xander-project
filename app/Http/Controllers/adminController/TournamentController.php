@@ -33,7 +33,10 @@ class TournamentController extends Controller
         return view('dash.admin.tournament.index', compact('tournaments'));
     }
 
-
+    public function show(Tournament $tournament)
+    {
+        return redirect()->route('events.show', ['event' => $tournament->id]);
+    }
     public function create()
     {
         // Show the form to create a new tournament

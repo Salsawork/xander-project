@@ -55,7 +55,7 @@
                                         <td class="px-4 py-3 text-gray-400">{{ $tournament->created_at->format('d M Y') }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center justify-end gap-3 text-gray-400">
-                                                <a href="{{ route('tournament.bracket', $tournament->id) }}" target="_blank"
+                                                <a href="{{ route('events.show', $tournament->id) }}" target="_blank"
                                                     class="hover:text-white" title="View">
                                                     <i class="fas fa-eye"></i>
                                                 </a>

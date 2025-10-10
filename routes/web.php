@@ -366,7 +366,7 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
     Route::prefix('championships')->name('tree.')->group(function () {
         Route::get('/', [TreeController::class, 'index'])->name('index');
         Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
-        Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
+        Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('update');
     });
 
     /* Company pages */

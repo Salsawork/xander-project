@@ -11,7 +11,6 @@
                     <h1 class="text-3xl font-extrabold mb-6">
                         Community
                     </h1>
-                    <div class="mt-20 sm:mt-28 px-4 sm:px-8">
 
                         @if (session('success'))
                             <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
@@ -208,7 +207,6 @@
                                 </div>
                             @endforeach
                         </div>
-                    </div>
                 </div>
             </main>
         </div>
