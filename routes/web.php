@@ -50,7 +50,6 @@ use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
 use App\Http\Controllers\CartItemController;
-use App\Http\Controllers\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
