@@ -362,22 +362,24 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
     Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
     Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
 
-/** Tree Management (Public or Auth, depends on requirement) */
-Route::prefix('championships')->name('tree.')->group(function () {
-    Route::get('/', [TreeController::class, 'index'])->name('index');
-    Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
-    Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
-});
+    /** Tree Management (Public or Auth, depends on requirement) */
+    Route::prefix('championships')->name('tree.')->group(function () {
+        Route::get('/', [TreeController::class, 'index'])->name('index');
+        Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
+        Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('tree.update');
+    });
 
-/* Company pages */
-Route::prefix('company')->group(function () {
-    Route::view('/careers', 'careers')->name('company.careers');
-    Route::view('/partners', 'partners')->name('company.partners');
-    Route::view('/press-media', 'press-media')->name('company.press');
-});
+    /* Company pages */
+    Route::prefix('company')->group(function () {
+        Route::view('/careers', 'careers')->name('company.careers');
+        Route::view('/partners', 'partners')->name('company.partners');
+        Route::view('/press-media', 'press-media')->name('company.press');
+    });
 
-/* Blog */
-Route::prefix('blog')->group(function () {
-    Route::view('/', 'blog.index')->name('blog.index');
-    Route::view('/{slug}', 'blog.show')->name('blog.show');
+    /* Blog */
+    Route::prefix('blog')->group(function () {
+        Route::view('/', 'blog.index')->name('blog.index');
+        Route::view('/{slug}', 'blog.show')->name('blog.show');
+    });
+
 });
