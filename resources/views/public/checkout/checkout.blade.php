@@ -20,8 +20,14 @@
             <div>
                 <h2 class="text-lg font-bold mb-4">Product</h2>
                 @forelse ($carts as $cart)
+                @php
+                $images = $cart['images'] ? (is_array($cart['images']) ? $cart['images'] : json_decode($cart['images'], true)) : [];
+                $firstImage = !empty($images) ? $images[0] : null;
+                $idx = ($loop->index % 5) + 1;
+                $defaultImg = asset("images/products/{$idx}.png");
+                @endphp
                 <div class="flex items-center space-x-4 mb-4">
-                    <img src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
+                    <img src="{{ $firstImage ?? $defaultImg }}" alt="{{ $cart['name'] }}" class="w-16 h-16 object-cover rounded">
                     <div class="flex-1">
                         <h3 class="font-semibold">{{ $cart['name'] }}</h3>
                         @if(isset($cart['discount']) && $cart['discount'] > 0)
@@ -44,12 +50,12 @@
                 @if(isset($sparrings) && count($sparrings) > 0)
                 @foreach($sparrings as $sparring)
                 <div class="flex items-center space-x-4 mb-4">
-                    <img src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}"
-                        alt="{{ $sparring['name'] }}"
+                    <img src="{{ $sparring['athlete_image'] ? asset('images/athlete/' . $sparring['athlete_image']) : 'https://placehold.co/400x400?text=No+Image' }}"
+                        alt="{{ $sparring['athlete_name'] }}"
                         class="w-16 h-16 object-cover rounded">
                     <div class="flex-1">
-                        <h3 class="font-semibold">{{ $sparring['name'] }}</h3>
-                        <p class="text-gray-400">{{ $sparring['schedule'] }}</p>
+                        <h3 class="font-semibold">{{ $sparring['athlete_name'] }}</h3>
+                        <p class="text-gray-400">{{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }} - {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}</p>
                         <p class="text-gray-400">Rp. {{ number_format($sparring['price'], 0, ',', '.') }}</p>
                     </div>
                 </div>
@@ -77,7 +83,7 @@
 
                         {{-- Jadwal dan Tanggal --}}
                         @if(isset($venue['date']) && isset($venue['start']) && isset($venue['end']))
-                        <p class="text-gray-400">{{ $venue['start'] }} - {{ $venue['end'] }} - {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}</p>
+                        <p class="text-gray-400">{{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }} - {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}</p>
                         @endif
 
                         {{-- Harga --}}
@@ -107,13 +113,13 @@
             <div class="bg-[#2a2a2a] rounded-2xl shadow-xl p-6 space-y-6">
                 <form id="checkout-form" enctype="multipart/form-data" method="POST">
                     @csrf
-
+                    
                     <input type="hidden" name="tax" id="tax" value="{{ $tax }}">
 
                     <!-- Hidden input untuk produk -->
                     @foreach($carts as $index => $cart)
-                    <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['id'] }}">
-                    <input type="hidden" name="products[{{ $index }}][stock]" value="{{ $cart['stock'] }}">
+                    <input type="hidden" name="products[{{ $index }}][id]" value="{{ $cart['product_id'] }}">
+                    <input type="hidden" name="products[{{ $index }}][quantity]" value="{{ $cart['quantity'] }}">
                     @endforeach
 
                     <!-- Hidden input untuk sparring -->
@@ -421,11 +427,21 @@
 
                         document.getElementById('shipping').value = shippingCost;
                     } else {
-                        alert('Tidak ada layanan pengiriman tersedia untuk kurir ini.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Shipping Unavailable',
+                            text: 'Tidak ada layanan pengiriman tersedia untuk kurir ini.',
+                            confirmButtonColor: '#3085d6'
+                        });
                     }
                 } catch (error) {
                     console.error('Gagal menghitung ongkir:', error);
-                    alert('Terjadi kesalahan saat menghitung ongkir.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Shipping Error',
+                        text: 'Terjadi kesalahan saat menghitung ongkir. Silakan coba lagi.',
+                        confirmButtonColor: '#3085d6'
+                    });
                 }
             });
         }
@@ -440,7 +456,7 @@
                     const courier = document.getElementById('courier').value;
                     const shipping = document.getElementById('shipping').value;
 
-                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0') {
+                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0' ) {
                         Swal.fire({
                             icon: 'warning',
                             title: 'Shipping Required',
@@ -475,13 +491,23 @@
                         const redirectUrl = '{{ route("checkout.payment") }}?order_number=' + data.order_number;
                         window.location.href = redirectUrl; // redirect ke halaman pembayaran
                     } else {
-                        alert(data.message || 'Order gagal diproses.');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Order Error',
+                            text: data.message || 'Order gagal diproses.',
+                            confirmButtonColor: '#3085d6'
+                        });
                         btn.disabled = false;
                         btn.textContent = 'Place Order';
                     }
                 } catch (err) {
                     console.error(err);
-                    alert('Terjadi kesalahan saat memproses order.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Order Error',
+                        text: 'Terjadi kesalahan saat memproses order. Silakan coba lagi.',
+                        confirmButtonColor: '#3085d6'
+                    });
                     btn.disabled = false;
                     btn.textContent = 'Place Order';
                 }

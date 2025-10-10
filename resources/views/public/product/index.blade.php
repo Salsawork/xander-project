@@ -1,6 +1,27 @@
 @extends('app')
 @section('title', 'Products Page - Xander Billiard')
 
+@php
+    use Illuminate\Support\Str;
+
+    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    use Illuminate\Pagination\LengthAwarePaginator;
+    // deteksi sederhana mobile/desktop via User-Agent
+    $ua       = request()->header('User-Agent', '');
+    $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
+    $perPage  = $isMobile ? 4 : 12;
+    $page   = max((int) request('page', 1), 1);
+    $products = $products ?? collect(); 
+    $products = new LengthAwarePaginator(
+        $products->slice(($page - 1) * $perPage, $perPage)->values(),
+        $products->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+@endphp
+
 @push('styles')
 <style>
   :root { color-scheme: dark; }

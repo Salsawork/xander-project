@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venue;
+use App\Models\BilliardSession;
+use App\Models\CartItem;
 use App\Models\PriceSchedule;
 use App\Models\Table;
 use Illuminate\Http\Request;
@@ -38,12 +40,68 @@ class VenueController extends Controller
             ->paginate(5)
             ->withQueryString();
 
-        $cartProducts  = json_decode($request->cookie('cartProduct') ?? '[]', true);
-        $cartVenues    = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
 
-        $addresses = Venue::select('address')->distinct()->pluck('address');
+        if (auth()->check()) {
+            $userId = auth()->id();
 
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
+
+        $addresses = Venue::select('address')
+            ->distinct()
+            ->pluck('address');
         return view('public.venue.index', compact('venues', 'cartProducts', 'cartVenues', 'cartSparrings', 'addresses'));
     }
 
@@ -115,10 +173,65 @@ class VenueController extends Controller
             ->orderBy('price', 'asc')
             ->value('price');
 
-        $cartProducts  = json_decode($request->cookie('cartProducts') ?? '[]', true);
-        $cartVenues    = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartSparrings') ?? '[]', true);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
 
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
+        
         return view('public.venue.detail', compact('detail', 'tables', 'minPrice', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 }

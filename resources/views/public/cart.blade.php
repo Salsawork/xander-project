@@ -105,7 +105,6 @@
         }
     }
 </style>
-
 <div class="fixed top-0 right-0 bg-gray-900 min-h-screen max-w-1/3 z-50 hidden" id="cart">
     <header class="flex items-center space-x-4 p-6 cart-header">
         <button aria-label="Back" class="text-gray-500 hover:text-gray-400 focus:outline-none" onclick="showCart()">
@@ -120,34 +119,41 @@
             <ul class="space-y-4">
                 {{-- Product --}}
                 @forelse ($cartProducts as $cart)
+                @php
+                $images = $cart['images'] ? (is_array($cart['images']) ? $cart['images'] : json_decode($cart['images'], true)) : [];
+                $firstImage = !empty($images) ? $images[0] : null;
+                $idx = ($loop->index % 5) + 1;
+                $defaultImg = asset("images/products/{$idx}.png");
+                @endphp
                 <li class="flex items-center space-x-4 cart-item">
-                    <input aria-label="{{ 'Select ' . $cart['name'] }}" name="selected_items[]" onchange="handleCheckboxChange(this)"
-                        class="w-5 h-5 border border-gray-600 rounded-sm bg-transparent checked:bg-blue-500 checked:border-blue-500"
-                        type="checkbox" value="{{ $cart['id'] }}" />
+                    <input type="checkbox" name="selected_items[]" data-type="product" value="product:{{ $cart['cart_id'] }}"
+                        onchange="handleCheckboxChange(this)" class="w-5 h-5 border border-gray-600 rounded-sm" />
                     <img alt="{{ $cart['name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
-                        src="{{ $cart['image'] ?? 'https://placehold.co/400x400?text=No+Image' }}" width="80" />
+                        src="{{ $firstImage ?? $defaultImg }}" width="80" />
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-white text-base leading-tight cart-name">
                             {{ $cart['name'] }}
                         </p>
-                        <input type="hidden" id="price-{{ $cart['id'] }}" value="{{ $cart['price'] }}">
-                        <input type="hidden" id="discount-{{ $cart['id'] }}" value="{{ $cart['discount'] ?? 0 }}">
+                        <input type="hidden" id="price-{{ $cart['cart_id'] }}" value="{{ $cart['price'] }}">
+                        <input type="hidden" id="discount-{{ $cart['cart_id'] }}" value="{{ $cart['discount'] ?? 0 }}">
 
-                        <p class="text-white text-sm mt-1 cart-price">
+                        <!-- gunakan div untuk menghindari nested <p> -->
+                        <div class="text-sm mt-1 cart-price">
                             @if(isset($cart['discount']) && $cart['discount'] > 0)
-                        <p class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</p>
-                        <p class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</p>
-                        @else
-                        <p class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</p>
-                        @endif
-                        </p>
+                            <div class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
+                            <div class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</div>
+                            @else
+                            <div class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
+                            @endif
+                        </div>
+
                         <p class="text-white text-xs mt-1 cart-meta">
                             Quantity: {{ $cart['stock'] ?? 1 }}
                         </p>
                     </div>
-                    <form action="{{ route('cart.del.product') }}" method="POST" class="delete-form">
+                    <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
-                        <input type="hidden" name="id" value="{{ $cart['id'] }}">
+                        <input type="hidden" name="id" value="{{ $cart['cart_id'] }}">
                         <button type="submit" aria-label="Delete {{ $cart['name'] }}"
                             class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
                             <i class="fas fa-trash-alt text-lg"></i>
@@ -165,9 +171,13 @@
                 {{-- Venue --}}
                 @forelse ($cartVenues ?? [] as $index => $venue)
                 <li class="flex items-center space-x-4 cart-item">
-                    <input type="checkbox" name="selected_items[]" value="venue-{{ $venue['id'] }}"
+                    <input
+                        type="checkbox"
+                        name="selected_items[]"
+                        data-type="venue"
+                        value="venue:{{ $venue['cart_id'] }}"
                         onchange="handleCheckboxChange(this)"
-                        class="w-5 h-5 border border-gray-600 rounded-sm bg-transparent checked:bg-blue-500 checked:border-blue-500" />
+                        class="w-5 h-5 border border-gray-600 rounded-sm" />
 
                     <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
                         src="https://placehold.co/400x400?text=No+Image" width="80" />
@@ -179,7 +189,7 @@
                             {{ $venue['date'] }} {{ $venue['start'] }} - {{ $venue['end'] }}
                         </p>
 
-                        <input type="hidden" id="price-venue-{{ $venue['id'] }}" value="{{ $venue['price'] }}">
+                        <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}" value="{{ $venue['price'] }}">
                         <p class="text-white text-sm mt-1 cart-price">
                             Rp. {{ number_format($venue['price'], 0, ',', '.') }}
                         </p>
@@ -188,9 +198,9 @@
                         </p>
                     </div>
 
-                    <form action="{{ route('cart.del.venue') }}" method="POST" class="delete-form">
+                    <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
-                        <input type="hidden" name="id" value="{{ $venue['id'] }}">
+                        <input type="hidden" name="id" value="{{ $venue['cart_id'] }}">
                         <button type="submit" aria-label="Delete {{ $venue['name'] }}"
                             class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
                             <i class="fas fa-trash-alt text-lg"></i>
@@ -203,31 +213,35 @@
                 {{-- Sparring --}}
                 @forelse ($cartSparrings ?? [] as $index => $sparring)
                 <li class="flex items-center space-x-4 cart-item">
-                    <input aria-label="{{ 'Select ' . $sparring['name'] }}" name="selected_items[]" onchange="handleCheckboxChange(this)"
-                        class="w-5 h-5 border border-gray-600 rounded-sm bg-transparent checked:bg-blue-500 checked:border-blue-500"
-                        type="checkbox" value="sparring-{{ $sparring['schedule_id'] }}" />
-                    <img alt="{{ $sparring['name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
+                    <input
+                        type="checkbox"
+                        name="selected_items[]"
+                        data-type="sparring"
+                        value="sparring:{{ $sparring['cart_id'] }}"
+                        onchange="handleCheckboxChange(this)"
+                        class="w-5 h-5 border border-gray-600 rounded-sm" />
+                    <img alt="{{ $sparring['athlete_name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
                         height="80"
-                        src="{{ $sparring['image'] ? asset('images/athlete/' . $sparring['image']) : 'https://placehold.co/400x400?text=No+Image' }}"
+                        src="{{ $sparring['athlete_image'] ? asset('images/athlete/' . $sparring['athlete_image']) : 'https://placehold.co/400x400?text=No+Image' }}"
                         width="80" />
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-white text-base leading-tight cart-name">
-                            {{ $sparring['name'] }} (Sparring)
+                            {{ $sparring['athlete_name'] }} (Sparring)
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            {{ $sparring['schedule'] }}
+                            {{ $sparring['date'] }} {{ $sparring['start'] }} - {{ $sparring['end'] }}
                         </p>
-                        <input type="hidden" id="price-sparring-{{ $sparring['schedule_id'] }}"
+                        <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}"
                             value="{{ $sparring['price'] }}">
                         <p class="text-white text-sm mt-1 cart-price">
                             Rp. {{ number_format($sparring['price'], 0, ',', '.') }}
                         </p>
                     </div>
-                    <form action="{{ route('cart.del.sparring') }}" method="POST" class="delete-form">
+                    <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
                         @method('POST')
-                        <input type="hidden" name="schedule_id" value="{{ $sparring['schedule_id'] }}">
-                        <button type="submit" aria-label="Delete {{ $sparring['name'] }}"
+                        <input type="hidden" name="id" value="{{ $sparring['cart_id'] }}">
+                        <button type="submit" aria-label="Delete {{ $sparring['athlete_name'] }}"
                             class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
                             <i class="fas fa-trash-alt text-lg"></i>
                         </button>
@@ -252,39 +266,36 @@
                                 let total = 0;
 
                                 checkboxes.forEach(function(checkbox) {
+                                    const type = checkbox.dataset.type || 'product';
+                                    const rawValue = checkbox.value;
+                                    const id = rawValue.split(':')[1] || rawValue;
+
                                     let priceInput = null;
                                     let discountInput = null;
                                     let qty = 1;
 
-                                    // Deteksi tipe item (product, venue, sparring)
-                                    if (checkbox.value.startsWith('venue-')) {
-                                        const id = checkbox.value.split('-')[1];
+                                    if (type === 'venue') {
                                         priceInput = document.getElementById('price-venue-' + id);
-                                    } else if (checkbox.value.startsWith('sparring-')) {
-                                        const id = checkbox.value.split('-')[1];
+                                    } else if (type === 'sparring') {
                                         priceInput = document.getElementById('price-sparring-' + id);
                                     } else {
-                                        // default: product
-                                        priceInput = document.getElementById('price-' + checkbox.value);
-                                        discountInput = document.getElementById('discount-' + checkbox.value);
+                                        priceInput = document.getElementById('price-' + id);
+                                        discountInput = document.getElementById('discount-' + id);
                                     }
 
-                                    // Cek stock (khusus product)
                                     const qtyText = checkbox.closest('li').querySelector('.cart-meta')?.textContent || '';
-                                    const qtyMatch = qtyText.match(/Quantity:\s*(\d+)/);
+                                    const qtyMatch = qtyText.match(/Quantity:\s*(\d+)/i);
                                     if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
                                     if (priceInput) {
-                                        const price = parseInt(priceInput.value) || 0;
+                                        const price = parseFloat(priceInput.value) || 0;
                                         const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
 
-                                        // Hitung harga setelah diskon
                                         const finalPrice = price - (price * discount);
                                         total += finalPrice * qty;
                                     }
                                 });
 
-                                // Tampilkan total dalam format Rupiah
                                 document.getElementById('cart-total-display').textContent = 'Rp. ' + total.toLocaleString('id-ID');
                             }
 
@@ -294,6 +305,7 @@
 
                             updateCartTotal();
                         </script>
+
                     </span>
                 </div>
                 <button type="submit"
@@ -307,17 +319,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Validasi: minimal 1 item dipilih (hanya checkbox di dalam cart)
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {
         const form = this;
 
-        // hapus input hidden lama biar ga dobel
         form.querySelectorAll('input[name="selected_items[]"]').forEach(el => el.remove());
 
-        // ambil semua checkbox yang dicentang
         const checked = document.querySelectorAll('#cart input[type="checkbox"]:checked');
 
-        // validasi: minimal 1 item harus dipilih
         if (checked.length === 0) {
             e.preventDefault();
             Swal.fire({
@@ -330,19 +338,20 @@
                 color: '#FFFFFF',
                 iconColor: '#FFC107'
             });
-            return; // stop proses submit
+            return;
         }
 
-        // tambahin hidden input sesuai item tercentang
         checked.forEach(cb => {
+            const type = cb.dataset.type || 'product';
+            const id = cb.value.split(':')[1] || cb.value;
             const hidden = document.createElement('input');
             hidden.type = 'hidden';
             hidden.name = 'selected_items[]';
-            hidden.value = cb.value;
+            hidden.value = `${type}:${id}`;
             form.appendChild(hidden);
         });
     });
 
-    // Optional: stub agar tidak error saat onchange dipanggil
+
     function handleCheckboxChange(_el) {}
 </script>

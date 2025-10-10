@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\AthleteDetail;
 use App\Models\AthleteReview;
+use App\Models\CartItem;
 use App\Models\SparringSchedule;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
@@ -63,10 +64,64 @@ class SparringController extends Controller
         $minPrice = AthleteDetail::min('price_per_session');
         $maxPrice = AthleteDetail::max('price_per_session');
 
-        // Data cart dari cookie
-        $cartProducts  = json_decode(Cookie::get('cartProducts')  ?? '[]', true);
-        $cartVenues    = json_decode(Cookie::get('cartVenues')    ?? '[]', true);
-        $cartSparrings = json_decode(Cookie::get('cartSparrings') ?? '[]', true);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
+
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
 
         return view('public.sparring.index', compact(
             'athletes',
@@ -105,10 +160,10 @@ class SparringController extends Controller
             ->map(fn($item) => [
                 'id'         => $item->id,
                 'athlete_id' => $item->athlete_id,
-                'date'       => Carbon::parse($item->date)->format('Y-m-d'),
-                'start_time' => Carbon::parse($item->start_time)->format('H:i'),
-                'end_time'   => Carbon::parse($item->end_time)->format('H:i'),
-                'is_booked'  => $item->is_booked,
+                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
+                'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
+                'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                'is_booked' => $item->is_booked,
             ]);
 
         // Ambil tanggal unik untuk date picker
@@ -134,10 +189,65 @@ class SparringController extends Controller
             ? AthleteReview::where('athlete_id', $athlete->id)->where('user_id', auth()->id())->exists()
             : false;
 
-        $cartProducts  = json_decode(Cookie::get('cartProducts')  ?? '[]', true);
-        $cartVenues    = json_decode(Cookie::get('cartVenues')    ?? '[]', true);
-        $cartSparrings = json_decode(Cookie::get('cartSparrings') ?? '[]', true);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
 
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'    => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'     => $item->id,
+                    'schedule_id' => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'        => $item->date,
+                    'start'       => $item->start,
+                    'end'         => $item->end,
+                    'price'       => $item->price,
+                ]);
+        }
+        
         return view('public.sparring.detail', compact(
             'athlete',
             'schedules',

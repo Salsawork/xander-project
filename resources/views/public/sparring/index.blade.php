@@ -3,9 +3,6 @@
 @section('title', 'Sparring')
 
 @php
-    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
-    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     $locations = $locations ?? ['Jakarta', 'Bandung', 'Surabaya', 'Medan'];

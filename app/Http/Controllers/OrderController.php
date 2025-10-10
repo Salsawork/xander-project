@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Bank;
+use App\Models\CartItem;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -37,17 +38,63 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        // Logging untuk debugging
         Log::info('Checkout page accessed');
-        $carts = $venues = $sparrings = [];
-        $total = $shipping = $tax = 0;
 
+        $total = $shipping = $tax = 0;
         $selectedItems = (array) $request->input('selected_items', []);
 
-        // Products
-        if (Cookie::has('cartProducts')) {
-            $cartData = json_decode(Cookie::get('cartProducts'), true) ?? [];
-            $carts = array_values(array_filter($cartData, fn($cart) => in_array((string)$cart['id'], $selectedItems)));
+        $selectedProducts = [];
+        $selectedVenues = [];
+        $selectedSparrings = [];
+
+        foreach ($selectedItems as $item) {
+            if (!str_contains($item, ':')) {
+                \Log::warning('Invalid selected item format', ['item' => $item]);
+                continue;
+            }
+
+            [$type, $id] = explode(':', $item);
+            switch ($type) {
+                case 'product':
+                    $selectedProducts[] = $id;
+                    break;
+                case 'venue':
+                    $selectedVenues[] = $id;
+                    break;
+                case 'sparring':
+                    $selectedSparrings[] = $id;
+                    break;
+            }
+        }
+
+
+        $carts = collect();
+        $venues = collect();
+        $sparrings = collect();
+
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            // --- PRODUK ---
+            $carts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->whereIn('id', $selectedProducts)
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'    => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'       => $item->product?->name,
+                    'brand'      => $item->product?->brand,
+                    'category'   => $item->product?->category?->name ?? '-',
+                    'price'      => $item->product?->pricing ?? 0,
+                    'quantity'   => $item->quantity,
+                    'weight'     => $item->product?->weight ?? 0,
+                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'   => $item->product?->discount ?? 0,
+                    'images'     => $item->product?->images[0] ?? null,
+                ]);
+
             foreach ($carts as $c) {
                 $price = (int) $c['price'];
                 $discountPercent = $c['discount'] ?? 0;
@@ -56,33 +103,71 @@ class OrderController extends Controller
                 $total += $subtotal;
                 $tax += $subtotal * 0.1;
             }
-        }
 
-        // Venues
-        if (Cookie::has('cartVenues')) {
-            $venueData = json_decode(Cookie::get('cartVenues'), true) ?? [];
-            $venues = array_values(array_filter($venueData, fn($venue) => in_array("venue-{$venue['id']}", $selectedItems)));
+            // --- VENUE ---
+            $venues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->whereIn('id', $selectedVenues)
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'id'      => $item->venue?->id,
+                    'name'    => $item->venue?->name,
+                    'address' => $item->venue?->address ?? '-',
+                    'date'    => $item->date,
+                    'start'   => $item->start,
+                    'end'     => $item->end,
+                    'table'   => $item->table_number,
+                    'price'   => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
             foreach ($venues as $v) {
-                $price = (int) $v['price'];
-                $total += $price;
+                $total += (int) $v['price'];
             }
-        }
 
-        // Sparrings
-        if (Cookie::has('cartSparrings')) {
-            $sparringData = json_decode(Cookie::get('cartSparrings'), true) ?? [];
-            $sparrings = array_values(array_filter($sparringData, fn($sparring) => in_array("sparring-{$sparring['schedule_id']}", $selectedItems)));
+            // --- SPARRING ---
+            $sparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->whereIn('id', $selectedSparrings)
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'       => $item->id,
+                    'schedule_id'   => $item->sparringSchedule?->id,
+                    'athlete_id'    => $item->sparringSchedule?->athlete?->id,
+                    'athlete_name'  => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'          => $item->date,
+                    'start'         => $item->start,
+                    'end'           => $item->end,
+                    'price'         => $item->price,
+                ]);
+
             foreach ($sparrings as $s) {
-                $price = (int) $s['price'];
-                $total += $price;
+                $total += (int) $s['price'];
             }
         }
 
-        $grandTotal = $total + $shipping + $tax;
+        $grandTotal = round($total + $shipping + $tax);
 
         $user = $request->user();
         $banks = Bank::all();
-        return view('public.checkout.checkout', compact('carts', 'venues', 'sparrings', 'total', 'shipping', 'tax', 'grandTotal', 'user', 'banks'));
+
+        return view('public.checkout.checkout', compact(
+            'carts',
+            'venues',
+            'sparrings',
+            'total',
+            'shipping',
+            'tax',
+            'grandTotal',
+            'user',
+            'banks'
+        ));
     }
 
     /**
@@ -161,16 +246,20 @@ class OrderController extends Controller
              *  ========================= */
             if ($request->has('products')) {
                 $checkedIds = array_column($request->products, 'id');
-                $cartProducts = json_decode(Cookie::get('cartProducts'), true) ?? [];
-                $remaining = array_values(array_filter($cartProducts, fn($p) => !in_array($p['id'], $checkedIds)));
-                Cookie::queue('cartProducts', json_encode($remaining), 60 * 24 * 7);
+
+                CartItem::where('user_id', $user->id)
+                    ->where('item_type', 'product')
+                    ->whereIn('item_id', $checkedIds)
+                    ->delete();
 
                 foreach ($request->products as $item) {
                     $product = Product::findOrFail($item['id']);
-                    $qty     = $item['stock'];
+                    $qty     = $item['quantity'];
+
                     if ($product->stock < $qty) {
                         throw new \Exception("Stok produk {$product->name} tidak mencukupi.");
                     }
+
                     $product->decrement('stock', $qty);
                     $price   = $product->pricing;
                     $tax      = $request->tax ?? 0;
@@ -184,19 +273,19 @@ class OrderController extends Controller
                         $request->input('city_name'),
                         $request->input('province_name'),
                     ]));
+                    
+                    $total += $subtotal;
 
                     $order->products()->attach($product->id, [
                         'stock' => $qty,
                         'price'    => $price,
-                        'subtotal' => $subtotal,
+                        'subtotal' => $subtotal + $tax + $shipping,
                         'discount' => $discount * $qty,
                         'tax'      => $tax,
                         'shipping' => $shipping,
                         'courier'  => $courier,
                         'address'  => $address,
                     ]);
-
-                    $total += $subtotal;
                 }
             }
 
@@ -205,12 +294,14 @@ class OrderController extends Controller
              *  ========================= */
             if ($request->has('venues')) {
                 $checkedIds = array_column($request->venues, 'id');
-                $cartVenues = json_decode(Cookie::get('cartVenues'), true) ?? [];
-                $remaining = array_values(array_filter($cartVenues, fn($v) => !in_array($v['id'], $checkedIds)));
-                Cookie::queue('cartVenues', json_encode($remaining), 60 * 24 * 7);
+
+                CartItem::where('user_id', $user->id)
+                    ->where('item_type', 'venue')
+                    ->whereIn('item_id', $checkedIds)
+                    ->delete();
 
                 foreach ($request->venues as $venue) {
-                    $bookingDate = \Carbon\Carbon::createFromFormat('d-m-Y', $venue['date'])->format('Y-m-d');
+                    $bookingDate = \Carbon\Carbon::parse($venue['date'])->format('Y-m-d');
 
                     if (isset($venue['table']) && isset($venue['id'])) {
                         $tableId = DB::table('tables')
@@ -244,9 +335,11 @@ class OrderController extends Controller
              *  ========================= */
             if ($request->has('sparrings')) {
                 $checkedIds = array_column($request->sparrings, 'schedule_id');
-                $cartSparrings = json_decode(Cookie::get('cartSparrings'), true) ?? [];
-                $remaining = array_values(array_filter($cartSparrings, fn($s) => !in_array($s['schedule_id'], $checkedIds)));
-                Cookie::queue('cartSparrings', json_encode($remaining), 60 * 24 * 7);
+
+                CartItem::where('user_id', $user->id)
+                    ->where('item_type', 'sparring')
+                    ->whereIn('item_id', $checkedIds)
+                    ->delete();
 
                 foreach ($request->sparrings as $sparring) {
                     $order->orderSparrings()->create([

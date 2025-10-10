@@ -4,10 +4,15 @@
 @php
     use Illuminate\Support\Str;
 
-    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
-    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
-    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    $dummyRelatedProducts = [
+        ['id'=>1,'name'=>'CUELEES TU + CT + 12 MAX','pricing'=>6700000,'image'=>'https://images.unsplash.com/photo-1629077832449-2d4c7e95f677?w=800&h=800&fit=crop'],
+        ['id'=>2,'name'=>'MEZZ PBOI','pricing'=>2250000,'image'=>'https://images.unsplash.com/photo-1611068813580-7cbc98d72def?w=800&h=800&fit=crop'],
+        ['id'=>3,'name'=>'AIR RUSH GOLD SW','pricing'=>4750000,'image'=>'https://images.unsplash.com/photo-1604881991720-f91add269bed?w=800&h=800&fit=crop'],
+        ['id'=>4,'name'=>'EXCEED 16 N/LE + HP2','pricing'=>3500000,'image'=>'https://via.placeholder.com/800x800/666666/FFFFFF?text=No+Image'],
+        ['id'=>5,'name'=>'EXCEED 16 N/LE + HP2','pricing'=>3500000,'image'=>'https://via.placeholder.com/800x800/666666/FFFFFF?text=No+Image'],
+    ];
 @endphp
 
 @push('styles')
