@@ -316,6 +316,7 @@ Route::middleware('auth')->group(function () {
 */
 Route::middleware('auth')->prefix('dashboard/tournament')->group(function () {
     Route::get('/', [TournamentController::class, 'index'])->name('tournament.index');
+    Route::get('/{id}/bracket', [EventController::class, 'bracketById'])->name('tournament.bracket');
     Route::get('/create', [TournamentController::class, 'create'])->name('tournament.create');
     Route::post('/', [TournamentController::class, 'store'])->name('tournament.store');
     Route::get('/{tournament}/edit', [TournamentController::class, 'edit'])->name('tournament.edit');
