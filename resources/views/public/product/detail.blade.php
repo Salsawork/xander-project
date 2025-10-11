@@ -193,9 +193,12 @@
 
       <hr class="border-gray-700 my-6" />
 
+      {{-- Share: Instagram diganti menjadi WhatsApp (+62 812-8467-9921) --}}
       <div class="flex items-center space-x-3 text-xs text-gray-400 max-w-xl">
         <span>Share :</span>
-        <a aria-label="Instagram" class="hover:text-white" href="#"><i class="fab fa-instagram"></i></a>
+        <a aria-label="WhatsApp" class="hover:text-white" href="https://wa.me/6281284679921" target="_blank" rel="noopener">
+          <i class="fab fa-whatsapp"></i>
+        </a>
         <a aria-label="Twitter"   class="hover:text-white" href="#"><i class="fab fa-twitter"></i></a>
         <a aria-label="Facebook"  class="hover:text-white" href="#"><i class="fab fa-facebook-f"></i></a>
       </div>
