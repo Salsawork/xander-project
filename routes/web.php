@@ -123,6 +123,12 @@ Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketBy
     ->where('event', '[0-9]+')
     ->name('events.bracket');
 
+// Event Register (POST) — simpan input modal / pendaftaran
+Route::post('/event/{event}/register', [EventController::class, 'register'])
+    ->where('event', '[0-9]+')
+    ->middleware('auth')
+    ->name('events.register');
+
 // Backward Compatibility Routes (redirect ke canonical)
 Route::get('/event/{event:name}', [EventController::class, 'showByName'])
     ->name('events.show.byname');
@@ -304,6 +310,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
+    /** Athlete area (user) */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
         Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
@@ -322,62 +329,60 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
 });
 
-    Route::middleware('auth')->group(function () {
-        
-        // Detail order & booking
-        Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
-        Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
-        Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
+Route::middleware('auth')->group(function () {
+    // Detail order & booking
+    Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
+    Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
+    Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
+});
 
-    });
+// RajaOngkir
+Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
+Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
+Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
+Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
+Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
 
-    // Rajaongkir
-    Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
-    Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
-    Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
-    Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
-    Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost'); 
+// Admin Event (dashboard)
+Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
+    Route::get('/', [AdminEventController::class, 'index'])->name('index');
+    Route::get('/create', [AdminEventController::class, 'create'])->name('create');
+    Route::post('/', [AdminEventController::class, 'store'])->name('store');
+    Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
+    Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
+    Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
+    Route::get('/{event}', [AdminEventController::class, 'show'])->name('show');
+});
 
-    Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
-        Route::get('/', [AdminEventController::class, 'index'])->name('index');
-        Route::get('/create', [AdminEventController::class, 'create'])->name('create');
-        Route::post('/', [AdminEventController::class, 'store'])->name('store');
-        Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
-        Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
-        Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
-        Route::get('/{event}', [AdminEventController::class, 'show'])->name('show');
-    });
 /*
 |--------------------------------------------------------------------------
 | Tournament & Tree
 |--------------------------------------------------------------------------
 */
-    Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->group(function () {
-        // Tournament CRUD
-        Route::get('/', [TournamentController::class, 'index'])->name('index');
-        Route::get('/create', [TournamentController::class, 'create'])->name('create');
-        Route::post('/', [TournamentController::class, 'store'])->name('store');
-        Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
-        Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
-        Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
+Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->group(function () {
+    Route::get('/', [TournamentController::class, 'index'])->name('index');
+    Route::get('/create', [TournamentController::class, 'create'])->name('create');
+    Route::post('/', [TournamentController::class, 'store'])->name('store');
+    Route::get('/{tournament:slug}/edit', [TournamentController::class, 'edit'])->name('edit');
+    Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
+    Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
+});
 
-        /** Tree Management (Public or Auth, depends on requirement) */
-        Route::prefix('championships')->name('tree.')->group(function () {
-            Route::get('/', [TreeController::class, 'index'])->name('index');
-            Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
-            Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('update');
-        });
-    });
-    /* Company pages */
-    Route::prefix('company')->group(function () {
-        Route::view('/careers', 'careers')->name('company.careers');
-        Route::view('/partners', 'partners')->name('company.partners');
-        Route::view('/press-media', 'press-media')->name('company.press');
-    });
+Route::prefix('championships')->name('tree.')->group(function () {
+    Route::get('/', [TreeController::class, 'index'])->name('index');
+    Route::post('/{championship}/trees', [TreeController::class, 'store'])->name('store');
+    Route::put('/{championship}/trees', [TreeController::class, 'update'])->name('update');
+});
 
-    /* Blog */
-    Route::prefix('blog')->group(function () {
-        Route::view('/', 'blog.index')->name('blog.index');
-        Route::view('/{slug}', 'blog.show')->name('blog.show');
-    });
+/* Company pages */
+Route::prefix('company')->group(function () {
+    Route::view('/careers', 'careers')->name('company.careers');
+    Route::view('/partners', 'partners')->name('company.partners');
+    Route::view('/press-media', 'press-media')->name('company.press');
+});
 
+/* Blog */
+Route::prefix('blog')->group(function () {
+    Route::view('/', 'blog.index')->name('blog.index');
+    Route::view('/{slug}', 'blog.show')->name('blog.show');
+});

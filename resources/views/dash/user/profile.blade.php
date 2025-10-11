@@ -183,7 +183,7 @@
         </section>
 
         {{-- OPTIONAL: Payment Method demo --}}
-        <section class="mt-8 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8">
+        {{-- <section class="mt-8 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-extrabold">Payment Method</h3>
             <button type="button"
@@ -211,7 +211,7 @@
               </button>
             </li>
           </ul>
-        </section>
+        </section> --}}
       </div>
     </main>
   </div>
