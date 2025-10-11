@@ -26,6 +26,7 @@ use App\Http\Controllers\ShippingController;
 
 // Event Admin
 use App\Http\Controllers\adminController\EventController as AdminEventController;
+use App\Http\Controllers\adminController\UserController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -327,6 +328,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
+    
+    Route::prefix('dashboard/admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::post('/users/{id}/verify', [UserController::class, 'verify'])->name('admin.users.verify');
+    });
 });
 
 Route::middleware('auth')->group(function () {

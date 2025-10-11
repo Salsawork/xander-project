@@ -14,7 +14,7 @@ if (sizeof($singleEliminationTree) > 0) {
     @if (Request::is('championships/'.$championship->id.'/pdf'))
         <h1> {{$championship->buildName()}}</h1>
     @endif
-    <form method="POST" action="{{ route('tournament.tree.update', ['championship' => $championship->id])}}"
+    <form method="POST" action="{{ route('tree.update', ['championship' => $championship->id])}}"
           accept-charset="UTF-8">
         {{ csrf_field() }}
         <input type="hidden" name="_method" value="PUT">

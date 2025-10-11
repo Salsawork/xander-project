@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CartItem;
 use App\Models\Product;
-use App\Models\Category;
+use App\Models\Categories;
 use App\Models\SparringSchedule;
 use App\Models\Venue;
 use App\Models\Visit;
@@ -77,7 +77,7 @@ class ProductController extends Controller
         }
 
         // 🔹 Ambil kategori untuk filter di view (dashboard)
-        $categories = Category::all();
+        $categories = Categories::all();
 
         // 🔹 Pilih view sesuai kebutuhan
         if ($request->is('dashboard*')) {
@@ -107,7 +107,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        $categories = Categories::all();
         return view('dash.admin.product.create', compact('categories'));
     }
 
@@ -139,7 +139,7 @@ class ProductController extends Controller
     public function edit(string $id)
     {
         $product    = Product::findOrFail($id);
-        $categories = Category::all();
+        $categories = Categories::all();
         return view('dash.admin.product.edit', compact('product', 'categories'));
     }
 
@@ -236,7 +236,7 @@ class ProductController extends Controller
             ->withQueryString();
 
         // Data filter bantu
-        $categories = Category::select('id','name')->orderBy('name')->get();
+        $categories = Categories::select('id','name')->orderBy('name')->get();
         $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
         $conditions = ['new' => 'New', 'used' => 'Used'];
 
