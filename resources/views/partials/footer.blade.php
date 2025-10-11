@@ -29,9 +29,12 @@
         <a href="https://facebook.com/xanderbilliard" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook" class="hover:text-white transition-colors">
           <i class="fab fa-facebook-f"></i><span class="sr-only">Facebook</span>
         </a>
-        <a href="https://instagram.com/xanderbilliard" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" class="hover:text-white transition-colors">
-          <i class="fab fa-instagram"></i><span class="sr-only">Instagram</span>
+
+        {{-- IG diganti ke WhatsApp +62 812-8467-9921 --}}
+        <a href="https://wa.me/6281284679921" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" title="+62 812-8467-9921" class="hover:text-white transition-colors">
+          <i class="fab fa-whatsapp"></i><span class="sr-only">WhatsApp: +62 812-8467-9921</span>
         </a>
+
         <a href="https://x.com/xanderbilliard" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" title="X (Twitter)" class="hover:text-white transition-colors">
           <i class="fab fa-twitter"></i><span class="sr-only">X (Twitter)</span>
         </a>

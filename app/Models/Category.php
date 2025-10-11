@@ -6,9 +6,64 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
+    protected $table = 'category';
+    public $timestamps = true;
+
     protected $fillable = [
-        'name'
+        'id',
+        'name',
+        'gender',
+        'isTeam',
+        'ageCategory',
+        'ageMin',
+        'ageMax',
+        'gradeCategory',
+        'gradeMin',
+        'gradeMax',
     ];
 
-    public $timestamps = false;
+    public function getNameAttribute($name)
+    {
+        return trans($name);
+    }
+
+    public function getGradeAttribute($grade)
+    {
+        return trans($grade);
+    }
+
+    public function getAgeCategoryAttribute($ageCategory)
+    {
+        return trans($ageCategory);
+    }
+
+    public function tournaments()
+    {
+        return $this->belongsToMany('App\Tournament');
+    }
+
+    public function championship()
+    {
+        return $this->hasMany(Championship::class);
+    }
+
+    public function isTeam()
+    {
+        return $this->isTeam;
+    }
+
+    public function isForMen()
+    {
+        return $this->gender == 'M';
+    }
+
+    public function isForWomen()
+    {
+        return $this->gender == 'F';
+    }
+
+    public function isMixt()
+    {
+        return $this->gender == 'X';
+    }
 }

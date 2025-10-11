@@ -6,8 +6,7 @@
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">
-                @include('partials.topbar')https://github.com/Salsawork/xander-project/pull/19/conflict?name=resources%252Fviews%252Fpartials%252Ftopbar.blade.php&ancestor_oid=58fbcabaea722b242c455fa0c1f86a76a0846603&base_oid=6375f040929c7dca17cd70755297f4de86e4a1fa&head_oid=65c8ac009573eb20651f10517b9e01d3eae271fe
-                
+                @include('partials.topbar')
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
                     <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">
                         Daftar Venue

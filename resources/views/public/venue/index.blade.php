@@ -6,70 +6,26 @@
 
 @push('styles')
 <style>
-    /* ===== Anti white overscroll (global, tanpa ubah tampilan) ===== */
     :root { color-scheme: dark; }
-    html, body {
-        height: 100%;
-        background: #0a0a0a;
-        overscroll-behavior-y: none;
-    }
-    /* iOS rubber-band: kanvas gelap di belakang konten */
-    body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: #0a0a0a;
-        pointer-events: none;
-        z-index: -1;
-    }
+    html, body { height: 100%; background: #0a0a0a; overscroll-behavior-y: none; }
+    body::before { content: ""; position: fixed; inset: 0; background: #0a0a0a; pointer-events: none; z-index: -1; }
 
-    /* ====== Styles halaman yang sudah ada ====== */
     .toggleContent { overflow: hidden; transition: max-height .3s ease; max-height: 1000px; }
     .toggleContent.max-h-0 { max-height: 0; }
 
     @media (min-width: 1024px) { .lg-hidden { display: none !important; } }
 
-    /* Mobile filter toggle */
     @media (max-width: 1023px) {
         .sm-hidden { display: none !important; }
-
-        .mobile-filter-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,.5);
-            z-index: 40;
-            display: none;
-        }
+        .mobile-filter-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 40; display: none; }
         .mobile-filter-overlay.active { display: block; }
-
-        .mobile-filter-sidebar {
-            position: fixed; top: 0; left: -100%;
-            width: 85%; max-width: 320px; height: 100%;
-            background: #171717;
-            z-index: 50;
-            transition: left .3s ease;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
+        .mobile-filter-sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 320px; height: 100%; background: #171717; z-index: 50; transition: left .3s ease; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .mobile-filter-sidebar.open { left: 0; }
     }
 
-    /* ===== Pill Pagination (mobile & desktop) ===== */
-    .pager {
-        display:inline-flex; align-items:center; gap:10px;
-        background:#1f2937; /* slate-800 */
-        border:1px solid rgba(255,255,255,.06);
-        border-radius:9999px; padding:6px 10px;
-        box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25);
-    }
-    .pager-label {
-        min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px;
-    }
-    .pager-btn {
-        width:44px; height:44px; display:grid; place-items:center;
-        border-radius:9999px; line-height:0; text-decoration:none;
-        border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35);
-        transition: transform .15s ease, opacity .15s ease;
-    }
+    .pager { display:inline-flex; align-items:center; gap:10px; background:#1f2937; border:1px solid rgba(255,255,255,.06); border-radius:9999px; padding:6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25); }
+    .pager-label { min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px; }
+    .pager-btn { width:44px; height:44px; display:grid; place-items:center; border-radius:9999px; line-height:0; text-decoration:none; border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35); transition: transform .15s ease, opacity .15s ease; }
     .pager-btn:hover { transform: translateY(-1px); }
     .pager-prev { background:#e5e7eb; color:#0f172a; }
     .pager-next { background:#2563eb; color:#fff; }
@@ -115,16 +71,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 sm:py-8 lg:py-12" id="list">
         <aside id="filterVenue" class="mobile-filter-sidebar">
             <div class="px-4 space-y-6 text-white text-sm">
-                <!-- Close Button -->
                 <div class="flex items-center justify-between mb-4 lg-hidden">
                     <h3 class="text-lg font-semibold">Filter & Search</h3>
                     <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
                 </div>
 
                 <form method="GET" action="{{ route('venues.index') }}">
-                    <input type="hidden" name="pp" value="{{ request('pp', 4) }}"><!-- paksa 4 per halaman -->
+                    <input type="hidden" name="pp" value="{{ request('pp', 4) }}">
 
-                    <!-- Search -->
                     <div>
                         <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
@@ -137,7 +91,6 @@
                         </div>
 
                         <div class="toggleContent">
-                            <!-- Hidden input agar ikut ke form -->
                             <input type="hidden" name="date" x-model="selectedDate">
 
                             <div class="flex items-center justify-center gap-2 mb-2">
@@ -159,7 +112,6 @@
                         </div>
                     </div>
 
-                    <!-- Location -->
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>Location</span>
@@ -175,7 +127,6 @@
                         </div>
                     </div>
 
-                    <!-- Price Range -->
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>Price Range</span>
@@ -189,7 +140,6 @@
                         </div>
                     </div>
 
-                    <!-- Buttons -->
                     <div class="flex gap-2 pt-2">
                         <button type="submit" class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">Filter</button>
                         <a href="{{ route('venues.index', array_merge(request()->except('page'), ['pp' => 4])) }}" class="flex-1 rounded border border-blue-500 px-4 py-2 font-medium text-blue-500 hover:bg-blue-500 hover:text-white">Reset</a>
@@ -202,8 +152,9 @@
         <section class="lg:col-span-4 flex flex-col gap-6">
             @forelse ($venues as $venue)
                 <div class="group">
-                    <div onclick="window.location='{{ route('venues.detail', $venue->id) }}'"
-                         class="bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
+                    {{-- GUNAKAN HREF DENGAN SLUG --}}
+                    <a href="{{ route('venues.detail', ['venue' => $venue->id, 'slug' => $venue->name]) }}"
+                       class="block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
 
                         <!-- Image -->
                         <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 flex items-center justify-center">
@@ -216,12 +167,18 @@
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
                                 <div class="flex justify-center items-end sm:mt-2">
                                     @auth
-                                    <i data-id="{{ $venue->id }}"
-                                       class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
-                                           ? 'fa-solid text-blue-500' : 'fa-regular text-gray-400' }}
-                                           fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition"></i>
-                                @endauth                                
-                                </div>                                
+                                      @if (auth()->user()->roles === 'user')
+                                        <i
+                                          data-id="{{ $venue->id }}"
+                                          class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
+                                              ? 'fa-solid text-blue-500'
+                                              : 'fa-regular text-gray-400' }}
+                                              fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition">
+                                        </i>
+                                      @endif
+                                    @endauth
+                                  </div>
+                                  
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
@@ -232,13 +189,12 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             @empty
                 <div class="text-center py-12 text-gray-400">No venues found.</div>
             @endforelse
 
-            <!-- Pagination (kustom, 4 item / halaman) -->
             @php
                 $current = method_exists($venues, 'currentPage') ? $venues->currentPage() : 1;
                 $last    = method_exists($venues, 'lastPage')    ? $venues->lastPage()    : 1;
@@ -247,7 +203,6 @@
             @endphp
             <div class="flex justify-center mt-6">
                 <nav class="pager" role="navigation" aria-label="Pagination">
-                    {{-- Prev --}}
                     @if ($prevUrl)
                         <a class="pager-btn pager-prev" href="{{ $prevUrl }}#list" aria-label="Previous page">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -262,10 +217,8 @@
                         </span>
                     @endif
 
-                    {{-- Label tengah: "X of Y" --}}
                     <span class="pager-label">{{ $current }} of {{ $last }}</span>
 
-                    {{-- Next --}}
                     @if ($nextUrl)
                         <a class="pager-btn pager-next" href="{{ $nextUrl }}#list" aria-label="Next page">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -284,11 +237,9 @@
         </section>
     </div>
 
-    {{-- Drawer/Modal keranjang --}}
     @include('public.cart')
 </div>
-
-<!-- Floating Cart (posisi kanan–tengah, di atas overlay filter) -->
+@if (Auth::check() && Auth::user()->roles === 'user')
 <button
     aria-label="Shopping cart with {{ $cartCount }} items"
     onclick="showCart()"
@@ -301,9 +252,9 @@
         </span>
     @endif
 </button>
+@endif
 
 <script>
-    // Paksa ?pp=4 di URL agar server paginate(4)
     (function ensurePP(){
         const url = new URL(window.location.href);
         const pp  = url.searchParams.get('pp');
@@ -314,88 +265,6 @@
             window.location.replace(url.toString());
         }
     })();
-
-    function syncFavoritesToUrl() {
-        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-        const params = new URLSearchParams(window.location.search);
-
-        if (favorites.length > 0) {
-            params.set("favorites", favorites.join(","));
-        } else {
-            params.delete("favorites");
-        }
-
-        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
-        window.location.reload();
-    }
-    document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll('.fa-bookmark').forEach(icon => {
-            icon.addEventListener('click', function (e) {
-                e.stopPropagation(); // biar gak klik card
-
-                const venueId = this.dataset.id;
-                if (!venueId) {
-                    Swal.fire({
-                        title: 'Oops!',
-                        text: 'ID venue tidak ditemukan.',
-                        icon: 'error',
-                        background: '#1E1E1F',
-                        color: '#FFFFFF'
-                    });
-                    return;
-                }
-
-                fetch(`/venues/${venueId}/favorite`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // Ubah tampilan ikon sesuai action
-                        if (data.action === 'added') {
-                            this.classList.remove('fa-regular', 'text-gray-400');
-                            this.classList.add('fa-solid', 'text-blue-500');
-                        } else if (data.action === 'removed') {
-                            this.classList.remove('fa-solid', 'text-blue-500');
-                            this.classList.add('fa-regular', 'text-gray-400');
-                        }
-
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: data.message,
-                            icon: 'success',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF',
-                            timer: 1200,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Oops!',
-                            text: data.message || 'Terjadi kesalahan.',
-                            icon: 'error',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF'
-                        });
-                    }
-                })
-                .catch(() => {
-                    Swal.fire({
-                        title: 'Oops!',
-                        text: 'Terjadi kesalahan jaringan.',
-                        icon: 'error',
-                        background: '#1E1E1F',
-                        color: '#FFFFFF'
-                    });
-                });
-            });
-        });
-
-    });
 </script>
 
 <script>
@@ -404,17 +273,11 @@
         toggles.forEach((btn) => {
             const content = btn.parentElement.nextElementSibling;
             btn.addEventListener("click", () => {
-                if (content.classList.contains("max-h-0")) {
-                    content.classList.remove("max-h-0");
-                    btn.textContent = "–";
-                } else {
-                    content.classList.add("max-h-0");
-                    btn.textContent = "+";
-                }
+                if (content.classList.contains("max-h-0")) { content.classList.remove("max-h-0"); btn.textContent = "–"; }
+                else { content.classList.add("max-h-0"); btn.textContent = "+"; }
             });
         });
 
-        // Mobile filter sidebar
         const mobileFilterBtn = document.getElementById("mobileFilterBtn");
         const filterVenue = document.getElementById("filterVenue");
         const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");

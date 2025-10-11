@@ -130,11 +130,41 @@
                 </a>
             </li>
             <li>
+                <a href="{{ route('admin.event.index') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('admin.event.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Event</span>
+                    @if(request()->routeIs('admin.event.index'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
                 <a href="{{ route('tournament.index') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Tournament</span>
                     @if(request()->routeIs('tournament.index'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('dash.admin.subscriber') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('dash.admin.subscriber') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Subscriber</span>
+                    @if(request()->routeIs('dash.admin.subscriber'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('dash.admin.opinion') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('dash.admin.opinion') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Opinion</span>
+                    @if(request()->routeIs('dash.admin.opinion'))
                     <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>

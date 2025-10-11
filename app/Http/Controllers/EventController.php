@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\Bracket;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
@@ -15,18 +18,19 @@ class EventController extends Controller
      */
     public function index()
     {
-        // Jika ada local scopes, gunakan; kalau tidak ada, fallback ke where status.
-        $upcomingEvents = Event::when(method_exists(Event::class, 'scopeUpcoming'),
-                fn($q) => $q->upcoming(),
-                fn($q) => $q->where('status', 'Upcoming')
-            )
+        $upcomingEvents = Event::when(
+            method_exists(Event::class, 'scopeUpcoming'),
+            fn($q) => $q->upcoming(),
+            fn($q) => $q->where('status', 'Upcoming')
+        )
             ->orderBy('start_date', 'asc')
             ->get();
 
-        $currentEvents = Event::when(method_exists(Event::class, 'scopeOngoing'),
-                fn($q) => $q->ongoing(),
-                fn($q) => $q->where('status', 'Ongoing')
-            )
+        $currentEvents = Event::when(
+            method_exists(Event::class, 'scopeOngoing'),
+            fn($q) => $q->ongoing(),
+            fn($q) => $q->where('status', 'Ongoing')
+        )
             ->orderBy('start_date', 'asc')
             ->get();
 
@@ -36,11 +40,6 @@ class EventController extends Controller
     /**
      * Katalog (list/show) — semua event + filter + pagination.
      * Route: GET /events/all  (name: events.list)
-     * Query params:
-     * - q        : string (search by name/desc/location)
-     * - status   : upcoming|ongoing|ended
-     * - game_type: string (LIKE)
-     * - region   : string (LIKE pada location)
      */
     public function list(Request $request)
     {
@@ -92,7 +91,11 @@ class EventController extends Controller
             : 'All Events';
 
         return view('public.event.show', compact(
-            'events', 'featured', 'gameTypes', 'regions', 'heading'
+            'events',
+            'featured',
+            'gameTypes',
+            'regions',
+            'heading'
         ));
     }
 
@@ -141,5 +144,60 @@ class EventController extends Controller
             'event' => $event->id,
             'name'  => Str::slug($event->name),
         ], 301);
+    }
+
+    /**
+     * Register (POST) — sekarang menyimpan input modal ke tabel users (user yg login).
+     * Route: POST /event/{event}/register (name: events.register) [auth]
+     * Field dari modal: username (alias name), email, phone
+     */
+    public function register(Request $request, $event)
+    {
+        $event = Event::findOrFail($event);
+
+        // Map "username" -> "name" kalau form mengirim username
+        if (!$request->filled('name') && $request->filled('username')) {
+            $request->merge(['name' => $request->input('username')]);
+        }
+
+        $user = Auth::user();
+
+        // Validasi, email unik kecuali milik user sendiri.
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            // batasi sesuai schema phone varchar(15)
+            'phone' => 'required|string|max:15',
+            '_from' => 'nullable|string'
+        ]);
+
+        // Cek ketersediaan pendaftaran (hanya Upcoming & belum lewat end_date)
+        $endDate = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
+        if ($event->status !== 'Upcoming' || now()->gt($endDate)) {
+            return back()
+                ->withInput()
+                ->with('error', 'Pendaftaran tidak tersedia untuk event ini.');
+        }
+
+        try {
+            // Update data user yang login
+            $user->name  = $validated['name'];
+            $user->email = $validated['email'];
+            $user->phone = $validated['phone'];
+            $user->save();
+        } catch (\Throwable $e) {
+            Log::error('Failed to update user from event register modal', [
+                'user_id'  => $user->id,
+                'event_id' => $event->id,
+                'error'    => $e->getMessage(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Terjadi kesalahan saat menyimpan data. Coba lagi.');
+        }
+
+        // Sukses
+        return back()->with('success', 'Data kamu berhasil diperbarui. Pendaftaran diterima!');
     }
 }

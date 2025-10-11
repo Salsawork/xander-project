@@ -105,7 +105,7 @@ class VenueController extends Controller
         return view('public.venue.index', compact('venues', 'cartProducts', 'cartVenues', 'cartSparrings', 'addresses'));
     }
 
-
+    // API schedules: /venues/{venueId}/price-schedules?date=YYYY-MM-DD
     public function detail(Request $request, $venueId)
     {
         try {
@@ -117,8 +117,6 @@ class VenueController extends Controller
             $today = $requestedTime->format('l');
             $requestedDate = $requestedTime->format('Y-m-d');
 
-
-            // Ambil semua schedule aktif untuk venue
             $schedules = PriceSchedule::where('venue_id', $detail->id)
                 ->where('is_active', true)
                 ->orderBy('start_time')
@@ -135,8 +133,8 @@ class VenueController extends Controller
                     'days'         => json_decode($item->days, true) ?? [],
                     'start_time'   => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
                     'end_time'     => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
-                    'time_category' => $item->time_category,
-                    'schedule' => collect(
+                    'time_category'=> $item->time_category,
+                    'schedule'     => collect(
                         \Carbon\CarbonInterval::minutes(60)
                             ->toPeriod(
                                 \Carbon\Carbon::parse($item->start_time),
@@ -147,7 +145,7 @@ class VenueController extends Controller
                         'end'   => $time->copy()->addHour()->format('H:i')
                     ])->values()->toArray(),
                     'tables_applicable' => $item->tables_applicable,
-                    'date'         => $requestedDate,
+                    'date' => $requestedDate,
                 ]);
 
             return response()->json([
@@ -164,10 +162,12 @@ class VenueController extends Controller
         }
     }
 
-    public function showDetail(Request $request, $venueId)
+    // DETAIL PAGE: /venues/{id}/{slug?}
+    public function showDetail(Request $request, $venueId, $slug = null)
     {
         $detail = Venue::findOrFail($venueId);
         $tables = Table::where('venue_id', $detail->id)->get();
+
         $minPrice = PriceSchedule::where('venue_id', $detail->id)
             ->where('is_active', true)
             ->orderBy('price', 'asc')

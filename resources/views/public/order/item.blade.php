@@ -40,10 +40,10 @@
                                 <div>
                                     <p class="font-medium text-white">{{ $item->product->name ?? 'Product Name' }}</p>
                                     <p class="text-gray-400 text-sm">{{ $item->product->category->name ?? 'Category' }}</p>
-                                    <p class="text-gray-400 text-sm">{{ $item->quantity }}x</p>
+                                    <p class="text-gray-400 text-sm">{{ $item->stock }}x</p>
                                 </div>
                             </div>
-                            <p class="font-medium">Rp. {{ number_format($item->price * $item->quantity - $item->discount , 0, ',', '.') }}</p>
+                            <p class="font-medium">Rp. {{ number_format($item->price * $item->stock - $item->discount , 0, ',', '.') }}</p>
                         </div>
                     </div>
 
@@ -69,7 +69,7 @@
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between">
                             <span>Subtotal</span>
-                            <span>Rp. {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</span>
+                            <span>Rp. {{ number_format($item->price * $item->stock, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Tax 10%</span>
@@ -83,7 +83,7 @@
                     <hr class="border-neutral-700 my-2">
                     <div class="flex justify-between text-base font-semibold">
                         <span>Grand Total</span>
-                        <span class="text-white">Rp. {{ number_format($item->price * $item->quantity - $item->discount + $item->tax + $item->shipping, 0, ',', '.') }}</span>
+                        <span class="text-white">Rp. {{ number_format($item->price * $item->stock - $item->discount + $item->tax + $item->shipping, 0, ',', '.') }}</span>
                     </div>
                 </div>
 

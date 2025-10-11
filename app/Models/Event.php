@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Xoco70\LaravelTournaments\Models\Tournament;
+
 
 class Event extends Model
 {
@@ -12,6 +14,9 @@ class Event extends Model
         'start_date',
         'end_date',
         'location',
+        'price_ticket',
+        'stock',
+        
         'game_types',
         'description',
         'total_prize_money',
@@ -54,4 +59,16 @@ class Event extends Model
     {
         return 'name';
     }
+
+    // Aksesori slug (opsional, tidak dipakai route di setup ini)
+    public function getSlugAttribute()
+    {
+        return str_replace(' ', '-', strtolower($this->name));
+    }
+
+    public function tournaments()
+    {
+        return $this->hasMany(Tournament::class, 'event_id');
+    }
+
 }

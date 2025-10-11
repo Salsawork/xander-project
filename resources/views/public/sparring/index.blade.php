@@ -5,18 +5,15 @@
 @php
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
-    // ===== Jaga variabel $locations biar filter tidak error saat dummy =====
     $locations = $locations ?? ['Jakarta', 'Bandung', 'Surabaya', 'Medan'];
 
-    // ===== Ambil data atlet yang SUDAH ada (apapun bentuknya) jadi Collection =====
     $existingItems = collect(
         ($athletes ?? collect()) instanceof \Illuminate\Pagination\LengthAwarePaginator
             ? ($athletes->items() ?? [])
             : (is_iterable($athletes ?? []) ? $athletes : [])
     );
 
-    // ===== Pagination adaptif via query 'pp' (per page): desktop 8 / mobile 4 ====
-    $pp   = (int) (request('pp') ?: 8);   // default 8; JS akan set 4 di mobile
+    $pp   = (int) (request('pp') ?: 8);
     $page = (int) (request('page') ?: 1);
 
     $slice    = $existingItems->forPage($page, $pp)->values();
@@ -31,7 +28,6 @@
 
 @push('styles')
     <style>
-        /* ===== Anti white overscroll (global) ===== */
         :root { color-scheme: dark; }
         html, body { height:100%; background:#0a0a0a; overscroll-behavior-y:none; }
         #app, main { background:#0a0a0a; }
@@ -41,42 +37,18 @@
         @media (min-width: 1024px) { .lg-hidden { display:none !important; } }
         @media (max-width: 1023px) { .sm-hidden { display:none !important; } }
 
-        /* Mobile filter overlay + sidebar */
         @media (max-width:1023px){
-            .mobile-filter-overlay{
-                position:fixed; inset:0; background:rgba(0,0,0,.5);
-                z-index:40; display:none;
-            }
+            .mobile-filter-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40; display:none; }
             .mobile-filter-overlay.active{ display:block; }
-            .mobile-filter-sidebar{
-                position:fixed; top:0; left:-100%;
-                width:85%; max-width:340px; height:100%;
-                background:rgb(23,23,23); z-index:50;
-                transition:left .3s ease; overflow-y:auto; -webkit-overflow-scrolling:touch;
-                padding-bottom:24px;
-            }
+            .mobile-filter-sidebar{ position:fixed; top:0; left:-100%; width:85%; max-width:340px; height:100%; background:rgb(23,23,23); z-index:50; transition:left .3s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:24px; }
             .mobile-filter-sidebar.open{ left:0; }
         }
         .toggleContent{ overflow:hidden; transition:max-height .3s ease; max-height:1000px; }
         .toggleContent.max-h-0{ max-height:0; }
 
-        /* ===== Pill Pagination (mobile & desktop) ===== */
-        .pager {
-            display:inline-flex; align-items:center; gap:10px;
-            background:#1f2937; /* slate-800 */
-            border:1px solid rgba(255,255,255,.06);
-            border-radius:9999px; padding:6px 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25);
-        }
-        .pager-label {
-            min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px;
-        }
-        .pager-btn {
-            width:44px; height:44px; display:grid; place-items:center;
-            border-radius:9999px; line-height:0; text-decoration:none;
-            border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35);
-            transition: transform .15s ease, opacity .15s ease;
-        }
+        .pager { display:inline-flex; align-items:center; gap:10px; background:#1f2937; border:1px solid rgba(255,255,255,.06); border-radius:9999px; padding:6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,.35) inset, 0 4px 14px rgba(0,0,0,.25); }
+        .pager-label { min-width:90px; text-align:center; color:#e5e7eb; font-weight:600; letter-spacing:.2px; }
+        .pager-btn { width:44px; height:44px; display:grid; place-items:center; border-radius:9999px; line-height:0; text-decoration:none; border:1px solid rgba(255,255,255,.15); box-shadow:0 2px 6px rgba(0,0,0,.35); transition: transform .15s ease, opacity .15s ease; }
         .pager-btn:hover { transform: translateY(-1px); }
         .pager-prev { background:#e5e7eb; color:#0f172a; }
         .pager-next { background:#2563eb; color:#fff; }
@@ -208,7 +180,8 @@
             <section class="lg:col-span-4 flex flex-col gap-6">
                 <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                     @forelse ($athletes as $athlete)
-                        <a href="{{ route('sparring.detail', $athlete->id) }}" class="block">
+                        {{-- LINK DENGAN SLUG --}}
+                        <a href="{{ route('sparring.detail', ['id' => $athlete->id, 'slug' => $athlete->name]) }}" class="block">
                             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow">
                                 <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
                                     @if ($athlete->athleteDetail && $athlete->athleteDetail->image)
@@ -233,7 +206,7 @@
                     @endforelse
                 </div>
 
-                {{-- Pagination: model pill (Prev • X of Y • Next) --}}
+                {{-- Pagination: pill --}}
                 @php
                     $current = $athletes->currentPage();
                     $last    = $athletes->lastPage();
@@ -242,7 +215,6 @@
                 @endphp
                 <div class="flex justify-center mt-6">
                     <nav class="pager" role="navigation" aria-label="Pagination">
-                        {{-- Prev --}}
                         @if ($prevUrl)
                             <a class="pager-btn pager-prev" href="{{ $prevUrl }}" aria-label="Previous page">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -257,10 +229,8 @@
                             </span>
                         @endif
 
-                        {{-- Label tengah --}}
                         <span class="pager-label">{{ $current }} of {{ $last }}</span>
 
-                        {{-- Next --}}
                         @if ($nextUrl)
                             <a class="pager-btn pager-next" href="{{ $nextUrl }}" aria-label="Next page">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -280,6 +250,7 @@
         </div>
 
         <!-- Floating Cart -->
+        @if (Auth::check() && Auth::user()->roles === 'user')
         <button
             aria-label="Shopping cart with {{ $cartCount }} items"
             onclick="showCart()"
@@ -292,6 +263,7 @@
                 </span>
             @endif
         </button>
+        @endif
 
         @include('public.cart')
     </div>
@@ -299,7 +271,7 @@
 
 @push('scripts')
     <script>
-        // ===== Atur per-page adaptif: Desktop 8 / Mobile 4 (query ?pp=...)
+        // Per-page adaptif: Desktop 8 / Mobile 4
         (function(){
             const isDesktop  = window.matchMedia('(min-width: 1024px)').matches;
             const desiredPP  = isDesktop ? 8 : 4;
@@ -317,7 +289,7 @@
             if (ppInput) ppInput.value = String(desiredPP);
         })();
 
-        // Toggle (Location, Price, dll)
+        // Toggle sections
         document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll(".toggleBtn").forEach((btn) => {
                 const content = btn.parentElement.nextElementSibling;
@@ -328,7 +300,7 @@
             });
         });
 
-        // Mobile filter open/close
+        // Mobile filter
         document.addEventListener("DOMContentLoaded", () => {
             const mobileFilterBtn     = document.getElementById("mobileFilterBtn");
             const filterSparring      = document.getElementById("filterSparring");
@@ -351,31 +323,7 @@
             mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
         });
 
-        // Format harga (input)
-        function formatNumberInput(input) {
-            let value = input.value.replace(/\D/g, "");
-            if (!value) { input.value = ""; return; }
-            input.value = new Intl.NumberFormat("id-ID").format(value);
-        }
-        function unformatNumberInput(value) { return (value || "").toString().replace(/\./g, ""); }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const minInput = document.getElementById("price_min");
-            const maxInput = document.getElementById("price_max");
-            if (minInput && minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
-            if (maxInput && maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
-
-            minInput?.addEventListener("input", () => formatNumberInput(minInput));
-            maxInput?.addEventListener("input", () => formatNumberInput(maxInput));
-
-            const form = document.querySelector('#filterSparring form');
-            form?.addEventListener("submit", () => {
-                if (minInput) minInput.value = unformatNumberInput(minInput.value);
-                if (maxInput) maxInput.value = unformatNumberInput(maxInput.value);
-            });
-        });
-
-        // Mini Alpine Calendar (dummy)
+        // Calendar mini (Alpine-like API dump)
         function calendar(defaultDate = '') {
             const today = new Date();
             let initialDate = defaultDate ? new Date(defaultDate) : today;

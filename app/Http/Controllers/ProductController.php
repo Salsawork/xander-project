@@ -77,14 +77,14 @@ class ProductController extends Controller
         }
 
         // 🔹 Ambil kategori untuk filter di view (dashboard)
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
 
         // 🔹 Pilih view sesuai kebutuhan
         if ($request->is('dashboard*')) {
             return view('dash.admin.product.index', compact('products', 'categories'));
         }
 
-        return view('landing', compact('products'));
+        return view('landing', compact('products', 'categories'));
     }
 
 
@@ -105,82 +105,69 @@ class ProductController extends Controller
         return view('landing', compact('products'));
     }
 
-
     public function create()
     {
         $categories = Category::all();
         return view('dash.admin.product.create', compact('categories'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required|string',
+            'name'        => 'required|string',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
-            'brand' => 'required|in:Mezz,Predator,Cuetec,Other',
-            'condition' => 'required|in:new,used',
-            'quantity' => 'required|integer|min:0',
-            'sku' => 'nullable|string|unique:products,sku',
-            'images' => 'nullable|array',
-            'images.*' => 'nullable|string',
-            'weight' => 'required|integer|min:0',
-            'length' => 'required|integer|min:0',
-            'breadth' => 'required|integer|min:0',
-            'width' => 'required|integer|min:0',
-            'pricing' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0|max:100'
+            'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
+            'condition'   => 'required|in:new,used',
+            'stock'    => 'required|integer|min:0',
+            'sku'         => 'nullable|string|unique:products,sku',
+            'images'      => 'nullable|array',
+            'images.*'    => 'nullable|string',
+            'weight'      => 'required|integer|min:0',
+            'length'      => 'required|integer|min:0',
+            'breadth'     => 'required|integer|min:0',
+            'width'       => 'required|integer|min:0',
+            'pricing'     => 'required|numeric|min:0',
+            'discount'    => 'nullable|numeric|min:0|max:100'
         ]);
+
         Product::create($validatedData);
+
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product    = Product::findOrFail($id);
         $categories = Category::all();
         return view('dash.admin.product.edit', compact('product', 'categories'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
-        // Debugging: Cek data yang dikirim
         Log::info('Request data:', $request->all());
 
-        // Pastikan discount tidak null
         if ($request->discount === null) {
             $request->merge(['discount' => 0]);
         }
 
         $validatedData = $request->validate([
-            'name' => 'required|string',
+            'name'        => 'required|string',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
-            'brand' => 'required|in:Mezz,Predator,Cuetec,Other',
-            'condition' => 'required|in:new,used',
-            'quantity' => 'required|integer|min:0',
-            'sku' => 'nullable|string|unique:products,sku,' . $id,
-            'images' => 'nullable|array',
-            'images.*' => 'nullable|string',
-            'weight' => 'required|integer|min:0',
-            'length' => 'required|integer|min:0',
-            'breadth' => 'required|integer|min:0',
-            'width' => 'required|integer|min:0',
-            'pricing' => 'required|numeric|min:0',
-            'discount' => 'required|numeric|min:0|max:100'
+            'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
+            'condition'   => 'required|in:new,used',
+            'stock'    => 'required|integer|min:0',
+            'sku'         => 'nullable|string|unique:products,sku,' . $id,
+            'images'      => 'nullable|array',
+            'images.*'    => 'nullable|string',
+            'weight'      => 'required|integer|min:0',
+            'length'      => 'required|integer|min:0',
+            'breadth'     => 'required|integer|min:0',
+            'width'       => 'required|integer|min:0',
+            'pricing'     => 'required|numeric|min:0',
+            'discount'    => 'required|numeric|min:0|max:100'
         ]);
-
-        // Debugging: Cek data yang lolos validasi
-        Log::info('Validated data:', $validatedData);
 
         $product = Product::findOrFail($id);
 
@@ -190,7 +177,7 @@ class ProductController extends Controller
             foreach ($request->file('images') as $image) {
                 $imageName = time() . '_' . $image->getClientOriginalName();
                 $image->storeAs('uploads', $imageName, 'public');
-                $uploadedImages[] = asset('storage/uploads/' . $imageName);
+                $uploadedImages[] = 'uploads/' . $imageName;
             }
 
             // Merge with existing images if any
@@ -201,41 +188,30 @@ class ProductController extends Controller
             $validatedData['images'] = $product->images ?? [];
         }
 
-        // Debugging: Cek data sebelum update
         Log::info('Data before update:', $product->toArray());
 
         try {
             $product->update($validatedData);
-            // Debugging: Cek data setelah update
             Log::info('Data after update:', $product->fresh()->toArray());
             return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
         } catch (\Exception $e) {
-            // Debugging: Cek jika ada error
             Log::error('Error updating product:', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Gagal memperbarui produk: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         try {
             $product = Product::findOrFail($id);
 
-            // Hapus gambar jika ada
+            // Hapus gambar jika ada (opsional)
             if ($product->gambar && file_exists(public_path('images/products/' . $product->gambar))) {
                 unlink(public_path('images/products/' . $product->gambar));
             }
 
-            // Matiin foreign key checks sementara
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
-
-            // Hapus produk
             $product->delete();
-
-            // Nyalain lagi foreign key checks
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
             return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');
@@ -244,7 +220,9 @@ class ProductController extends Controller
         }
     }
 
-    public function landing(Request $request)
+    /**
+     * Halaman katalog publik /products (listing dengan filter).
+     */public function landing(Request $request)
     {
         $products = Product::query()
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
@@ -257,6 +235,12 @@ class ProductController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        // Data filter bantu
+        $categories = Category::select('id','name')->orderBy('name')->get();
+        $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
+        $conditions = ['new' => 'New', 'used' => 'Used'];
+
+
         $cartProducts = collect();
         $cartVenues = collect();
         $cartSparrings = collect();
@@ -278,7 +262,7 @@ class ProductController extends Controller
                     'quantity' => $item->quantity,
                     'total'    => $item->quantity * ($item->product?->pricing ?? 0),
                     'discount' => $item->product?->discount ?? 0,
-                    'images'    => $item->product?->images[0] ?? null,
+                    'images'   => $item->product?->images[0] ?? null,
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -305,34 +289,43 @@ class ProductController extends Controller
                 ->where('item_type', 'sparring')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'     => $item->id,
-                    'schedule_id' => $item->sparringSchedule?->id,
+                    'cart_id'      => $item->id,
+                    'schedule_id'  => $item->sparringSchedule?->id,
                     'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'        => $item->date,
-                    'start'       => $item->start,
-                    'end'         => $item->end,
-                    'price'       => $item->price,
+                    'athlete_image'=> $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'         => $item->date,
+                    'start'        => $item->start,
+                    'end'          => $item->end,
+                    'price'        => $item->price,
                 ]);
         }
 
+        // ✅ Tambahkan variabel ke compact()
         return view('public.product.index', compact(
             'products',
+            'categories',
+            'brands',
+            'conditions',
             'cartProducts',
             'cartVenues',
             'cartSparrings'
         ));
     }
 
-
-
+    /**
+     * Detail produk + related.
+     * Di sini kita hitung harga final (diskon) untuk dipakai di Blade,
+     * tanpa mengubah Model.
+     */
     public function detail(Request $request, $product)
     {
         $detail = Product::findOrFail($product);
-
         $cartProducts = collect();
         $cartVenues = collect();
         $cartSparrings = collect();
+
+        // ===== Related products =====
+        $limit = 10;
 
         if (auth()->check()) {
             $userId = auth()->id();
@@ -388,7 +381,76 @@ class ProductController extends Controller
                     'price'       => $item->price,
                 ]);
         }
+
+        $baseQuery = Product::query()
+            ->where('id', '!=', $detail->id)
+            ->where(function ($q) use ($detail) {
+                $hasCat   = !empty($detail->category_id);
+                $hasBrand = !empty($detail->brand);
+                if ($hasCat && $hasBrand) {
+                    $q->where('category_id', $detail->category_id)
+                      ->orWhere('brand', $detail->brand);
+                } elseif ($hasCat) {
+                    $q->where('category_id', $detail->category_id);
+                } elseif ($hasBrand) {
+                    $q->where('brand', $detail->brand);
+                } else {
+                    $q->whereNotNull('id');
+                }
+            })
+            ->orderByRaw("CASE WHEN category_id = ? THEN 0 ELSE 1 END", [$detail->category_id])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit);
+
+        $relatedProducts = $baseQuery->get();
+
+        if ($relatedProducts->count() < $limit) {
+            $extra = Product::where('id', '!=', $detail->id)
+                ->whereNotIn('id', $relatedProducts->pluck('id'))
+                ->inRandomOrder()
+                ->limit($limit - $relatedProducts->count())
+                ->get();
+            $relatedProducts = $relatedProducts->concat($extra);
+        }
+
+        // ===== Hitung harga final & persen diskon (tanpa ubah model) =====
+        $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount);
+        $detailHasDiscount     = $detailDiscountPercent > 0;
+        $detailFinalPrice      = $this->finalPrice((float)$detail->pricing, $detailDiscountPercent);
+
+        // Untuk related, kita buat array map id => perhitungan
+        $relatedPriceMap = [];
+        foreach ($relatedProducts as $p) {
+            $dp = $this->normalizeDiscountPercent($p->discount);
+            $relatedPriceMap[$p->id] = [
+                'has_discount'    => $dp > 0,
+                'discount_percent'=> $dp,
+                'final_price'     => $this->finalPrice((float)$p->pricing, $dp),
+            ];
+        }
         
-        return view('public.product.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
+        return view('public.product.detail', compact(
+            'detail', 'relatedProducts', 'cartProducts', 'cartVenues', 'cartSparrings',
+            'detailDiscountPercent', 'detailHasDiscount', 'detailFinalPrice',
+            'relatedPriceMap'
+        ));
+    }
+
+    private function normalizeDiscountPercent($discount): float
+    {
+        $d = (float) ($discount ?? 0);
+        if ($d <= 0) return 0.0;
+        return $d <= 1 ? $d * 100.0 : $d;
+    }
+
+    /**
+     * Harga setelah diskon (dibulatkan).
+     */
+    private function finalPrice(float $pricing, float $discountPercent): int
+    {
+        if ($discountPercent <= 0) return (int) round($pricing, 0);
+        $final = $pricing - ($pricing * ($discountPercent / 100.0));
+        return (int) round($final, 0);
     }
 }
+

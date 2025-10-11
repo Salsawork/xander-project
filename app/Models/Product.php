@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     protected $table = 'products';
+
     protected $fillable = [
         'name',
         'description',
@@ -14,7 +15,7 @@ class Product extends Model
         'brand',
         'level',
         'condition',
-        'quantity',
+        'stock',
         'sku',
         'images',
         'weight',
@@ -22,24 +23,24 @@ class Product extends Model
         'breadth',
         'width',
         'pricing',
-        'discount'
+        'discount',
     ];
 
     protected $casts = [
-        'images' => 'json',
-        'pricing' => 'decimal:0',
-        'discount' => 'decimal:2'
+        'images'   => 'json',
+        'pricing'  => 'decimal:0',
+        'discount' => 'decimal:2',
     ];
 
     protected $attributes = [
-        'brand' => 'Other',
+        'brand'     => 'Other',
         'condition' => 'new',
-        'quantity' => 0,
-        'weight' => 0,
-        'length' => 0,
-        'breadth' => 0,
-        'width' => 0,
-        'discount' => 0
+        'stock'  => 0,
+        'weight'    => 0,
+        'length'    => 0,
+        'breadth'   => 0,
+        'width'     => 0,
+        'discount'  => 0,
     ];
 
     public function category()
@@ -50,8 +51,7 @@ class Product extends Model
     public function orders()
     {
         return $this->belongsToMany(Order::class, 'order_items')
-            ->withPivot('quantity', 'price', 'subtotal', 'discount')
+            ->withPivot('stock', 'price', 'subtotal', 'discount')
             ->withTimestamps();
     }
-    
 }

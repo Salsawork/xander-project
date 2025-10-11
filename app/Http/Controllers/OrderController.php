@@ -198,7 +198,7 @@ class OrderController extends Controller
             // products
             'products'             => 'array',
             'products.*.id'        => 'required|exists:products,id',
-            'products.*.quantity'  => 'required|integer|min:1',
+            'products.*.stock'  => 'required|integer|min:1',
 
             // sparrings
             'sparrings'                => 'array',
@@ -295,7 +295,7 @@ class OrderController extends Controller
                     $total += $subtotal;
 
                     $order->products()->attach($product->id, [
-                        'quantity' => $qty,
+                        'stock' => $qty,
                         'price'    => $price,
                         'subtotal' => $subtotal,
                         'discount' => $discount * $qty,

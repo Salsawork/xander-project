@@ -2,12 +2,41 @@
 @extends('app')
 @section('title', 'User Dashboard - Profile')
 
+@push('styles')
+<style>
+  :root{
+    color-scheme: dark;
+    --page-bg:#0a0a0a;
+  }
+  html, body{
+    height:100%;
+    background:var(--page-bg);
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:var(--page-bg);
+    pointer-events:none;
+    z-index:-1;
+  }
+  #app, main, .min-h-screen{ background:var(--page-bg); }
+  .prevent-bounce{
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background:var(--page-bg);
+  }
+</style>
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-neutral-900 text-white">
   <div class="flex min-h-[100dvh]">
     @include('partials.sidebar')
 
-    <main class="flex-1 overflow-y-auto min-w-0 my-8">
+    <main class="flex-1 overflow-y-auto min-w-0 my-8 prevent-bounce">
       @include('partials.topbar')
 
       <div class="max-w-6xl mt-16 mx-16">
@@ -29,13 +58,13 @@
 
         @php
           $user = auth()->user();
-          $avatarUrl = $user?->avatar_url; // accessor dari model
+          $avatarUrl = $user?->avatar_url; // dari accessor
           $nameRaw = trim($user->name ?? '');
           $parts = preg_split('/\s+/', $nameRaw, -1, PREG_SPLIT_NO_EMPTY);
           $initials = '';
           if ($parts) {
-              $initials .= mb_strtoupper(mb_substr($parts[0],0,1));
-              if (count($parts) > 1) $initials .= mb_strtoupper(mb_substr($parts[1],0,1));
+            $initials .= mb_strtoupper(mb_substr($parts[0],0,1));
+            if (count($parts) > 1) $initials .= mb_strtoupper(mb_substr($parts[1],0,1));
           }
           if ($initials === '') $initials = 'U';
         @endphp
@@ -43,49 +72,63 @@
         {{-- PROFILE CARD --}}
         <section class="mt-20 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8">
           <div class="flex flex-col md:flex-row md:items-center md:gap-6">
+            {{-- AVATAR (klik untuk menu) --}}
             <div class="relative">
-              @if($avatarUrl)
-                <img id="avatarPreview"
-                     src="{{ $avatarUrl }}"
-                     alt="Avatar"
-                     class="h-20 w-20 rounded-full object-cover ring-2 ring-white/10 mb-4 md:mb-0">
-                <div id="avatarPlaceholder" class="hidden"></div>
-              @else
-                <div id="avatarPlaceholder"
-                     class="h-20 w-20 rounded-full bg-[#1f1f1f] ring-2 ring-white/10 mb-4 md:mb-0 grid place-items-center text-xl font-bold select-none">
-                  {{ $initials }}
+              <button id="avatarTrigger"
+                      type="button"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                      class="relative h-20 w-20 rounded-full ring-2 ring-white/10 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                @if($avatarUrl)
+                  <img id="avatarPreview"
+                       src="{{ $avatarUrl }}"
+                       alt="Profile photo"
+                       class="h-full w-full object-cover">
+                @else
+                  <div id="avatarPlaceholder"
+                       class="h-full w-full bg-[#1f1f1f] grid place-items-center text-xl font-bold select-none">
+                    {{ $initials }}
+                  </div>
+                @endif
+              </button>
+
+              {{-- Popover --}}
+              <div id="avatarMenu"
+                   class="hidden absolute z-20 left-1/2 -translate-x-1/2 mt-3 w-56 rounded-2xl border border-white/10 bg-[#1f1f1f] shadow-[0_20px_60px_rgba(0,0,0,.5)] overflow-hidden">
+                <div class="absolute -top-2 left-1/2 -translate-x-1/2 h-4 w-4 rotate-45 bg-[#1f1f1f] border-t border-l border-white/10"></div>
+
+                <div class="py-1">
+                  <button id="menuUpload" type="button"
+                          class="w-full text-left px-4 py-3 text-[15px] hover:bg-white/10 flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                    <i class="fas fa-camera text-base"></i>
+                    <span class="font-medium">Upload New Photo</span>
+                  </button>
+
+                  @if($avatarUrl)
+                    <button id="menuRemove" type="button"
+                            class="w-full text-left px-4 py-3 text-[15px] text-red-300 hover:bg-red-600/15 flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+                      <i class="fas fa-trash-alt text-base"></i>
+                      <span class="font-medium">Remove Photo</span>
+                    </button>
+                  @endif
                 </div>
-                <img id="avatarPreview" src="" alt="" class="hidden h-20 w-20 rounded-full object-cover ring-2 ring-white/10">
-              @endif
-              <input id="avatarInput" type="file" name="avatar" form="profileForm" accept="image/*" class="hidden">
+              </div>
+
+              {{-- Inputs (terhubung ke form) --}}
+              <input id="photoInput" type="file" name="photo_profile" form="profileForm" accept="image/*" class="hidden">
+              <input id="removePhotoInput" type="hidden" name="remove_photo" value="0" form="profileForm">
             </div>
 
-            <div class="flex-1">
+            <div class="flex-1 mt-4 md:mt-0">
               <h2 class="text-xl font-extrabold">{{ $user->name ?? '' }}</h2>
               <p class="text-gray-300 text-sm leading-6">
                 {{ $user->email ?? '' }}<br>
                 {{ $user->phone ?? '' }}
               </p>
-
-              <div class="mt-3 flex items-center gap-3">
-                <button type="button"
-                        onclick="document.getElementById('avatarInput').click()"
-                        class="inline-flex items-center gap-2 text-sm font-semibold rounded-md px-3 py-1.5 border border-white/15 hover:bg-white/10">
-                  <i class="fas fa-camera"></i>
-                  Change Photo
-                </button>
-
-                @if($avatarUrl)
-                  <label class="inline-flex items-center gap-2 text-sm font-semibold rounded-md px-3 py-1.5 border border-red-600/50 text-red-300 hover:bg-red-600/10 cursor-pointer">
-                    <input type="checkbox" name="remove_avatar" value="1" form="profileForm" class="mr-1 accent-red-600" id="removeAvatarCheckbox">
-                    Remove Photo
-                  </label>
-                @endif
-              </div>
             </div>
           </div>
 
-          {{-- Form --}}
+          {{-- FORM --}}
           <form id="profileForm" method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data"
                 class="mt-8 grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6">
             @csrf
@@ -94,34 +137,26 @@
             <div class="space-y-4 md:col-span-1">
               <div>
                 <label class="block text-xs text-gray-400 mb-1">Full Name</label>
-                <input type="text" name="name"
-                       value="{{ old('name', $user->name) }}"
-                       placeholder="Your full name"
+                <input type="text" name="name" value="{{ old('name', $user->name) }}"
                        class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">First Name</label>
-                  <input type="text" name="firstname"
-                         value="{{ old('firstname', $user->firstname) }}"
-                         placeholder="First name"
+                  <input type="text" name="firstname" value="{{ old('firstname', $user->firstname) }}"
                          class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Last Name</label>
-                  <input type="text" name="lastname"
-                         value="{{ old('lastname', $user->lastname) }}"
-                         placeholder="Last name"
+                  <input type="text" name="lastname" value="{{ old('lastname', $user->lastname) }}"
                          class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
               </div>
 
               <div>
                 <label class="block text-xs text-gray-400 mb-1">Phone</label>
-                <input type="text" name="phone"
-                       value="{{ old('phone', $user->phone) }}"
-                       placeholder="+62 ..."
+                <input type="text" name="phone" value="{{ old('phone', $user->phone) }}"
                        class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
               </div>
             </div>
@@ -133,9 +168,7 @@
             <div class="space-y-4 md:col-span-1">
               <div>
                 <label class="block text-xs text-gray-400 mb-1">Email</label>
-                <input type="email" name="email"
-                       value="{{ old('email', $user->email) }}"
-                       placeholder="you@example.com"
+                <input type="email" name="email" value="{{ old('email', $user->email) }}"
                        class="w-full rounded-md bg-[#1f1f1f] border border-white/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
               </div>
 
@@ -149,8 +182,8 @@
           </form>
         </section>
 
-        {{-- OPTIONAL: Payment Method contoh UI --}}
-        <section class="mt-8 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8">
+        {{-- OPTIONAL: Payment Method demo --}}
+        {{-- <section class="mt-8 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-extrabold">Payment Method</h3>
             <button type="button"
@@ -178,44 +211,64 @@
               </button>
             </li>
           </ul>
-        </section>
+        </section> --}}
       </div>
     </main>
   </div>
 </div>
 
-{{-- Avatar preview / remove UI logic --}}
+{{-- Avatar interactions --}}
 <script>
-  const input    = document.getElementById('avatarInput');
-  const preview  = document.getElementById('avatarPreview');
-  const holder   = document.getElementById('avatarPlaceholder');
-  const removeCb = document.getElementById('removeAvatarCheckbox');
+  (function(){
+    const trigger = document.getElementById('avatarTrigger');
+    const menu    = document.getElementById('avatarMenu');
+    const upload  = document.getElementById('menuUpload');
+    const remove  = document.getElementById('menuRemove');
+    const input   = document.getElementById('photoInput');
+    const rmInput = document.getElementById('removePhotoInput');
+    const preview = document.getElementById('avatarPreview');
+    const holder  = document.getElementById('avatarPlaceholder');
 
-  if (input) {
-    input.addEventListener('change', () => {
+    const closeMenu = () => { if(menu){ menu.classList.add('hidden'); trigger?.setAttribute('aria-expanded','false'); } };
+    const toggleMenu= () => { if(menu){ menu.classList.toggle('hidden'); trigger?.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true'); } };
+
+    trigger?.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+
+    // Upload
+    upload?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMenu();
+      if (rmInput) rmInput.value = '0';
+      input?.click();
+    });
+
+    // Remove
+    remove?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMenu();
+      if (rmInput) rmInput.value = '1';
+      // Sembunyikan preview & tampilkan placeholder
+      if (preview) preview.classList.add('hidden');
+      if (holder)  holder.classList.remove('hidden');
+    });
+
+    // Preview on choose
+    input?.addEventListener('change', () => {
       const [file] = input.files || [];
       if (file) {
         const url = URL.createObjectURL(file);
+        if (preview) { preview.src = url; preview.classList.remove('hidden'); }
         if (holder) holder.classList.add('hidden');
-        if (preview) {
-          preview.src = url;
-          preview.classList.remove('hidden');
-        }
-        if (removeCb) removeCb.checked = false;
+        if (rmInput) rmInput.value = '0';
       }
     });
-  }
 
-  if (removeCb && preview && holder) {
-    removeCb.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        preview.classList.add('hidden');
-        holder.classList.remove('hidden');
-      } else {
-        if (preview.src) preview.classList.remove('hidden');
-        holder.classList.toggle('hidden', !!preview.src);
-      }
+    // Close on outside click / ESC
+    document.addEventListener('click', (e) => {
+      if (!menu || menu.classList.contains('hidden')) return;
+      if (!(menu.contains(e.target) || trigger.contains(e.target))) closeMenu();
     });
-  }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+  })();
 </script>
 @endsection
