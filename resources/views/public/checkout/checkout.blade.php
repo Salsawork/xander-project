@@ -36,7 +36,7 @@
                         @else
                         <p class="text-gray-400">Rp. {{ number_format($cart['price'], 0, ',', '.') }}</p>
                         @endif
-                        <p class="text-gray-400">Quantity: {{ $cart['stock'] }}</p>
+                        <p class="text-gray-400">Quantity: {{ $cart['quantity'] }}</p>
                     </div>
                 </div>
                 @empty

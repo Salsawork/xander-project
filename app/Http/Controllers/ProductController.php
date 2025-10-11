@@ -77,14 +77,14 @@ class ProductController extends Controller
         }
 
         // 🔹 Ambil kategori untuk filter di view (dashboard)
-        $categories = \App\Models\Category::all();
+        $categories = Category::all();
 
         // 🔹 Pilih view sesuai kebutuhan
         if ($request->is('dashboard*')) {
             return view('dash.admin.product.index', compact('products', 'categories'));
         }
 
-        return view('landing', compact('products'));
+        return view('landing', compact('products', 'categories'));
     }
 
 
@@ -222,8 +222,7 @@ class ProductController extends Controller
 
     /**
      * Halaman katalog publik /products (listing dengan filter).
-     */
-    public function landing(Request $request)
+     */public function landing(Request $request)
     {
         $products = Product::query()
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
@@ -236,9 +235,97 @@ class ProductController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        // Data filter bantu
+        $categories = Category::select('id','name')->orderBy('name')->get();
+        $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
+        $conditions = ['new' => 'New', 'used' => 'Used'];
+
+
         $cartProducts = collect();
         $cartVenues = collect();
         $cartSparrings = collect();
+
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'     => $item->product?->name,
+                    'brand'    => $item->product?->brand,
+                    'category' => $item->product?->category?->name ?? '-',
+                    'price'    => $item->product?->pricing,
+                    'quantity' => $item->quantity,
+                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount' => $item->product?->discount ?? 0,
+                    'images'   => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id' => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'      => $item->id,
+                    'schedule_id'  => $item->sparringSchedule?->id,
+                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image'=> $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'         => $item->date,
+                    'start'        => $item->start,
+                    'end'          => $item->end,
+                    'price'        => $item->price,
+                ]);
+        }
+
+        // ✅ Tambahkan variabel ke compact()
+        return view('public.product.index', compact(
+            'products',
+            'categories',
+            'brands',
+            'conditions',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings'
+        ));
+    }
+
+    /**
+     * Detail produk + related.
+     * Di sini kita hitung harga final (diskon) untuk dipakai di Blade,
+     * tanpa mengubah Model.
+     */
+    public function detail(Request $request, $product)
+    {
+        $detail = Product::findOrFail($product);
+        $cartProducts = collect();
+        $cartVenues = collect();
+        $cartSparrings = collect();
+
+        // ===== Related products =====
+        $limit = 10;
 
         if (auth()->check()) {
             $userId = auth()->id();
@@ -295,30 +382,75 @@ class ProductController extends Controller
                 ]);
         }
 
-        return view('public.product.index', compact(
-            'products',
-            'cartProducts',
-            'cartVenues',
-            'cartSparrings'
+        $baseQuery = Product::query()
+            ->where('id', '!=', $detail->id)
+            ->where(function ($q) use ($detail) {
+                $hasCat   = !empty($detail->category_id);
+                $hasBrand = !empty($detail->brand);
+                if ($hasCat && $hasBrand) {
+                    $q->where('category_id', $detail->category_id)
+                      ->orWhere('brand', $detail->brand);
+                } elseif ($hasCat) {
+                    $q->where('category_id', $detail->category_id);
+                } elseif ($hasBrand) {
+                    $q->where('brand', $detail->brand);
+                } else {
+                    $q->whereNotNull('id');
+                }
+            })
+            ->orderByRaw("CASE WHEN category_id = ? THEN 0 ELSE 1 END", [$detail->category_id])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit);
+
+        $relatedProducts = $baseQuery->get();
+
+        if ($relatedProducts->count() < $limit) {
+            $extra = Product::where('id', '!=', $detail->id)
+                ->whereNotIn('id', $relatedProducts->pluck('id'))
+                ->inRandomOrder()
+                ->limit($limit - $relatedProducts->count())
+                ->get();
+            $relatedProducts = $relatedProducts->concat($extra);
+        }
+
+        // ===== Hitung harga final & persen diskon (tanpa ubah model) =====
+        $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount);
+        $detailHasDiscount     = $detailDiscountPercent > 0;
+        $detailFinalPrice      = $this->finalPrice((float)$detail->pricing, $detailDiscountPercent);
+
+        // Untuk related, kita buat array map id => perhitungan
+        $relatedPriceMap = [];
+        foreach ($relatedProducts as $p) {
+            $dp = $this->normalizeDiscountPercent($p->discount);
+            $relatedPriceMap[$p->id] = [
+                'has_discount'    => $dp > 0,
+                'discount_percent'=> $dp,
+                'final_price'     => $this->finalPrice((float)$p->pricing, $dp),
+            ];
+        }
+        
+        return view('public.product.detail', compact(
+            'detail', 'relatedProducts', 'cartProducts', 'cartVenues', 'cartSparrings',
+            'detailDiscountPercent', 'detailHasDiscount', 'detailFinalPrice',
+            'relatedPriceMap'
         ));
     }
 
-
-
-
+    private function normalizeDiscountPercent($discount): float
+    {
+        $d = (float) ($discount ?? 0);
+        if ($d <= 0) return 0.0;
+        return $d <= 1 ? $d * 100.0 : $d;
+    }
 
     /**
-     * Detail produk + related.
-     * Di sini kita hitung harga final (diskon) untuk dipakai di Blade,
-     * tanpa mengubah Model.
+     * Harga setelah diskon (dibulatkan).
      */
-    public function detail(Request $request, $product)
+    private function finalPrice(float $pricing, float $discountPercent): int
     {
-        $detail = Product::findOrFail($product);
-        $cartProducts = json_decode($request->cookie('cartProduct') ?? '[]', true);
-        $cartVenues = json_decode($request->cookie('cartVenues') ?? '[]', true);
-        $cartSparrings = json_decode($request->cookie('cartsparring') ?? '[]', true);
-
-        return view('public.product.detail', compact('detail', 'cartProducts', 'cartVenues', 'cartSparrings'));
+        if ($discountPercent <= 0) return (int) round($pricing, 0);
+        $final = $pricing - ($pricing * ($discountPercent / 100.0));
+        return (int) round($final, 0);
     }
 }
+

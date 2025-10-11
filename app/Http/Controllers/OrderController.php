@@ -99,7 +99,7 @@ class OrderController extends Controller
                 $price = (int) $c['price'];
                 $discountPercent = $c['discount'] ?? 0;
                 $discount = $price * $discountPercent;
-                $subtotal = ($price - $discount) * $c['stock'];
+                $subtotal = ($price - $discount) * $c['quantity'];
                 $total += $subtotal;
                 $tax += $subtotal * 0.1;
             }

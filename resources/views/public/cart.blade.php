@@ -161,7 +161,7 @@
                     </form>
                 </li>
                 @empty
-                @if(empty($cartSparrings) && empty($cartVenues))
+                @if(empty($cartSparrings) && empty($cartVenues) && empty($cartProducts))
                 <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">
                     Your cart is empty
                 </li>

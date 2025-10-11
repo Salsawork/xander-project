@@ -32,7 +32,7 @@ class CartController extends Controller
         }
 
         if ($foundKey !== null) {
-            $cartProduct[$foundKey]['stock'] += $request->stock;
+            $cartProduct[$foundKey]['quantity'] += $request->quantity;
         } else {
             $cartProduct[] = [
                 'id' => $product->id,
@@ -40,7 +40,7 @@ class CartController extends Controller
                 'image' => $product->images[0] ?? null,
                 'price' => $product->pricing,
                 'weight' => $product->weight,
-                'stock' => $request->stock,
+                'quantity' => $request->quantity,
                 'discount' => $product->discount,
             ];
         }
