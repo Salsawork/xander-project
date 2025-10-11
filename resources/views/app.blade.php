@@ -13,15 +13,15 @@
 
 <body>
     <div class="w-full">
-        {{-- @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
+        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
             @include('partials.navbar')
-        @endif --}}
+        @endif
 
         @yield('content')
 
-        {{-- @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
+        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*'))
             @include('partials.footer')
-        @endif --}}
+        @endif
 
     </div>
     @stack('scripts')
