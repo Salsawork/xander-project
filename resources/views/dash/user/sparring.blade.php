@@ -62,23 +62,23 @@
                             <span class="text-gray-300 text-sm">
                                 {{ $order->created_at->format('d F Y') }}
                             </span>
+                            @php
+                            $badgeColor = [
+                            'pending' => 'bg-blue-600 text-white',
+                            'processing' => 'bg-yellow-400 text-gray-900',
+                            'paid' => 'bg-green-600 text-white',
+                            'failed' => 'bg-red-600 text-white',
+                            'refunded' => 'bg-gray-600 text-white',
+                            ][$order->payment_status] ?? 'bg-[#f59e0b]';
+                            @endphp
+                            <span class="{{ $badgeColor }} text-white text-xs font-normal rounded-full px-4 py-1">
+                                {{ ucfirst($order->payment_status) }}
+                            </span>
                         </header>
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->orderSparrings as $sparring)
                             <li class="flex items-center py-3 space-x-4">
-                                @php
-                                $imagePath = 'https://placehold.co/400x600?text=No+Image';
-
-                                if (!empty($sparring->athlete->images) && is_array($sparring->athlete->images)) {
-                                foreach ($sparring->athlete->images as $img) {
-                                if (!empty($img)) {
-                                $imagePath = asset('storage/uploads/' . $img);
-                                break;
-                                }
-                                }
-                                }
-                                @endphp
-                                <img src="{{ $imagePath }}"
+                                <img src="{{ $sparring->athlete_image ? asset('storage/uploads/' . $sparring->athlete_image) : 'https://placehold.co/400x600?text=No+Image' }}"
                                     alt="{{ $sparring->athlete->name }}"
                                     class="object-cover"
                                     style="width: 60px; height: 90px; object-fit: cover;"

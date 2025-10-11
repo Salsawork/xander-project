@@ -51,7 +51,7 @@
                     <div>
                         <h3 class="text-base sm:text-lg font-semibold mb-2">Payment Information</h3>
                         <div class="bg-[#1e1e1e] rounded-lg p-4 space-y-2">
-                            <p class="text-sm sm:text-base"><span class="text-gray-400">Payment Method:</span> {{ $order->payment_method }}</p>
+                            <p class="text-sm sm:text-base"><span class="text-gray-400">Payment Method:</span> {{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</p>
                             <p class="text-sm sm:text-base"><span class="text-gray-400">Payment Status:</span>
                                 <span class="{{ $order->payment_status == 'paid' ? 'text-green-500' : ($order->payment_status == 'pending' ? 'text-yellow-500' : 'text-red-500') }}">
                                     {{ ucfirst($order->payment_status) }}
@@ -157,21 +157,28 @@
                             @endif
                         </tbody>
                         <tfoot class="bg-[#1e1e1e] font-medium">
+                            @php
+                                $subtotal = 0;
+                                $shipping = 0;
+                                $tax = 0;
+                                if ($order->products->isNotEmpty()) {
+                                    $subtotal = $order->products->sum('pivot.subtotal');
+                                    $shipping = $order->products->first()->pivot->shipping ?? 0;
+                                    $tax = $order->products->first()->pivot->tax ?? 0;
+                                }
+                            @endphp
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Subtotal:</td>
-                                <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3">Rp. {{ number_format($subtotal, 0, ',', '.') }}</td>
                             </tr>
-                            @forelse($order->products as $product)
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Shipping:</td>
-                                <td class="px-4 py-3">Rp. {{ number_format($product->pivot->shipping, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3">Rp. {{ number_format($shipping, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Tax:</td>
-                                <td class="px-4 py-3">Rp. {{ number_format($product->pivot->tax, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3">Rp. {{ number_format($tax, 0, ',', '.') }}</td>
                             </tr>
-                            @empty
-                            @endforelse
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right font-bold">Total:</td>
                                 <td class="px-4 py-3 font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>

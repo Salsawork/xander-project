@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Bank;
+use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\User;
 use App\Models\Order;
@@ -198,7 +199,7 @@ class OrderController extends Controller
             // products
             'products'             => 'array',
             'products.*.id'        => 'required|exists:products,id',
-            'products.*.stock'  => 'required|integer|min:1',
+            'products.*.quantity'  => 'nullable|integer|min:1',
 
             // sparrings
             'sparrings'                => 'array',
@@ -241,7 +242,7 @@ class OrderController extends Controller
                 throw new \Exception('Tidak ada item yang dikirim untuk checkout.');
             }
 
-            $orderType = $types; 
+            $orderType = $types;
 
             // ==========================
             // Buat order utama
@@ -255,7 +256,7 @@ class OrderController extends Controller
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
-                'order_type'      => $orderType, 
+                'order_type'      => $orderType,
             ]);
 
             $total = 0;
@@ -295,7 +296,7 @@ class OrderController extends Controller
                     $total += $subtotal;
 
                     $order->products()->attach($product->id, [
-                        'stock' => $qty,
+                        'quantity' => $qty,
                         'price'    => $price,
                         'subtotal' => $subtotal,
                         'discount' => $discount * $qty,
@@ -315,42 +316,68 @@ class OrderController extends Controller
              *  Tambahkan Venues / Bookings
              *  ========================= */
             if ($orderType === 'venue') {
-                $checkedIds = array_column($request->venues, 'id');
+                $venueTotal = 0; // simpan total semua venue di sini
 
-                CartItem::where('user_id', $user->id)
-                    ->where('item_type', 'venue')
-                    ->whereIn('item_id', $checkedIds)
-                    ->delete();
+                foreach ($request->venues as $venueData) {
+                    $bookingDate = \Carbon\Carbon::parse($venueData['date'])->format('Y-m-d');
 
-                foreach ($request->venues as $venue) {
-                    $bookingDate = \Carbon\Carbon::parse($venue['date'])->format('Y-m-d');
-
-                    if (isset($venue['table']) && isset($venue['id'])) {
-                        $tableId = DB::table('tables')
-                            ->where('table_number', $venue['table'])
-                            ->where('venue_id', $venue['id'])
-                            ->value('id');
-
-                        if (!$tableId) {
-                            throw new \Exception('Table not found for venue: ' . $venue['id']);
-                        }
-                    } else {
+                    if (!isset($venueData['table']) || !isset($venueData['id'])) {
                         throw new \Exception('Venue ID dan Table number wajib diisi.');
                     }
 
+                    // Cari table_id berdasarkan nomor meja
+                    $tableId = DB::table('tables')
+                        ->where('table_number', $venueData['table'])
+                        ->where('venue_id', $venueData['id'])
+                        ->value('id');
+
+                    if (!$tableId) {
+                        throw new \Exception('Table not found for venue: ' . $venueData['id']);
+                    }
+
+                    // Pastikan tidak bentrok waktu
+                    $existingBooking = Booking::where('table_id', $tableId)
+                        ->where('booking_date', $bookingDate)
+                        ->where('status', 'booked')
+                        ->where(function ($q) use ($venueData) {
+                            $q->where('start_time', '<', $venueData['end'])
+                                ->where('end_time', '>', $venueData['start']);
+                        })
+                        ->exists();
+
+                    if ($existingBooking) {
+                        throw new \Exception('Table ' . $venueData['table'] . ' pada venue ini sudah dipesan untuk tanggal dan waktu yang sama.');
+                    }
+
+                    // Tambahkan ke tabel bookings
                     $order->bookings()->create([
-                        'venue_id' => $venue['id'],
-                        'price'    => $venue['price'],
-                        'table_id' => $tableId,
-                        'user_id'  => $user->id,
+                        'venue_id'     => $venueData['id'],
+                        'price'        => $venueData['price'],
+                        'table_id'     => $tableId,
+                        'user_id'      => $user->id,
                         'booking_date' => $bookingDate,
-                        'start_time'   => $venue['start'],
-                        'end_time'     => $venue['end'],
+                        'status'       => 'booked',
+                        'start_time'   => $venueData['start'],
+                        'end_time'     => $venueData['end'],
                     ]);
 
-                    $total += $venue['price'];
+                    // Hapus item dari cart
+                    CartItem::where('user_id', $user->id)
+                        ->where('item_type', 'venue')
+                        ->where('item_id', $venueData['id'])
+                        ->where('date', $bookingDate)
+                        ->where('start', $venueData['start'])
+                        ->where('end', $venueData['end'])
+                        ->delete();
+
+                    // Tambahkan harga venue ke total keseluruhan
+                    $venueTotal += $venueData['price'];
                 }
+
+                // Akumulasi ke total order global
+                $total += $venueTotal;
             }
+
 
             /** =========================
              *  Tambahkan Sparring

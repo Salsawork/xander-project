@@ -148,7 +148,7 @@
                         </div>
 
                         <p class="text-white text-xs mt-1 cart-meta">
-                            Quantity: {{ $cart['stock'] ?? 1 }}
+                            Quantity: {{ $cart['quantity'] ?? 0 }}
                         </p>
                     </div>
                     <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">

@@ -91,7 +91,7 @@ Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
 
     // API price schedule (JANGAN DI BAWAH DETAIL)
-    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])
+    Route::get('/{venueId}/price-schedules', [VenueController::class, 'priceSchedules'])
         ->where(['venueId' => '[0-9]+'])
         ->name('venues.priceSchedules');
 
@@ -201,6 +201,7 @@ Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::delete('/delete/{order}', [DashboardOrderController::class, 'destroy'])->name('order.delete');
     Route::get('/update-status/{order}', [DashboardOrderController::class, 'updateStatus'])->name('admin.orders.update-status');
     Route::get('/update-payment-status/{order}', [DashboardOrderController::class, 'updatePaymentStatus'])->name('admin.orders.update-payment-status');
+    Route::get('/update-booking-status/{order}', [DashboardOrderController::class, 'updateBookingStatus'])->name('admin.orders.update-booking-status');
 });
 
 /** Midtrans Notification (public) */

@@ -54,17 +54,26 @@ class Order extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'order_items')
-            ->withPivot('stock', 'price', 'tax', 'shipping', 'subtotal', 'discount', 'courier', 'address')
+            ->withPivot('quantity', 'price', 'tax', 'shipping', 'subtotal', 'discount', 'courier', 'address')
             ->withTimestamps();
     }
+
+    public function venues()
+    {
+        return $this->belongsToMany(Venue::class, 'bookings')
+            ->withPivot(['price', 'table_id', 'user_id', 'booking_date', 'status', 'start_time', 'end_time'])
+            ->withTimestamps();
+    }
+
+
     public function items()
     {
-        return $this->hasMany(OrderItem::class, 'order_id' );
+        return $this->hasMany(OrderItem::class, 'order_id');
     }
 
     public function bookings()
     {
-        return $this->hasMany(Booking::class, 'order_id'); 
+        return $this->hasMany(Booking::class, 'order_id');
     }
 
     /**
@@ -74,5 +83,4 @@ class Order extends Model
     {
         return $this->hasMany(OrderSparring::class, 'order_id');
     }
-    
 }

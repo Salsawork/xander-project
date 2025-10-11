@@ -156,6 +156,7 @@
                             <th class="px-4 py-3">Name</th>
                             <th class="px-4 py-3">Payment</th>
                             <th class="px-4 py-3">Status Payment</th>
+                            <th class="px-4 py-3">Status Booking</th>
                             <th class="px-4 py-3">File</th>
                             <th class="px-4 py-3">Total</th>
                             <th class="px-4 py-3">Action</th>
@@ -171,19 +172,34 @@
                                 {{ $order->user->name ?? 'Guest' }}
                             </td>
                             <td class="px-4 py-3">{{ $order->payment_method === 'transfer_manual' ? 'Transfer manual' : $order->payment_method }}</td>
-                               <td class="px-4 py-3">
+                            <td class="px-4 py-3">
                                 @php
                                 $statusClass = [
-                         'pending'    => 'bg-blue-600 text-white',
+                                'pending' => 'bg-blue-600 text-white',
                                 'processing' => 'bg-yellow-400 text-gray-900',
-                                'paid'       => 'bg-green-600 text-white',
-                                'failed'     => 'bg-red-600 text-white',
-                                'refunded'   => 'bg-gray-600 text-white',
+                                'paid' => 'bg-green-600 text-white',
+                                'failed' => 'bg-red-600 text-white',
+                                'refunded' => 'bg-gray-600 text-white',
                                 ];
                                 @endphp
                                 <span
                                     class="{{ $statusClass[$order->payment_status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
                                     {{ ucfirst($order->payment_status) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                @php
+                                $statusClass = [
+                                'pending' => 'bg-blue-600 text-white',
+                                'confirmed' => 'bg-yellow-400 text-gray-900',
+                                'cancelled' => 'bg-red-600 text-white',
+                                'completed' => 'bg-green-600 text-white',
+                                'booking' => 'bg-gray-600 text-white',
+                                ];
+                                @endphp
+                                <span
+                                    class="{{ $statusClass[$order->bookings->first()->status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
+                                    {{ ucfirst($order->bookings->first()->status ?? 'N/A') }}
                                 </span>
                             </td>
                             <td>
@@ -227,6 +243,34 @@
                                             <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'refunded']) }}"
                                                 class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
                                                 data-status="Refunded">Refunded</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="relative" x-data="{ openBooking: false }">
+                                    <button @click="openBooking = !openBooking"
+                                        aria-label="Update booking status order {{ $order->id }}"
+                                        class="hover:text-blue-400">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </button>
+                                    <div x-show="openBooking" x-cloak @click.away="openBooking = false"
+                                        class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50"
+                                        style="transform: translateX(-30%); min-width: 12rem;">
+                                        <div class="py-1">
+                                            <a href="{{ route('admin.orders.update-booking-status', ['order' => $order->id, 'status' => 'pending']) }}"
+                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] booking-status-link"
+                                                data-status="Pending">Pending</a>
+                                            <a href="{{ route('admin.orders.update-booking-status', ['order' => $order->id, 'status' => 'confirmed']) }}"
+                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] booking-status-link"
+                                                data-status="Confirmed">Confirmed</a>
+                                            <a href="{{ route('admin.orders.update-booking-status', ['order' => $order->id, 'status' => 'cancelled']) }}"
+                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] booking-status-link"
+                                                data-status="Cancelled">Cancelled</a>
+                                            <a href="{{ route('admin.orders.update-booking-status', ['order' => $order->id, 'status' => 'completed']) }}"
+                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] booking-status-link"
+                                                data-status="Completed">Completed</a>
+                                            <a href="{{ route('admin.orders.update-booking-status', ['order' => $order->id, 'status' => 'booked']) }}"
+                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] booking-status-link"
+                                                data-status="Completed">Booked</a>
                                         </div>
                                     </div>
                                 </div>
@@ -427,7 +471,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Kirim request hapus order ke server
-                        const deleteUrl = '{{ route('order.delete', ':id') }}'.replace(':id', orderId);
+                        const deleteUrl = '{{ route('order.delete',':id') }}'.replace(':id', orderId);
 
                         fetch(deleteUrl, {
                                 method: 'DELETE',

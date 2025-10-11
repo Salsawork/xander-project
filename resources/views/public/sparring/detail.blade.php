@@ -182,9 +182,11 @@ $fullStars = floor((float)($averageRating ?? 0));
 
           <div>
             <label class="text-sm text-gray-300">Date</label>
-            <div class="field-wrap mt-2">
+            <div class="field-wrap mt-2 relative">
               <input id="dateInput" name="date" type="date" class="input-pill pr-12" placeholder="YYYY-MM-DD">
-              <button type="button" id="openDateBtn" class="date-btn" aria-label="Open date picker" title="Pick a date"><i class="far fa-calendar-alt"></i></button>
+              <button type="button" id="openDateBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white" aria-label="Open date picker" title="Pick a date">
+                <i class="far fa-calendar-alt"></i>
+              </button>
             </div>
           </div>
 

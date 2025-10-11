@@ -15,12 +15,12 @@ class OrderController extends Controller
     public function indexProduct(Request $request)
     {
         $orders = Order::where('order_type', 'product')
-        ->when($request->search, function ($query) use ($request) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%');
-            });
-        })
+            ->when($request->search, function ($query) use ($request) {
+                $query->whereHas('user', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%')
+                        ->orWhere('email', 'like', '%' . $request->search . '%');
+                });
+            })
             ->when($request->status, function ($query) use ($request) {
                 $query->where('delivery_status', $request->status);
             })
@@ -46,12 +46,12 @@ class OrderController extends Controller
     public function indexBooking(Request $request)
     {
         $orders = Order::where('order_type', 'venue')
-        ->when($request->search, function ($query) use ($request) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%');
-            });
-        })
+            ->when($request->search, function ($query) use ($request) {
+                $query->whereHas('user', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%')
+                        ->orWhere('email', 'like', '%' . $request->search . '%');
+                });
+            })
             ->when($request->status, function ($query) use ($request) {
                 $query->where('payment_status', $request->status);
             })
@@ -77,12 +77,12 @@ class OrderController extends Controller
     public function indexSparring(Request $request)
     {
         $orders = Order::where('order_type', 'sparring')
-        ->when($request->search, function ($query) use ($request) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%');
-            });
-        })
+            ->when($request->search, function ($query) use ($request) {
+                $query->whereHas('user', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%')
+                        ->orWhere('email', 'like', '%' . $request->search . '%');
+                });
+            })
             ->when($request->status, function ($query) use ($request) {
                 $query->where('payment_status', $request->status);
             })
@@ -162,7 +162,7 @@ class OrderController extends Controller
             'status' => $request->query('status'),
             'all_data' => $request->all()
         ]);
-        
+
         $status = $request->query('status');
         $validStatuses = ['pending', 'processing', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
 
@@ -229,6 +229,48 @@ class OrderController extends Controller
             ]);
 
             return redirect()->back()->with('error', 'Gagal mengubah status: ' . $e->getMessage());
+        }
+    }
+    public function updateBookingStatus(Request $request, $orderId)
+    {
+        Log::info('Update booking status request', [
+            'order_id' => $orderId,
+            'status' => $request->query('status'),
+            'all_data' => $request->all()
+        ]);
+
+        $status = $request->query('status');
+        $validStatuses = ['pending', 'booked', 'confirmed', 'cancelled', 'completed'];
+
+        if (!$status || !in_array($status, $validStatuses)) {
+            return redirect()->back()->with('error', 'Status booking tidak valid');
+        }
+
+        try {
+            $order = Order::findOrFail($orderId);
+            $oldStatus = $order->bookings()->first()->status ?? null;
+            $booking = $order->bookings()->first();
+            if ($booking) {
+                $booking->status = $status;
+                $booking->save();
+            }
+            $order->save();
+
+            Log::info('Booking status updated', [
+                'order_id' => $order->id,
+                'old_status' => $oldStatus,
+                'new_status' => $order->bookings()->first()->status
+            ]);
+
+            return redirect()->back()->with('success', 'Status booking berhasil diperbarui');
+        } catch (\Exception $e) {
+            Log::error('Failed to update booking status', [
+                'order_id' => $orderId,
+                'status' => $status,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal mengubah status booking: ' . $e->getMessage());
         }
     }
 }
