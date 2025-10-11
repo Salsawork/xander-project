@@ -193,12 +193,12 @@ class OrderController extends Controller
             'district_name'     => 'nullable|string|max:255',
             'subdistrict_name'  => 'nullable|string|max:255',
             'courier'           => 'nullable|string|max:255',
+            'address'           => 'nullable|string|max:255',
 
             // products
             'products'             => 'array',
             'products.*.id'        => 'required|exists:products,id',
             'products.*.quantity'  => 'required|integer|min:1',
-
 
             // sparrings
             'sparrings'                => 'array',
@@ -225,18 +225,37 @@ class OrderController extends Controller
         try {
             $user = auth()->user();
 
-            // Generate order number
-            $orderNumber = 'ORD-' . strtoupper(uniqid());
+            // ==========================
+            // Tentukan order_type berdasarkan data yang dikirim
+            // ==========================
+            $types = '';
+            if ($request->has('products') && count($request->products) > 0) {
+                $types = 'product';
+            } elseif ($request->has('venues') && count($request->venues) > 0) {
+                $types = 'venue';
+            } elseif ($request->has('sparrings') && count($request->sparrings) > 0) {
+                $types = 'sparring';
+            }
 
+            if ($types === '') {
+                throw new \Exception('Tidak ada item yang dikirim untuk checkout.');
+            }
+
+            $orderType = $types; 
+
+            // ==========================
             // Buat order utama
+            // ==========================
+            $orderNumber = 'ORD-' . strtoupper(uniqid());
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
                 'order_number'    => $orderNumber,
-                'total'           => 0, // akan diupdate setelah item masuk
+                'total'           => 0,
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
+                'order_type'      => $orderType, 
             ]);
 
             $total = 0;
@@ -244,7 +263,7 @@ class OrderController extends Controller
             /** =========================
              *  Tambahkan Products
              *  ========================= */
-            if ($request->has('products')) {
+            if ($orderType === 'product') {
                 $checkedIds = array_column($request->products, 'id');
 
                 CartItem::where('user_id', $user->id)
@@ -267,24 +286,27 @@ class OrderController extends Controller
                     $discount = ($price * $product->discount);
                     $subtotal = ($price - $discount) * $qty;
                     $courier  = $request->courier;
-                    $address = implode(', ', array_filter([
-                        $request->input('subdistrict_name'),
-                        $request->input('district_name'),
-                        $request->input('city_name'),
-                        $request->input('province_name'),
-                    ]));
-                    
+                    $address  = $request->address;
+                    $province = $request->province_name;
+                    $city     = $request->city_name;
+                    $district = $request->district_name;
+                    $subdistrict = $request->subdistrict_name;
+
                     $total += $subtotal;
 
                     $order->products()->attach($product->id, [
                         'quantity' => $qty,
                         'price'    => $price,
-                        'subtotal' => $subtotal + $tax + $shipping,
+                        'subtotal' => $subtotal,
                         'discount' => $discount * $qty,
                         'tax'      => $tax,
                         'shipping' => $shipping,
                         'courier'  => $courier,
                         'address'  => $address,
+                        'province' => $province,
+                        'city'     => $city,
+                        'district' => $district,
+                        'subdistrict' => $subdistrict,
                     ]);
                 }
             }
@@ -292,7 +314,7 @@ class OrderController extends Controller
             /** =========================
              *  Tambahkan Venues / Bookings
              *  ========================= */
-            if ($request->has('venues')) {
+            if ($orderType === 'venue') {
                 $checkedIds = array_column($request->venues, 'id');
 
                 CartItem::where('user_id', $user->id)
@@ -313,7 +335,7 @@ class OrderController extends Controller
                             throw new \Exception('Table not found for venue: ' . $venue['id']);
                         }
                     } else {
-                        throw new \Exception('Venue ID and Table number are required');
+                        throw new \Exception('Venue ID dan Table number wajib diisi.');
                     }
 
                     $order->bookings()->create([
@@ -333,7 +355,7 @@ class OrderController extends Controller
             /** =========================
              *  Tambahkan Sparring
              *  ========================= */
-            if ($request->has('sparrings')) {
+            if ($orderType === 'sparring') {
                 $checkedIds = array_column($request->sparrings, 'schedule_id');
 
                 CartItem::where('user_id', $user->id)
@@ -351,7 +373,6 @@ class OrderController extends Controller
                     $total += $sparring['price'];
 
                     $athlete = User::find($sparring['athlete_id']);
-                    $user    = auth()->user();
                     if ($athlete && $athlete->email) {
                         $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
                             "Detail Pemesan:\n" .
@@ -369,6 +390,7 @@ class OrderController extends Controller
                     }
                 }
             }
+
             if ($request->filled('shipping')) {
                 $total += $request->shipping;
             }
@@ -376,7 +398,6 @@ class OrderController extends Controller
             if ($request->filled('tax')) {
                 $total += $request->tax;
             }
-
 
             // Update total order
             $order->update(['total' => $total]);
@@ -387,6 +408,7 @@ class OrderController extends Controller
                 'status'       => 'success',
                 'message'      => 'Order berhasil dibuat!',
                 'order_number' => $order->order_number,
+                'order_type'   => $orderType,
                 'data'         => $order->load('user', 'products', 'orderSparrings', 'bookings'),
             ]);
         } catch (\Exception $e) {

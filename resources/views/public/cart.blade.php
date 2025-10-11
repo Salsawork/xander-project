@@ -186,7 +186,7 @@
                             {{ $venue['name'] }}
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            {{ $venue['date'] }} {{ $venue['start'] }} - {{ $venue['end'] }}
+                            {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }} {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}
                         </p>
 
                         <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}" value="{{ $venue['price'] }}">
@@ -229,7 +229,7 @@
                             {{ $sparring['athlete_name'] }} (Sparring)
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            {{ $sparring['date'] }} {{ $sparring['start'] }} - {{ $sparring['end'] }}
+                            {{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }} {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}
                         </p>
                         <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}"
                             value="{{ $sparring['price'] }}">
@@ -322,15 +322,17 @@
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {
         const form = this;
 
+        // Hapus input hidden sebelumnya agar tidak dobel
         form.querySelectorAll('input[name="selected_items[]"]').forEach(el => el.remove());
 
         const checked = document.querySelectorAll('#cart input[type="checkbox"]:checked');
 
+        // Cek: minimal 1 item harus dipilih
         if (checked.length === 0) {
             e.preventDefault();
             Swal.fire({
                 title: 'Perhatian!',
-                text: 'Wajib Pilih Minimal 1 Barang',
+                text: 'Wajib pilih minimal 1 barang untuk checkout.',
                 icon: 'warning',
                 confirmButtonText: 'OK',
                 confirmButtonColor: '#3085d6',
@@ -341,6 +343,26 @@
             return;
         }
 
+        // 🔍 Cek apakah semua item memiliki type yang sama
+        const types = new Set();
+        checked.forEach(cb => types.add(cb.dataset.type || 'product'));
+
+        if (types.size > 1) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Failed Checkout!',
+                text: 'Checkout hanya bisa dilakukan untuk 1 jenis item (misalnya hanya produk, hanya venue atau hanya sparring).',
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#d33',
+                background: '#1E1E1F',
+                color: '#FFFFFF',
+                iconColor: '#FF5252'
+            });
+            return;
+        }
+
+        // Jika lolos validasi → tambahkan input hidden untuk data checkout
         checked.forEach(cb => {
             const type = cb.dataset.type || 'product';
             const id = cb.value.split(':')[1] || cb.value;
@@ -352,6 +374,6 @@
         });
     });
 
-
+    // Event listener placeholder (biar tidak error)
     function handleCheckboxChange(_el) {}
 </script>

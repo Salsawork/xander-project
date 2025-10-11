@@ -15,6 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->constrained()->onDelete('restrict');
             $table->string('order_number')->unique();
+            $table->string('order_type')->nullable();
             $table->decimal('total', 12, 0)->default(0);
             $table->enum('payment_status', [
                 'pending',

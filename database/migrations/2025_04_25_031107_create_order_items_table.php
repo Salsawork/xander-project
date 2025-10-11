@@ -22,6 +22,10 @@ return new class extends Migration
             $table->decimal('subtotal', 10, 0);
             $table->decimal('discount', 10, 0)->default(0);
             $table->string('courier')->nullable();
+            $table->string('province')->nullable();
+            $table->string('city')->nullable();
+            $table->string('district')->nullable();
+            $table->string('subdistrict')->nullable();
             $table->text('address')->nullable();
             $table->timestamps();
 

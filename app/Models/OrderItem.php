@@ -15,7 +15,11 @@ class OrderItem extends Model
         'discount',
         'tax',
         'shipping',
-        'address'
+        'address',
+        'province',
+        'city',
+        'district',
+        'subdistrict',
     ];
 
     public function order()

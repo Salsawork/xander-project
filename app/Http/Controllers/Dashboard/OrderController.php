@@ -12,36 +12,99 @@ class OrderController extends Controller
     /**
      * Tampilkan semua order
      */
-    public function index(Request $request)
-{
-    $orders = Order::when($request->search, function ($query) use ($request) {
+    public function indexProduct(Request $request)
+    {
+        $orders = Order::where('order_type', 'product')
+        ->when($request->search, function ($query) use ($request) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%');
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         })
-        ->when($request->status, function ($query) use ($request) {
-            $query->where('delivery_status', $request->status);
+            ->when($request->status, function ($query) use ($request) {
+                $query->where('delivery_status', $request->status);
+            })
+            // hanya 1 orderBy, kasih default DESC
+            ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
+            ->get();
+
+        $pendingCount    = Order::where('order_type', 'product')->where('delivery_status', 'pending')->count();
+        $processingCount = Order::where('order_type', 'product')->where('delivery_status', 'processing')->count();
+        $shippedCount    = Order::where('order_type', 'product')->where('delivery_status', 'shipped')->count();
+        $deliveredCount  = Order::where('order_type', 'product')->where('delivery_status', 'delivered')->count();
+        $cancelledCount  = Order::where('order_type', 'product')->where('delivery_status', 'cancelled')->count();
+
+        return view('dash.admin.order.product', compact(
+            'orders',
+            'pendingCount',
+            'processingCount',
+            'shippedCount',
+            'deliveredCount',
+            'cancelledCount'
+        ));
+    }
+    public function indexBooking(Request $request)
+    {
+        $orders = Order::where('order_type', 'venue')
+        ->when($request->search, function ($query) use ($request) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
+            });
         })
-        // hanya 1 orderBy, kasih default DESC
-        ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
-        ->get();
+            ->when($request->status, function ($query) use ($request) {
+                $query->where('payment_status', $request->status);
+            })
+            // hanya 1 orderBy, kasih default DESC
+            ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
+            ->get();
 
-    $pendingCount    = Order::where('delivery_status', 'pending')->count();
-    $processingCount = Order::where('delivery_status', 'processing')->count();
-    $shippedCount    = Order::where('delivery_status', 'shipped')->count();
-    $deliveredCount  = Order::where('delivery_status', 'delivered')->count();
-    $cancelledCount  = Order::where('delivery_status', 'cancelled')->count();
+        $pendingCount    = Order::where('order_type', 'venue')->where('payment_status', 'pending')->count();
+        $processingCount = Order::where('order_type', 'venue')->where('payment_status', 'processing')->count();
+        $paidCount       = Order::where('order_type', 'venue')->where('payment_status', 'paid')->count();
+        $failedCount     = Order::where('order_type', 'venue')->where('payment_status', 'failed')->count();
+        $refundedCount   = Order::where('order_type', 'venue')->where('payment_status', 'refunded')->count();
 
-    return view('dash.admin.order', compact(
-        'orders',
-        'pendingCount',
-        'processingCount',
-        'shippedCount',
-        'deliveredCount',
-        'cancelledCount'
-    ));
-}
+        return view('dash.admin.order.booking', compact(
+            'orders',
+            'pendingCount',
+            'processingCount',
+            'paidCount',
+            'failedCount',
+            'refundedCount'
+        ));
+    }
+    public function indexSparring(Request $request)
+    {
+        $orders = Order::where('order_type', 'sparring')
+        ->when($request->search, function ($query) use ($request) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
+            });
+        })
+            ->when($request->status, function ($query) use ($request) {
+                $query->where('payment_status', $request->status);
+            })
+            // hanya 1 orderBy, kasih default DESC
+            ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
+            ->get();
+
+        $pendingCount    = Order::where('order_type', 'sparring')->where('payment_status', 'pending')->count();
+        $processingCount = Order::where('order_type', 'sparring')->where('payment_status', 'processing')->count();
+        $paidCount       = Order::where('order_type', 'sparring')->where('payment_status', 'paid')->count();
+        $failedCount     = Order::where('order_type', 'sparring')->where('payment_status', 'failed')->count();
+        $refundedCount   = Order::where('order_type', 'sparring')->where('payment_status', 'refunded')->count();
+
+        return view('dash.admin.order.sparring', compact(
+            'orders',
+            'pendingCount',
+            'processingCount',
+            'paidCount',
+            'failedCount',
+            'refundedCount'
+        ));
+    }
 
 
     /**
@@ -59,7 +122,7 @@ class OrderController extends Controller
             'returned'   => 'bg-[#f87171] text-[#7f1d1d]',
         ];
 
-        return view('dash.admin.detailOrder', compact('order', 'statusClass'));
+        return view('dash.admin.order.detailOrder', compact('order', 'statusClass'));
     }
 
     /**
@@ -99,12 +162,12 @@ class OrderController extends Controller
             'status' => $request->query('status'),
             'all_data' => $request->all()
         ]);
-
+        
         $status = $request->query('status');
         $validStatuses = ['pending', 'processing', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
 
         if (!$status || !in_array($status, $validStatuses)) {
-            return redirect()->route('order.index')->with('error', 'Status pengiriman tidak valid');
+            return redirect()->back()->with('error', 'Status pengiriman tidak valid');
         }
 
         try {
@@ -119,7 +182,7 @@ class OrderController extends Controller
                 'new_status' => $order->delivery_status
             ]);
 
-            return redirect()->route('order.index')->with('success', 'Status pengiriman berhasil diperbarui');
+            return redirect()->back()->with('success', 'Status pengiriman berhasil diperbarui');
         } catch (\Exception $e) {
             Log::error('Failed to update status', [
                 'order_id' => $orderId,
@@ -127,7 +190,45 @@ class OrderController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->route('order.index')->with('error', 'Gagal mengubah status: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengubah status: ' . $e->getMessage());
+        }
+    }
+    public function updatePaymentStatus(Request $request, $orderId)
+    {
+        Log::info('Update status request', [
+            'order_id' => $orderId,
+            'status' => $request->query('status'),
+            'all_data' => $request->all()
+        ]);
+
+        $status = $request->query('status');
+        $validStatuses = ['pending', 'processing', 'paid', 'failed', 'refunded'];
+
+        if (!$status || !in_array($status, $validStatuses)) {
+            return redirect()->back()->with('error', 'Status pembayaran tidak valid');
+        }
+
+        try {
+            $order = Order::findOrFail($orderId);
+            $oldStatus = $order->payment_status;
+            $order->payment_status = $status;
+            $order->save();
+
+            Log::info('Status updated', [
+                'order_id' => $order->id,
+                'old_status' => $oldStatus,
+                'new_status' => $order->payment_status
+            ]);
+
+            return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui');
+        } catch (\Exception $e) {
+            Log::error('Failed to update status', [
+                'order_id' => $orderId,
+                'status' => $status,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal mengubah status: ' . $e->getMessage());
         }
     }
 }

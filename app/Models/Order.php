@@ -18,6 +18,7 @@ class Order extends Model
         'user_id',
         'bank_id',
         'order_number',
+        'order_type',
         'total',
         'payment_status',
         'delivery_status',
@@ -58,7 +59,7 @@ class Order extends Model
     }
     public function items()
     {
-        return $this->hasMany(OrderItem::class, 'order_id');
+        return $this->hasMany(OrderItem::class, 'order_id' );
     }
 
     public function bookings()

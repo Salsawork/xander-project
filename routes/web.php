@@ -163,10 +163,13 @@ Route::prefix('checkout')->group(function () {
 });
 
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
-    Route::get('/', [DashboardOrderController::class, 'index'])->name('order.index');
+    Route::get('/product', [DashboardOrderController::class, 'indexProduct'])->name('order.index.product');    
+    Route::get('/booking', [DashboardOrderController::class, 'indexBooking'])->name('order.index.booking');
+    Route::get('/sparring', [DashboardOrderController::class, 'indexSparring'])->name('order.index.sparring');
     Route::get('/detail/{order?}', [DashboardOrderController::class, 'detail'])->name('order.detail.index');
-    Route::delete('/delete/{order}', [DashboardOrderController::class, 'destroy'])->name('admin.orders.delete');
+    Route::delete('/delete/{order}', [DashboardOrderController::class, 'destroy'])->name('order.delete');
     Route::get('/update-status/{order}', [DashboardOrderController::class, 'updateStatus'])->name('admin.orders.update-status');
+    Route::get('/update-payment-status/{order}', [DashboardOrderController::class, 'updatePaymentStatus'])->name('admin.orders.update-payment-status');
 });
 
 /** Midtrans Notification (public) */
@@ -185,6 +188,7 @@ Route::middleware('auth')->group(function () {
     /** User: pages for sidebar **/
     Route::get('dashboard/notification', fn() => view('dash.user.notification'))->name('notification.index');
     Route::get('dashboard/myorder', fn() => view('dash.user.myorder'))->name('myorder.index');
+    Route::get('dashboard/sparring', fn() => view('dash.user.sparring'))->name('user.sparring.index');
     Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
     /** Profile */

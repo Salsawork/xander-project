@@ -214,6 +214,12 @@
                                     <option value="pos">POS</option>
                                 </select>
                             </div>
+                            <div>
+                                <label for="address" class="block font-semibold mb-1">Address</label>
+                                <input type="text" name="address" id="address"
+                                    value="{{ old('address', $user->address ?? '') }}"
+                                    class="w-full border rounded p-2" required>
+                            </div>
                         </div>
                         <!-- Hidden input untuk cost -->
                         <input type="hidden" name="weight" id="weight" value="{{ $cart['weight'] }}">
