@@ -22,7 +22,8 @@ class Venue extends Model
         'date',
         'operating_hours',
         'rating',
-        'price'
+        'price',
+        'image',
     ];
 
     /**

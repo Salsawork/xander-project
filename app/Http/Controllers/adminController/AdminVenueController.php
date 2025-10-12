@@ -55,13 +55,13 @@ class AdminVenueController extends Controller
             'phone' => 'required|string|max:20',
             'operating_hours' => 'required|string|max:100',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Buat user baru dengan role venue
+            // Buat user baru
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -69,7 +69,19 @@ class AdminVenueController extends Controller
                 'roles' => 'venue',
             ]);
 
-            // Buat venue baru terkait dengan user
+            // Upload gambar jika ada
+            $imageName = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $destinationPath = public_path('images/venue');
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0777, true);
+                }
+                $image->move($destinationPath, $imageName);
+            }
+
+            // Simpan data venue
             Venue::create([
                 'user_id' => $user->id,
                 'name' => $request->venue_name,
@@ -77,18 +89,16 @@ class AdminVenueController extends Controller
                 'phone' => $request->phone,
                 'operating_hours' => $request->operating_hours,
                 'description' => $request->description,
-                'rating' => 0, // Default rating
+                'rating' => 0,
+                'image' => $imageName, // hanya nama file
             ]);
 
-            // Commit transaksi
             DB::commit();
 
             return redirect()->route('venue.index')
                 ->with('success', 'Venue berhasil ditambahkan!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika ada error
             DB::rollBack();
-
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
                 ->withInput();
@@ -127,20 +137,34 @@ class AdminVenueController extends Controller
         ]);
 
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Update data user
+            // Update user
             $user = User::find($venue->user_id);
             $user->name = $request->name;
             $user->email = $request->email;
-
-            // Update password jika diisi
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
-
             $user->save();
+
+            // Upload gambar baru jika ada
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $destinationPath = public_path('images/venue');
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0777, true);
+                }
+
+                // Hapus file lama jika ada
+                if ($venue->image && file_exists(public_path('images/venue/' . $venue->image))) {
+                    unlink(public_path('images/venue/' . $venue->image));
+                }
+
+                $image->move($destinationPath, $imageName);
+                $venue->image = $imageName;
+            }
 
             // Update data venue
             $venue->name = $request->venue_name;
@@ -150,15 +174,12 @@ class AdminVenueController extends Controller
             $venue->description = $request->description;
             $venue->save();
 
-            // Commit transaksi
             DB::commit();
 
             return redirect()->route('venue.index')
                 ->with('success', 'Venue berhasil diperbarui!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika ada error
             DB::rollBack();
-
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
                 ->withInput();
