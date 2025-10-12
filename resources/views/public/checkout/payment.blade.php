@@ -70,12 +70,12 @@
                                         <p class="text-xs text-blue-100 mb-1 font-medium">Transfer ke rekening:</p>
                                         <div class="space-y-1">
                                             <div>
-                                                <div class="font-bold text-white text-sm">Bank Syariah Indonesia (BSI)</div>
+                                                <div class="font-bold text-white text-sm">Bank Central Asia</div>
                                                 <div class="flex items-baseline gap-1 mt-1 justify-center">
                                                     <span class="text-xs text-blue-100">No Rek:</span>
-                                                    <span class="font-mono font-bold text-white">7575707097</span>
+                                                    <span class="font-mono font-bold text-white">1234567890</span>
                                                 </div>
-                                                <div class="text-xs text-blue-100">A.N: BANGKIT MEMBANGUN NEGERI</div>
+                                                <div class="text-xs text-blue-100">A.N: Xander Billiard</div>
                                             </div>
                                         </div>
                                         <div class="border-t border-blue-500 pt-1 mt-1">
@@ -174,8 +174,8 @@
                                                 <li>Masukkan kartu ATM & PIN</li>
                                                 <li>Pilih menu "Transfer"</li>
                                                 <li>Pilih "Transfer Antar Bank"</li>
-                                                <li>Masukkan kode bank BSI (451)</li>
-                                                <li>Masukkan nomor rekening: <span class="font-mono font-semibold">7575707097</span></li>
+                                                <li>Masukkan kode bank BCA (451)</li>
+                                                <li>Masukkan nomor rekening: <span class="font-mono font-semibold">1234567890</span></li>
                                                 <li>Masukkan nominal transfer</li>
                                                 <li>Periksa detail transaksi</li>
                                                 <li>Konfirmasi dan selesai</li>
@@ -186,8 +186,8 @@
                                             <ol class="list-decimal list-inside space-y-1">
                                                 <li>Login aplikasi M-Banking</li>
                                                 <li>Pilih menu Transfer</li>
-                                                <li>Pilih Bank BSI</li>
-                                                <li>Masukkan No Rekening <span class="font-mono font-semibold">7575707097</span></li>
+                                                <li>Pilih Bank BCA</li>
+                                                <li>Masukkan No Rekening <span class="font-mono font-semibold">1234567890</span></li>
                                                 <li>Masukkan nominal Rp {{ number_format($order->total, 0, ',', '.') }}</li>
                                                 <li>Konfirmasi & simpan bukti transfer</li>
                                             </ol>
@@ -201,8 +201,8 @@
                                                 <li>Ketuk tombol 'Login'</li>
                                                 <li>Pilih menu pembayaran atau transfer</li>
                                                 <li>Pilih opsi transfer antarbank</li>
-                                                <li>Pilih Bank BSI</li>
-                                                <li>Isi kode bank BSI 451 diikuti nomor rekening <span class="font-mono font-semibold">7575707097</span></li>
+                                                <li>Pilih Bank BCA</li>
+                                                <li>Isi kode bank BCA 451 diikuti nomor rekening <span class="font-mono font-semibold">1234567890</span></li>
                                                 <li>Masukkan nominal transfer sesuai Total Pembayaran</li>
                                                 <li>Verifikasi nomor rekening, nama penerima, dan nominal transfer</li>
                                                 <li>Pilih ya/lanjut dan selesaikan transaksi</li>

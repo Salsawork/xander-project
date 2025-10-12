@@ -67,4 +67,10 @@ class Venue extends Model
         return $this->hasMany(Favorite::class);
     }
 
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class, 'bookings')
+            ->withPivot(['price', 'table_id', 'user_id', 'booking_date', 'status', 'start_time', 'end_time'])
+            ->withTimestamps();
+    }
 }

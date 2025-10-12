@@ -60,6 +60,17 @@
           @endif
         </a>
       </li>
+      
+      <li>
+        <a href="{{ route('user.sparring.index') }}"
+          class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('user.sparring.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+          <span>Sparring</span>
+          @if(request()->routeIs('user.sparring.index'))
+          <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+          @endif
+        </a>
+      </li>
 
       <li>
         <a href="{{ route('favorite.index') }}"
@@ -139,6 +150,15 @@
            {{ request()->routeIs('booking.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
           <i class="fas fa-calendar-check w-5 text-gray-400"></i>
           <span>Booking</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ route('user.sparring.index') }}"
+          class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
+                  {{ request()->routeIs('user.sparring.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+          <i class="fas fa-handshake w-5 text-gray-400"></i>
+          <span>Sparring</span>
         </a>
       </li>
       <li>
