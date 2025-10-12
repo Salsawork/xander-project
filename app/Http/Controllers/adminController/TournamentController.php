@@ -21,30 +21,33 @@ class TournamentController extends Controller
     public function index(Request $request)
     {
         $query = Tournament::with('event'); // panggil relasi event
-    
+
         // Jika ada parameter search, filter berdasarkan nama tournament
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
-    
+
         // Hanya ambil tournament yang punya event_id
         $query->whereNotNull('event_id');
-    
+
         // Urutkan data terbaru
         $tournaments = $query->orderBy('created_at', 'desc')->get();
-    
+
         return view('dash.admin.tournament.index', compact('tournaments'));
     }
-    
 
     public function show(Tournament $tournament)
     {
         return redirect()->route('events.show', ['event' => $tournament->id]);
     }
+
     public function create()
     {
+        // Ambil semua events yang tersedia
+        $events = Event::orderBy('start_date', 'desc')->get();
+
         // Show the form to create a new tournament
-        return view('dash.admin.tournament.create');
+        return view('dash.admin.tournament.create', compact('events'));
     }
 
     public function store(Request $request)
@@ -57,18 +60,20 @@ class TournamentController extends Controller
             'isTeam' => 'required',
             'treeType' => 'required',
             'fightingAreas' => 'required',
+            'event_id' => 'required|exists:events,id',
         ]);
 
         DB::beginTransaction();
 
         try {
-            // 1️⃣ Buat Tournament
+            // 1️⃣ Buat Tournament dengan event_id
             $tournamentData = [
                 'name' => $data['name'],
                 'user_id' => auth()->id(),
                 'slug' => uniqid() . '-' . time(),
                 'dateIni' => now(),
                 'dateFin' => now()->addDays(7),
+                'event_id' => $data['event_id'],
             ];
 
             $tournament = Tournament::create($tournamentData);
@@ -79,28 +84,17 @@ class TournamentController extends Controller
                 'category_id' => 1,
             ]);
 
-            // 3️⃣ Buat Event otomatis dari Tournament
-            $finalsFormat = $data['treeType'] == 1 ? 'Single Elimination' : 'Playoff';
+            // 3️⃣ Update Event yang sudah ada dengan tournament_id
+            $event = Event::find($data['event_id']);
+            if ($event) {
+                $finalsFormat = $data['treeType'] == 1 ? 'Single Elimination' : 'Playoff';
 
-            $event = Event::create([
-                'tournament_id' => $tournament->id,
-                'name' => $tournament->name,
-                'image_url' => 'default.jpg',
-                'start_date' => now(),
-                'end_date' => now()->addDays(7),
-                'location' => 'Belum ditentukan',
-                'game_types' => 'Unknown',
-                'description' => 'Event tournament: ' . $tournament->name,
-                'total_prize_money' => 0,
-                'champion_prize' => 0,
-                'runner_up_prize' => 0,
-                'third_place_prize' => 0,
-                'match_style' => 'Unknown',
-                'finals_format' => $finalsFormat,
-                'divisions' => 'General',
-                'social_media_handle' => '@tournament',
-                'status' => 'Upcoming',
-            ]);
+                $event->update([
+                    'tournament_id' => $tournament->id,
+                    'name' => $tournament->name,
+                    'finals_format' => $finalsFormat,
+                ]);
+            }
 
             // 4️⃣ Generate fighters/competitors dan bracket tree
             $numFighters = (int) $data['numFighters'];
@@ -119,7 +113,7 @@ class TournamentController extends Controller
             DB::commit();
 
             return redirect()->route('tournament.edit', $tournament->slug)
-                ->with('success', 'Tournament, Event, dan Bracket berhasil dibuat!');
+                ->with('success', 'Tournament dan Bracket berhasil dibuat dan terhubung dengan Event!');
         } catch (TreeGenerationException $e) {
             DB::rollBack();
             return redirect()->back()
@@ -131,6 +125,94 @@ class TournamentController extends Controller
                 ->withInput()
                 ->withErrors('Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    public function edit(Tournament $tournament)
+    {
+        $tournament->load(
+            'competitors',
+            'championships.settings',
+            'championships.category'
+        );
+
+        // Ambil semua events yang tersedia
+        $events = Event::orderBy('start_date', 'desc')->get();
+
+        return view('dash.admin.tournament.edit', compact('tournament', 'events'));
+    }
+
+    public function update(Tournament $tournament, Championship $championship, Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'hasPreliminary' => 'required',
+            'preliminaryGroupSize' => 'required',
+            'numFighters' => 'required',
+            'isTeam' => 'required',
+            'treeType' => 'required',
+            'fightingAreas' => 'required',
+            'event_id' => 'required|exists:events,id',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Update tournament data including event_id
+            $tournament->update([
+                'name' => $data['name'],
+                'event_id' => $data['event_id'],
+            ]);
+
+            // Delete existing bracket data
+            $this->deleteEverything($championship->id);
+
+            $numFighters = $request->numFighters;
+            $isTeam = $request->isTeam ?? 0;
+
+            // Re-generate championship data
+            $championship = $this->provisionObjects($request, $isTeam, $numFighters, $tournament);
+            $generation = $championship->chooseGenerationStrategy();
+            $generation->run();
+
+            // Update atau ambil event
+            $event = Event::find($data['event_id']);
+            if ($event) {
+                $finalsFormat = $request->treeType == 1 ? 'Single Elimination' : 'Playoff';
+
+                // Update event dengan data tournament
+                $event->update([
+                    'tournament_id' => $tournament->id,
+                    'name' => $request->name,
+                    'finals_format' => $finalsFormat,
+                ]);
+
+                // Re-generate brackets untuk event
+                $this->generateBracketsFromChampionship($event, $championship);
+            }
+
+            DB::commit();
+
+            return back()
+                ->with('success', 'Tournament, Event, dan Bracket berhasil di-update!')
+                ->with('numFighters', $numFighters)
+                ->with('isTeam', $isTeam);
+        } catch (TreeGenerationException $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors($e->getMessage());
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors('Error: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy(Tournament $tournament)
+    {
+        $tournament->delete();
+
+        return redirect()->route('tournament.index')
+            ->with('success', 'Tournament deleted successfully');
     }
 
     /**
@@ -208,75 +290,6 @@ class TournamentController extends Controller
         }
     }
 
-
-    public function edit(Tournament $tournament)
-    {
-        $tournament->load(
-            'competitors',
-            'championships.settings',
-            'championships.category'
-        );
-
-        return view('dash.admin.tournament.edit', compact('tournament'));
-    }
-
-    public function update(Tournament $tournament, Championship $championship, Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'hasPreliminary' => 'required',
-            'preliminaryGroupSize' => 'required',
-            'numFighters' => 'required',
-            'isTeam' => 'required',
-            'treeType' => 'required',
-            'fightingAreas' => 'required',
-        ]);
-
-        DB::beginTransaction();
-
-        try {
-            // Delete existing bracket data
-            $this->deleteEverything($championship->id);
-
-            $numFighters = $request->numFighters;
-            $isTeam = $request->isTeam ?? 0;
-
-            // Re-generate championship data
-            $championship = $this->provisionObjects($request, $isTeam, $numFighters, $tournament);
-            $generation = $championship->chooseGenerationStrategy();
-            $generation->run();
-
-            // Update event jika ada
-            $event = Event::where('tournament_id', $tournament->id)->first();
-            if ($event) {
-                $finalsFormat = $request->treeType == 1 ? 'Single Elimination' : 'Playoff';
-
-                $event->update([
-                    'name' => $request->name,
-                    'finals_format' => $finalsFormat,
-                ]);
-
-                // Re-generate brackets untuk event
-                $this->generateBracketsFromChampionship($event, $championship);
-            }
-
-            DB::commit();
-
-            return back()
-                ->with('success', 'Tournament dan Bracket berhasil di-update!')
-                ->with('numFighters', $numFighters)
-                ->with('isTeam', $isTeam);
-        } catch (TreeGenerationException $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withErrors($e->getMessage());
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withErrors('Error: ' . $e->getMessage());
-        }
-    }
-
     private function deleteEverything($championshipId)
     {
         // Get fighters groups and delete them
@@ -313,13 +326,5 @@ class TournamentController extends Controller
         $championship->settings = ChampionshipSettings::createOrUpdate($request, $championship);
 
         return $championship;
-    }
-
-    public function destroy(Tournament $tournament)
-    {
-        $tournament->delete();
-
-        return redirect()->route('tournament.index')
-            ->with('success', 'Tournament deleted successfully');
     }
 }
