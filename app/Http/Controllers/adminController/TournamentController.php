@@ -16,6 +16,8 @@ use Xoco70\LaravelTournaments\Models\Tournament;
 use App\Models\Event;
 
 
+
+
 class TournamentController extends Controller
 {
     public function index(Request $request)
@@ -141,6 +143,15 @@ class TournamentController extends Controller
         return view('dash.admin.tournament.edit', compact('tournament', 'events'));
     }
 
+    // Update method update() di TournamentController.php
+    // Tambahkan setelah DB::commit() dan sebelum return
+
+    // Update method update() di TournamentController.php
+    // Tambahkan setelah DB::commit() dan sebelum return
+
+    // Update method update() di TournamentController.php
+    // Tambahkan setelah DB::commit() dan sebelum return
+
     public function update(Tournament $tournament, Championship $championship, Request $request)
     {
         $data = $request->validate([
@@ -188,6 +199,9 @@ class TournamentController extends Controller
 
                 // Re-generate brackets untuk event
                 $this->generateBracketsFromChampionship($event, $championship);
+
+                // 🆕 AUTO SYNC: Update winners dari fight results
+                $this->syncBracketsWithFights($event, $championship);
             }
 
             DB::commit();
@@ -204,6 +218,73 @@ class TournamentController extends Controller
             DB::rollBack();
             return redirect()->back()
                 ->withErrors('Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 🆕 Sync brackets dengan championship fights
+     */
+    private function syncBracketsWithFights(Event $event, Championship $championship)
+    {
+        // Ambil semua fights yang sudah ada winner
+        $fights = $championship->fights()
+            ->whereNotNull('winner_id')
+            ->with('winner')
+            ->get();
+
+        foreach ($fights as $fight) {
+            if (!$fight->winner) continue;
+
+            $winnerName = $fight->winner->fullName;
+            $round = $fight->round ?? 1;
+
+            // Update bracket: tandai sebagai winner
+            Bracket::where('event_id', $event->id)
+                ->where('player_name', $winnerName)
+                ->where('round', $round)
+                ->update(['is_winner' => true]);
+
+            // Advance winner ke round berikutnya
+            $this->advanceWinnerToNextRound($event, $winnerName, $round);
+        }
+    }
+
+    /**
+     * 🆕 Advance winner ke round berikutnya
+     */
+    private function advanceWinnerToNextRound(Event $event, string $winnerName, int $currentRound)
+    {
+        $nextRound = $currentRound + 1;
+
+        // Dapatkan total rounds
+        $maxRound = Bracket::where('event_id', $event->id)->max('round');
+
+        if ($currentRound >= $maxRound) {
+            // Sudah di final, tidak ada round berikutnya
+            return;
+        }
+
+        // Tentukan posisi di round berikutnya
+        $currentBracket = Bracket::where('event_id', $event->id)
+            ->where('player_name', $winnerName)
+            ->where('round', $currentRound)
+            ->first();
+
+        if (!$currentBracket) return;
+
+        $nextPosition = $currentBracket->next_match_position;
+
+        if (!$nextPosition) return;
+
+        // Cek apakah sudah ada bracket di round berikutnya
+        $nextBracket = Bracket::where('event_id', $event->id)
+            ->where('round', $nextRound)
+            ->where('position', $nextPosition)
+            ->first();
+
+        if ($nextBracket && $nextBracket->player_name === 'TBD') {
+            // Update existing bracket
+            $nextBracket->update(['player_name' => $winnerName]);
         }
     }
 

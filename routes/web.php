@@ -46,7 +46,7 @@ use App\Http\Controllers\adminController\NewsController as AdminNewsController;
 use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelinesController;
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
 use App\Http\Controllers\adminController\AdminVenueController;
-use App\Http\Controllers\adminController\FightController;
+
 use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
@@ -355,6 +355,14 @@ Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->gr
     Route::get('/{event}', [AdminEventController::class, 'show'])->name('show');
 });
 
+Route::middleware(['auth'])->group(function () {
+    Route::post('/event/{event}/bracket/update-winner', [EventController::class, 'updateBracketWinner'])
+        ->name('events.bracket.update-winner');
+    
+    Route::post('/event/{event}/bracket/sync', [EventController::class, 'syncBracketsWithFights'])
+        ->name('events.bracket.sync');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Tournament & Tree
@@ -370,13 +378,14 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
 });
 
 /** Admin: Fight List */
-Route::middleware('auth')->prefix('dashboard/fight')->name('fight.')->group(function () {
-    // Menampilkan daftar pertarungan berdasarkan championship
-    Route::get('/{championshipId}', [FightController::class, 'index'])->name('index');
+// Route::middleware('auth')->prefix('dashboard/fight')->name('fight.')->group(function () {
+//     // Menampilkan daftar pertarungan berdasarkan championship
+//     Route::get('/{championshipId}', [FightController::class, 'index'])->name('index');
 
-    // Update pemenang pertarungan
-    Route::put('/{fight}', [FightController::class, 'update'])->name('update');
-});
+//     // Update pemenang pertarungan
+//     Route::put('/{fight}', [FightController::class, 'update'])->name('update');
+// });
+
 
 
 Route::prefix('championships')->name('tree.')->group(function () {
