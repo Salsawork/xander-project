@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Bank;
+use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\User;
 use App\Models\Order;
@@ -193,12 +194,12 @@ class OrderController extends Controller
             'district_name'     => 'nullable|string|max:255',
             'subdistrict_name'  => 'nullable|string|max:255',
             'courier'           => 'nullable|string|max:255',
+            'address'           => 'nullable|string|max:255',
 
             // products
             'products'             => 'array',
             'products.*.id'        => 'required|exists:products,id',
-            'products.*.stock'  => 'required|integer|min:1',
-
+            'products.*.quantity'  => 'nullable|integer|min:1',
 
             // sparrings
             'sparrings'                => 'array',
@@ -225,18 +226,37 @@ class OrderController extends Controller
         try {
             $user = auth()->user();
 
-            // Generate order number
-            $orderNumber = 'ORD-' . strtoupper(uniqid());
+            // ==========================
+            // Tentukan order_type berdasarkan data yang dikirim
+            // ==========================
+            $types = '';
+            if ($request->has('products') && count($request->products) > 0) {
+                $types = 'product';
+            } elseif ($request->has('venues') && count($request->venues) > 0) {
+                $types = 'venue';
+            } elseif ($request->has('sparrings') && count($request->sparrings) > 0) {
+                $types = 'sparring';
+            }
 
+            if ($types === '') {
+                throw new \Exception('Tidak ada item yang dikirim untuk checkout.');
+            }
+
+            $orderType = $types;
+
+            // ==========================
             // Buat order utama
+            // ==========================
+            $orderNumber = 'ORD-' . strtoupper(uniqid());
             $order = Order::create([
                 'id'              => (string) Str::uuid(),
                 'user_id'         => $user->id,
                 'order_number'    => $orderNumber,
-                'total'           => 0, // akan diupdate setelah item masuk
+                'total'           => 0,
                 'payment_status'  => 'pending',
                 'delivery_status' => 'pending',
                 'payment_method'  => $request->payment_method,
+                'order_type'      => $orderType,
             ]);
 
             $total = 0;
@@ -244,7 +264,7 @@ class OrderController extends Controller
             /** =========================
              *  Tambahkan Products
              *  ========================= */
-            if ($request->has('products')) {
+            if ($orderType === 'product') {
                 $checkedIds = array_column($request->products, 'id');
 
                 CartItem::where('user_id', $user->id)
@@ -267,24 +287,27 @@ class OrderController extends Controller
                     $discount = ($price * $product->discount);
                     $subtotal = ($price - $discount) * $qty;
                     $courier  = $request->courier;
-                    $address = implode(', ', array_filter([
-                        $request->input('subdistrict_name'),
-                        $request->input('district_name'),
-                        $request->input('city_name'),
-                        $request->input('province_name'),
-                    ]));
-                    
+                    $address  = $request->address;
+                    $province = $request->province_name;
+                    $city     = $request->city_name;
+                    $district = $request->district_name;
+                    $subdistrict = $request->subdistrict_name;
+
                     $total += $subtotal;
 
                     $order->products()->attach($product->id, [
-                        'stock' => $qty,
+                        'quantity' => $qty,
                         'price'    => $price,
-                        'subtotal' => $subtotal + $tax + $shipping,
+                        'subtotal' => $subtotal,
                         'discount' => $discount * $qty,
                         'tax'      => $tax,
                         'shipping' => $shipping,
                         'courier'  => $courier,
                         'address'  => $address,
+                        'province' => $province,
+                        'city'     => $city,
+                        'district' => $district,
+                        'subdistrict' => $subdistrict,
                     ]);
                 }
             }
@@ -292,48 +315,74 @@ class OrderController extends Controller
             /** =========================
              *  Tambahkan Venues / Bookings
              *  ========================= */
-            if ($request->has('venues')) {
-                $checkedIds = array_column($request->venues, 'id');
+            if ($orderType === 'venue') {
+                $venueTotal = 0; // simpan total semua venue di sini
 
-                CartItem::where('user_id', $user->id)
-                    ->where('item_type', 'venue')
-                    ->whereIn('item_id', $checkedIds)
-                    ->delete();
+                foreach ($request->venues as $venueData) {
+                    $bookingDate = \Carbon\Carbon::parse($venueData['date'])->format('Y-m-d');
 
-                foreach ($request->venues as $venue) {
-                    $bookingDate = \Carbon\Carbon::parse($venue['date'])->format('Y-m-d');
-
-                    if (isset($venue['table']) && isset($venue['id'])) {
-                        $tableId = DB::table('tables')
-                            ->where('table_number', $venue['table'])
-                            ->where('venue_id', $venue['id'])
-                            ->value('id');
-
-                        if (!$tableId) {
-                            throw new \Exception('Table not found for venue: ' . $venue['id']);
-                        }
-                    } else {
-                        throw new \Exception('Venue ID and Table number are required');
+                    if (!isset($venueData['table']) || !isset($venueData['id'])) {
+                        throw new \Exception('Venue ID dan Table number wajib diisi.');
                     }
 
+                    // Cari table_id berdasarkan nomor meja
+                    $tableId = DB::table('tables')
+                        ->where('table_number', $venueData['table'])
+                        ->where('venue_id', $venueData['id'])
+                        ->value('id');
+
+                    if (!$tableId) {
+                        throw new \Exception('Table not found for venue: ' . $venueData['id']);
+                    }
+
+                    // Pastikan tidak bentrok waktu
+                    $existingBooking = Booking::where('table_id', $tableId)
+                        ->where('booking_date', $bookingDate)
+                        ->where('status', 'booked')
+                        ->where(function ($q) use ($venueData) {
+                            $q->where('start_time', '<', $venueData['end'])
+                                ->where('end_time', '>', $venueData['start']);
+                        })
+                        ->exists();
+
+                    if ($existingBooking) {
+                        throw new \Exception('Table ' . $venueData['table'] . ' pada venue ini sudah dipesan untuk tanggal dan waktu yang sama.');
+                    }
+
+                    // Tambahkan ke tabel bookings
                     $order->bookings()->create([
-                        'venue_id' => $venue['id'],
-                        'price'    => $venue['price'],
-                        'table_id' => $tableId,
-                        'user_id'  => $user->id,
+                        'venue_id'     => $venueData['id'],
+                        'price'        => $venueData['price'],
+                        'table_id'     => $tableId,
+                        'user_id'      => $user->id,
                         'booking_date' => $bookingDate,
-                        'start_time'   => $venue['start'],
-                        'end_time'     => $venue['end'],
+                        'status'       => 'booked',
+                        'start_time'   => $venueData['start'],
+                        'end_time'     => $venueData['end'],
                     ]);
 
-                    $total += $venue['price'];
+                    // Hapus item dari cart
+                    CartItem::where('user_id', $user->id)
+                        ->where('item_type', 'venue')
+                        ->where('item_id', $venueData['id'])
+                        ->where('date', $bookingDate)
+                        ->where('start', $venueData['start'])
+                        ->where('end', $venueData['end'])
+                        ->delete();
+
+                    // Tambahkan harga venue ke total keseluruhan
+                    $venueTotal += $venueData['price'];
                 }
+
+                // Akumulasi ke total order global
+                $total += $venueTotal;
             }
+
 
             /** =========================
              *  Tambahkan Sparring
              *  ========================= */
-            if ($request->has('sparrings')) {
+            if ($orderType === 'sparring') {
                 $checkedIds = array_column($request->sparrings, 'schedule_id');
 
                 CartItem::where('user_id', $user->id)
@@ -351,7 +400,6 @@ class OrderController extends Controller
                     $total += $sparring['price'];
 
                     $athlete = User::find($sparring['athlete_id']);
-                    $user    = auth()->user();
                     if ($athlete && $athlete->email) {
                         $messageBody = "Halo {$athlete->name}, ada user yang baru saja melakukan order sparring denganmu.\n\n" .
                             "Detail Pemesan:\n" .
@@ -369,6 +417,7 @@ class OrderController extends Controller
                     }
                 }
             }
+
             if ($request->filled('shipping')) {
                 $total += $request->shipping;
             }
@@ -376,7 +425,6 @@ class OrderController extends Controller
             if ($request->filled('tax')) {
                 $total += $request->tax;
             }
-
 
             // Update total order
             $order->update(['total' => $total]);
@@ -387,6 +435,7 @@ class OrderController extends Controller
                 'status'       => 'success',
                 'message'      => 'Order berhasil dibuat!',
                 'order_number' => $order->order_number,
+                'order_type'   => $orderType,
                 'data'         => $order->load('user', 'products', 'orderSparrings', 'bookings'),
             ]);
         } catch (\Exception $e) {

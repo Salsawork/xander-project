@@ -25,12 +25,12 @@
                         </div>
                     @endif
 
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                    {{-- <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                         <input name="search" value="{{ request('search') }}"
                             class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
                             placeholder="Cari opinion..." type="search"
                             onchange="window.location.href='{{ route('dash.admin.opinion') }}?search=' + this.value" />
-                    </div>
+                    </div> --}}
 
                     <!-- Desktop & Tablet Table View -->
                     <div class="hidden sm:block overflow-x-auto">

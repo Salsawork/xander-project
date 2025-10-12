@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Venue;
 use App\Models\BilliardSession;
+use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\PriceSchedule;
 use App\Models\Table;
+use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
 
 class VenueController extends Controller
@@ -106,58 +109,103 @@ class VenueController extends Controller
     }
 
     // API schedules: /venues/{venueId}/price-schedules?date=YYYY-MM-DD
-    public function detail(Request $request, $venueId)
+    public function priceSchedules(Request $request, $venueId)
     {
         try {
-            $detail = Venue::findOrFail($venueId);
+            $venue = Venue::findOrFail($venueId);
             $requestedTime = $request->query('date')
                 ? \Carbon\Carbon::parse($request->query('date'))
                 : now();
 
-            $today = $requestedTime->format('l');
+            $today = strtolower($requestedTime->format('l'));
             $requestedDate = $requestedTime->format('Y-m-d');
 
-            $schedules = PriceSchedule::where('venue_id', $detail->id)
+            $tables = \App\Models\Table::where('venue_id', $venueId)->get();
+            $bookings = Booking::where('venue_id', $venueId)
+                ->where('booking_date', $requestedDate)
+                ->where('status', 'booked')
+                ->get();
+
+            $schedules = PriceSchedule::where('venue_id', $venueId)
                 ->where('is_active', true)
                 ->orderBy('start_time')
                 ->get()
                 ->filter(function ($item) use ($today) {
-                    $days = json_decode($item->days, true) ?? [];
-                    return in_array(strtolower($today), array_map('strtolower', $days));
+                    $days = is_string($item->days) ? json_decode($item->days, true) ?? [] : (array) $item->days;
+                    return in_array($today, array_map('strtolower', $days));
                 })
-                ->map(fn($item) => [
-                    'id'           => $item->id,
-                    'venue_id'     => $item->venue_id,
-                    'name'         => $item->name,
-                    'price'        => number_format($item->price, 0, ',', '.'),
-                    'days'         => json_decode($item->days, true) ?? [],
-                    'start_time'   => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
-                    'end_time'     => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
-                    'time_category'=> $item->time_category,
-                    'schedule'     => collect(
-                        \Carbon\CarbonInterval::minutes(60)
-                            ->toPeriod(
-                                \Carbon\Carbon::parse($item->start_time),
-                                \Carbon\Carbon::parse($item->end_time)->subHour()
-                            )
-                    )->map(fn($time) => [
-                        'start' => $time->format('H:i'),
-                        'end'   => $time->copy()->addHour()->format('H:i')
-                    ])->values()->toArray(),
-                    'tables_applicable' => $item->tables_applicable,
-                    'date' => $requestedDate,
-                ]);
+                ->map(function ($item) use ($requestedDate, $tables, $bookings) {
+                    $tablesApplicable = $item->tables_applicable;
+
+                    if (is_string($tablesApplicable)) {
+                        $tablesApplicable = json_decode($tablesApplicable, true);
+                    }
+
+                    if (!is_array($tablesApplicable)) {
+                        $tablesApplicable = [];
+                    }
+
+                    $slots = collect(
+                        \Carbon\CarbonInterval::minutes(60)->toPeriod(
+                            \Carbon\Carbon::parse($item->start_time),
+                            \Carbon\Carbon::parse($item->end_time)->subHour()
+                        )
+                    )->map(function ($time) use ($tables, $bookings, $requestedDate, $tablesApplicable) {
+                        $start = $time->format('H:i');
+                        $end = $time->copy()->addHour()->format('H:i');
+
+                        $tablesWithStatus = $tables->map(function ($table) use ($bookings, $requestedDate, $start, $end, $tablesApplicable) {
+                            // Jika tablesApplicable kosong, anggap semua meja termasuk dalam jadwal ini
+                            $isInApplicableList = empty($tablesApplicable) || in_array($table->table_number ?? $table->id, $tablesApplicable);
+
+                            $isBooked = $bookings->contains(function ($b) use ($table, $start, $end) {
+                                $bStart = \Carbon\Carbon::parse($b->start_time);
+                                $bEnd   = \Carbon\Carbon::parse($b->end_time);
+                                $sStart = \Carbon\Carbon::parse($start);
+                                $sEnd   = \Carbon\Carbon::parse($end);
+
+                                return $b->table_id == $table->id &&
+                                    $sStart->lt($bEnd) && $sEnd->gt($bStart);
+                            });
+
+                            return [
+                                'id' => $table->id,
+                                'name' => $table->table_number ?? ('Table ' . $table->id),
+                                'is_booked' => $isBooked || !$isInApplicableList,
+                            ];
+                        });
+
+                        return [
+                            'start' => $start,
+                            'end' => $end,
+                            'tables' => $tablesWithStatus,
+                        ];
+                    });
+
+                    return [
+                        'id' => $item->id,
+                        'venue_id' => $item->venue_id,
+                        'name' => $item->name,
+                        'price' => $item->price,
+                        'days' => is_string($item->days) ? json_decode($item->days, true) ?? [] : (array) $item->days,
+                        'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
+                        'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                        'time_category' => $item->time_category,
+                        'schedule' => $slots,
+                        'date' => $requestedDate,
+                    ];
+                })
+                ->values();
 
             return response()->json([
-                'detail' => $detail,
-                'schedules' => $schedules,
-                'tables_applicable' => $schedules->pluck('tables_applicable')->flatten()->unique()->values()->toArray(),
+                'venue' => $venue,
                 'requestedDate' => $requestedDate,
+                'schedules' => $schedules,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to retrieve venue details',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -231,7 +279,7 @@ class VenueController extends Controller
                     'price'       => $item->price,
                 ]);
         }
-        
+
         return view('public.venue.detail', compact('detail', 'tables', 'minPrice', 'cartProducts', 'cartVenues', 'cartSparrings'));
     }
 }

@@ -1,6 +1,9 @@
 @extends('app')
 @section('title', 'Venues - Xander Billiard')
 @php
+    $cartProducts  = json_decode(request()->cookie('cartProducts') ?? '[]', true);
+    $cartVenues    = json_decode(request()->cookie('cartVenues') ?? '[]', true);
+    $cartSparrings = json_decode(request()->cookie('cartSparrings') ?? '[]', true);
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @endphp
 
@@ -151,10 +154,10 @@
 
         <section class="lg:col-span-4 flex flex-col gap-6">
             @forelse ($venues as $venue)
-                <div class="group">
+                <div class="group relative">
                     {{-- GUNAKAN HREF DENGAN SLUG --}}
                     <a href="{{ route('venues.detail', ['venue' => $venue->id, 'slug' => $venue->name]) }}"
-                       class="block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
+                       class="relative block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
 
                         <!-- Image -->
                         <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 flex items-center justify-center">
@@ -165,20 +168,6 @@
                         <div class="w-full flex flex-col justify-between px-4">
                             <div class="flex justify-between items-start lg:mb-8">
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
-                                <div class="flex justify-center items-end sm:mt-2">
-                                    @auth
-                                      @if (auth()->user()->roles === 'user')
-                                        <i
-                                          data-id="{{ $venue->id }}"
-                                          class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
-                                              ? 'fa-solid text-blue-500'
-                                              : 'fa-regular text-gray-400' }}
-                                              fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition">
-                                        </i>
-                                      @endif
-                                    @endauth
-                                  </div>
-                                  
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
@@ -190,6 +179,22 @@
                             </div>
                         </div>
                     </a>
+                    <div class="absolute top-3 right-4">
+                        <div class="flex justify-center items-end sm:mt-2">
+                            @auth
+                              @if (auth()->user()->roles === 'user')
+                                <i
+                                  data-id="{{ $venue->id }}"
+                                  data-url="{{ route('venues.favorite', $venue->id) }}"
+                                  class="bookmark-toggle {{ auth()->user()->favorites->contains('venue_id', $venue->id)
+                                      ? 'fa-solid text-blue-500'
+                                      : 'fa-regular text-gray-400' }}
+                                      fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition">
+                                </i>
+                              @endif
+                            @endauth
+                          </div>                          
+                    </div>
                 </div>
             @empty
                 <div class="text-center py-12 text-gray-400">No venues found.</div>
@@ -353,4 +358,48 @@
         }
     }
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.bookmark-toggle').forEach(icon => {
+        icon.addEventListener('click', async function (e) {
+          e.preventDefault();
+          e.stopPropagation(); // cegah klik di dalam <a> agar tidak reload halaman
+    
+          const url = this.dataset.url;
+    
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+              }
+            });
+    
+            if (!response.ok) throw new Error('Gagal mengubah status favorit');
+    
+            const result = await response.json();
+    
+            // 🔄 Toggle class dengan cara pasti
+            if (result.status === 'added') {
+              this.classList.remove('fa-regular', 'text-gray-400');
+              this.classList.add('fa-solid', 'text-blue-500');
+            } else if (result.status === 'removed') {
+              this.classList.remove('fa-solid', 'text-blue-500');
+              this.classList.add('fa-regular', 'text-gray-400');
+            }
+
+            window.location.reload();
+    
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan, coba lagi nanti.');
+          }
+        });
+      });
+    });
+    </script>
+    
+    
 @endpush

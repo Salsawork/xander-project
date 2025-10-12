@@ -133,12 +133,14 @@
 
                     <!-- Hidden input untuk venue -->
                     @if(isset($venue))
-                    <input type="hidden" name="venues[0][id]" value="{{ $venue['id'] }}">
-                    <input type="hidden" name="venues[0][price]" value="{{ $venue['price'] }}">
-                    <input type="hidden" name="venues[0][date]" value="{{ $venue['date'] }}">
-                    <input type="hidden" name="venues[0][table]" value="{{ $venue['table'] }}">
-                    <input type="hidden" name="venues[0][start]" value="{{ $venue['start'] }}">
-                    <input type="hidden" name="venues[0][end]" value="{{ $venue['end'] }}">
+                    @foreach($venues as $index => $venue)
+                    <input type="hidden" name="venues[{{ $index }}][id]" value="{{ $venue['id'] }}">
+                    <input type="hidden" name="venues[{{ $index }}][price]" value="{{ $venue['price'] }}">
+                    <input type="hidden" name="venues[{{ $index }}][date]" value="{{ $venue['date'] }}">
+                    <input type="hidden" name="venues[{{ $index }}][table]" value="{{ $venue['table'] ?? '' }}">
+                    <input type="hidden" name="venues[{{ $index }}][start]" value="{{ $venue['start'] }}">
+                    <input type="hidden" name="venues[{{ $index }}][end]" value="{{ $venue['end'] }}">
+                    @endforeach
                     @endif
 
                     <!-- Billing Details -->
@@ -213,6 +215,12 @@
                                     <option value="anteraja">AnterAja</option>
                                     <option value="pos">POS</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label for="address" class="block font-semibold mb-1">Address</label>
+                                <input type="text" name="address" id="address"
+                                    value="{{ old('address', $user->address ?? '') }}"
+                                    class="w-full border rounded p-2" required>
                             </div>
                         </div>
                         <!-- Hidden input untuk cost -->

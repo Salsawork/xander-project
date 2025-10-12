@@ -3,37 +3,13 @@
 
 @push('styles')
 <style>
-    /* ===== Anti white flash global ===== */
     :root{ color-scheme: dark; --page-bg:#0a0a0a; }
     :root, html, body{ background:var(--page-bg); }
-    html, body{ height:100%; }
-
-    /* Matikan overscroll glow/bounce tembus body */
-    html, body{
-        overscroll-behavior-y: none;
-        overscroll-behavior-x: none;
-        touch-action: pan-y;
-        -webkit-text-size-adjust: 100%;
-    }
-
-    /* Kanvas gelap fixed di belakang semua konten (extend atas/bawah) */
-    #antiBounceBg{
-        position: fixed;
-        left:0; right:0;
-        top:-120svh; bottom:-120svh;
-        background:var(--page-bg);
-        z-index:-1;
-        pointer-events:none;
-    }
-
-    /* Pastikan wrapper layout juga gelap */
+    html, body{ height:100%; overscroll-behavior: none; touch-action: pan-y; -webkit-text-size-adjust: 100%; }
+    #antiBounceBg{ position:fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg); z-index:-1; pointer-events:none; }
     #app, main{ background:var(--page-bg); }
+    .scroll-root, .scroll-inner{ overscroll-behavior: contain; background:var(--page-bg); }
 
-    /* Scroll containers: cegah chaining + wajib bg gelap */
-    .scroll-root{ overscroll-behavior: contain; background:var(--page-bg); }
-    .scroll-inner{ overscroll-behavior: contain; background:var(--page-bg); }
-
-    /* ===== Style milikmu ===== */
     label:has(input[type="radio"]:checked) {
         background-color: #2563eb;
         border-color: #2563eb;
@@ -47,18 +23,12 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @endphp
 
 @section('content')
-<!-- Anti white flash canvas -->
 <div id="antiBounceBg" aria-hidden="true"></div>
 
-<!-- Stabilkan unit tinggi viewport di mobile (toolbar naik/turun) -->
 <script>
   (function(){
-    function setSVH(){
-      const svh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--svh', svh + 'px');
-    }
-    setSVH();
-    window.addEventListener('resize', setSVH);
+    function setSVH(){ const svh=window.innerHeight*0.01; document.documentElement.style.setProperty('--svh',svh+'px'); }
+    setSVH(); window.addEventListener('resize',setSVH);
   })();
 </script>
 
@@ -84,21 +54,16 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                             $img = $detail->images[0];
                             if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://') && !str_starts_with($img, '/storage/')) {
                                 $mainImagePath = asset('storage/uploads/' . $img);
-                            } else {
-                                $mainImagePath = $img;
-                            }
+                            } else { $mainImagePath = $img; }
                         }
                     @endphp
                     <div class="col-span-2">
-                        <img id="mainImage" src="{{ $mainImagePath }}" alt="{{ $detail->name }}"
-                             class="rounded-lg w-full h-[300px] object-cover" />
+                        <img id="mainImage" src="{{ $mainImagePath }}" alt="{{ $detail->name }}" class="rounded-lg w-full h-[300px] object-cover" />
                     </div>
                     <div class="flex flex-col gap-4">
-                        <img src="https://placehold.co/400x250?text=Img+1"
-                             class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
+                        <img src="https://placehold.co/400x250?text=Img+1" class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
                              onclick="changeMainImage('https://placehold.co/800x500?text=Img+1')" />
-                        <img src="https://placehold.co/400x250?text=Img+2"
-                             class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
+                        <img src="https://placehold.co/400x250?text=Img+2" class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
                              onclick="changeMainImage('https://placehold.co/800x500?text=Img+2')" />
                     </div>
                 </div>
@@ -109,30 +74,21 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                         <h1 class="text-2xl font-extrabold">{{ $detail->name }}</h1>
                         <p class="text-gray-300">{{ $detail->address ?? 'Jakarta Pusat' }}</p>
                     </div>
-
                     <hr class="border-gray-400">
-
                     <div>
                         <h2 class="font-semibold mb-2">Facilities</h2>
                         <ul class="grid grid-cols-3 gap-2 text-sm text-gray-300">
                             <li>• Food & Drinks</li>
-                            <li>• Alcohol Available</li>
                             <li>• Smoking Area</li>
-                            <li>• Non-Smoking Area</li>
                             <li>• VIP Lounge</li>
                             <li>• Equipment Rental</li>
-                            <li>• Membership Program</li>
-                            <li>• Live Tournament Streaming</li>
-                            <li>• Private Training Rooms</li>
                         </ul>
                     </div>
-
                     <hr class="border-gray-400">
-
                     <div>
                         <h2 class="font-semibold mb-2">Location</h2>
                         <a href="https://maps.google.com" target="_blank" class="text-blue-400 underline text-sm">
-                            Jl. MH Thamrin No. 45, Menteng, Jakarta Pusat, DKI Jakarta 10350
+                            {{ $detail->address ?? 'No address available' }}
                         </a>
                         <div class="mt-3">
                             <iframe
@@ -157,8 +113,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
                         <div>
                             <label class="text-sm text-gray-400">Date</label>
-                            <input type="date" id="datePicker" name="date"
-                                class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500">
+                            <input type="date" id="datePicker" name="date" class="mt-1 w-full px-3 py-2 rounded bg-neutral-700 text-white focus:ring focus:ring-blue-500">
                         </div>
 
                         <div id="scheduleContainer" class="mt-1">
@@ -179,8 +134,7 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                         </div>
 
                         @if (Auth::check() && Auth::user()->roles === 'user')
-                        <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
                             Add to cart
                         </button>
                         @endif
@@ -217,122 +171,89 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 
-    function changeMainImage(src){ const img=document.getElementById('mainImage'); if(img) img.src=src; }
+document.addEventListener("DOMContentLoaded", function() {
+    const datePicker = document.getElementById("datePicker");
+    const scheduleList = document.getElementById("scheduleList");
+    const tableList = document.getElementById("tableList");
+    const form = document.getElementById("addToCartForm");
+    const venueId = "{{ $detail->id }}";
+    let selectedSchedule = null; // keep selected schedule data
+    let selectedTableNumber = null; // keep selected table number
 
-    document.addEventListener("DOMContentLoaded", function() {
-        const datePicker = document.getElementById("datePicker");
-        const scheduleList = document.getElementById("scheduleList");
-        const tableList = document.getElementById("tableList");
-        const form = document.getElementById("addToCartForm");
-        const venueId = "{{ $detail->id }}";
-        const tables = @json($tables);
+    datePicker.addEventListener("change", function() {
+        const selectedDate = this.value;
+        if (!selectedDate) return;
+        scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
+        tableList.innerHTML = "";
 
-        datePicker.addEventListener("change", function() {
-            const selectedDate = this.value;
-            if (!selectedDate) return;
+        fetch(`{{ url('/venues') }}/${venueId}/price-schedules?date=${encodeURIComponent(selectedDate)}`)
+            .then(res => res.json())
+            .then(data => {
+                scheduleList.innerHTML = "";
+                const schedules = data.schedules || [];
 
-            form.querySelectorAll("input[name='schedule[start]'], input[name='schedule[end]'], input[name='price'], input[name='table_id']").forEach(el => el.remove());
+                if (schedules.length === 0) {
+                    scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available.</p>`;
+                    return;
+                }
 
-            // PAKAI ABSOLUTE URL supaya tidak bentrok dengan slug ber-spasi
-            fetch(`{{ url('/venues') }}/${venueId}/price-schedules?date=${encodeURIComponent(selectedDate)}`)
-                .then(res => res.json())
-                .then(data => {
-                    scheduleList.innerHTML = "";
-                    tableList.innerHTML = "";
+                schedules.forEach(sch => {
+                    sch.schedule.forEach(slot => {
+                        const lbl = document.createElement("label");
+                        lbl.className = "border rounded px-2 py-2 cursor-pointer flex items-center justify-center";
+                        lbl.innerHTML = `
+                            <input type="radio" name="schedule" value="${slot.start}-${slot.end}" class="hidden" required>
+                            ${slot.start} - ${slot.end}
+                        `;
 
-                    const schedules = Array.isArray(data.schedules) ? data.schedules : Object.values(data.schedules || {});
-
-                    if (schedules && schedules.length > 0) {
-                        schedules.forEach((sch) => {
-                            if (sch.schedule && sch.schedule.length > 0) {
-                                sch.schedule.forEach((slot) => {
-                                    const lbl = document.createElement("label");
-                                    lbl.className = "border rounded px-2 py-2 cursor-pointer flex items-center justify-between";
-                                    lbl.innerHTML = `
-                                        <input type="radio" name="schedule_id"
-                                               value="${sch.id}"
-                                               data-start="${slot.start}"
-                                               data-end="${slot.end}"
-                                               data-price="${sch.price}"
-                                               class="hidden" required>
-                                        ${slot.start} - ${slot.end}
-                                    `;
-
-                                    const radio = lbl.querySelector("input[type=radio]");
-
-                                    radio.addEventListener("change", () => {
-                                        const rawPrice = radio.dataset.price || "0";
-                                        const price = parseInt(rawPrice.replace(/\./g, "").replace(",", "")) || 0;
-                                        document.getElementById("priceDisplay").innerText = "Rp " + price.toLocaleString('id-ID');
-
-                                        renderTables(tables || [], sch.tables_applicable || []);
-
-                                        form.querySelectorAll("input[name='schedule[start]'], input[name='schedule[end]'], input[name='price']").forEach(el => el.remove());
-
-                                        const startHidden = document.createElement("input");
-                                        startHidden.type = "hidden";
-                                        startHidden.name = "schedule[start]";
-                                        startHidden.value = radio.dataset.start;
-                                        form.appendChild(startHidden);
-
-                                        const endHidden = document.createElement("input");
-                                        endHidden.type = "hidden";
-                                        endHidden.name = "schedule[end]";
-                                        endHidden.value = radio.dataset.end;
-                                        form.appendChild(endHidden);
-
-                                        const priceHidden = document.createElement("input");
-                                        priceHidden.type = "hidden";
-                                        priceHidden.name = "price";
-                                        priceHidden.value = price;
-                                        form.appendChild(priceHidden);
-                                    });
-
-                                    scheduleList.appendChild(lbl);
-                                });
-                            }
+                        const radio = lbl.querySelector("input");
+                        radio.addEventListener("change", () => {
+                            selectedSchedule = {
+                                start: slot.start,
+                                end: slot.end,
+                                price: sch.price
+                            };
+                            document.getElementById("priceDisplay").innerText = "Rp " + sch.price;
+                            renderTables(slot.tables);
                         });
-                    } else {
-                        scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available</p>`;
-                    }
-                })
-                .catch(err => {
-                    console.error("Error fetching schedules:", err);
-                    scheduleList.innerHTML = `<p class="text-red-500 text-sm">Failed to load schedules</p>`;
+
+                        scheduleList.appendChild(lbl);
+                    });
                 });
-        });
-
-        function renderTables(tables, applicableIds) {
-            tableList.innerHTML = "";
-
-            if (!applicableIds || applicableIds.length === 0) {
-                tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables applicable</p>`;
-                return;
-            }
-
-            const filteredTables = tables.filter(tbl => (applicableIds || []).includes(String(tbl.table_number)));
-
-            if (filteredTables.length === 0) {
-                tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables found</p>`;
-                return;
-            }
-
-            filteredTables.forEach(tbl => {
-                const btn = document.createElement("label");
-                btn.className = "border rounded px-2 py-2 cursor-pointer";
-                btn.innerHTML = `
-                    <input type="radio" name="table" value="${tbl.table_number}" class="hidden">
-                    <span>${tbl.table_number ?? tbl.name ?? tbl.id}</span>
-                `;
-                tableList.appendChild(btn);
+            })
+            .catch(err => {
+                scheduleList.innerHTML = `<p class="text-red-500 text-sm">Error loading schedules.</p>`;
+                console.error(err);
             });
-        }
     });
 
-    // submit handler
-    document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
+    function renderTables(tables = []) {
+        tableList.innerHTML = "";
+        if (tables.length === 0) {
+            tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
+            return;
+        }
+
+        tables.forEach(tbl => {
+            const lbl = document.createElement("label");
+            lbl.className = `border rounded px-2 py-2 cursor-pointer flex justify-center items-center ${tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : ''}`;
+            lbl.innerHTML = `
+                <input type="radio" name="table_id" value="${tbl.id}" class="hidden">
+                ${tbl.name || 'Table ' + tbl.id}
+            `;
+            const radio = lbl.querySelector("input");
+            radio.addEventListener("change", () => {
+                selectedTableNumber = tbl.name || 'Table ' + tbl.id;
+            });
+            tableList.appendChild(lbl);
+        });
+    }
+
+    // Form submit handler with validation
+    form.addEventListener('submit', function(e) {
         e.preventDefault();
 
         if (!isLoggedIn) {
@@ -340,43 +261,90 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
                 title: 'Belum Login!',
                 text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
                 icon: 'warning'
-            }).then(() => { window.location.href = '/login'; });
+            }).then(() => {
+                window.location.href = '/login';
+            });
             return;
         }
 
-        const date = document.getElementById('datePicker')?.value;
-        const schedule = document.querySelector('input[name="schedule_id"]:checked');
-        const table = document.querySelector('input[name="table"]:checked');
+        const date = datePicker.value;
+        const schedule = document.querySelector('input[name="schedule"]:checked');
+        const table = document.querySelector('input[name="table_id"]:checked');
 
-        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning' }); return; }
-        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.',  icon:'warning' }); return; }
-        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.',    icon:'warning' }); return; }
+        if (!date) {
+            Swal.fire({
+                title: 'Oops!',
+                text: 'Silakan pilih tanggal terlebih dahulu.',
+                icon: 'warning'
+            });
+            return;
+        }
+        if (!schedule) {
+            Swal.fire({
+                title: 'Oops!',
+                text: 'Silakan pilih jadwal terlebih dahulu.',
+                icon: 'warning'
+            });
+            return;
+        }
+        if (!table) {
+            Swal.fire({
+                title: 'Oops!',
+                text: 'Silakan pilih meja terlebih dahulu.',
+                icon: 'warning'
+            });
+            return;
+        }
 
-        Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+        // Append schedule & price fields to FormData
+        const fd = new FormData(this);
+        fd.append('schedule[start]', selectedSchedule.start);
+        fd.append('schedule[end]', selectedSchedule.end);
+        fd.append('price', selectedSchedule.price);
+        fd.append('table', selectedTableNumber);
+
+        Swal.fire({
+            title: 'Mohon tunggu...',
+            text: 'Sedang memproses permintaan Anda.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
 
         fetch(this.action, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: new FormData(this)
-        })
-        .then(res => res.json())
-        .then(data => {
-            Swal.close();
-            if (data.success) {
-                Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
-                    .then(() => location.reload());
-            } else {
-                Swal.fire({ title:'Gagal!', text: data.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
-            }
-        })
-        .catch(() => {
-            Swal.close();
-            Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
-        });
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: fd
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Venue berhasil ditambahkan ke keranjang.',
+                        icon: 'success'
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: data.message || 'Terjadi kesalahan, coba lagi.',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.close();
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan jaringan.',
+                    icon: 'error'
+                });
+            });
     });
+});
 </script>
 @endpush

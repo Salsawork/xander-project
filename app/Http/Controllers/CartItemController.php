@@ -82,17 +82,19 @@ class CartItemController extends Controller
         $price     = $request->input('price');
         $table     = $request->input('table');
 
+        // Cek duplikasi hanya jika table_number sama
         $exists = CartItem::where('user_id', $user->id)
             ->where('item_type', 'venue')
             ->where('item_id', $venue->id)
             ->where('date', $date)
             ->where('start', $startTime)
+            ->where('table_number', $table)
             ->exists();
 
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => "Venue dengan waktu mulai {$startTime} pada {$date} sudah ada di keranjang.",
+                'message' => "Venue dengan waktu mulai {$startTime} pada {$date} untuk table {$table} sudah ada di keranjang.",
             ], 400);
         }
 
