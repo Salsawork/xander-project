@@ -189,17 +189,20 @@
                             </td>
                             <td class="px-4 py-3">
                                 @php
-                                $statusClass = [
-                                'pending' => 'bg-blue-600 text-white',
-                                'confirmed' => 'bg-yellow-400 text-gray-900',
-                                'cancelled' => 'bg-red-600 text-white',
-                                'completed' => 'bg-green-600 text-white',
-                                'booking' => 'bg-gray-600 text-white',
-                                ];
+                                    $statusClass = [
+                                        'pending'   => 'bg-blue-600 text-white',
+                                        'confirmed' => 'bg-yellow-400 text-gray-900',
+                                        'cancelled' => 'bg-red-600 text-white',
+                                        'completed' => 'bg-green-600 text-white',
+                                        'booking'   => 'bg-gray-600 text-white',
+                                    ];
+
+                                    $status = optional($order->bookings->first())->status;
                                 @endphp
-                                <span
-                                    class="{{ $statusClass[$order->bookings->first()->status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
-                                    {{ ucfirst($order->bookings->first()->status ?? 'N/A') }}
+
+                                <span class="{{ $statusClass[$status] ?? 'bg-gray-500 text-white' }} 
+                                            px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
+                                    {{ ucfirst($status ?? 'N/A') }}
                                 </span>
                             </td>
                             <td>

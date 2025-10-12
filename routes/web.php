@@ -319,6 +319,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
+    Route::prefix('athlete')->group(function () {
+        Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
+        Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
+        Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
+        Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
+        Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
+        Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
+        Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
+    });
+
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', fn() => view('dash.admin.partner'))->name('partner.index');
     });
