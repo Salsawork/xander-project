@@ -36,7 +36,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
     <div class="col-span-1">
         <label for="isTeam" class="block text-sm font-medium text-gray-700">Team?</label>
         <select
@@ -70,5 +70,33 @@
             <option value="4" @if ($setting->fightingAreas == 4) selected @endif>4</option>
             <option value="8" @if ($setting->fightingAreas == 8) selected @endif>8</option>
         </select>
+    </div>
+</div>
+
+<!-- Event Selection Row -->
+<div class="grid grid-cols-1 gap-6 mt-6">
+    <div class="col-span-1">
+        <label for="event_id" class="block text-sm font-medium text-gray-700">
+            Pilih Event <span class="text-red-500">*</span>
+        </label>
+        <select
+            class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
+            id="event_id" name="event_id" required>
+            <option value="">-- Pilih Event --</option>
+            @foreach($events as $event)
+                <option value="{{ $event->id }}" 
+                    @if(isset($tournament) && $tournament->event_id == $event->id) selected 
+                    @elseif(old('event_id') == $event->id) selected 
+                    @endif>
+                    {{ $event->name }} - {{ \Carbon\Carbon::parse($event->start_date)->format('d M Y') }}
+                    @if(isset($tournament) && $tournament->event_id == $event->id)
+                        (Current)
+                    @endif
+                </option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-xs text-gray-400">
+            Tournament ini akan terhubung dengan event yang dipilih
+        </p>
     </div>
 </div>

@@ -126,6 +126,25 @@
                                 </div>
                             </div>
 
+                            <!-- Row 3: Event Selection -->
+                            <div class="grid grid-cols-1 gap-6">
+                                <div>
+                                    <label for="event_id" class="block text-sm font-medium text-gray-300 mb-1">
+                                        Pilih Event <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="event_id" id="event_id" required
+                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">-- Pilih Event --</option>
+                                        @foreach($events as $event)
+                                            <option value="{{ $event->id }}" {{ old('event_id') == $event->id ? 'selected' : '' }}>
+                                                {{ $event->name }} - {{ \Carbon\Carbon::parse($event->start_date)->format('d M Y') }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-400">Tournament ini akan terhubung dengan event yang dipilih</p>
+                                </div>
+                            </div>
+
                             <!-- Info Box -->
                             <div class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mt-4">
                                 <div class="flex items-start gap-3">
