@@ -124,18 +124,21 @@ Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketBy
     ->where('event', '[0-9]+')
     ->name('events.bracket');
 
-// Event Register (POST) — simpan input modal / pendaftaran
+// Event Register (POST) — set role player
 Route::post('/event/{event}/register', [EventController::class, 'register'])
     ->where('event', '[0-9]+')
     ->middleware('auth')
     ->name('events.register');
 
-// Backward Compatibility Routes (redirect ke canonical)
-Route::get('/event/{event:name}', [EventController::class, 'showByName'])
-    ->name('events.show.byname');
+// Event Buy Ticket (POST) — role user setelah beli, simpan ke order_events, kurangi stok event_tickets
+Route::post('/event/{event}/buy', [EventController::class, 'buyTicket'])
+    ->where('event', '[0-9]+')
+    ->middleware('auth')
+    ->name('events.buy');
 
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
-    ->name('events.bracket.byname');
+// Backward Compatibility Routes (redirect ke canonical)
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])->name('events.show.byname');
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
@@ -311,24 +314,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
-    /** Athlete area (user) */
-    Route::prefix('athlete')->group(function () {
-        Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-        Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
-        Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
-        Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
-        Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-        Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
-        Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
-    });
-
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', fn() => view('dash.admin.partner'))->name('partner.index');
     });
 
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
-    
+
     Route::prefix('dashboard/admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{id}/verify', [UserController::class, 'verify'])->name('admin.users.verify');

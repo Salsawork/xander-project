@@ -23,35 +23,40 @@
         body { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
         img { display: block; background: transparent; }
 
-        /* Modal Styles */
+        /* Modal Styles (Register & Buy Ticket) */
         .modal { display:none; position:fixed; z-index:9999; inset:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,.7); backdrop-filter: blur(4px); }
         .modal.active { display:flex; align-items:center; justify-content:center; }
-        .modal-content { background:#1f1f1f; margin:auto; padding:0; border-radius:12px; width:90%; max-width:500px; box-shadow:0 4px 6px rgba(0,0,0,.3); animation: slideDown .3s ease-out; }
+        .modal-content { background:#1f1f1f; margin:auto; padding:0; border-radius:12px; width:90%; max-width:520px; box-shadow:0 4px 6px rgba(0,0,0,.3); animation: slideDown .3s ease-out; }
         @keyframes slideDown { from{opacity:0; transform:translateY(-50px);} to{opacity:1; transform:translateY(0);} }
         .modal-header { padding:20px 24px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
         .modal-body { padding:24px; }
         .modal-footer { padding:16px 24px; border-top:1px solid #333; display:flex; justify-content:flex-end; gap:12px; }
         .close { color:#aaa; font-size:28px; font-weight:bold; cursor:pointer; transition:color .3s; }
         .close:hover,.close:focus { color:#fff; }
-        .form-group { margin-bottom:20px; }
+        .form-group { margin-bottom:16px; }
         .form-label { display:block; margin-bottom:8px; font-weight:500; color:#e5e5e5; }
-        .form-input { width:100%; padding:12px 16px; background:#2a2a2a; border:1px solid #404040; border-radius:8px; color:#fff; font-size:14px; transition:all .3s; }
-        .form-input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+        .form-input, .form-select { width:100%; padding:12px 14px; background:#2a2a2a; border:1px solid #404040; border-radius:8px; color:#fff; font-size:14px; transition:all .3s; }
+        .form-input:focus, .form-select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); }
         .form-input::placeholder { color:#666; }
         .btn-primary { background:#3b82f6; color:#fff; padding:10px 24px; border:none; border-radius:8px; font-weight:500; cursor:pointer; transition:background-color .3s; }
         .btn-primary:hover { background:#2563eb; }
         .btn-secondary { background:transparent; color:#9ca3af; padding:10px 24px; border:1px solid #404040; border-radius:8px; font-weight:500; cursor:pointer; transition:all .3s; }
         .btn-secondary:hover { background:#2a2a2a; color:#fff; }
+        .hint { font-size:12px; color:#9ca3af; }
     </style>
 
     @php
         use Illuminate\Support\Str;
         use Carbon\Carbon;
 
-        $pretty = Str::slug($event->name);
+        $pretty   = Str::slug($event->name);
+        $now      = Carbon::now();
+        $endDate  = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
 
-        $now = Carbon::now();
-        $endDate = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
+        // Sumber harga & stok dari ticket default jika dikirim controller
+        $ticketPrice  = isset($ticket) ? (float) ($ticket->price ?? 0) : (float) ($event->price_ticket ?? 0);
+        $stockLeft    = isset($ticket) ? (int) ($ticket->stock ?? 0) : (int) ($event->stock ?? 0);
+
         $showRegister = ($event->status === 'Upcoming') && $now->lte($endDate);
     @endphp
 
@@ -139,35 +144,48 @@
                             <div class="mb-8">
                                 <h3 class="text-xl font-bold mb-4">Registration & Tickets</h3>
                                 <div class="space-y-4 bg-neutral-700 p-6 rounded-lg">
-                                    <div>
-                                        <p class="font-medium mb-1">Player Registration:</p>
-                                        <p class="text-gray-300">Open until {{ $endDate->format('F d, Y') }} (Limited Slots)</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <p class="font-medium mb-1">Player Registration</p>
+                                            <p class="text-gray-300">Until {{ $endDate->format('F d, Y') }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium mb-1">Ticket Price</p>
+                                            <p class="text-gray-300">Rp. {{ number_format($ticketPrice, 0, ',', '.') }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium mb-1">Stock Left</p>
+                                            <p class="text-gray-300">{{ $stockLeft }}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="font-medium mb-1">Spectator Tickets:</p>
-                                        <p class="text-gray-300">Available online starting {{ $event->start_date->copy()->subMonths(2)->format('F d, Y') }}</p>
-                                    </div>
+
                                     <div class="flex flex-wrap gap-4 pt-4">
                                         @if($showRegister)
                                             @guest
-                                                {{-- Belum login -> arahkan ke halaman login --}}
                                                 <a href="{{ route('login') }}"
                                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                                                     Register Now
                                                 </a>
                                             @else
-                                                {{-- Sudah login -> buka modal --}}
-                                                <button type="button" onclick="openModal()"
+                                                <button type="button" onclick="openModal('#registrationModal')"
                                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                                                     Register Now
                                                 </button>
                                             @endguest
                                         @endif
 
-                                        <a href="#"
-                                           class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                            Buy Ticket
-                                        </a>
+                                        @guest
+                                            <a href="{{ route('login') }}"
+                                               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                                                Buy Ticket
+                                            </a>
+                                        @else
+                                            <button type="button"
+                                                    onclick="openModal('#buyTicketModal')"
+                                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                                                Buy Ticket
+                                            </button>
+                                        @endguest
                                     </div>
                                 </div>
                             </div>
@@ -261,18 +279,18 @@
         </div>
     </div>
 
-    <!-- Modal Registration -->
+    {{-- ========== MODAL: Registration (role player) ========== --}}
     @auth
-    @if($showRegister)
+    @php $showRegisterModal = $showRegister; @endphp
+    @if($showRegisterModal)
     <div id="registrationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="text-2xl font-bold text-white">Event Registration</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
+                <span class="close" onclick="closeModal('#registrationModal')">&times;</span>
             </div>
             <form id="registrationForm" action="{{ route('events.register', $event->id) }}" method="POST">
                 @csrf
-                <!-- Penanda agar kalau gagal validasi, modal otomatis dibuka lagi -->
                 <input type="hidden" name="_from" value="event-registration">
                 <div class="modal-body">
                     <div class="form-group">
@@ -309,7 +327,7 @@
                             placeholder="+62 812 3456 7890"
                             value="{{ old('phone', auth()->user()->phone ?? '') }}"
                             required>
-                        <p class="text-xs text-gray-400 mt-2">Maksimal 15 karakter sesuai format data.</p>
+                        <p class="hint mt-2">Maksimal 15 karakter sesuai format data.</p>
                     </div>
 
                     <p class="text-sm text-gray-400 mt-4">
@@ -318,7 +336,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal('#registrationModal')">Cancel</button>
                     <button type="submit" class="btn-primary">Submit Registration</button>
                 </div>
             </form>
@@ -327,50 +345,100 @@
     @endif
     @endauth
 
+    {{-- ========== MODAL: Buy Ticket ========== --}}
+    @auth
+    <div id="buyTicketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-2xl font-bold text-white">Buy Ticket</h2>
+                <span class="close" onclick="closeModal('#buyTicketModal')">&times;</span>
+            </div>
+            <form id="buyTicketForm" action="{{ route('events.buy', $event->id) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="_from" value="event-buy">
+
+                {{-- Penting: kirim ticket_id default agar order_events.ticket_id terisi --}}
+                <input type="hidden" name="ticket_id" value="{{ $ticket->id ?? '' }}"/>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Ticket Price</label>
+                        <input type="text" class="form-input" value="Rp. {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="qty">Quantity <span class="text-red-500">*</span></label>
+                        <input type="number" min="1" max="{{ $stockLeft }}" value="1" id="qty" name="qty" class="form-input" required>
+                        <p class="hint mt-2">Sisa stok: {{ $stockLeft }}</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="bank_id">Bank <span class="text-red-500">*</span></label>
+                        <select id="bank_id" name="bank_id" class="form-select" required>
+                            <option value="">Pilih bank</option>
+                            @foreach($banks as $b)
+                                <option value="{{ $b->id_bank }}">{{ $b->nama_bank }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="bukti_payment">Bukti Pembayaran <span class="text-red-500">*</span></label>
+                        <input type="file" id="bukti_payment" name="bukti_payment" accept="image/*" class="form-input" required>
+                        <p class="hint mt-2">Format: JPG/PNG/WEBP, maks 2MB.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Total Payment</label>
+                        <input type="text" id="totalPaymentDisplay" class="form-input" value="Rp. {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
+                        <input type="hidden" id="unitPrice" value="{{ $ticketPrice }}">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('#buyTicketModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Submit Purchase</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endauth
+
     <script>
-        const modal = document.getElementById('registrationModal');
+        function openModal(sel){ const m = document.querySelector(sel); if(!m) return; m.classList.add('active'); document.body.style.overflow='hidden'; }
+        function closeModal(sel){ const m = document.querySelector(sel); if(!m) return; m.classList.remove('active'); document.body.style.overflow='auto'; }
 
-        function openModal() {
-            if (!modal) return;
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
+        // Auto-calc total payment pada Buy Ticket
+        (function(){
+            const qtyEl   = document.getElementById('qty');
+            const priceEl = document.getElementById('unitPrice');
+            const outEl   = document.getElementById('totalPaymentDisplay');
 
-        function closeModal() {
-            if (!modal) return;
-            modal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            if (event.target === modal) {
-                closeModal();
+            function formatRupiah(n){
+                n = Math.floor(n);
+                return 'Rp. ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             }
-        });
 
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && modal && modal.classList.contains('active')) {
-                closeModal();
+            function recalc(){
+                if(!qtyEl || !priceEl || !outEl) return;
+                const qty   = Math.max(1, parseInt(qtyEl.value || '1', 10));
+                const price = parseFloat(priceEl.value || '0');
+                const total = qty * price;
+                outEl.value = formatRupiah(total);
             }
-        });
 
-        // Basic phone check
-        const form = document.getElementById('registrationForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const phone = document.getElementById('phone').value.trim();
-                if (phone.length < 8 || phone.length > 15) {
-                    e.preventDefault();
-                    alert('Please enter a valid phone number (8-15 characters).');
-                }
-            });
-        }
+            qtyEl && qtyEl.addEventListener('input', recalc);
+            recalc();
+        })();
 
-        // Jika ada error validasi dari form ini, buka modal otomatis
-        @if ($errors->any() && old('_from') === 'event-registration')
-            window.addEventListener('load', openModal);
+        // Buka ulang modal bila ada error validasi
+        @if ($errors->any())
+            @if (old('_from') === 'event-registration')
+                window.addEventListener('load', () => openModal('#registrationModal'));
+            @endif
+            @if (old('_from') === 'event-buy')
+                window.addEventListener('load', () => openModal('#buyTicketModal'));
+            @endif
         @endif
     </script>
 @endsection
