@@ -11,7 +11,6 @@ class Bank extends Model
 
     protected $table = 'mst_bank';
     protected $primaryKey = 'id_bank';
-    public $timestamps = false;
 
     protected $fillable = [
         'nama_bank',
