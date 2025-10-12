@@ -382,40 +382,40 @@
   });
 
   const addBtn = document.getElementById('addToCartButton');
-if (addBtn) {
-  addBtn.addEventListener('click', () => {
-    const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
-    const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+      const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
 
-    if (!isLoggedIn) {
-      Swal.fire({
-        title: 'Belum Login!',
-        text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-        icon: 'warning',
-        confirmButtonText: 'Login Sekarang',
-        confirmButtonColor: '#3085d6',
-        background: '#1E1E1F',
-        color: '#FFFFFF'
-      }).then(() => { window.location.href = '/login'; });
-      return;
-    }
+      if (!isLoggedIn) {
+        Swal.fire({
+          title: 'Belum Login!',
+          text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+          icon: 'warning',
+          confirmButtonText: 'Login Sekarang',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        }).then(() => { window.location.href = '/login'; });
+        return;
+      }
 
-    if (userRole !== 'user') {
-      Swal.fire({
-        title: 'Akses Ditolak!',
-        text: 'Hanya user yang bisa menambahkan ke keranjang.',
-        icon: 'error',
-        confirmButtonColor: '#3085d6',
-        background: '#1E1E1F',
-        color: '#FFFFFF'
-      });
-      return;
-    }
+      if (userRole !== 'user') {
+        Swal.fire({
+          title: 'Akses Ditolak!',
+          text: 'Hanya user yang bisa menambahkan ke keranjang.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+        return;
+      }
 
-    // Kalau sudah login dan role = user, baru submit form
-    document.getElementById('addToCartForm').requestSubmit();
-  });
-}
+      // Kalau sudah login dan role = user, baru submit form
+      document.getElementById('addToCartForm').requestSubmit();
+    });
+  }
 
 </script>
 @endpush
