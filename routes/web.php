@@ -47,7 +47,6 @@ use App\Http\Controllers\adminController\NewsController as AdminNewsController;
 use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelinesController;
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
 use App\Http\Controllers\adminController\AdminVenueController;
-use App\Http\Controllers\adminController\FightController;
 use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
@@ -381,16 +380,6 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
     Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
     Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
 });
-
-/** Admin: Fight List */
-Route::middleware('auth')->prefix('dashboard/fight')->name('fight.')->group(function () {
-    // Menampilkan daftar pertarungan berdasarkan championship
-    Route::get('/{championshipId}', [FightController::class, 'index'])->name('index');
-
-    // Update pemenang pertarungan
-    Route::put('/{fight}', [FightController::class, 'update'])->name('update');
-});
-
 
 Route::prefix('championships')->name('tree.')->group(function () {
     Route::get('/', [TreeController::class, 'index'])->name('index');
