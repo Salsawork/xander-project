@@ -181,22 +181,21 @@
           <!-- Quantity Controls -->
           <div class="flex items-center gap-2">
             <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepDown()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">-</button>
-            <input type="number" name="stock" value="1" min="1" readonly class="w-14 text-center rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm pl-4">
+            <input type="number" name="quantity" value="1" min="1" readonly class="w-14 text-center rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm pl-4">
             <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepUp()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">+</button>
           </div>
 
           <!-- Add to Cart Button -->
 
-         @if (Auth::check() && Auth::user()->roles === 'user')
-            <button
-              type="submit"
-              class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition"
-            >
-              <i class="fas fa-shopping-cart mr-2"></i>
-              Add to cart
-            </button>
-          @endif
-
+          <button
+          type="button"
+          id="addToCartButton"
+          class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition"
+        >
+          <i class="fas fa-shopping-cart mr-2"></i>
+          Add to cart
+        </button>
+        
         </div>
       </form>
 
@@ -381,5 +380,42 @@
       smoothScroll(track, Math.min((track?.scrollWidth||0), track.scrollLeft + step));
     });
   });
+
+  const addBtn = document.getElementById('addToCartButton');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+      const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+
+      if (!isLoggedIn) {
+        Swal.fire({
+          title: 'Belum Login!',
+          text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+          icon: 'warning',
+          confirmButtonText: 'Login Sekarang',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        }).then(() => { window.location.href = '/login'; });
+        return;
+      }
+
+      if (userRole !== 'user') {
+        Swal.fire({
+          title: 'Akses Ditolak!',
+          text: 'Hanya user yang bisa menambahkan ke keranjang.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+        return;
+      }
+
+      // Kalau sudah login dan role = user, baru submit form
+      document.getElementById('addToCartForm').requestSubmit();
+    });
+  }
+
 </script>
 @endpush

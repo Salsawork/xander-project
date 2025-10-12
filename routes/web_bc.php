@@ -601,7 +601,7 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
  */
 Route::middleware('auth')->prefix('athlete')->group(function () {
     // Athlete Dashboard
-    Route::get('/dashboard', [App\Http\Controllers\athleteController\DashboardController::class, 'index'])->name('athlete.dashboard');
+    Route::get('/dashboard', [App\Http\Controllers\athleteController\DashboardController::class, 'index'])->name('athlete.index');
 
     // Athlete Sparring - Create Session
     Route::get('/sparring/create', function () {

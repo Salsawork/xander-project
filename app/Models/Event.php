@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Xoco70\LaravelTournaments\Models\Tournament;
 
-
 class Event extends Model
 {
     protected $fillable = [
@@ -16,7 +15,6 @@ class Event extends Model
         'location',
         'price_ticket',
         'stock',
-        
         'game_types',
         'description',
         'total_prize_money',
@@ -54,13 +52,11 @@ class Event extends Model
         return $query->where('status', 'Ended');
     }
 
-    // Binding route default pakai kolom name (untuk /event/{event:name})
     public function getRouteKeyName()
     {
         return 'name';
     }
 
-    // Aksesori slug (opsional, tidak dipakai route di setup ini)
     public function getSlugAttribute()
     {
         return str_replace(' ', '-', strtolower($this->name));
@@ -71,4 +67,8 @@ class Event extends Model
         return $this->hasMany(Tournament::class, 'event_id');
     }
 
+    public function tickets()
+    {
+        return $this->hasMany(EventTicket::class, 'event_id');
+    }
 }

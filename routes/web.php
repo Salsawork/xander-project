@@ -27,6 +27,7 @@ use App\Http\Controllers\ShippingController;
 
 // Event Admin
 use App\Http\Controllers\adminController\EventController as AdminEventController;
+use App\Http\Controllers\adminController\UserController;
 
 // Venue Controllers
 use App\Http\Controllers\venueController\DashboardController as VenueDashboardController;
@@ -46,7 +47,6 @@ use App\Http\Controllers\adminController\NewsController as AdminNewsController;
 use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelinesController;
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
 use App\Http\Controllers\adminController\AdminVenueController;
-
 use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
@@ -92,7 +92,7 @@ Route::prefix('venues')->group(function () {
     Route::get('/', [VenueController::class, 'index'])->name('venues.index');
 
     // API price schedule (JANGAN DI BAWAH DETAIL)
-    Route::get('/{venueId}/price-schedules', [VenueController::class, 'detail'])
+    Route::get('/{venueId}/price-schedules', [VenueController::class, 'priceSchedules'])
         ->where(['venueId' => '[0-9]+'])
         ->name('venues.priceSchedules');
 
@@ -124,18 +124,21 @@ Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketBy
     ->where('event', '[0-9]+')
     ->name('events.bracket');
 
-// Event Register (POST) — simpan input modal / pendaftaran
+// Event Register (POST) — set role player
 Route::post('/event/{event}/register', [EventController::class, 'register'])
     ->where('event', '[0-9]+')
     ->middleware('auth')
     ->name('events.register');
 
-// Backward Compatibility Routes (redirect ke canonical)
-Route::get('/event/{event:name}', [EventController::class, 'showByName'])
-    ->name('events.show.byname');
+// Event Buy Ticket (POST) — role user setelah beli, simpan ke order_events, kurangi stok event_tickets
+Route::post('/event/{event}/buy', [EventController::class, 'buyTicket'])
+    ->where('event', '[0-9]+')
+    ->middleware('auth')
+    ->name('events.buy');
 
-Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])
-    ->name('events.bracket.byname');
+// Backward Compatibility Routes (redirect ke canonical)
+Route::get('/event/{event:name}', [EventController::class, 'showByName'])->name('events.show.byname');
+Route::get('/event/{event:name}/bracket', [EventController::class, 'bracketByName'])->name('events.bracket.byname');
 
 /** Services */
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
@@ -195,10 +198,14 @@ Route::prefix('checkout')->group(function () {
 });
 
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
-    Route::get('/', [DashboardOrderController::class, 'index'])->name('order.index');
+    Route::get('/product', [DashboardOrderController::class, 'indexProduct'])->name('order.index.product');    
+    Route::get('/booking', [DashboardOrderController::class, 'indexBooking'])->name('order.index.booking');
+    Route::get('/sparring', [DashboardOrderController::class, 'indexSparring'])->name('order.index.sparring');
     Route::get('/detail/{order?}', [DashboardOrderController::class, 'detail'])->name('order.detail.index');
-    Route::delete('/delete/{order}', [DashboardOrderController::class, 'destroy'])->name('admin.orders.delete');
+    Route::delete('/delete/{order}', [DashboardOrderController::class, 'destroy'])->name('order.delete');
     Route::get('/update-status/{order}', [DashboardOrderController::class, 'updateStatus'])->name('admin.orders.update-status');
+    Route::get('/update-payment-status/{order}', [DashboardOrderController::class, 'updatePaymentStatus'])->name('admin.orders.update-payment-status');
+    Route::get('/update-booking-status/{order}', [DashboardOrderController::class, 'updateBookingStatus'])->name('admin.orders.update-booking-status');
 });
 
 /** Midtrans Notification (public) */
@@ -217,6 +224,7 @@ Route::middleware('auth')->group(function () {
     /** User: pages for sidebar **/
     Route::get('dashboard/notification', fn() => view('dash.user.notification'))->name('notification.index');
     Route::get('dashboard/myorder', fn() => view('dash.user.myorder'))->name('myorder.index');
+    Route::get('dashboard/sparring', fn() => view('dash.user.sparring'))->name('user.sparring.index');
     Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
     /** Profile */
@@ -311,7 +319,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
-    /** Athlete area (user) */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
         Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
@@ -328,6 +335,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
+
+    Route::prefix('dashboard/admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::post('/users/{id}/verify', [UserController::class, 'verify'])->name('admin.users.verify');
+    });
 });
 
 Route::middleware('auth')->group(function () {
@@ -376,17 +388,6 @@ Route::middleware('auth')->prefix('dashboard/tournament')->name('tournament.')->
     Route::put('/{tournament}/{championship}', [TournamentController::class, 'update'])->name('update');
     Route::delete('/{tournament}', [TournamentController::class, 'destroy'])->name('destroy');
 });
-
-/** Admin: Fight List */
-// Route::middleware('auth')->prefix('dashboard/fight')->name('fight.')->group(function () {
-//     // Menampilkan daftar pertarungan berdasarkan championship
-//     Route::get('/{championshipId}', [FightController::class, 'index'])->name('index');
-
-//     // Update pemenang pertarungan
-//     Route::put('/{fight}', [FightController::class, 'update'])->name('update');
-// });
-
-
 
 Route::prefix('championships')->name('tree.')->group(function () {
     Route::get('/', [TreeController::class, 'index'])->name('index');

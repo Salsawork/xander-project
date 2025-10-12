@@ -19,7 +19,7 @@
                         </a>
                     </div>
                     
-                    <form id="editVenueForm" action="{{ route('venue.update', $venue->id) }}" method="POST">
+                    <form id="editVenueForm" action="{{ route('venue.update', $venue->id) }}" method="POST" enctype="multipart/form-data" >
                         @csrf
                         @method('PUT')
                         
@@ -91,6 +91,18 @@
                                                 class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 name="venue_name" id="venue_name" type="text" value="{{ $venue->name }}" />
                                             @error('venue_name')
+                                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1" for="image">
+                                                Gambar Venue
+                                            </label>
+                                            <input name="image" value="{{ old('image') }}"
+                                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                id="image" type="file" placeholder="Masukkan gambar venue" value="{{ $venue->image }}" />
+                                            @error('image')
                                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                             @enderror
                                         </div>

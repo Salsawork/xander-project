@@ -182,9 +182,11 @@ $fullStars = floor((float)($averageRating ?? 0));
 
           <div>
             <label class="text-sm text-gray-300">Date</label>
-            <div class="field-wrap mt-2">
+            <div class="field-wrap mt-2 relative">
               <input id="dateInput" name="date" type="date" class="input-pill pr-12" placeholder="YYYY-MM-DD">
-              <button type="button" id="openDateBtn" class="date-btn" aria-label="Open date picker" title="Pick a date"><i class="far fa-calendar-alt"></i></button>
+              <button type="button" id="openDateBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white" aria-label="Open date picker" title="Pick a date">
+                <i class="far fa-calendar-alt"></i>
+              </button>
             </div>
           </div>
 
@@ -198,9 +200,13 @@ $fullStars = floor((float)($averageRating ?? 0));
             <input type="text" name="promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
           </div>
 
-          @if (Auth::check() && Auth::user()->roles === 'user')
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">Add to cart</button>
-          @endif
+          <button
+          type="button"
+          id="addToCartButton"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
+          <i class="fas fa-shopping-cart mr-2"></i>
+          Add to cart
+        </button>
         </form>
       </div>
     </div>
@@ -502,7 +508,41 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // HAPUS handler Instagram lama — tidak diperlukan untuk WhatsApp
+  const addBtn = document.getElementById('addToCartButton');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+      const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+
+      if (!isLoggedIn) {
+        Swal.fire({
+          title: 'Belum Login!',
+          text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+          icon: 'warning',
+          confirmButtonText: 'Login Sekarang',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        }).then(() => { window.location.href = '/login'; });
+        return;
+      }
+
+      if (userRole !== 'user') {
+        Swal.fire({
+          title: 'Akses Ditolak!',
+          text: 'Hanya user yang bisa menambahkan ke keranjang.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+        return;
+      }
+
+      // Kalau sudah login dan role = user, baru submit form
+      document.getElementById('addToCartForm').requestSubmit();
+    });
+  }
 });
 </script>
 @endpush

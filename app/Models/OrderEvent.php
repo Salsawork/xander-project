@@ -7,17 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 class OrderEvent extends Model
 {
     protected $table = 'order_events';
-    protected $fillable = 
-    [
-        'order_id',
-        'event_id',
+
+    protected $fillable = [
+        'order_number',
         'user_id',
-        'ticket_id',
-        'bank_id',
+        'event_id',
+        'ticket_id',      // event_tickets.id
+        'bank_id',        // mst_bank.id_bank
         'total_payment',
         'bukti_payment',
         'status',
-        'type',
+    ];
+
+    protected $casts = [
+        'total_payment' => 'decimal:2',
     ];
 
     public function event()
@@ -32,16 +35,11 @@ class OrderEvent extends Model
 
     public function ticket()
     {
-        return $this->belongsTo(Ticket::class);
+        return $this->belongsTo(EventTicket::class, 'ticket_id');
     }
 
     public function bank()
     {
-        return $this->belongsTo(Bank::class);
-    }
-
-    public function order()
-    {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Bank::class, 'bank_id', 'id_bank');
     }
 }

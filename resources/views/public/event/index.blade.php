@@ -67,11 +67,30 @@
         use Illuminate\Support\Str;
         use Carbon\Carbon;
 
-        $resolveImage = function ($path) {
-            if (empty($path)) return null;
-            return Str::startsWith($path, ['http://', 'https://', '/']) ? $path : asset($path);
+        /**
+         * Pastikan semua gambar event dibaca dari /images/events/{filename}
+         * Contoh absolut: https://demo-xanders.ptbmn.id/images/events/{filename}
+         */
+        $EVENT_IMG_DIR = 'images/events/';
+
+        /**
+         * Normalisasi sumber dari DB:
+         * - http/https → biarkan (absolut)
+         * - selain itu (root-absolute "/", relatif, atau mengandung folder lain) → pakai basename ke /images/events/{basename}
+         */
+        $normalizeToEventsDir = function (?string $u) use ($EVENT_IMG_DIR) {
+            if (!$u) return null;
+            $u = trim($u);
+            if (Str::startsWith($u, ['http://','https://'])) {
+                return $u;
+            }
+            $basename = basename($u);
+            return asset($EVENT_IMG_DIR . $basename);
         };
 
+        /**
+         * Fallback range tanggal
+         */
         $dateRange = function ($start, $end) {
             $s = $start ? Carbon::parse($start) : null;
             $e = $end ? Carbon::parse($end) : null;
@@ -86,8 +105,31 @@
             return '-';
         };
 
+        /**
+         * Detail URL
+         */
         $eventDetailUrl = function ($e) {
             return route('events.show', ['event' => $e->id, 'name' => Str::slug($e->name)]);
+        };
+
+        /**
+         * Kandidat gambar untuk tiap event:
+         * 1) image_url (dinormalisasi ke /images/events/{basename} kecuali absolut http/https)
+         * 2) Fallback by ID: {id}.webp → {id}.jpg → {id}.png (semua di /images/events/)
+         */
+        $buildEventImageCandidates = function ($e) use ($EVENT_IMG_DIR, $normalizeToEventsDir) {
+            $cand = [];
+
+            if (!empty($e->image_url)) {
+                $cand[] = $normalizeToEventsDir($e->image_url);
+            }
+
+            $id = $e->id ?? 'unknown';
+            $cand[] = asset($EVENT_IMG_DIR . $id . '.webp');
+            $cand[] = asset($EVENT_IMG_DIR . $id . '.jpg');
+            $cand[] = asset($EVENT_IMG_DIR . $id . '.png');
+
+            return array_values(array_unique(array_filter($cand)));
         };
     @endphp
 
@@ -126,7 +168,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 grid-equal">
                 @forelse (($upcomingEvents ?? collect()) as $ev)
                     @php
-                        $img   = $resolveImage($ev->image_url ?? null);
+                        $srcs  = $buildEventImageCandidates($ev);
                         $range = $dateRange($ev->start_date ?? null, $ev->end_date ?? null);
                         $link  = $eventDetailUrl($ev);
                     @endphp
@@ -134,12 +176,19 @@
                     <a href="{{ $link }}" class="group h-full">
                         <div class="ev-card">
                             <div class="ev-thumb relative">
-                                @if ($img)
-                                  <img src="{{ $img }}" alt="{{ $ev->name }}" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                                @if (!empty($srcs))
+                                    <img
+                                        class="js-img-fallback"
+                                        data-srcs='@json($srcs)'
+                                        data-idx="0"
+                                        src="{{ $srcs[0] }}"
+                                        alt="{{ $ev->name }}"
+                                        loading="lazy"
+                                        decoding="async">
                                 @else
-                                  <div class="w-full h-full grid place-items-center text-gray-400">
-                                    <i class="far fa-image text-3xl"></i>
-                                  </div>
+                                    <div class="w-full h-full grid place-items-center text-gray-400">
+                                        <i class="far fa-image text-3xl"></i>
+                                    </div>
                                 @endif
                             </div>
 
@@ -181,7 +230,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 grid-equal">
                 @forelse (($currentEvents ?? collect()) as $ev)
                     @php
-                        $img   = $resolveImage($ev->image_url ?? null);
+                        $srcs  = $buildEventImageCandidates($ev);
                         $range = $dateRange($ev->start_date ?? null, $ev->end_date ?? null);
                         $link  = $eventDetailUrl($ev);
                     @endphp
@@ -189,12 +238,19 @@
                     <a href="{{ $link }}" class="group h-full">
                         <div class="ev-card">
                             <div class="ev-thumb relative">
-                                @if ($img)
-                                  <img src="{{ $img }}" alt="{{ $ev->name }}" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                                @if (!empty($srcs))
+                                    <img
+                                        class="js-img-fallback"
+                                        data-srcs='@json($srcs)'
+                                        data-idx="0"
+                                        src="{{ $srcs[0] }}"
+                                        alt="{{ $ev->name }}"
+                                        loading="lazy"
+                                        decoding="async">
                                 @else
-                                  <div class="w-full h-full grid place-items-center text-gray-400">
-                                      <i class="far fa-image text-3xl"></i>
-                                  </div>
+                                    <div class="w-full h-full grid place-items-center text-gray-400">
+                                        <i class="far fa-image text-3xl"></i>
+                                    </div>
                                 @endif
                             </div>
 
@@ -227,4 +283,44 @@
         </section>
 
     </main>
+
+    {{-- Fallback gambar berantai (.webp -> .jpg -> .png -> placeholder) --}}
+    <script>
+        (function () {
+            function showPlaceholder(img) {
+                img.onerror = null;
+                img.style.display = 'none';
+                var wrap = img.closest('.ev-thumb');
+                if (wrap && !wrap.querySelector('.placeholder')) {
+                    var ph = document.createElement('div');
+                    ph.className = 'placeholder w-full h-full grid place-items-center text-gray-400';
+                    ph.innerHTML = '<i class="far fa-image text-3xl"></i>';
+                    wrap.appendChild(ph);
+                }
+            }
+
+            function tryNext(img) {
+                try {
+                    var list = img.dataset.srcs ? JSON.parse(img.dataset.srcs) : [];
+                    var idx = parseInt(img.dataset.idx || '0', 10);
+
+                    if ((idx + 1) < list.length) {
+                        img.dataset.idx = String(idx + 1);
+                        img.src = list[idx + 1];
+                    } else {
+                        showPlaceholder(img);
+                    }
+                } catch (e) {
+                    showPlaceholder(img);
+                }
+            }
+
+            document.addEventListener('error', function (ev) {
+                var t = ev.target;
+                if (t && t.classList && t.classList.contains('js-img-fallback')) {
+                    tryNext(t);
+                }
+            }, true);
+        })();
+    </script>
 @endsection

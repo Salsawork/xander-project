@@ -13,8 +13,8 @@
 </style>
 
 <!-- DEKSTOP -->
-<aside class="sm-hidden bg-[#1f1f1f] w-64 min-w-[256px] flex-shrink-0 sticky top-0 h-[100dvh] border-r border-white/10">
-    <header class="h-16 flex items-center justify-center border-b border-white/10">
+<aside class="sm-hidden bg-[#1f1f1f] w-64 min-w-[256px] flex-shrink-0 sticky top-0 h-[100dvh] border-r border-white/10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+    <header class="h-16 flex items-center justify-center border-b border-white/10 flex-shrink-0">
         <a href="{{ route('index') }}" class="inline-flex items-center">
             <img src="{{ asset('/images/logo/logo-xander.png') }}" alt="Logo" class="h-9">
         </a>
@@ -45,14 +45,37 @@
             </li>
 
             <li>
-                <a href="{{ route('order.index') }}"
-                    class="group flex items-center justify-between rounded-lg px-3 py-2
-                  {{ request()->routeIs('order.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+            <li x-data="{ open: false }">
+                <button @click="open = !open"
+                    class="w-full group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs(['order.index.product','order.index.booking','order.index.sparring']) ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Order Management</span>
-                    @if(request()->routeIs('order.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
-                    @endif
-                </a>
+                    <i :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-xs"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 ml-4 space-y-2 text-sm">
+                    <li>
+                        <a href="{{ route('order.index.product') }}"
+                            class="block rounded px-3 py-1.5
+                          {{ request()->routeIs('order.index.product') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Product
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('order.index.booking') }}"
+                            class="block rounded px-3 py-1.5
+                          {{ request()->routeIs('order.index.booking') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Booking
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('order.index.sparring') }}"
+                            class="block rounded px-3 py-1.5
+                          {{ request()->routeIs('order.index.sparring') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Sparring
+                        </a>
+                    </li>
+                </ul>
+            </li>
             </li>
 
             <li>
@@ -122,6 +145,16 @@
                   {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Tournament</span>
                     @if(request()->routeIs('tournament.index'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('admin.users.index') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Verify Player</span>
+                    @if(request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
                     <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
@@ -207,15 +240,40 @@
                 </a>
             </li>
 
-            <li>
-                <a href="{{ route('order.index') }}"
-                    class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
-                  {{ request()->routeIs('order.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
-                    <i class="fas fa-shopping-cart w-5 text-gray-400"></i>
-                    <span>Order Management</span>
-                </a>
+            <li x-data="{ open: false }">
+                <button @click="open = !open"
+                    class="w-full flex items-center justify-between text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
+                    {{ request()->routeIs(['order.index.product','order.index.booking','order.index.sparring']) ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-shopping-cart w-5 text-gray-400"></i>
+                        <span>Order Management</span>
+                    </div>
+                    <i :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-xs"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 ml-8 space-y-1 text-sm">
+                    <li>
+                        <a href="{{ route('order.index.product') }}"
+                            class="block rounded px-3 py-1.5
+                            {{ request()->routeIs('order.index.product') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Product
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('order.index.booking') }}"
+                            class="block rounded px-3 py-1.5
+                            {{ request()->routeIs('order.index.booking') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Booking
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('order.index.sparring') }}"
+                            class="block rounded px-3 py-1.5
+                            {{ request()->routeIs('order.index.sparring') ? 'text-[#0a8aff]' : 'text-gray-400 hover:text-white' }}">
+                            Sparring
+                        </a>
+                    </li>
+                </ul>
             </li>
-
             <li>
                 <a href="{{ route('promo.index') }}"
                     class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
@@ -257,11 +315,51 @@
                 </a>
             </li>
             <li>
+                <a href="{{ route('admin.event.index') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('admin.event.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Event</span>
+                    @if(request()->routeIs('admin.event.index'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
                 <a href="{{ route('tournament.index') }}"
                     class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
                   {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
                     <i class="fas fa-trophy w-5 text-gray-400"></i>
                     <span>Tournament</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('admin.users.index') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Verify Player</span>
+                    @if(request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('dash.admin.subscriber') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('dash.admin.subscriber') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Subscriber</span>
+                    @if(request()->routeIs('dash.admin.subscriber'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('dash.admin.opinion') }}"
+                    class="group flex items-center justify-between rounded-lg px-3 py-2
+                  {{ request()->routeIs('dash.admin.opinion') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                    <span>Opinion</span>
+                    @if(request()->routeIs('dash.admin.opinion'))
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @endif
                 </a>
             </li>
         </ul>
