@@ -46,6 +46,7 @@ use App\Http\Controllers\communityController\NewsController;
 use App\Http\Controllers\adminController\NewsController as AdminNewsController;
 use App\Http\Controllers\adminController\GuidelinesController as AdminGuidelinesController;
 use App\Http\Controllers\GuidelinesController as PublicGuidelinesController;
+use App\Http\Controllers\adminController\DashboardController;
 use App\Http\Controllers\adminController\AdminVenueController;
 use App\Http\Controllers\adminController\AdminAthleteController;
 use App\Http\Controllers\adminController\TournamentController;
@@ -219,7 +220,7 @@ Route::post('/payment/notification', [OrderController::class, 'notification'])->
 Route::middleware('auth')->group(function () {
     /** General Dashboard */
     Route::redirect('dashboard', 'dashboard/overview');
-    Route::get('dashboard/overview', fn() => view('dashboard'))->name('dashboard');
+    Route::get('dashboard/overview', [DashboardController::class, 'index'])->name('dashboard');
 
     /** User: pages for sidebar **/
     Route::get('dashboard/notification', fn() => view('dash.user.notification'))->name('notification.index');
