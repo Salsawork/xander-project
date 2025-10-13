@@ -7,8 +7,6 @@
     @elseif (Auth::user()->roles == 'user')
         @include('dash.user.profile')
     @elseif (Auth::user()->roles == 'venue')
-        @include('dash.venue.dashboard')
-    @elseif (Auth::user()->roles == 'athlete')
-        @include('dash.athlete.dashboard')
+        @include('dash.user.profile')
     @endif
 @endsection

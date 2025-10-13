@@ -45,7 +45,7 @@
             @endif
             <div>
                 <div class="text-white font-bold">
-                    Table #{{ $transaction->table->number ?? '-' }}
+                    Table #{{ $transaction->table->table_number ?? '-' }}
                 </div>
                 <div class="text-gray-400 text-sm">
                     {{ \Carbon\Carbon::parse($transaction->booking_date)->format('d/m/Y') }}

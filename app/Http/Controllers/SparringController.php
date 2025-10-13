@@ -8,6 +8,7 @@ use App\Models\AthleteDetail;
 use App\Models\AthleteReview;
 use App\Models\CartItem;
 use App\Models\SparringSchedule;
+use App\Models\Order;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -189,6 +190,15 @@ class SparringController extends Controller
             ? AthleteReview::where('athlete_id', $athlete->id)->where('user_id', auth()->id())->exists()
             : false;
 
+        $userHasSparringOrder = false;
+        if (auth()->check()) {
+            $userHasSparringOrder = Order::where('user_id', auth()->id())
+                ->whereHas('orderSparrings', function ($query) use ($athlete) {
+                    $query->where('athlete_id', $athlete->id);
+                })
+                ->exists();
+        }
+
         $cartProducts = collect();
         $cartVenues = collect();
         $cartSparrings = collect();
@@ -260,7 +270,8 @@ class SparringController extends Controller
             'totalReviews',
             'counts',
             'percents',
-            'alreadyReviewed'
+            'alreadyReviewed',
+            'userHasSparringOrder'
         ));
     }
 

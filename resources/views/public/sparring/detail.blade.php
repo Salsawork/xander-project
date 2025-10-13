@@ -199,12 +199,9 @@ $fullStars = floor((float)($averageRating ?? 0));
             <label class="text-sm text-gray-300">Promo code (Optional)</label>
             <input type="text" name="promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
           </div>
-
-          <button
-          type="button"
-          id="addToCartButton"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
-          <i class="fas fa-shopping-cart mr-2"></i>
+        <button type="button"
+          id="addToCartButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
+          <i class="fas fa-shopping-cart mr-2"></i>  
           Add to cart
         </button>
         </form>
@@ -280,7 +277,9 @@ $fullStars = floor((float)($averageRating ?? 0));
           <h3 class="text-base font-semibold">Buat Review</h3>
 
           @auth
-            @if ($alreadyReviewed)
+          @if (!$userHasSparringOrder)
+              <div class="mt-3">Kamu belum memiliki pengalaman bermain dengan atlet ini, jadi belum bisa membuat review.</div>
+            @elseif ($alreadyReviewed)
               <div class="mt-3 text-sm text-gray-300">Kamu sudah memberi review untuk atlet ini. Terima kasih! 🙌</div>
             @else
               @if (session('success'))
@@ -302,7 +301,7 @@ $fullStars = floor((float)($averageRating ?? 0));
               <form action="{{ route('sparring.review.store', ['id' => $athlete->id]) }}" method="POST" class="mt-3">
                 @csrf
 
-                <label class="block text-sm text-gray-300 mb-2">Rating</label>
+                <label class="block text-gray-300 mb-2">Rating</label>
                 <div class="flex items-center gap-2 stars-input mb-3" id="ratingBox">
                   @for ($i = 1; $i <= 5; $i++)
                     <i class="fas fa-star" data-value="{{ $i }}"></i>
@@ -367,6 +366,46 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', alignTitleAndCard);
   alignTitleAndCard();
 
+  function alignCreateReview() {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const anchor = document.getElementById('reviewsAnchor');   // H3 "Customer Reviews"
+    const createCard = document.getElementById('createReviewCard');
+    if (!anchor || !createCard) return;
+
+    if (!mq.matches) { // mobile: reset
+      createCard.style.marginTop = '';
+      return;
+    }
+
+    // Tambahkan offset kebawah 14px supaya terlihat sedikit di bawah judul "Customer Reviews"
+    const extraDown = 14;
+
+    const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
+    const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
+
+    const delta = anchorTop - cardTop;
+    const topMargin = (delta > 0 ? delta : 0) + extraDown;
+
+    createCard.style.marginTop = topMargin + 'px';
+    // Nudge kiri dilakukan via CSS (@media min-width:768px => margin-left:-8px)
+  }
+  // panggil pada berbagai momen agar stabil
+  window.addEventListener('resize', alignCreateReview);
+  window.addEventListener('load', alignCreateReview);
+  setTimeout(alignCreateReview, 250);
+  alignCreateReview();
+
+  /* ===== Rating stars input (form kanan) ===== */
+  const stars = document.querySelectorAll('#ratingBox i');
+  const ratingInput = document.getElementById('ratingInput');
+  stars.forEach(st => {
+    st.addEventListener('click', () => {
+      const v = parseInt(st.dataset.value, 10);
+      ratingInput.value = v;
+      stars.forEach(s2 => s2.classList.toggle('active', parseInt(s2.dataset.value,10) <= v));
+    });
+  });
+  
   const dateInput   = document.getElementById('dateInput');
   const openDateBtn = document.getElementById('openDateBtn');
   const scheduleGrid= document.getElementById('scheduleGrid');
