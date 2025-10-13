@@ -74,4 +74,9 @@ class Venue extends Model
             ->withPivot(['price', 'table_id', 'user_id', 'booking_date', 'status', 'start_time', 'end_time'])
             ->withTimestamps();
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }
