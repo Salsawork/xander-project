@@ -423,126 +423,156 @@
         </div>
     </section>
 
-    <!-- Latest News & Events -->
-    <section class="relative bg-cover bg-center bg-no-repeat text-white vh-section px-6 md:px-16 py-12 md:py-16 bg-neutral-900"
-             style="background-image: url('/images/bg/background_3.png')">
+   <!-- Latest News & Events -->
+<section class="relative bg-cover bg-center bg-no-repeat text-white vh-section px-6 md:px-16 py-12 md:py-16 bg-neutral-900"
+         style="background-image: url('/images/bg/background_3.png')">
 
-        @php
-            use Illuminate\Support\Str;
-            use App\Models\Event;
-            use Carbon\Carbon;
+    @php
+        use Illuminate\Support\Str;
+        use App\Models\Event;
+        use Carbon\Carbon;
 
-            $imgUrl = function ($path) {
-                if (!$path) return asset('images/placeholder/event-hero.png');
-                return Str::startsWith($path, ['http://', 'https://', '/']) ? $path : asset($path);
-            };
+        $imgUrl = function ($path) {
+            if (!$path) return asset('images/placeholder/event-hero.png');
+            return Str::startsWith($path, ['http://', 'https://', '/']) ? $path : asset($path);
+        };
 
-            $latest = Event::orderByDesc('start_date')->take(4)->get();
-            $featured = $latest->first();
-            $side     = $latest->skip(1);
+        // === ACAK DI SETIAP RELOAD: pakai inRandomOrder() ===
+        // Ambil total 5 data acak: 1 untuk featured, 4 untuk side
+        $latest   = Event::inRandomOrder()->take(5)->get();
+        $featured = $latest->first();
+        $side     = $latest->skip(1)->take(4);
 
-            $fmtRange = function($e) {
-                try{
-                    $sd = $e->start_date instanceof Carbon ? $e->start_date : ($e->start_date ? Carbon::parse($e->start_date) : null);
-                    $ed = $e->end_date   instanceof Carbon ? $e->end_date   : ($e->end_date   ? Carbon::parse($e->end_date)   : null);
-                    if(!$sd && !$ed) return '';
-                    if($sd && $ed && $sd->format('M') === $ed->format('M')) return $sd->format('M d') . ' - ' . $ed->format('d, Y');
-                    if($sd && $ed) return $sd->format('M d, Y') . ' - ' . $ed->format('M d, Y');
-                    return $sd ? $sd->format('M d, Y') : $ed->format('M d, Y');
-                }catch(\Throwable $th){ return ''; }
-            };
+        $fmtRange = function($e) {
+            try{
+                $sd = $e->start_date instanceof Carbon ? $e->start_date : ($e->start_date ? Carbon::parse($e->start_date) : null);
+                $ed = $e->end_date   instanceof Carbon ? $e->end_date   : ($e->end_date   ? Carbon::parse($e->end_date)   : null);
+                if(!$sd && !$ed) return '';
+                if($sd && $ed && $sd->format('M') === $ed->format('M')) return $sd->format('M d') . ' - ' . $ed->format('d, Y');
+                if($sd && $ed) return $sd->format('M d, Y') . ' - ' . $ed->format('M d, Y');
+                return $sd ? $sd->format('M d, Y') : $ed->format('M d, Y');
+            }catch(\Throwable $th){ return ''; }
+        };
 
-            $showUrl = function($e){ return route('events.show', $e); };
+        $showUrl = function($e){ return route('events.show', $e); };
 
-            $shortDesc = function($e, $limit = 160){
-                $text = $e->summary ?? $e->short_description ?? $e->description ?? '';
-                $text = strip_tags($text);
-                return Str::limit($text, $limit);
-            };
-        @endphp
+        $shortDesc = function($e, $limit = 160){
+            $text = $e->summary ?? $e->short_description ?? $e->description ?? '';
+            $text = strip_tags($text);
+            return Str::limit($text, $limit);
+        };
+    @endphp
 
-        <div class="mx-auto max-w-7xl relative z-10 h-full flex flex-col">
-            <div class="flex items-center justify-between gap-4 mb-8">
-                <h2 class="text-2xl md:text-3xl font-bold">Latest News &amp; Events</h2>
+    <div class="mx-auto max-w-7xl relative z-10 h-full flex flex-col">
+        <div class="flex items-center justify-between gap-4 mb-8">
+            <h2 class="text-2xl md:text-3xl font-bold">Latest News &amp; Events</h2>
 
-                <a href="{{ route('events.index') }}#all-events"
-                   class="hidden md:inline-flex items-center gap-2 text-sm font-medium text-blue-300 hover:text-white transition">
-                    See All Events
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
+            <a href="{{ route('events.index') }}#all-events"
+               class="hidden md:inline-flex items-center gap-2 text-sm font-medium text-blue-300 hover:text-white transition">
+                See All Events
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
 
-            @if($featured)
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- FEATURED CARD -->
-                <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
-                    <img src="{{ $imgUrl($featured->image_url) }}" alt="{{ $featured->name }}"
-                         class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
+        @if($featured)
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- FEATURED CARD -->
+            <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
+                <img src="{{ $imgUrl($featured->image_url) }}" alt="{{ $featured->name }}"
+                     class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500" />
+                <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
 
-                    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                        <div class="flex flex-wrap items-center gap-3 text-xs md:text-sm mb-3 text-gray-300">
-                            @if($featured->status)
-                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
-                                    {{ $featured->status }}
-                                </span>
-                            @endif
-                            @if($featured->start_date || $featured->end_date)
-                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
-                                    {{ $fmtRange($featured) }}
-                                </span>
-                            @endif
-                            @if($featured->location)
-                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
-                                    {{ $featured->location }}
-                                </span>
-                            @endif
-                        </div>
-
-                        <h3 class="text-xl md:text-2xl font-semibold">{{ $featured->name }}</h3>
-                        <p class="mt-2 text-sm md:text-base text-gray-200 max-w-3xl">
-                            {{ $shortDesc($featured, 190) }}
-                        </p>
+                <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                    <div class="flex flex-wrap items-center gap-3 text-xs md:text-sm mb-3 text-gray-300">
+                        @if($featured->status)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $featured->status }}
+                            </span>
+                        @endif
+                        @if($featured->start_date || $featured->end_date)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $fmtRange($featured) }}
+                            </span>
+                        @endif
+                        @if($featured->location)
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-neutral-800/70 ring-1 ring-white/10">
+                                {{ $featured->location }}
+                            </span>
+                        @endif
                     </div>
 
-                    <a href="{{ $showUrl($featured) }}" class="absolute inset-0 z-10" aria-label="Open {{ $featured->name }}"></a>
-                </article>
+                    <h3 class="text-xl md:text-2xl font-semibold">{{ $featured->name }}</h3>
+                    <p class="mt-2 text-sm md:text-base text-gray-200 max-w-3xl">
+                        {{ $shortDesc($featured, 190) }}
+                    </p>
+                </div>
 
-                <!-- SIDE LIST -->
-                <aside class="flex flex-col gap-6">
+                <a href="{{ $showUrl($featured) }}" class="absolute inset-0 z-10" aria-label="Open {{ $featured->name }}"></a>
+            </article>
+
+            <!-- SIDE LIST - MAKSIMAL 4 ITEM -->
+            <aside class="flex flex-col h-[420px] md:h-[520px]">
+                <div class="flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-neutral-800/50">
                     @forelse ($side as $e)
-                        <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition min-h-[108px] group">
+                        <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition group flex-shrink-0">
                             <img src="{{ $imgUrl($e->image_url) }}" alt="{{ $e->name }}"
-                                 class="w-32 md:w-36 h-40 object-cover rounded-md bg-neutral-700 flex-shrink-0" />
-                            <div class="flex flex-col justify-center pr-8">
-                                <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline">{{ $e->name }}</h4>
-                                <div class="mt-1 flex flex-wrap gap-2 text-[11px] md:text-xs text-gray-300">
+                                 class="w-24 md:w-28 h-24 md:h-28 object-cover rounded-md bg-neutral-700 flex-shrink-0" />
+                            <div class="flex flex-col justify-start flex-1 min-w-0">
+                                <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline line-clamp-2">{{ $e->name }}</h4>
+                                <div class="mt-1 flex flex-wrap gap-1.5 text-[10px] md:text-xs text-gray-300">
                                     @if($e->status)<span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $e->status }}</span>@endif
                                     @if($e->start_date || $e->end_date)<span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $fmtRange($e) }}</span>@endif
-                                    @if($e->location)<span class="px-2 py-0.5 rounded-full bg-neutral-700/70">{{ $e->location }}</span>@endif
                                 </div>
-                                <p class="text-xs md:text-sm text-gray-300 mt-2">{{ $shortDesc($e, 120) }}</p>
+                                @if($e->location)
+                                <div class="mt-1 text-[10px] md:text-xs text-gray-400 flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span class="truncate">{{ $e->location }}</span>
+                                </div>
+                                @endif
+                                <p class="text-xs text-gray-300 mt-1.5 line-clamp-2">{{ $shortDesc($e, 100) }}</p>
                             </div>
                             <a href="{{ $showUrl($e) }}" class="absolute inset-0 z-10" aria-label="Open {{ $e->name }}"></a>
                         </article>
                     @empty
-                        <div class="text-gray-400">Belum ada event lain.</div>
+                        <div class="text-gray-400 text-center py-8">Belum ada event lain.</div>
                     @endforelse
-                </aside>
-            </div>
-            @else
-                <div class="rounded-xl bg-neutral-800/60 p-8 text-gray-300">Belum ada event untuk ditampilkan.</div>
-            @endif
-
-            <div class="mt-8 md:hidden">
-                <a href="{{ route('events.index') }}#all-events"
-                   class="inline-flex items-center gap-2 bg-transparent border border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition">
-                    See All Events
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
+                </div>
+            </aside>
         </div>
-    </section>
+        @else
+            <div class="rounded-xl bg-neutral-800/60 p-8 text-gray-300">Belum ada event untuk ditampilkan.</div>
+        @endif
+
+        <div class="mt-8 md:hidden">
+            <a href="{{ route('events.index') }}#all-events"
+               class="inline-flex items-center gap-2 bg-transparent border border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition">
+                See All Events
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Custom scrollbar untuk aside */
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: rgba(38, 38, 38, 0.5);
+        border-radius: 3px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: rgba(64, 64, 64, 0.8);
+        border-radius: 3px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 82, 82, 1);
+    }
+</style>
+
+
 
 </div>
 @endsection
+
