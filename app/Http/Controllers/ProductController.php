@@ -179,14 +179,14 @@ class ProductController extends Controller
                 $image->storeAs('uploads', $imageName, 'public');
                 $uploadedImages[] = 'uploads/' . $imageName;
             }
-
-            // Merge with existing images if any
-            $existingImages = json_decode($product->images ?? '[]', true);
-            $validatedData['images'] = array_merge($existingImages, $uploadedImages);
+        
+            // 🔥 Ganti semua gambar lama dengan yang baru
+            $validatedData['images'] = $uploadedImages;
         } else {
-            // Keep existing images or set empty array if null
+            // Tetap gunakan gambar lama kalau tidak upload baru
             $validatedData['images'] = $product->images ?? [];
         }
+        
 
         Log::info('Data before update:', $product->toArray());
 

@@ -8,11 +8,12 @@ use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\PriceSchedule;
 use App\Models\Table;
+use App\Models\Review;                 // <— TAMBAH
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;                // upload helper
-use Illuminate\Support\Facades\File;       // file helper
+use Illuminate\Support\Str;            // upload helper
+use Illuminate\Support\Facades\File;   // file helper
 
 class VenueController extends Controller
 {
@@ -221,6 +222,41 @@ class VenueController extends Controller
             ->orderBy('price', 'asc')
             ->value('price');
 
+        // ==== REVIEWS ====
+        $reviewsQ = Review::with(['user:id,name'])
+            ->where('venue_id', $detail->id)
+            ->latest();
+
+        $reviews = $reviewsQ->get();
+
+        $averageRating = round((float) Review::where('venue_id', $detail->id)->avg('rating'), 1);
+        $countsRaw = Review::selectRaw('rating, COUNT(*) as c')
+            ->where('venue_id', $detail->id)
+            ->groupBy('rating')
+            ->pluck('c', 'rating');
+
+        $totalReviews = $countsRaw->sum();
+        $counts = [];
+        $percents = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $cnt = (int) ($countsRaw[$i] ?? 0);
+            $counts[$i] = $cnt;
+            $percents[$i] = $totalReviews ? round($cnt * 100 / $totalReviews, 1) : 0;
+        }
+        $fullStars = (int) floor($averageRating);
+
+        $alreadyReviewed = auth()->check()
+            ? Review::where('venue_id', $detail->id)->where('user_id', auth()->id())->exists()
+            : false;
+
+        $userHasBooking = false;
+        if (auth()->check()) {
+            // Minimal rule: user pernah booking venue ini (boleh status apapun), opsional bisa dibatasi tanggal <= today
+            $userHasBooking = Booking::where('user_id', auth()->id())
+                ->where('venue_id', $detail->id)
+                ->exists();
+        }
+
         $cartProducts  = collect();
         $cartVenues    = collect();
         $cartSparrings = collect();
@@ -280,7 +316,75 @@ class VenueController extends Controller
                 ]);
         }
 
-        return view('public.venue.detail', compact('detail', 'tables', 'minPrice', 'cartProducts', 'cartVenues', 'cartSparrings'));
+        return view('public.venue.detail', compact(
+            'detail',
+            'tables',
+            'minPrice',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings',
+            // Reviews data
+            'reviews',
+            'averageRating',
+            'counts',
+            'percents',
+            'fullStars',
+            'alreadyReviewed',
+            'userHasBooking'
+        ));
+    }
+
+    /**
+     * Store review untuk venue
+     * Syarat:
+     * - Authenticated
+     * - Pernah punya booking untuk venue tsb
+     * - (Opsional UI) Batasi 1 review per user per venue
+     * Catatan: DB ada UNIQUE (booking_id,user_id) yang menjamin 1 review per booking. :contentReference[oaicite:1]{index=1}
+     */
+    public function storeReview(Request $request, $venueId)
+    {
+        $request->validate([
+            'rating'  => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:3000',
+        ]);
+
+        if (!auth()->check()) {
+            return back()->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $venue = Venue::findOrFail($venueId);
+        $user  = auth()->user();
+
+        // Pastikan user pernah booking venue ini
+        $booking = Booking::where('user_id', $user->id)
+            ->where('venue_id', $venue->id)
+            ->orderByDesc('booking_date')
+            ->first();
+
+        if (!$booking) {
+            return back()->with('error', 'Kamu belum memiliki booking di venue ini.');
+        }
+
+        // (Opsional) Batasi 1 review per user per venue (agar UX mirip sparring)
+        $already = Review::where('user_id', $user->id)
+            ->where('venue_id', $venue->id)
+            ->exists();
+
+        if ($already) {
+            return back()->with('error', 'Kamu sudah memberikan review untuk venue ini.');
+        }
+
+        // Simpan review (ikuti constraint UNIQUE booking_id + user_id)
+        Review::create([
+            'booking_id' => $booking->id,
+            'user_id'    => $user->id,
+            'venue_id'   => (int) $venue->id,
+            'rating'     => (int) $request->integer('rating'),
+            'comment'    => $request->string('comment')->toString(),
+        ]);
+
+        return back()->with('success', 'Terima kasih! Review kamu sudah tersimpan.');
     }
 
     /**
@@ -296,8 +400,8 @@ class VenueController extends Controller
         $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
 
         // Path CMS & FE
-        $cmsPath = public_path('images/venue');                      // public/images/venue
-        $fePath  = base_path('../demo-xanders/images/venue');        // ../demo-xanders/images/venue
+        $cmsPath = public_path('images/venue');
+        $fePath  = base_path('../demo-xanders/images/venue');
 
         // Buat folder jika belum ada
         if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
@@ -326,8 +430,6 @@ class VenueController extends Controller
     /**
      * ======= Endpoint Update Gambar Venue =======
      * Form bisa kirim field 'gambar' atau 'image'
-     * Route contoh:
-     * Route::post('/admin/venues/{id}/image', [VenueController::class, 'updateImage'])->name('admin.venues.updateImage');
      */
     public function updateImage(Request $request, $id)
     {
@@ -343,7 +445,6 @@ class VenueController extends Controller
             if (!empty($venue->image)) {
                 $this->deleteVenueFile($venue->image);
             }
-
             $venue->image = $this->uploadVenueFile($file);
             $venue->save();
         }

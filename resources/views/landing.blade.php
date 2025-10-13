@@ -206,137 +206,155 @@
         </div>
     </section>
 
-    <!-- Top Picks -->
-    <section class="relative bg-cover bg-center bg-no-repeat vh-section px-6 md:px-20 py-12 md:py-16 bg-neutral-900"
-             style="background-image: url('/images/bg/background_1.png')">
-        <div class="relative z-10 text-white h-full flex flex-col">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl md:text-3xl font-bold">Top Picks</h2>
-            </div>
+    <!-- Top Picks (Mobile acak setiap reload) -->
+<section class="relative bg-cover bg-center bg-no-repeat vh-section px-6 md:px-20 py-12 md:py-16 bg-neutral-900"
+         style="background-image: url('/images/bg/background_1.png')">
+  <div class="relative z-10 text-white h-full flex flex-col">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-2xl md:text-3xl font-bold">Top Picks</h2>
+    </div>
 
-            <div class="flex flex-wrap gap-3 mb-8">
-                <a href="{{ route('level', ['level' => 'professional']) }}"><button class="chip-btn">Professional Grade</button></a>
-                <a href="{{ route('level', ['level' => 'beginner']) }}"><button class="chip-btn">Beginner-Friendly</button></a>
-                <a href="{{ route('level', ['level' => 'under50']) }}"><button class="chip-btn">Under $50</button></a>
-                <a href="{{ route('level', ['level' => 'cue-cases']) }}"><button class="chip-btn">Cue Cases</button></a>
-            </div>
+    <div class="flex flex-wrap gap-3 mb-8">
+      <a href="{{ route('level', ['level' => 'professional']) }}"><button class="chip-btn">Professional Grade</button></a>
+      <a href="{{ route('level', ['level' => 'beginner']) }}"><button class="chip-btn">Beginner-Friendly</button></a>
+      <a href="{{ route('level', ['level' => 'under50']) }}"><button class="chip-btn">Under $50</button></a>
+      <a href="{{ route('level', ['level' => 'cue-cases']) }}"><button class="chip-btn">Cue Cases</button></a>
+    </div>
 
-            @php $items = $products; @endphp
+    @php
+      use Illuminate\Pagination\LengthAwarePaginator;
 
-            <!-- MOBILE -->
-            <div class="md:hidden">
-                <div class="grid grid-cols-2 gap-4 px-2">
-                    @forelse ($items as $product)
-                        @php
-                            $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
-                            $firstImage = !empty($images) ? $images[0] : null;
-                            $idx = ($loop->index % 5) + 1;
-                            $defaultImg = asset("images/products/{$idx}.png");
-                            if ($firstImage) {
-                                $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-                                $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-                            } else { $src = $defaultImg; }
-                            $hasDisc = !empty($product->discount) && $product->discount > 0;
-                            $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
-                            $final = $hasDisc
-                                ? $product->pricing - $product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount / 100)
-                                : $product->pricing;
-                            $slug = \Illuminate\Support\Str::slug($product->name);
-                        @endphp
+      // Ambil koleksi raw (support kalau $products itu paginator/collection/array)
+      $rawItems = ($products instanceof LengthAwarePaginator)
+        ? collect($products->items())
+        : collect($products ?? []);
 
-                        <article class="tp-card-ui group">
-                            <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
-                                <div class="relative w-full aspect-[3/4] tp-imgwrap">
-                                    <img src="{{ $src }}" alt="{{ $product->name }}"
-                                         onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
-                                    <span class="shine"></span>
-                                    @if ($hasDisc)
-                                        <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full">
-                                            -{{ number_format($discPct, 0) }}%
-                                        </span>
-                                    @endif
-                                </div>
-                            </a>
-                            <div class="tp-meta px-4 py-3">
-                                <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}">
-                                    <h3 class="text-[14px] font-semibold tracking-tight line-clamp-1">{{ $product->name }}</h3>
-                                </a>
-                                <div class="mt-1">
-                                    @if ($hasDisc)
-                                        <div class="text-gray-400 text-[12px] leading-none mb-1">
-                                            <span class="opacity-80">Rp</span>
-                                            <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
-                                        </div>
-                                    @endif
-                                    <div class="text-white font-extrabold text-[16px] leading-tight">
-                                        Rp {{ number_format($final, 0, ',', '.') }}
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    @empty
-                        <div class="col-span-2 text-center py-8"><p>Tidak ada produk yang tersedia saat ini.</p></div>
-                    @endforelse
+      // Deteksi mobile via User-Agent
+      $ua       = request()->header('User-Agent', '');
+      $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
+
+      // --- Penting: di MOBILE acak setiap reload ---
+      $itemsMobile = $isMobile ? $rawItems->shuffle() : $rawItems;
+
+      // Desktop/Tablet tetap pakai urutan asli
+      $itemsDesktop = $rawItems;
+    @endphp
+
+    <!-- MOBILE (acak setiap reload) -->
+    <div class="md:hidden">
+      <div class="grid grid-cols-2 gap-4 px-2">
+        @forelse ($itemsMobile as $product)
+          @php
+            $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
+            $firstImage = !empty($images) ? $images[0] : null;
+            $idx = ($loop->index % 5) + 1;
+            $defaultImg = asset("images/products/{$idx}.png");
+            if ($firstImage) {
+              $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
+              $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
+            } else { $src = $defaultImg; }
+            $hasDisc = !empty($product->discount) && $product->discount > 0;
+            $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
+            $final = $hasDisc
+              ? $product->pricing - $product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount / 100)
+              : $product->pricing;
+            $slug = \Illuminate\Support\Str::slug($product->name);
+          @endphp
+
+          <article class="tp-card-ui group">
+            <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
+              <div class="relative w-full aspect-[3/4] tp-imgwrap">
+                <img src="{{ $src }}" alt="{{ $product->name }}"
+                     onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+                <span class="shine"></span>
+                @if ($hasDisc)
+                  <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full">
+                    -{{ number_format($discPct, 0) }}%
+                  </span>
+                @endif
+              </div>
+            </a>
+            <div class="tp-meta px-4 py-3">
+              <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}">
+                <h3 class="text-[14px] font-semibold tracking-tight line-clamp-1">{{ $product->name }}</h3>
+              </a>
+              <div class="mt-1">
+                @if ($hasDisc)
+                  <div class="text-gray-400 text-[12px] leading-none mb-1">
+                    <span class="opacity-80">Rp</span>
+                    <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
+                  </div>
+                @endif
+                <div class="text-white font-extrabold text-[16px] leading-tight">
+                  Rp {{ number_format($final, 0, ',', '.') }}
                 </div>
+              </div>
             </div>
+          </article>
+        @empty
+          <div class="col-span-2 text-center py-8"><p>Tidak ada produk yang tersedia saat ini.</p></div>
+        @endforelse
+      </div>
+    </div>
 
-            <!-- DESKTOP/TABLET -->
-            <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
-                @forelse ($items as $product)
-                    @php
-                        $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
-                        $firstImage = !empty($images) ? $images[0] : null;
-                        $idx = ($loop->index % 5) + 1;
-                        $defaultImg = asset("images/products/{$idx}.png");
-                        if ($firstImage) {
-                            $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-                            $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-                        } else { $src = $defaultImg; }
-                        $hasDisc = !empty($product->discount) && $product->discount > 0;
-                        $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
-                        $final = $hasDisc
-                            ? $product->pricing - $product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount / 100)
-                            : $product->pricing;
-                        $slug = \Illuminate\Support\Str::slug($product->name);
-                    @endphp
+    <!-- DESKTOP/TABLET (urutan asli) -->
+    <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
+      @forelse ($itemsDesktop as $product)
+        @php
+          $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
+          $firstImage = !empty($images) ? $images[0] : null;
+          $idx = ($loop->index % 5) + 1;
+          $defaultImg = asset("images/products/{$idx}.png");
+          if ($firstImage) {
+            $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
+            $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
+          } else { $src = $defaultImg; }
+          $hasDisc = !empty($product->discount) && $product->discount > 0;
+          $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
+          $final = $hasDisc
+            ? $product->pricing - $product->pricing * ($product->discount <= 1 ? $product->discount : $product->discount / 100)
+            : $product->pricing;
+          $slug = \Illuminate\Support\Str::slug($product->name);
+        @endphp
 
-                    <article class="tp-card-ui group">
-                        <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
-                            <div class="relative aspect-[3/4] w-full tp-imgwrap">
-                                <img src="{{ $src }}" alt="{{ $product->name }}"
-                                     onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
-                                <span class="shine"></span>
-                                @if ($hasDisc)
-                                    <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full">
-                                        -{{ number_format($discPct, 0) }}%
-                                    </span>
-                                @endif
-                            </div>
-                        </a>
-
-                        <div class="tp-meta px-4 py-3">
-                            <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}">
-                                <h3 class="text-[15px] font-semibold tracking-tight line-clamp-1">{{ $product->name }}</h3>
-                            </a>
-                            <div class="mt-1">
-                                @if ($hasDisc)
-                                    <div class="text-gray-400 text-[13px] leading-none mb-1">
-                                        <span class="opacity-80">Rp</span>
-                                        <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
-                                    </div>
-                                @endif
-                                <div class="text-white font-extrabold text-[18px] leading-tight">
-                                    Rp {{ number_format($final, 0, ',', '.') }}
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-                @empty
-                    <div class="col-span-4 text-center py-8"><p>Tidak ada produk yang tersedia saat ini.</p></div>
-                @endforelse
+        <article class="tp-card-ui group">
+          <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
+            <div class="relative aspect-[3/4] w-full tp-imgwrap">
+              <img src="{{ $src }}" alt="{{ $product->name }}"
+                   onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+              <span class="shine"></span>
+              @if ($hasDisc)
+                <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full">
+                  -{{ number_format($discPct, 0) }}%
+                </span>
+              @endif
             </div>
-        </div>
-    </section>
+          </a>
+
+          <div class="tp-meta px-4 py-3">
+            <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}">
+              <h3 class="text-[15px] font-semibold tracking-tight line-clamp-1">{{ $product->name }}</h3>
+            </a>
+            <div class="mt-1">
+              @if ($hasDisc)
+                <div class="text-gray-400 text-[13px] leading-none mb-1">
+                  <span class="opacity-80">Rp</span>
+                  <span class="line-through">{{ number_format($product->pricing, 0, ',', '.') }}</span>
+                </div>
+              @endif
+              <div class="text-white font-extrabold text-[18px] leading-tight">
+                Rp {{ number_format($final, 0, ',', '.') }}
+              </div>
+            </div>
+          </div>
+        </article>
+      @empty
+        <div class="col-span-4 text-center py-8"><p>Tidak ada produk yang tersedia saat ini.</p></div>
+      @endforelse
+    </div>
+  </div>
+</section>
+
 
     <!-- Jumbotron 2 - Guidelines -->
     <section class="relative bg-cover bg-center min-h-[70vh] md:h-screen flex items-center"
@@ -575,4 +593,3 @@
 
 </div>
 @endsection
-
