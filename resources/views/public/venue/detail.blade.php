@@ -50,6 +50,11 @@
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
     .review-head .user-stars i{font-size:18px}
   }
+
+  /* Nudge kiri sedikit untuk "Buat Review" di desktop */
+  @media (min-width:768px){
+    #createReviewCard{ margin-left:-8px; } /* kiri dikit */
+  }
 </style>
 @endpush
 
@@ -369,7 +374,7 @@ const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 
 document.addEventListener("DOMContentLoaded", function() {
-  /* ===== Sinkronkan posisi Create Review agar sejajar dengan "Customer Reviews" ===== */
+  /* ===== Sinkronkan posisi Create Review agar sejajar (lebih bawah dikit & kiri dikit) ===== */
   function alignCreateReview() {
     const mq = window.matchMedia('(min-width: 768px)');
     const anchor = document.getElementById('reviewsAnchor');   // H3 "Customer Reviews"
@@ -381,11 +386,17 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
 
+    // Tambahkan offset kebawah 14px supaya terlihat sedikit di bawah judul "Customer Reviews"
+    const extraDown = 14;
+
     const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
     const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
 
     const delta = anchorTop - cardTop;
-    createCard.style.marginTop = (delta > 0 ? delta : 0) + 'px';
+    const topMargin = (delta > 0 ? delta : 0) + extraDown;
+
+    createCard.style.marginTop = topMargin + 'px';
+    // Nudge kiri dilakukan via CSS (@media min-width:768px => margin-left:-8px)
   }
   // panggil pada berbagai momen agar stabil
   window.addEventListener('resize', alignCreateReview);
