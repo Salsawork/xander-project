@@ -27,14 +27,23 @@
             @endguest
 
             @auth
-            {{-- Settings hanya untuk non-admin --}}
-            @if(Auth::user()->roles !== 'admin')
-            <a href="{{ route('dashboard') }}"
-                class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
+            @php
+                $role = Auth::user()->roles ?? null;
+            
+                $settingsRoute = match($role) {
+                    'admin'   => route('dashboard'),
+                    'venue'   => route('venue.dashboard'),
+                    'athlete' => route('athlete.dashboard'),
+                    'user'    => route('profile.edit'),
+                };
+            @endphp
+            
+            <a href="{{ $settingsRoute }}"
+            class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
                 <i class="fas fa-gear w-4 shrink-0 text-gray-300"></i>
                 <span>Settings</span>
             </a>
-            @endif
+        
 
             {{-- Logout untuk semua user yang login --}}
             <form method="POST" action="{{ route('logout') }}">

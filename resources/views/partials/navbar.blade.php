@@ -43,11 +43,34 @@
         @endguest
 
         @auth
-          <a href="{{ route('dashboard') }}"
-             class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
-            <i class="fas fa-gear w-4 shrink-0 text-gray-300"></i>
-            <span>Settings</span>
-          </a>
+        @php
+        $role = Auth::user()->roles ?? null;
+    
+        switch ($role) {
+            case 'admin':
+                $settingsRoute = route('dashboard');
+                break;
+            case 'venue':
+                $settingsRoute = route('venue.dashboard');
+                break;
+            case 'athlete':
+                $settingsRoute = route('athlete.dashboard');
+                break;
+            case 'user':
+                $settingsRoute = route('profile.edit');
+                break;
+            default:
+                $settingsRoute = route('dashboard'); // fallback jika role tidak dikenali
+                break;
+        }
+    @endphp
+    
+    <a href="{{ $settingsRoute }}"
+       class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-[#3a3a3a] rounded-md whitespace-nowrap">
+        <i class="fas fa-gear w-4 shrink-0 text-gray-300"></i>
+        <span>Settings</span>
+    </a>
+    
 
           <form method="POST" action="{{ route('logout') }}">
             @csrf
