@@ -17,8 +17,8 @@ $shareText   = 'Sparring dengan ' . ($athlete->name ?? 'Athlete') . ' di Xander 
 $fbShareUrl  = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrlAbs);
 $xShareUrl   = 'https://twitter.com/intent/tweet?text=' . urlencode($shareText) . '&url=' . urlencode($shareUrlAbs);
 
-// === WhatsApp (ganti dari Instagram) ===
-$waPhone     = '6281284679921'; // +62 812-8467-9921 -> 6281284679921
+// WhatsApp
+$waPhone     = '6281284679921';
 $waMessage   = $shareText . ' ' . $shareUrlAbs;
 $waShareUrl  = 'https://wa.me/' . $waPhone . '?text=' . urlencode($waMessage);
 
@@ -42,7 +42,6 @@ $fullStars = floor((float)($averageRating ?? 0));
   /* ====== UI Elements ====== */
   .btn-share{width:2.25rem;height:2.25rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#374151;transition:.2s}
   .btn-share:hover{background:#4b5563}
-  /* Cards use #171717 to match the requested background */
   .card{background:#171717;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   .booking-card{padding:25px!important;border-radius:12px}
   .booking-card hr{margin-top:8px;margin-bottom:14px}
@@ -66,17 +65,22 @@ $fullStars = floor((float)($averageRating ?? 0));
   .reviews-card{background:#171717;border-radius:14px;padding:18px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:100%}
   .reviews-card h3{font-weight:700}
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
-  .rating-row{display:flex;align-items:center;gap:.75rem}
+
+  /* ==== BARIS RATING – rapi & responsif ==== */
+  .rating-row{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+  .rating-stars{display:inline-flex;gap:6px;white-space:nowrap;line-height:1;flex:0 0 auto}
   .rating-stars i{font-size:22px;color:#fbbf24}
-  .rating-number{font-size:28px;font-weight:800;letter-spacing:.5px}
-  .rating-outof{font-size:12px;color:#9ca3af;margin-left:.35rem}
+  .rating-number{font-size:28px;font-weight:800;letter-spacing:.5px;flex:0 0 auto}
+  .rating-outof{font-size:12px;color:#9ca3af;margin-left:.35rem;line-height:1.2;flex:0 0 auto}
+
+  /* Bar distribusi */
   .bar-row{display:flex;align-items:center;gap:.6rem;margin-top:.55rem}
   .bar-row .label{width:18px;color:#fbbf24;text-align:center}
   .bar-row .ratebar{flex:1;height:10px;background:#2a2a2a;border-radius:9999px;overflow:hidden}
   .bar-row .ratebar .fill{height:100%;background:#e5e7eb;border-radius:9999px}
   .bar-row .count{width:70px;text-align:right;font-size:12px;color:#9ca3af}
 
-  /* ====== Review Item & Create Card use #171717 ====== */
+  /* ====== Review Item & Create Card ====== */
   .review-item{--avatar:48px;--gap:16px;--indent:calc(var(--avatar) + var(--gap));position:relative;padding:22px;background:#171717;border-radius:14px}
   .review-item::before{content:"";position:absolute;left:var(--indent);right:0;top:0;height:1px;background:rgba(255,255,255,.08)}
   .review-head{position:relative}
@@ -99,13 +103,22 @@ $fullStars = floor((float)($averageRating ?? 0));
     .review-date{font-size:11px!important}
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
     .review-head .user-stars i{font-size:18px}
+
+    /* pindahkan "out of 5" ke baris bawah saat sempit */
+    .rating-stars i{font-size:20px}
+    .rating-number{font-size:26px}
+    .rating-outof{flex:1 1 100%;order:3;margin-left:0;margin-top:2px;text-align:left}
+  }
+
+  @media (max-width:380px){
+    .rating-stars i{font-size:18px}
+    .rating-number{font-size:24px}
   }
 </style>
 @endpush
 
 @section('content')
-<div class="page-wrap text-white min-h-screen"><!-- background now pure #171717 -->
-
+<div class="page-wrap text-white min-h-screen">
   <!-- TOP: Foto / Bio / Booking -->
   <div class="max-w-7xl mx-auto px-4 lg:px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
     <!-- Foto -->
@@ -157,7 +170,6 @@ $fullStars = floor((float)($averageRating ?? 0));
           <a href="{{ $xShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Share on X" title="Share on X">
             <i class="fab fa-x-twitter text-white"></i>
           </a>
-          {{-- GANTI: Instagram -> WhatsApp --}}
           <a href="{{ $waShareUrl }}" target="_blank" rel="noopener" class="btn-share" aria-label="Chat on WhatsApp" title="Chat on WhatsApp">
             <i class="fab fa-whatsapp text-white"></i>
           </a>
@@ -578,7 +590,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // Kalau sudah login dan role = user, baru submit form
       document.getElementById('addToCartForm').requestSubmit();
     });
   }

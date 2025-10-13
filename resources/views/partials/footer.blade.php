@@ -107,14 +107,14 @@
   </div>
 
   {{-- Bottom bar --}}
-  <div class="mt-12 pt-6 border-t border-gray-700 flex flex-col md:flex-row justify-between text-sm text-gray-400">
+  {{-- <div class="mt-12 pt-6 border-t border-gray-700 flex flex-col md:flex-row justify-between text-sm text-gray-400">
     <p>&copy; {{ $year }} Xander Billiard</p>
     <div class="space-x-4">
       <a href="#" class="hover:underline">All Rights Reserved</a>
       <a href="#" class="hover:underline">Terms and Conditions</a>
       <a href="#" class="hover:underline">Privacy Policy</a>
     </div>
-  </div>
+  </div> --}}
 </footer>
 
 <style>

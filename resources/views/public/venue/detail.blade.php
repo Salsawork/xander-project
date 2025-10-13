@@ -17,12 +17,22 @@
   .reviews-card{background:#171717;border-radius:14px;padding:18px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:100%}
   .reviews-card h3{font-weight:700}
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
-  .rating-row{display:flex;align-items:center;gap:.75rem}
-  .rating-stars i{font-size:22px;color:#fbbf24}
-  .rating-number{font-size:28px;font-weight:800;letter-spacing:.5px}
-  .rating-outof{font-size:12px;color:#9ca3af;margin-left:.35rem}
+
+  /* ==== BARIS RATING ==== */
+  .rating-row{
+    display:flex; align-items:center; gap:.75rem;
+    flex-wrap:wrap;                    /* boleh wrap bila sempit */
+  }
+  /* bintang + angka selalu satu baris */
+  .rating-stars{ display:inline-flex; gap:6px; white-space:nowrap; line-height:1; flex:0 0 auto; }
+  .rating-stars i{ font-size:22px; color:#fbbf24; }
+  .rating-number{ font-size:28px; font-weight:800; letter-spacing:.5px; flex:0 0 auto; }
+  /* "out of 5" normalnya di baris yang sama */
+  .rating-outof{ font-size:12px; color:#9ca3af; margin-left:.35rem; line-height:1.2; flex:0 0 auto; }
+
+  /* Bar distribusi */
   .bar-row{display:flex;align-items:center;gap:.6rem;margin-top:.55rem}
-  .bar-row .label{width:18px;color:#fbbf24;text-align:center}
+  .bar-row .label{width:18px;color:#fbbf24;text-align:center;line-height:1}
   .bar-row .ratebar{flex:1;height:10px;background:#2a2a2a;border-radius:9999px;overflow:hidden}
   .bar-row .ratebar .fill{height:100%;background:#e5e7eb;border-radius:9999px}
   .bar-row .count{width:70px;text-align:right;font-size:12px;color:#9ca3af}
@@ -41,6 +51,7 @@
   .stars-input i.active{color:#f5c518}
   .helper{font-size:.8rem;color:#9ca3af}
 
+  /* Mobile tweaks */
   @media (max-width:640px){
     .review-item{--avatar:40px;--gap:12px;padding:16px 14px 14px}
     .review-left{gap:12px}
@@ -49,11 +60,29 @@
     .review-date{font-size:11px!important}
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
     .review-head .user-stars i{font-size:18px}
+
+    /* Saat sempit, pindahkan "out of 5" ke baris bawah agar tidak keluar */
+    .rating-row{ gap:.6rem; }
+    .rating-stars i{ font-size:20px; }
+    .rating-number{ font-size:26px; }
+    .rating-outof{
+      flex:1 1 100%;       /* ambil 1 baris sendiri */
+      order:3;             /* pastikan muncul setelah angka */
+      margin-left:0; margin-top:2px;
+      text-align:left;     /* bisa diganti right kalau mau */
+      font-size:12px;
+    }
   }
 
-  /* Nudge kiri sedikit untuk "Buat Review" di desktop */
+  /* Extra kecil */
+  @media (max-width:380px){
+    .rating-stars i{font-size:18px}
+    .rating-number{font-size:24px}
+  }
+
+  /* Nudge kiri untuk "Buat Review" di desktop */
   @media (min-width:768px){
-    #createReviewCard{ margin-left:-8px; } /* kiri dikit */
+    #createReviewCard{ margin-left:-8px; }
   }
 </style>
 @endpush
@@ -63,7 +92,6 @@
 
   $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
-  // Helper URL gambar: FE -> CMS -> placeholder (tanpa route baru)
   $venueImgUrl = function (?string $pathLike) {
       $pathLike = $pathLike ? trim($pathLike) : '';
       if ($pathLike === '') return asset('images/placeholder/venue.png');
@@ -72,7 +100,7 @@
       $filename = basename($pathLike);
 
       $feAbs  = base_path('../demo-xanders/images/venue/' . $filename);
-      $feLink = public_path('fe-venue'); // symlink publik → ../demo-xanders/images/venue
+      $feLink = public_path('fe-venue');
       if (File::exists($feAbs) && is_dir($feLink)) return asset('fe-venue/' . $filename);
 
       $cmsAbs = public_path('images/venue/' . $filename);
@@ -84,7 +112,6 @@
       return asset('images/placeholder/venue.png');
   };
 
-  // Kumpulkan gambar galeri
   $rawImages = [];
   if (!empty($detail->images)) {
       $rawImages = is_array($detail->images)
@@ -100,7 +127,6 @@
   $thumbs = array_slice($resolvedImages, 1, 2);
   while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
 
-  // Rating summary
   $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
   $fullStars = floor((float)($averageRating ?? 0));
 @endphp
@@ -191,7 +217,7 @@
                   @endfor
                 </div>
                 <div class="rating-number">{{ $avgText }}</div>
-                <div class="rating-outof">out of&nbsp;5</div>
+                <div class="rating-outof">out of 5</div>
               </div>
 
               <div class="mt-3">
@@ -296,7 +322,7 @@
           <p>Disruptive behavior may result in removal without refund.</p>
         </div>
 
-        {{-- ==== BUAT REVIEW (diturunkan agar sejajar dengan Customer Reviews) ==== --}}
+        {{-- ==== BUAT REVIEW ==== --}}
         <div id="createReviewCard" class="create-card text-sm text-gray-300">
           <h3 class="text-base font-semibold text-white">Buat Review</h3>
 
@@ -324,7 +350,6 @@
 
               <form action="{{ route('venues.reviews.store', ['venue' => $detail->id]) }}" method="POST" class="mt-3" id="reviewForm">
                 @csrf
-
                 <label class="block text-gray-300 mb-2">Rating</label>
                 <div class="flex items-center gap-2 stars-input mb-3" id="ratingBox">
                   @for ($i = 1; $i <= 5; $i++)
@@ -374,37 +399,24 @@ const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 
 document.addEventListener("DOMContentLoaded", function() {
-  /* ===== Sinkronkan posisi Create Review agar sejajar (lebih bawah dikit & kiri dikit) ===== */
   function alignCreateReview() {
     const mq = window.matchMedia('(min-width: 768px)');
-    const anchor = document.getElementById('reviewsAnchor');   // H3 "Customer Reviews"
+    const anchor = document.getElementById('reviewsAnchor');
     const createCard = document.getElementById('createReviewCard');
     if (!anchor || !createCard) return;
-
-    if (!mq.matches) { // mobile: reset
-      createCard.style.marginTop = '';
-      return;
-    }
-
-    // Tambahkan offset kebawah 14px supaya terlihat sedikit di bawah judul "Customer Reviews"
+    if (!mq.matches) { createCard.style.marginTop = ''; return; }
     const extraDown = 14;
-
     const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
     const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
-
     const delta = anchorTop - cardTop;
-    const topMargin = (delta > 0 ? delta : 0) + extraDown;
-
-    createCard.style.marginTop = topMargin + 'px';
-    // Nudge kiri dilakukan via CSS (@media min-width:768px => margin-left:-8px)
+    createCard.style.marginTop = ((delta>0?delta:0)+extraDown) + 'px';
   }
-  // panggil pada berbagai momen agar stabil
   window.addEventListener('resize', alignCreateReview);
   window.addEventListener('load', alignCreateReview);
   setTimeout(alignCreateReview, 250);
   alignCreateReview();
 
-  /* ===== Rating stars input (form kanan) ===== */
+  /* Rating stars input */
   const stars = document.querySelectorAll('#ratingBox i');
   const ratingInput = document.getElementById('ratingInput');
   stars.forEach(st => {
@@ -415,7 +427,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
-  /* ===== Booking logic (jadwal & meja) ===== */
+  /* Booking logic (jadwal & meja) */
   const datePicker   = document.getElementById("datePicker");
   const scheduleList = document.getElementById("scheduleList");
   const tableList    = document.getElementById("tableList");
