@@ -1,7 +1,37 @@
 @extends('app')
 @section('title', 'Venues - Xander Billiard')
 @php
-    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    /**
+     * URL gambar venue (FE -> CMS -> placeholder) TANPA route baru.
+     * FE diakses via path publik: /fe-venue/{filename} (symlink ke ../demo-xanders/images/venue).
+     */
+    $imgUrl = function ($filename) {
+        $filename = $filename ? trim($filename) : '';
+        if ($filename === '') {
+            return asset('images/placeholder/venue.png');
+        }
+
+        // 1) Cek file di FE (abs path)
+        $feAbs = base_path('../demo-xanders/images/venue/' . $filename);
+        // 2) Cek apakah symlink/dir publik fe-venue tersedia
+        $fePublicDir = public_path('fe-venue');
+
+        if (\Illuminate\Support\Facades\File::exists($feAbs) && is_dir($fePublicDir)) {
+            // FE tersedia & bisa diakses publik tanpa route
+            return asset('fe-venue/' . $filename);
+        }
+
+        // 3) Fallback ke CMS
+        $cmsAbs = public_path('images/venue/' . $filename);
+        if (\Illuminate\Support\Facades\File::exists($cmsAbs)) {
+            return asset('images/venue/' . $filename);
+        }
+
+        // 4) Fallback placeholder
+        return asset('images/placeholder/venue.png');
+    };
 @endphp
 
 @push('styles')
@@ -152,16 +182,20 @@
         <section class="lg:col-span-4 flex flex-col gap-6">
             @forelse ($venues as $venue)
                 <div class="group">
-                    {{-- GUNAKAN HREF DENGAN SLUG --}}
                     <a href="{{ route('venues.detail', ['venue' => $venue->id, 'slug' => $venue->name]) }}"
                        class="block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
 
-                        <!-- Image -->
-                        <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 flex items-center justify-center">
-                            <span class="text-gray-500 text-lg sm:text-2xl">Image</span>
+                        {{-- IMAGE: FE -> CMS -> placeholder (tanpa route) --}}
+                        <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 overflow-hidden">
+                            <img
+                                src="{{ $imgUrl($venue->image ?? '') }}"
+                                alt="{{ $venue->name }}"
+                                class="w-full h-full object-cover block"
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';"
+                            >
                         </div>
 
-                        <!-- Details -->
                         <div class="w-full flex flex-col justify-between px-4">
                             <div class="flex justify-between items-start lg:mb-8">
                                 <h3 class="text-lg sm:text-2xl font-bold">{{ $venue->name }}</h3>
@@ -177,8 +211,7 @@
                                         </i>
                                       @endif
                                     @endauth
-                                  </div>
-                                  
+                                </div>
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">

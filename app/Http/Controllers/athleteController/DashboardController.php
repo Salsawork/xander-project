@@ -7,6 +7,8 @@ use App\Models\MatchHistory;
 use App\Models\BilliardSession;
 use App\Models\Participants;
 use App\Models\User;
+use App\Models\AthleteReview;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -22,30 +24,32 @@ class DashboardController extends Controller
         }
 
         // Ambil data rating dari review (diasumsikan rating 4.9)
-        $rating = 4.9;
-        $totalRating = 123000;
+        $averageRating = AthleteReview::where('athlete_id', $user->id)->avg('rating');
+        // dd($averageRating);
+        $totalRating = AthleteReview::where('athlete_id', $user->id)->count();
 
-        // Ambil data pendapatan bulanan
-        $currentMonth = Carbon::now()->format('Y-m');
-        $lastMonth = Carbon::now()->subMonth()->format('Y-m');
+        $now = Carbon::now();
 
+        // Bulan ini
         $monthlyEarnings = MatchHistory::where('user_id', $user->id)
-            ->whereMonth('created_at', '=', Carbon::now()->month)
-            ->whereYear('created_at', '=', Carbon::now()->year)
+            ->whereMonth('date', $now->month)
+            ->whereYear('date', $now->year)
             ->where('status', 'completed')
             ->sum('total_amount');
-
+        
+        // Bulan lalu
         $lastMonthEarnings = MatchHistory::where('user_id', $user->id)
-            ->whereMonth('created_at', '=', Carbon::now()->subMonth()->month)
-            ->whereYear('created_at', '=', Carbon::now()->subMonth()->year)
+            ->whereMonth('date', $now->copy()->subMonth()->month)
+            ->whereYear('date', $now->copy()->subMonth()->year)
             ->where('status', 'completed')
             ->sum('total_amount');
-
-        // Hitung persentase perubahan pendapatan
+        
+        // Hitung persentase perubahan
         $percentageChange = 0;
         if ($lastMonthEarnings > 0) {
-            $percentageChange = (($monthlyEarnings - $lastMonthEarnings) / $lastMonthEarnings) * 100;
+            $percentageChange = round((($monthlyEarnings - $lastMonthEarnings) / $lastMonthEarnings) * 100, 1);
         }
+        
 
         // Ambil data jumlah sesi yang dibuat
         $sessionCreated = BilliardSession::where('created_at', '>=', Carbon::now()->subYear())
@@ -76,27 +80,13 @@ class DashboardController extends Controller
             ->take(3)
             ->get();
 
-        // Ambil data review (dummy data sementara)
-        $reviews = [
-            [
-                'name' => 'Lee Han Yu',
-                'rating' => 5,
-                'comment' => 'Had an amazing time playing against...',
-                'positive' => true
-            ],
-            [
-                'name' => 'Jessica Huang',
-                'rating' => 2,
-                'comment' => 'The session was well-organized, but...',
-                'positive' => false
-            ],
-            [
-                'name' => 'Nathanael Immanuel',
-                'rating' => 5,
-                'comment' => 'The services here is amazing!',
-                'positive' => true
-            ]
-        ];
+        // Ambil review dari database berdasarkan session yang diikuti athlete
+        $reviews = AthleteReview::with('user')
+        ->where('athlete_id', $user->id)
+        ->latest()
+        ->take(5)
+        ->get();
+  
 
         // Tambahkan di Controller
         $scheduledDates = BilliardSession::whereHas('participants', function($query) use ($user) {
@@ -112,7 +102,7 @@ class DashboardController extends Controller
 
         return view('dash.athlete.dashboard', compact(
             'user',
-            'rating',
+            'averageRating',
             'totalRating',
             'monthlyEarnings',
             'lastMonthEarnings',

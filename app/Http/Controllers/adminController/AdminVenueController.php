@@ -9,9 +9,48 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;                // upload helper
+use Illuminate\Support\Facades\File;       // file helper
 
 class AdminVenueController extends Controller
 {
+    /**
+     * ================= Upload Helper (CMS + FE) =================
+     * - CMS : public/images/venue
+     * - FE  : ../demo-xanders/images/venue
+     */
+    private function uploadVenueFile(\Illuminate\Http\UploadedFile $file): string
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName     = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
+        $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
+
+        $cmsPath = public_path('images/venue');                      // public/images/venue
+        $fePath  = base_path('../demo-xanders/images/venue');        // ../demo-xanders/images/venue
+
+        if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
+        if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
+
+        // simpan ke CMS
+        $file->move($cmsPath, $filename);
+
+        // copy ke FE
+        @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
+
+        return $filename;
+    }
+
+    private function deleteVenueFile(?string $filename): void
+    {
+        if (!$filename) return;
+
+        $cmsPath = public_path('images/venue/' . $filename);
+        $fePath  = base_path('../demo-xanders/images/venue/' . $filename);
+
+        if (File::exists($cmsPath)) @unlink($cmsPath);
+        if (File::exists($fePath))  @unlink($fePath);
+    }
+
     /**
      * Display a listing of the venues.
      */
@@ -27,10 +66,9 @@ class AdminVenueController extends Controller
                     });
             })
             ->get();
-    
+
         return view('dash.admin.venue.index', compact('venues'));
     }
-    
 
     /**
      * Show the form for creating a new venue.
@@ -47,15 +85,15 @@ class AdminVenueController extends Controller
     {
         // Validasi input
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'venue_name' => 'required|string|max:255',
-            'address' => 'required|string',
-            'phone' => 'required|string|max:20',
+            'name'            => 'required|string|max:255',
+            'email'           => 'required|string|email|max:255|unique:users',
+            'password'        => 'required|string|min:8',
+            'venue_name'      => 'required|string|max:255',
+            'address'         => 'required|string',
+            'phone'           => 'required|string|max:20',
             'operating_hours' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'description'     => 'nullable|string',
+            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
 
         try {
@@ -63,34 +101,29 @@ class AdminVenueController extends Controller
 
             // Buat user baru
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name'     => $request->name,
+                'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'roles' => 'venue',
+                'roles'    => 'venue',
             ]);
 
-            // Upload gambar jika ada
+            // Upload gambar jika ada (dukung 'image' atau 'gambar')
             $imageName = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $destinationPath = public_path('images/venue');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $image->move($destinationPath, $imageName);
+            $file = $request->file('image') ?? $request->file('gambar');
+            if ($file) {
+                $imageName = $this->uploadVenueFile($file); // simpan CMS + copy FE, auto-buat folder
             }
 
             // Simpan data venue
             Venue::create([
-                'user_id' => $user->id,
-                'name' => $request->venue_name,
-                'address' => $request->address,
-                'phone' => $request->phone,
-                'operating_hours' => $request->operating_hours,
-                'description' => $request->description,
-                'rating' => 0,
-                'image' => $imageName, // hanya nama file
+                'user_id'        => $user->id,
+                'name'           => $request->venue_name,
+                'address'        => $request->address,
+                'phone'          => $request->phone,
+                'operating_hours'=> $request->operating_hours,
+                'description'    => $request->description,
+                'rating'         => 0,
+                'image'          => $imageName,
             ]);
 
             DB::commit();
@@ -120,58 +153,49 @@ class AdminVenueController extends Controller
     {
         // Validasi input
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
+            'name'            => 'required|string|max:255',
+            'email'           => [
+                'required', 'string', 'email', 'max:255',
                 Rule::unique('users')->ignore($venue->user_id),
             ],
-            'password' => 'nullable|string|min:8',
-            'venue_name' => 'required|string|max:255',
-            'address' => 'required|string',
-            'phone' => 'required|string|max:20',
+            'password'        => 'nullable|string|min:8',
+            'venue_name'      => 'required|string|max:255',
+            'address'         => 'required|string',
+            'phone'           => 'required|string|max:20',
             'operating_hours' => 'required|string|max:100',
-            'description' => 'nullable|string',
+            'description'     => 'nullable|string',
+            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
 
         try {
             DB::beginTransaction();
 
             // Update user
-            $user = User::find($venue->user_id);
-            $user->name = $request->name;
+            $user = User::findOrFail($venue->user_id);
+            $user->name  = $request->name;
             $user->email = $request->email;
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
             $user->save();
 
-            // Upload gambar baru jika ada
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $destinationPath = public_path('images/venue');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
+            // Upload gambar baru jika ada (dukung 'image' atau 'gambar')
+            $file = $request->file('image') ?? $request->file('gambar');
+            if ($file) {
+                // Hapus file lama di CMS + FE
+                if (!empty($venue->image)) {
+                    $this->deleteVenueFile($venue->image);
                 }
-
-                // Hapus file lama jika ada
-                if ($venue->image && file_exists(public_path('images/venue/' . $venue->image))) {
-                    unlink(public_path('images/venue/' . $venue->image));
-                }
-
-                $image->move($destinationPath, $imageName);
-                $venue->image = $imageName;
+                // Upload baru
+                $venue->image = $this->uploadVenueFile($file);
             }
 
             // Update data venue
-            $venue->name = $request->venue_name;
-            $venue->address = $request->address;
-            $venue->phone = $request->phone;
+            $venue->name            = $request->venue_name;
+            $venue->address         = $request->address;
+            $venue->phone           = $request->phone;
             $venue->operating_hours = $request->operating_hours;
-            $venue->description = $request->description;
+            $venue->description     = $request->description;
             $venue->save();
 
             DB::commit();
@@ -192,14 +216,13 @@ class AdminVenueController extends Controller
     public function destroy(Venue $venue)
     {
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Ambil user_id sebelum menghapus venue
-            $userId = $venue->user_id;
+            // Simpan nama file sebelum hapus
+            $imageName = $venue->image;
 
-            // Nonaktifkan foreign key checks sementara
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            // Ambil user_id
+            $userId = $venue->user_id;
 
             // Hapus venue
             $venue->delete();
@@ -207,16 +230,16 @@ class AdminVenueController extends Controller
             // Hapus user terkait
             User::destroy($userId);
 
-            // Aktifkan kembali foreign key checks
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
-            // Commit transaksi
             DB::commit();
+
+            // Bersihkan file gambar di CMS + FE (di luar transaksi DB)
+            if (!empty($imageName)) {
+                $this->deleteVenueFile($imageName);
+            }
 
             return redirect()->route('venue.index')
                 ->with('success', 'Venue berhasil dihapus!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika ada error
             DB::rollBack();
 
             return redirect()->back()

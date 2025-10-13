@@ -11,55 +11,36 @@
     <div class="border-t border-neutral-700 my-2"></div>
 
     <div class="space-y-4">
-        <!-- Review Item 1 -->
-        <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-1">
-                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                        <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm3 10.5a.75.75 0 000-1.5H9a.75.75 0 000 1.5h6z" clip-rule="evenodd" />
-                    </svg>
+        @forelse ($reviews as $review)
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 mt-1">
+                    <div class="w-8 h-8 {{ $review->rating >= 4 ? 'bg-green-500' : 'bg-red-500' }} rounded-full flex items-center justify-center">
+                        @if($review->rating >= 4)
+                            {{-- Icon smile --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                                <path fill-rule="evenodd" d="M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5zM9 10.5a.75.75 0 110-1.5.75.75 0 010 1.5zm6 0a.75.75 0 110-1.5.75.75 0 010 1.5zm-6.75 3a4.5 4.5 0 008.25 0H8.25z" clip-rule="evenodd" />
+                            </svg>
+                        @else
+                            {{-- Icon sad --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                                <path fill-rule="evenodd" d="M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5zM9 10.5a.75.75 0 110-1.5.75.75 0 010 1.5zm6 0a.75.75 0 110-1.5.75.75 0 010 1.5zM8.25 15.75a4.5 4.5 0 017.5 0h-7.5z" clip-rule="evenodd" />
+                            </svg>
+                        @endif
+                    </div>
                 </div>
-            </div>
-            <div class="flex-1">
-                <div class="flex justify-between">
-                    <div class="font-medium">Lee Han Yu | 5 <span class="text-yellow-500">★</span></div>
-                </div>
-                <p class="text-sm text-gray-400 mt-1">Had an amazing time playing against ...</p>
-            </div>
-        </div>
 
-        <!-- Review Item 2 -->
-        <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-1">
-                <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                        <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clip-rule="evenodd" />
-                    </svg>
+                <div class="flex-1">
+                    <div class="flex justify-between">
+                        <div class="font-medium">
+                            {{ $review->user->name ?? 'Anonymous' }} |
+                            {{ $review->rating }} <span class="text-yellow-500">★</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1">{{ $review->comment }}</p>
                 </div>
             </div>
-            <div class="flex-1">
-                <div class="flex justify-between">
-                    <div class="font-medium">Jessica Huang | 2 <span class="text-yellow-500">★</span></div>
-                </div>
-                <p class="text-sm text-gray-400 mt-1">The session was well-organized, but ...</p>
-            </div>
-        </div>
-
-        <!-- Review Item 3 -->
-        <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-1">
-                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                        <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm3 10.5a.75.75 0 000-1.5H9a.75.75 0 000 1.5h6z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-            </div>
-            <div class="flex-1">
-                <div class="flex justify-between">
-                    <div class="font-medium">Nathanael Immanuel | 5 <span class="text-yellow-500">★</span></div>
-                </div>
-                <p class="text-sm text-gray-400 mt-1">The services here is amazing!</p>
-            </div>
-        </div>
+        @empty
+            <p class="text-gray-400 text-sm">No reviews yet.</p>
+        @endforelse
     </div>
 </div>

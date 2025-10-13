@@ -19,7 +19,80 @@
 @endpush
 
 @php
-$cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    use Illuminate\Support\Facades\File;
+
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+
+    /**
+     * Helper URL gambar untuk venue:
+     * Prioritas: FE (../demo-xanders/images/venue) -> CMS (public/images/venue) -> placeholder.
+     * Tidak menambah route. FE diakses via /fe-venue (symlink publik jika ada).
+     */
+    $venueImgUrl = function (?string $pathLike) {
+        $pathLike = $pathLike ? trim($pathLike) : '';
+        if ($pathLike === '') {
+            return asset('images/placeholder/venue.png');
+        }
+
+        // Jika sudah absolut (http/https) atau path publik lain (/storage, /images), langsung pakai
+        if (preg_match('~^https?://~i', $pathLike) || str_starts_with($pathLike, '/')) {
+            return $pathLike;
+        }
+
+        // Normalisasi ke nama file (abaikan subfolder jika ada)
+        $filename = basename($pathLike);
+
+        // 1) FE absolute check
+        $feAbs  = base_path('../demo-xanders/images/venue/' . $filename);
+        $feLink = public_path('fe-venue'); // symlink publik → ../demo-xanders/images/venue
+        if (File::exists($feAbs) && is_dir($feLink)) {
+            return asset('fe-venue/' . $filename);
+        }
+
+        // 2) CMS check
+        $cmsAbs = public_path('images/venue/' . $filename);
+        if (File::exists($cmsAbs)) {
+            return asset('images/venue/' . $filename);
+        }
+
+        // 3) Opsional: jika ada di public/storage/uploads (lama)
+        $storAbs = public_path('storage/uploads/' . $filename);
+        if (File::exists($storAbs)) {
+            return asset('storage/uploads/' . $filename);
+        }
+
+        // 4) Fallback
+        return asset('images/placeholder/venue.png');
+    };
+
+    // Kumpulkan daftar gambar untuk galeri
+    $rawImages = [];
+    if (!empty($detail->images)) {
+        $rawImages = is_array($detail->images)
+            ? $detail->images
+            : (is_string($detail->images) ? (json_decode($detail->images, true) ?? []) : []);
+    }
+    if (empty($rawImages) && !empty($detail->image)) {
+        $rawImages = [$detail->image];
+    }
+
+    $resolvedImages = collect($rawImages)
+        ->filter(fn($x) => !empty($x))
+        ->map(fn($x) => $venueImgUrl($x))
+        ->values()
+        ->all();
+
+    if (empty($resolvedImages)) {
+        $resolvedImages = [asset('images/placeholder/venue.png')];
+    }
+
+    $mainImage = $resolvedImages[0];
+    $thumbs = array_slice($resolvedImages, 1, 2);
+
+    // Jika thumb kurang dari 2, tambahkan placeholder agar layout stabil
+    while (count($thumbs) < 2) {
+        $thumbs[] = asset('images/placeholder/venue.png');
+    }
 @endphp
 
 @section('content')
@@ -46,25 +119,24 @@ $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             {{-- LEFT --}}
             <div class="md:col-span-2 space-y-6">
-                {{-- Gallery --}}
+                {{-- Gallery (FE -> CMS -> placeholder) --}}
                 <div class="grid grid-cols-3 gap-4">
-                    @php
-                        $mainImagePath = 'https://placehold.co/800x510?text=No+Image';
-                        if (!empty($detail->images) && is_array($detail->images) && !empty($detail->images[0])) {
-                            $img = $detail->images[0];
-                            if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://') && !str_starts_with($img, '/storage/')) {
-                                $mainImagePath = asset('storage/uploads/' . $img);
-                            } else { $mainImagePath = $img; }
-                        }
-                    @endphp
                     <div class="col-span-2">
-                        <img id="mainImage" src="{{ $mainImagePath }}" alt="{{ $detail->name }}" class="rounded-lg w-full h-[300px] object-cover" />
+                        <img id="mainImage"
+                             src="{{ $mainImage }}"
+                             alt="{{ $detail->name }}"
+                             class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
+                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
                     </div>
                     <div class="flex flex-col gap-4">
-                        <img src="https://placehold.co/400x250?text=Img+1" class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
-                             onclick="changeMainImage('https://placehold.co/800x500?text=Img+1')" />
-                        <img src="https://placehold.co/400x250?text=Img+2" class="rounded-lg w-full h-[250px] object-cover cursor-pointer"
-                             onclick="changeMainImage('https://placehold.co/800x500?text=Img+2')" />
+                        @foreach ($thumbs as $t)
+                            <img src="{{ $t }}"
+                                 alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
+                                 class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
+                                 loading="lazy"
+                                 onclick="changeMainImage('{{ $t }}')"
+                                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
+                        @endforeach
                     </div>
                 </div>
 
@@ -180,8 +252,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const tableList = document.getElementById("tableList");
     const form = document.getElementById("addToCartForm");
     const venueId = "{{ $detail->id }}";
-    let selectedSchedule = null; // keep selected schedule data
-    let selectedTableNumber = null; // keep selected table number
+    let selectedSchedule = null;
+    let selectedTableNumber = null;
 
     datePicker.addEventListener("change", function() {
         const selectedDate = this.value;
@@ -216,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function() {
                                 end: slot.end,
                                 price: sch.price
                             };
-                            document.getElementById("priceDisplay").innerText = "Rp " + sch.price;
+                            document.getElementById("priceDisplay").innerText = "Rp " + new Intl.NumberFormat("id-ID").format(sch.price);
                             renderTables(slot.tables);
                         });
 
@@ -246,13 +318,12 @@ document.addEventListener("DOMContentLoaded", function() {
             `;
             const radio = lbl.querySelector("input");
             radio.addEventListener("change", () => {
-                selectedTableNumber = tbl.name || 'Table ' + tbl.id;
+                selectedTableNumber = tbl.name || ('Table ' + tbl.id);
             });
             tableList.appendChild(lbl);
         });
     }
 
-    // Form submit handler with validation
     form.addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -272,31 +343,18 @@ document.addEventListener("DOMContentLoaded", function() {
         const table = document.querySelector('input[name="table_id"]:checked');
 
         if (!date) {
-            Swal.fire({
-                title: 'Oops!',
-                text: 'Silakan pilih tanggal terlebih dahulu.',
-                icon: 'warning'
-            });
+            Swal.fire({ title: 'Oops!', text: 'Silakan pilih tanggal terlebih dahulu.', icon: 'warning' });
             return;
         }
         if (!schedule) {
-            Swal.fire({
-                title: 'Oops!',
-                text: 'Silakan pilih jadwal terlebih dahulu.',
-                icon: 'warning'
-            });
+            Swal.fire({ title: 'Oops!', text: 'Silakan pilih jadwal terlebih dahulu.', icon: 'warning' });
             return;
         }
         if (!table) {
-            Swal.fire({
-                title: 'Oops!',
-                text: 'Silakan pilih meja terlebih dahulu.',
-                icon: 'warning'
-            });
+            Swal.fire({ title: 'Oops!', text: 'Silakan pilih meja terlebih dahulu.', icon: 'warning' });
             return;
         }
 
-        // Append schedule & price fields to FormData
         const fd = new FormData(this);
         fd.append('schedule[start]', selectedSchedule.start);
         fd.append('schedule[end]', selectedSchedule.end);
@@ -323,26 +381,15 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(data => {
                 Swal.close();
                 if (data.success) {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Venue berhasil ditambahkan ke keranjang.',
-                        icon: 'success'
-                    }).then(() => location.reload());
+                    Swal.fire({ title: 'Berhasil!', text: 'Venue berhasil ditambahkan ke keranjang.', icon: 'success' })
+                        .then(() => location.reload());
                 } else {
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: data.message || 'Terjadi kesalahan, coba lagi.',
-                        icon: 'error'
-                    });
+                    Swal.fire({ title: 'Gagal!', text: data.message || 'Terjadi kesalahan, coba lagi.', icon: 'error' });
                 }
             })
             .catch(() => {
                 Swal.close();
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan.',
-                    icon: 'error'
-                });
+                Swal.fire({ title: 'Error!', text: 'Terjadi kesalahan jaringan.', icon: 'error' });
             });
     });
 });
