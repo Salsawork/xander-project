@@ -24,7 +24,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ShippingController;
 
-
 // Event Admin
 use App\Http\Controllers\adminController\EventController as AdminEventController;
 use App\Http\Controllers\adminController\UserController;
@@ -53,6 +52,7 @@ use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
 use App\Http\Controllers\CartItemController;
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -125,13 +125,13 @@ Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketBy
     ->where('event', '[0-9]+')
     ->name('events.bracket');
 
-// Event Register (POST) — set role player
+// Event Register (POST)
 Route::post('/event/{event}/register', [EventController::class, 'register'])
     ->where('event', '[0-9]+')
     ->middleware('auth')
     ->name('events.register');
 
-// Event Buy Ticket (POST) — role user setelah beli, simpan ke order_events, kurangi stok event_tickets
+// Event Buy Ticket (POST)
 Route::post('/event/{event}/buy', [EventController::class, 'buyTicket'])
     ->where('event', '[0-9]+')
     ->middleware('auth')
@@ -173,6 +173,7 @@ Route::get('/guideline', [PublicGuidelinesController::class, 'index'])->name('gu
 Route::get('/guideline/category/{category}', [PublicGuidelinesController::class, 'category'])->name('guideline.category');
 Route::get('/guideline/{slug}', [PublicGuidelinesController::class, 'show'])->name('guideline.show');
 
+/** Public actions */
 Route::post('/subscribe', [SubscriberController::class, 'store'])->name('subscribe.store');
 Route::post('/opinion', [OpinionController::class, 'store'])->name('opinion.store');
 
@@ -198,6 +199,11 @@ Route::prefix('checkout')->group(function () {
     Route::get('/success', [OrderController::class, 'success'])->name('checkout.success');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard Orders (auth)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::get('/product', [DashboardOrderController::class, 'indexProduct'])->name('order.index.product');    
     Route::get('/booking', [DashboardOrderController::class, 'indexBooking'])->name('order.index.booking');
@@ -222,7 +228,7 @@ Route::middleware('auth')->group(function () {
     Route::redirect('dashboard', 'dashboard/overview');
     Route::get('dashboard/overview', [DashboardController::class, 'index'])->name('dashboard');
 
-    /** User: pages for sidebar **/
+    /** User pages for sidebar **/
     Route::get('dashboard/notification', fn() => view('dash.user.notification'))->name('notification.index');
     Route::get('dashboard/myorder', fn() => view('dash.user.myorder'))->name('myorder.index');
     Route::get('dashboard/sparring', fn() => view('dash.user.sparring'))->name('user.sparring.index');
@@ -310,7 +316,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
         Route::get('/transaction/{booking}', [TransactionController::class, 'show'])
             ->where(['booking' => '[0-9]+'])
-            ->name('venue.transaction.show'); // NEW: detail transaksi
+            ->name('venue.transaction.show'); // detail transaksi
     });
 
     /** Admin: Athletes */
@@ -323,6 +329,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
     });
 
+    /** Athlete area */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
         Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
@@ -333,34 +340,48 @@ Route::middleware('auth')->group(function () {
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
     });
 
+    /** Admin: Partner (static) */
     Route::prefix('dashboard/partner')->group(function () {
         Route::get('/', fn() => view('dash.admin.partner'))->name('partner.index');
     });
 
+    /** Admin: Subscriber & Opinion */
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
+    Route::get('/dashboard/subscriber/export', [SubscriberController::class, 'export'])->name('dash.admin.subscriber.export');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
+    Route::get('/dashboard/opinion/export', [OpinionController::class, 'export'])->name('dash.admin.opinion.export'); 
 
+    /** Admin: Users */
     Route::prefix('dashboard/admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{id}/verify', [UserController::class, 'verify'])->name('admin.users.verify');
+        Route::get('/users/export', [UserController::class, 'export'])->name('admin.users.export');
     });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Order detail (auth)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
-    // Detail order & booking
     Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
     Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
     Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
 });
 
-// RajaOngkir
+/* RajaOngkir */
 Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces'])->name('rajaongkir.provinces');
 Route::get('/shipping/cities', [ShippingController::class, 'getCities'])->name('rajaongkir.cities');
 Route::get('/shipping/districts', [ShippingController::class, 'getDistricts'])->name('rajaongkir.districts');
 Route::get('/shipping/subdistricts', [ShippingController::class, 'getSubDistricts'])->name('rajaongkir.subdistricts');
 Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('rajaongkir.cost');
 
-// Admin Event (dashboard)
+/*
+|--------------------------------------------------------------------------
+| Admin Event (dashboard)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
     Route::get('/', [AdminEventController::class, 'index'])->name('index');
     Route::get('/create', [AdminEventController::class, 'create'])->name('create');
@@ -370,14 +391,17 @@ Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->gr
     Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
     Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
     Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
-
 });
 
-
+/*
+|--------------------------------------------------------------------------
+| Event Bracket protected actions
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
     Route::post('/event/{event}/bracket/update-winner', [EventController::class, 'updateBracketWinner'])
         ->name('events.bracket.update-winner');
-    
+
     Route::post('/event/{event}/bracket/sync', [EventController::class, 'syncBracketsWithFights'])
         ->name('events.bracket.sync');
 });
