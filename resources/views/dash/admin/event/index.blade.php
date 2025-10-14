@@ -44,18 +44,6 @@
                     Daftar Event
                 </h1>
 
-                @if (session('success'))
-                    <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if (session('error'))
-                    <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                     <input
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
@@ -70,15 +58,16 @@
                             Export Excel
                         </a>
                          
-                        <a href="{{ route('admin.event.create') }}"
+                        <button type="button"
+                           onclick="confirmAddEvent('{{ route('admin.event.create') }}')"
                            class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
                             <i class="fas fa-plus"></i>
                             Tambah Event
-                        </a>
+                        </button>
                     </div>
                 </div>                
 
-                <!-- Desktop & Tablet Table View -->
+                <!-- Desktop Table -->
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
                         <thead class="bg-[#2c2c2c] text-gray-300">
@@ -94,20 +83,20 @@
                         </thead>
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
-                                @php
-                                    $imgPath = null;
-                                    if (!empty($event->image_url)) {
-                                        $candidates = [
-                                            $event->image_url,                          // e.g. events/abc.jpg
-                                            'storage/'.$event->image_url,               // if symlink used
-                                        ];
-                                        foreach ($candidates as $rel) {
-                                            if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
-                                        }
-                                    }
-                                @endphp
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
+                                        @php
+                                            $imgPath = null;
+                                            if (!empty($event->image_url)) {
+                                                $candidates = [
+                                                    $event->image_url,
+                                                    'storage/'.$event->image_url,
+                                                ];
+                                                foreach ($candidates as $rel) {
+                                                    if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
+                                                }
+                                            }
+                                        @endphp
                                         @if ($imgPath)
                                             <img src="{{ $imgPath }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
                                         @else
@@ -127,21 +116,15 @@
                                     <td class="px-4 py-3 text-gray-300">{{ $event->status }}</td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex gap-3 text-gray-400 justify-end">
-                                            <a href="{{ route('admin.event.edit', $event->id) }}"
-                                               class="hover:text-gray-200" title="Edit">
+                                            <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
+                                                    class="hover:text-gray-200" title="Edit">
                                                 <i class="fas fa-pen"></i>
-                                            </a>
+                                            </button>
 
-                        <!-- Delete form per-row agar URL pasti match route -->
-                        <form action="{{ route('admin.event.destroy', $event->id) }}"
-                              method="POST" class="inline-block"
-                              onsubmit="return confirm('Hapus event: {{ $event->name }} ?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="hover:text-gray-200" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                                            <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
+                                                    class="hover:text-gray-200" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -159,28 +142,10 @@
                 <!-- Mobile Card View -->
                 <div class="sm:hidden space-y-4">
                     @forelse ($events as $event)
-                        @php
-                            $imgPath = null;
-                            if (!empty($event->image_url)) {
-                                $candidates = [
-                                    $event->image_url,
-                                    'storage/'.$event->image_url,
-                                ];
-                                foreach ($candidates as $rel) {
-                                    if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
-                                }
-                            }
-                        @endphp
                         <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
-                                @if ($imgPath)
-                                    <img src="{{ $imgPath }}"
-                                         alt="{{ $event->name }}" class="h-16 w-16 rounded object-cover shrink-0">
-                                @else
-                                    <div class="h-16 w-16 rounded bg-gray-700 flex items-center justify-center shrink-0">
-                                        <span class="text-xs text-gray-300">No Img</span>
-                                    </div>
-                                @endif
+                                <img src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/80' }}"
+                                     class="h-16 w-16 rounded object-cover shrink-0" alt="">
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold text-base mb-1">{{ $event->name }}</h3>
                                     <p class="text-xs text-gray-400">
@@ -189,36 +154,18 @@
                                 </div>
                             </div>
 
-                            <div class="space-y-2 text-sm mb-4">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Lokasi:</span>
-                                    <span class="text-xs text-right">{{ $event->location ?? '-' }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Harga Tiket:</span>
-                                    <span class="text-xs font-medium">
-                                        Rp {{ number_format($event->price_ticket ?? 0, 0, ',', '.') }}
-                                    </span>
-                                </div>
-                            </div>
-
                             <div class="flex gap-2 pt-3 border-t border-gray-700">
-                                <a href="{{ route('admin.event.edit', $event->id) }}" 
-                                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
+                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-pen text-xs"></i>
                                     Edit
-                                </a>
+                                </button>
 
-                                <form action="{{ route('admin.event.destroy', $event->id) }}" method="POST" class="flex-1"
-                                      onsubmit="return confirm('Hapus event: {{ $event->name }} ?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
-                                        <i class="fas fa-trash text-xs"></i>
-                                        Delete
-                                    </button>
-                                </form>
+                                <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
+                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                    <i class="fas fa-trash text-xs"></i>
+                                    Delete
+                                </button>
                             </div>
                         </div>
                     @empty
@@ -231,4 +178,95 @@
         </main>
     </div>
 </div>
+
+{{-- SweetAlert Script --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // 🔹 Konfirmasi Tambah Event
+    function confirmAddEvent(url) {
+        Swal.fire({
+            title: 'Tambah Event?',
+            text: "Kamu akan diarahkan ke halaman tambah event.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, lanjut!',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#1e90ff',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url;
+            }
+        });
+    }
+
+    // 🔹 Konfirmasi Edit Event
+    function confirmEditEvent(url) {
+        Swal.fire({
+            title: 'Edit Event?',
+            text: "Kamu akan membuka halaman edit event ini.",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, lanjut!',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#1e90ff',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url;
+            }
+        });
+    }
+
+    // 🔹 Konfirmasi Delete Event
+    function confirmDeleteEvent(url, name) {
+        Swal.fire({
+            title: 'Hapus Event?',
+            text: `Apakah kamu yakin ingin menghapus event "${name}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#d33',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_token';
+                csrf.value = '{{ csrf_token() }}';
+                form.appendChild(csrf);
+
+                const method = document.createElement('input');
+                method.type = 'hidden';
+                method.name = '_method';
+                method.value = 'DELETE';
+                form.appendChild(method);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    // 🔹 Notifikasi dari session
+    @if (session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: "{{ session('success') }}",
+            confirmButtonColor: '#1e90ff',
+        });
+    @endif
+
+    @if (session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: "{{ session('error') }}",
+            confirmButtonColor: '#d33',
+        });
+    @endif
+</script>
 @endsection

@@ -62,11 +62,8 @@
 
                             {{-- Export Excel: ikut ?search jika ada --}}
                             <a href="{{ route('dash.admin.opinion.export', request()->only('search')) }}"
-                               class="btn btn-primary">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 3a1 1 0 011 1v9.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L11 13.586V4a1 1 0 011-1z"/>
-                                    <path d="M5 18a1 1 0 011-1h12a1 1 0 110 2H6a1 1 0 01-1-1z"/>
-                                </svg>
+                                class="flex items-center justify-center gap-1 border border-green-500 text-green-500 rounded px-3 py-2 text-xs sm:text-sm hover:bg-green-500 hover:text-white transition whitespace-nowrap">
+                                <i class="fas fa-file-excel"></i>
                                 Export Excel
                             </a>
                         </div>

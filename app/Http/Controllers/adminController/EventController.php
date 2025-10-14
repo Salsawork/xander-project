@@ -205,19 +205,23 @@ class EventController extends Controller
      */
     public function destroy($id)
     {
-        $event = Event::findOrFail($id);
-
+        $event = Event::withCount('tickets')->findOrFail($id);
+    
+        if ($event->tickets_count > 0) {
+            return back()->with('error', 'Tidak bisa menghapus event karena masih memiliki tiket.');
+        }
+    
         if ($event->image_url && File::exists(public_path($event->image_url))) {
             File::delete(public_path($event->image_url));
         }
-
+    
         $event->delete();
-
+    
         return redirect()
             ->route('admin.event.index')
             ->with('success', 'Event berhasil dihapus.');
     }
-
+    
     /**
      * Hapus semua karakter non-digit dari field uang supaya selalu numerik.
      * Aman untuk input "1.000.000", "1,000,000", "Rp 1.000.000", dll.
