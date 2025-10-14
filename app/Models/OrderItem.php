@@ -15,6 +15,7 @@ class OrderItem extends Model
         'discount',
         'tax',
         'shipping',
+        'courier',
         'address',
         'province',
         'city',

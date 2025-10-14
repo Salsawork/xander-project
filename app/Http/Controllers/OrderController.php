@@ -378,7 +378,6 @@ class OrderController extends Controller
                 $total += $venueTotal;
             }
 
-
             /** =========================
              *  Tambahkan Sparring
              *  ========================= */
@@ -390,12 +389,22 @@ class OrderController extends Controller
                     ->whereIn('item_id', $checkedIds)
                     ->delete();
 
+                // Cek apakah jadwal sparring masih tersedia
+                $schedules = SparringSchedule::whereIn('id', $checkedIds)->get();
+                foreach ($schedules as $schedule) {
+                    if ($schedule->is_booked) {
+                        throw new \Exception('Jadwal sparring tidak tersedia atau sudah dipesan.');
+                    }
+                }
+
                 foreach ($request->sparrings as $sparring) {
                     $order->orderSparrings()->create([
                         'athlete_id'  => $sparring['athlete_id'],
                         'schedule_id' => $sparring['schedule_id'],
                         'price'       => $sparring['price'],
                     ]);
+
+                    SparringSchedule::where('id', $sparring['schedule_id'])->update(['is_booked' => true]);
 
                     $total += $sparring['price'];
 
@@ -612,45 +621,29 @@ class OrderController extends Controller
      */
     public function showDetailOrder(Order $order)
     {
-        if ($order->items()->exists()) {
-            $items = $order->items()->with('product')->get();
-            $products = $items->pluck('product')->unique();
+        switch ($order->order_type) {
+            case 'product':
+                $order->load('products.category');
+                $user = User::find($order->user_id);
+                return view('public.order.item', compact('order', 'user'));
 
-            $hasBooking = $order->bookings()->exists();
-            $hasSparring = $order->orderSparrings()->exists();
-            return view('public.order.item', compact('order', 'items', 'products', 'hasBooking', 'hasSparring'));
-        }
+            case 'venue':
+                $order->load(['bookings.venue', 'bookings.table']);
+                $bookings = $order->bookings;
+                $user = User::find($order->user_id);
+                return view('public.order.booking', compact('order', 'bookings', 'user'));
 
-        if ($order->orderSparrings()->exists()) {
-            $sparrings = $order->orderSparrings()->get();
-            return view('public.order.sparring', compact('order', 'sparrings'));
-        }
+            case 'sparring':
+                $order->load('orderSparrings');
+                $sparrings = $order->orderSparrings;
+                $user = User::find($order->user_id);
+                return view('public.order.sparring', compact('order', 'sparrings', 'user'));
 
-        if ($order->bookings()->exists()) {
-            $bookings = $order->bookings()->with(['venue', 'table'])->get();
-            $venues = $bookings->pluck('venue')->unique();
-            $tables = $bookings->pluck('table')->unique();
-            return view('public.order.booking', compact('order', 'bookings', 'venues', 'tables'));
-        }
-    }
-
-    public function showDetailBooking(Order $order)
-    {
-        if ($order->bookings()->exists()) {
-            $bookings = $order->bookings()->with(['venue', 'table'])->get();
-            $venues = $bookings->pluck('venue')->unique();
-            $tables = $bookings->pluck('table')->unique();
-            return view('public.order.booking', compact('order', 'bookings', 'venues', 'tables'));
+            default:
+                return redirect()->back()->with('error', 'Jenis order tidak dikenal.');
         }
     }
 
-    public function showDetailSparring(Order $order)
-    {
-        if ($order->orderSparrings()->exists()) {
-            $sparrings = $order->orderSparrings()->get();
-            return view('public.order.sparring', compact('order', 'sparrings'));
-        }
-    }
 
     /**
      * Show the form for editing the specified resource.

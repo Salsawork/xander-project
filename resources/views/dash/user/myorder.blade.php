@@ -163,32 +163,34 @@
 
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->products as $product)
-                            <li class="flex items-center py-3 space-x-4">
-                                @php
-                                $images = $product->pivot->images ? (is_array($product->pivot->images) ? $product->pivot->images : json_decode($product->pivot->images, true)) : [];
-                                $firstImage = !empty($images) ? $images[0] : null;
-                                $idx = ($loop->index % 5) + 1;
-                                $defaultImg = asset("images/products/{$idx}.png");
-                                @endphp
-                                <img
-                                    src="{{ $firstImage ? asset('storage/uploads/' . ltrim($firstImage, '/')) : $defaultImg }}"
-                                    alt="{{ $product->name }}"
-                                    class="w-[60px] h-[90px] rounded-md object-cover bg-gray-700"
-                                    onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
+                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                                <li class="flex items-center py-3 space-x-4">
+                                    @php
+                                    $images = $product->pivot->images ? (is_array($product->pivot->images) ? $product->pivot->images : json_decode($product->pivot->images, true)) : [];
+                                    $firstImage = !empty($images) ? $images[0] : null;
+                                    $idx = ($loop->index % 5) + 1;
+                                    $defaultImg = asset("images/products/{$idx}.png");
+                                    @endphp
+                                    <img
+                                        src="{{ $firstImage ? asset('storage/uploads/' . ltrim($firstImage, '/')) : $defaultImg }}"
+                                        alt="{{ $product->name }}"
+                                        class="w-[60px] h-[90px] rounded-md object-cover bg-gray-700"
+                                        onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
 
-                                <div class="flex-1">
-                                    <p class="font-bold text-white text-sm leading-tight">
-                                        {{ $product->name }}
-                                    </p>
-                                    <p class="text-gray-300 text-xs mt-1">
-                                        {{ $product->pivot->quantity }}x
-                                    </p>
-                                </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold text-white text-sm leading-tight">
+                                            {{ $product->name }}
+                                        </p>
+                                        <p class="text-gray-300 text-xs mt-1">
+                                            {{ $product->pivot->quantity }}x
+                                        </p>
+                                    </div>
 
-                                <p class="text-gray-300 text-sm whitespace-nowrap">
-                                    Rp. {{ number_format($product->pivot->price, 0, ',', '.') }}
-                                </p>
-                            </li>
+                                    <p class="text-gray-300 text-sm whitespace-nowrap">
+                                        Rp. {{ number_format($product->pivot->price, 0, ',', '.') }}
+                                    </p>
+                                </li>
+                            </a>
                             @endforeach
                         </ul>
 

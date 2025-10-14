@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 /**
  * Controllers
  */
+
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -53,7 +54,7 @@ use App\Http\Controllers\adminController\TournamentController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
 use App\Http\Controllers\CartItemController;
-
+use App\Http\Controllers\InvoiceController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -198,6 +199,9 @@ Route::prefix('checkout')->group(function () {
     Route::put('/payment/{order}', [OrderController::class, 'updatePayment'])->name('checkout.updatePayment');
     Route::get('/finish', [OrderController::class, 'finish'])->name('checkout.finish');
     Route::get('/success', [OrderController::class, 'success'])->name('checkout.success');
+    Route::get('/invoice/product/{orderId}', [InvoiceController::class, 'productInvoice'])->name('invoice.product');
+    Route::get('/invoice/booking/{orderId}', [InvoiceController::class, 'bookingInvoice'])->name('invoice.booking');
+    Route::get('/invoice/sparring/{orderId}', [InvoiceController::class, 'sparringInvoice'])->name('invoice.sparring');
 });
 
 /*
@@ -206,7 +210,7 @@ Route::prefix('checkout')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->prefix('dashboard/order')->group(function () {
-    Route::get('/product', [DashboardOrderController::class, 'indexProduct'])->name('order.index.product');    
+    Route::get('/product', [DashboardOrderController::class, 'indexProduct'])->name('order.index.product');
     Route::get('/booking', [DashboardOrderController::class, 'indexBooking'])->name('order.index.booking');
     Route::get('/sparring', [DashboardOrderController::class, 'indexSparring'])->name('order.index.sparring');
     Route::get('/detail/{order?}', [DashboardOrderController::class, 'detail'])->name('order.detail.index');
@@ -337,7 +341,6 @@ Route::middleware('auth')->group(function () {
     /** Athlete area */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-        Route::get('/dashboard/athlete/export', [AthleteDashboardController::class, 'export'])->name('athlete.export');
         Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
@@ -372,8 +375,6 @@ Route::middleware('auth')->group(function () {
 */
 Route::middleware('auth')->group(function () {
     Route::get('/order/{order}', [OrderController::class, 'showDetailOrder'])->name('order.detail');
-    Route::get('/order/booking/{order}', [OrderController::class, 'showDetailBooking'])->name('order.booking');
-    Route::get('/order/sparring/{order}', [OrderController::class, 'showDetailSparring'])->name('order.sparring');
 });
 
 /* RajaOngkir */

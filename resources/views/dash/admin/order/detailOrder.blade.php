@@ -4,28 +4,40 @@
 @push('styles')
 <style>
     /* ====== Anti overscroll / white bounce ====== */
-    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
-    html, body{
-        height:100%;
-        min-height:100%;
-        background:var(--page-bg);
-        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+    :root {
+        color-scheme: dark;
+        --page-bg: #0a0a0a;
+    }
+
+    html,
+    body {
+        height: 100%;
+        min-height: 100%;
+        background: var(--page-bg);
+        overscroll-behavior-y: none;
+        /* cegah rubber-band ke body */
         overscroll-behavior-x: none;
         touch-action: pan-y;
-        -webkit-text-size-adjust:100%;
+        -webkit-text-size-adjust: 100%;
     }
+
     /* Kanvas gelap tetap di belakang konten */
-    #antiBounceBg{
+    #antiBounceBg {
         position: fixed;
-        left:0; right:0;
-        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
-        background:var(--page-bg);
-        z-index:-1;
-        pointer-events:none;
+        left: 0;
+        right: 0;
+        top: -120svh;
+        bottom: -120svh;
+        /* svh stabil di mobile */
+        background: var(--page-bg);
+        z-index: -1;
+        pointer-events: none;
     }
+
     /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
-    .scroll-safe{
-        background-color:#171717;      /* senada dengan bg-neutral-900 */
+    .scroll-safe {
+        background-color: #171717;
+        /* senada dengan bg-neutral-900 */
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
     }
@@ -112,7 +124,6 @@
                         </thead>
                         <tbody class="text-sm font-normal">
                             @forelse($order->products as $product)
-                            <tr class="border-b border-gray-700">
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
                                         @php
@@ -191,14 +202,14 @@
                         </tbody>
                         <tfoot class="bg-[#1e1e1e] font-medium">
                             @php
-                                $subtotal = 0;
-                                $shipping = 0;
-                                $tax = 0;
-                                if ($order->products->isNotEmpty()) {
-                                    $subtotal = $order->products->sum('pivot.subtotal');
-                                    $shipping = $order->products->first()->pivot->shipping ?? 0;
-                                    $tax = $order->products->first()->pivot->tax ?? 0;
-                                }
+                            $subtotal = 0;
+                            $shipping = 0;
+                            $tax = 0;
+                            if ($order->products->isNotEmpty()) {
+                            $subtotal = $order->products->sum('pivot.subtotal');
+                            $shipping = $order->products->first()->pivot->shipping ?? 0;
+                            $tax = $order->products->first()->pivot->tax ?? 0;
+                            }
                             @endphp
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Subtotal:</td>
