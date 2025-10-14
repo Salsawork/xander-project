@@ -1,31 +1,39 @@
-/.phpunit.cache
-/node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/vendor
-/public/events
+# Laravel defaults
 /vendor/
+node_modules/
+public/storage/
+storage/*.key
+storage/pail/
 .env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
+.env.*
 Homestead.json
 Homestead.yaml
+.phpunit.result.cache
+.phpunit.cache
+.phpactor.json
+
+# Frontend build & cache
+/public/build/
+public/hot
 npm-debug.log
 yarn-error.log
-/auth.json
-/.fleet
-/.idea
-/.nova
-/.vscode
-/.zed
+
+# Upload directories
+/public/events/
 *.zip
 *.tar.gz
 *.tar.bz2
+
+# IDE and editor folders
+/.idea/
+/.vscode/
+/fleet/
+/nova/
+/zed/
+
+# System and OS files
 *.DS_Store
 *.sql
-/node_modules
+
+# Composer cache
+composer.lock.bak
