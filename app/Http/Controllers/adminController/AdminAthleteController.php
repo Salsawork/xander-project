@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AthleteExport;
+
 
 class AdminAthleteController extends Controller
 {
@@ -227,5 +231,13 @@ class AdminAthleteController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    public function export(Request $request)
+    {
+        $filename = 'athletes_' . now()->format('Ymd_His') . '.xlsx';
+        $search = $request->get('search');
+
+        return Excel::download(new AthleteExport($search), $filename);
     }
 }

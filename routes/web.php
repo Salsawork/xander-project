@@ -336,6 +336,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{athlete}/edit', [AdminAthleteController::class, 'edit'])->name('athlete.edit');
         Route::put('/{athlete}', [AdminAthleteController::class, 'update'])->name('athlete.update');
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
+        Route::get('/export', [AdminAthleteController::class, 'export'])->name('athlete.export');
     });
 
     /** Athlete area */
