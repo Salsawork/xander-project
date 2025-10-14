@@ -163,7 +163,7 @@
 
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->products as $product)
-                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                            <a href="{{ $order->payment_status === 'pending' ? route('checkout.payment', ['order_number' => $order->order_number]) : route('order.detail', ['order' => $order->id]) }}">
                                 <li class="flex items-center py-3 space-x-4">
                                     @php
                                     $images = $product->pivot->images ? (is_array($product->pivot->images) ? $product->pivot->images : json_decode($product->pivot->images, true)) : [];
