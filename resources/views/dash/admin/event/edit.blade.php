@@ -1,11 +1,44 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Edit Event')
 
+@push('styles')
+<style>
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>
+@endpush
+
 @section('content')
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
                 @include('partials.topbar')
 
                 <div class="mt-20 sm:mt-0 px-4 sm:px-8">
@@ -14,7 +47,7 @@
                     </h1>
 
                     <form method="POST" action="{{ route('admin.event.update', $event) }}" enctype="multipart/form-data"
-                        class="flex flex-col lg:flex-row lg:space-x-8">
+                        class="flex flex-col lg:flex-row lg:space-x-8" id="eventEditForm">
                         @csrf
                         @method('PUT')
 
@@ -48,6 +81,7 @@
                                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+
                                 {{-- Price Ticket --}}
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1" for="price_ticket">
@@ -126,17 +160,54 @@
                                     </div>
                                 </div>
 
-                                {{-- Total Prize --}}
+                                {{-- Total Prize (Rupiah Format) --}}
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1" for="total_prize_money">
                                         Total Hadiah (Rp)
                                     </label>
                                     <input name="total_prize_money" value="{{ old('total_prize_money', $event->total_prize_money) }}"
-                                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white"
-                                        id="total_prize_money" type="number" step="0.01" />
+                                        class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white"
+                                        id="total_prize_money" type="text" inputmode="numeric" autocomplete="off" />
                                     @error('total_prize_money')
                                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
+                                </div>
+
+                                {{-- Prize Breakdown (Rupiah Format) --}}
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1" for="champion_prize">
+                                            Juara 1 (Rp)
+                                        </label>
+                                        <input name="champion_prize" value="{{ old('champion_prize', $event->champion_prize) }}"
+                                            class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white"
+                                            id="champion_prize" type="text" inputmode="numeric" autocomplete="off" />
+                                        @error('champion_prize')
+                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1" for="runner_up_prize">
+                                            Juara 2 (Rp)
+                                        </label>
+                                        <input name="runner_up_prize" value="{{ old('runner_up_prize', $event->runner_up_prize) }}"
+                                            class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white"
+                                            id="runner_up_prize" type="text" inputmode="numeric" autocomplete="off" />
+                                        @error('runner_up_prize')
+                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-xs text-gray-400 mb-1" for="third_place_prize">
+                                            Juara 3 (Rp)
+                                        </label>
+                                        <input name="third_place_prize" value="{{ old('third_place_prize', $event->third_place_prize) }}"
+                                            class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white"
+                                            id="third_place_prize" type="text" inputmode="numeric" autocomplete="off" />
+                                        @error('third_place_prize')
+                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
                                 </div>
 
                                 {{-- Upload Gambar --}}
@@ -184,7 +255,16 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // ===== Number format (Rupiah) untuk Total Hadiah & Juara 1/2/3 =====
+    const nfID = new Intl.NumberFormat('id-ID');
+    function onlyDigits(v){ return (v||'').toString().replace(/[^\d]/g,''); }
+    function formatRupiahInput(el){
+        const raw = onlyDigits(el.value);
+        el.value = raw ? nfID.format(parseInt(raw,10)) : '';
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // SweetAlert success
         @if(session('success'))
             Swal.fire({
                 icon: 'success',
@@ -196,6 +276,26 @@
                 color: '#fff'
             });
         @endif
+
+        // Terapkan format rupiah ke field hadiah
+        const rupiahFields = [
+            'total_prize_money',
+            'champion_prize',
+            'runner_up_prize',
+            'third_place_prize'
+        ].map(id => document.getElementById(id)).filter(Boolean);
+
+        rupiahFields.forEach(el => {
+            if(el.value) formatRupiahInput(el);     // inisialisasi
+            el.addEventListener('input', () => formatRupiahInput(el));
+            el.addEventListener('blur',  () => formatRupiahInput(el));
+        });
+
+        // Bersihkan titik sebelum submit agar backend menerima angka murni
+        const form = document.getElementById('eventEditForm');
+        form.addEventListener('submit', () => {
+            rupiahFields.forEach(el => { el.value = onlyDigits(el.value); });
+        });
     });
 </script>
 @endpush

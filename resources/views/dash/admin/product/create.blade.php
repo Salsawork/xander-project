@@ -1,11 +1,54 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Products List')
 
+@push('styles')
+<style>
+  /* ===== Global anti white-flash / rubber-band ===== */
+  :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+  html, body{
+    height:100%;
+    min-height:100%;
+    background:var(--page-bg);
+    overscroll-behavior-y: none;   /* cegah chaining ke body */
+    overscroll-behavior-x: none;
+    touch-action: pan-y;           /* iOS Safari: tetap bisa scroll vertikal */
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Kanvas gelap “di belakang segalanya” saat bounce */
+  #antiBounceBg{
+    position: fixed;
+    left:0; right:0;
+    top:-120svh;                   /* svh stabil di mobile */
+    bottom:-120svh;
+    background:var(--page-bg);
+    z-index:-1;
+    pointer-events:none;
+  }
+  /* Pastikan wrapper gelap */
+  #app, main{ background:var(--page-bg); }
+
+  /* Container scroll utama aman dari bounce tembus body */
+  .scroll-safe{
+    background-color:#171717;      /* match bg-neutral-900 */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Styling form/panel (tetap sama) */
+  .panel{ background:#262626; }
+</style>
+@endpush
+
 @section('content')
+<!-- Layer gelap anti-bounce -->
+<div id="antiBounceBg" aria-hidden="true"></div>
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-8">
+
+        <!-- Tambahkan .scroll-safe di sini -->
+        <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-8 scroll-safe">
             @include('partials.topbar')
 
             <h1 class="text-3xl font-extrabold my-8 px-4 sm:px-8">
@@ -18,7 +61,7 @@
 
                 <!-- General Information -->
                 <section aria-labelledby="general-info-title"
-                    class="bg-[#262626] rounded-lg p-6 sm:p-8 flex-1 w-full space-y-8">
+                    class="panel rounded-lg p-6 sm:p-8 flex-1 w-full space-y-8">
                     <h2 class="text-lg font-bold border-b border-gray-600 pb-2" id="general-info-title">
                         General Information
                     </h2>
@@ -116,7 +159,7 @@
                 <!-- Right Panel -->
                 <section class="flex flex-col space-y-8 w-full max-w-lg">
                     <!-- Product Image -->
-                    <div class="bg-[#262626] rounded-lg p-6 space-y-4">
+                    <div class="panel rounded-lg p-6 space-y-4">
                         <h2 class="text-lg font-bold border-b border-gray-600 pb-2">Product Image</h2>
                         <div class="flex flex-wrap gap-4">
                             <input type="hidden" name="images[]" id="input-image-1" />
@@ -156,7 +199,7 @@
                     </div>
 
                     <!-- Shipping & Delivery -->
-                    <div class="bg-[#262626] rounded-lg p-6 space-y-4">
+                    <div class="panel rounded-lg p-6 space-y-4">
                         <h2 class="text-lg font-bold border-b border-gray-600 pb-2">Shipping and Delivery</h2>
                         <div class="space-y-4">
                             <div>
@@ -187,13 +230,14 @@
                     </div>
 
                     <!-- Pricing -->
-                    <div class="bg-[#262626] rounded-lg p-6 space-y-4">
+                    <div class="panel rounded-lg p-6 space-y-4">
                         <h2 class="text-lg font-bold border-b border-gray-600 pb-2">Pricing</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1" for="price">Price (IDR)</label>
                                 <input name="pricing" id="price" type="text" placeholder="0"
-                                    class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                       inputmode="numeric" autocomplete="off"
+                                       class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1" for="discount">Discount (%)</label>
@@ -219,4 +263,37 @@
         </main>
     </div>
 </div>
+
+{{-- ===== Price (IDR) number format ===== --}}
+<script>
+  (function(){
+    const el = document.getElementById('price');
+    if(!el) return;
+
+    const nf = new Intl.NumberFormat('id-ID'); // 1.234.567
+    const digits = (v) => (v || '').replace(/\D+/g, '');
+    const fmt    = (raw) => raw ? nf.format(Number(raw)) : '';
+
+    const raw0 = digits(el.value);
+    el.value = fmt(raw0);
+    el.dataset.raw = raw0;
+
+    el.addEventListener('input', () => {
+      const raw = digits(el.value);
+      el.dataset.raw = raw;
+      el.value = fmt(raw);
+      el.setSelectionRange(el.value.length, el.value.length); // caret ke akhir
+    });
+
+    el.addEventListener('blur', () => {
+      const raw = digits(el.value);
+      el.dataset.raw = raw;
+      el.value = fmt(raw);
+    });
+
+    el.form?.addEventListener('submit', () => {
+      el.value = el.dataset.raw ? el.dataset.raw : '';
+    });
+  })();
+</script>
 @endsection

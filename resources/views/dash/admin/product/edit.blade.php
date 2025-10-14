@@ -1,11 +1,49 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Edit Product')
 
+@push('styles')
+<style>
+  /* ===== Global anti white-flash / rubber-band ===== */
+  :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+  html, body{
+    height:100%;
+    min-height:100%;
+    background:var(--page-bg);
+    overscroll-behavior-y: none;   /* cegah chaining ke body */
+    overscroll-behavior-x: none;
+    touch-action: pan-y;           /* iOS Safari: tetap bisa scroll vertikal */
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Kanvas gelap “di belakang segalanya” saat bounce */
+  #antiBounceBg{
+    position: fixed;
+    left:0; right:0;
+    top:-120svh;                   /* svh stabil di mobile */
+    bottom:-120svh;
+    background:var(--page-bg);
+    z-index:-1;
+    pointer-events:none;
+  }
+  /* Pastikan wrapper gelap */
+  #app, main{ background:var(--page-bg); }
+
+  /* Hindari "putih-putih" saat overscroll di area konten */
+  .scroll-safe{
+    background-color:#171717; /* seirama dengan bg-neutral-900 */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+</style>
+@endpush
+
 @section('content')
+<!-- Layer gelap anti-bounce -->
+<div id="antiBounceBg" aria-hidden="true"></div>
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-6 sm:py-8">
+        <main class="flex-1 overflow-y-auto min-w-0 mb-8 py-6 sm:py-8 scroll-safe">
             @include('partials.topbar')
 
             <!-- Header -->
@@ -193,8 +231,10 @@
                             </h2>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Harga (IDR)</label>
-                                    <input name="pricing" type="number" value="{{ $product->pricing }}"
+                                    <label class="block text-xs text-gray-400 mb-1" for="price">Harga (IDR)</label>
+                                    {{-- Ganti ke text + formatting IDR --}}
+                                    <input name="pricing" id="price" type="text" inputmode="numeric" autocomplete="off"
+                                           value="{{ $product->pricing }}"
                                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                                 </div>
                                 <div>
@@ -222,4 +262,42 @@
         </main>
     </div>
 </div>
+
+{{-- ===== Harga (IDR) number format ===== --}}
+<script>
+  (function(){
+    const el = document.getElementById('price');
+    if(!el) return;
+
+    const nf = new Intl.NumberFormat('id-ID');       // 1.234.567
+    const digits = (v) => (v || '').replace(/\D+/g, '');
+    const fmt    = (raw) => raw ? nf.format(Number(raw)) : '';
+
+    // Format nilai awal (misal dari server)
+    const raw0 = digits(el.value);
+    el.value = fmt(raw0);
+    el.dataset.raw = raw0;
+
+    // Saat user mengetik/paste
+    el.addEventListener('input', () => {
+      const raw = digits(el.value);
+      el.dataset.raw = raw;
+      el.value = fmt(raw);
+      // caret ke akhir agar stabil
+      try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){}
+    });
+
+    // Rapikan saat blur
+    el.addEventListener('blur', () => {
+      const raw = digits(el.value);
+      el.dataset.raw = raw;
+      el.value = fmt(raw);
+    });
+
+    // Kirim angka murni saat submit
+    el.form?.addEventListener('submit', () => {
+      el.value = el.dataset.raw ? el.dataset.raw : '';
+    });
+  })();
+</script>
 @endsection

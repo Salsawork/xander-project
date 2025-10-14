@@ -1,11 +1,44 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Tambah Event')
 
+@push('styles')
+<style>
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>
+@endpush
+
 @section('content')
+<div id="antiBounceBg" aria-hidden="true"></div>
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+        <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
             @include('partials.topbar')
 
             <div class="mt-20 sm:mt-0 px-4 sm:px-8">
@@ -14,7 +47,7 @@
                 </h1>
 
                 <form method="POST" action="{{ route('admin.event.store') }}" enctype="multipart/form-data"
-                    class="bg-[#262626] rounded-lg p-6 sm:p-8 space-y-6">
+                    class="bg-[#262626] rounded-lg p-6 sm:p-8 space-y-6" id="eventForm">
                     @csrf
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -96,29 +129,32 @@
                         <div>
                             <label class="block text-xs text-gray-400 mb-1" for="total_prize_money">Total Hadiah (Rp)</label>
                             <input name="total_prize_money" value="{{ old('total_prize_money') }}" id="total_prize_money"
-                                type="number" step="0.01"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                type="text"
+                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                inputmode="numeric" autocomplete="off">
                             @error('total_prize_money') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1" for="champion_prize">Juara 1 (Rp)</label>
-                            <input name="champion_prize" value="{{ old('champion_prize') }}" id="champion_prize" type="number"
-                                step="0.01"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <input name="champion_prize" value="{{ old('champion_prize') }}" id="champion_prize" type="text"
+                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                inputmode="numeric" autocomplete="off">
                             @error('champion_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1" for="runner_up_prize">Juara 2 (Rp)</label>
                             <input name="runner_up_prize" value="{{ old('runner_up_prize') }}" id="runner_up_prize"
-                                type="number" step="0.01"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                type="text"
+                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                inputmode="numeric" autocomplete="off">
                             @error('runner_up_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1" for="third_place_prize">Juara 3 (Rp)</label>
                             <input name="third_place_prize" value="{{ old('third_place_prize') }}" id="third_place_prize"
-                                type="number" step="0.01"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                type="text"
+                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                inputmode="numeric" autocomplete="off">
                             @error('third_place_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
@@ -180,3 +216,41 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // ===== Helper: format angka ke format rupiah (puluhan ribu dgn titik) =====
+    const nfID = new Intl.NumberFormat('id-ID');
+    function onlyDigits(value){
+        return (value || '').toString().replace(/[^\d]/g,'');
+    }
+    function formatRupiahInput(el){
+        const raw = onlyDigits(el.value);
+        el.value = raw ? nfID.format(parseInt(raw,10)) : '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const rupiahFields = [
+            'total_prize_money',
+            'champion_prize',
+            'runner_up_prize',
+            'third_place_prize'
+        ].map(id => document.getElementById(id)).filter(Boolean);
+
+        // Inisialisasi format saat load (jika ada old value)
+        rupiahFields.forEach(el => {
+            if(el.value) formatRupiahInput(el);
+            el.addEventListener('input', () => formatRupiahInput(el));
+            el.addEventListener('blur', () => formatRupiahInput(el));
+        });
+
+        // Bersihkan format sebelum submit agar backend menerima angka murni
+        const form = document.getElementById('eventForm');
+        form.addEventListener('submit', () => {
+            rupiahFields.forEach(el => {
+                el.value = onlyDigits(el.value);
+            });
+        });
+    });
+</script>
+@endpush

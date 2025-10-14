@@ -1,11 +1,44 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Edit Guideline')
 
+@push('styles')
+<style>
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>
+@endpush
+
 @section('content')
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
                 @include('partials.topbar')
                 <div class="flex items-center mb-6">
                     <a href="{{ route('admin.guidelines.index') }}" class="text-gray-400 hover:text-white mr-4">
@@ -138,7 +171,7 @@
                                 <div>
                                     <label for="content" class="block text-sm font-medium text-gray-300 mb-1">Konten <span class="text-red-500">*</span></label>
                                     <textarea name="content" id="content" rows="12" required
-                                        class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]">{{ old('content', $guideline->content) }}</textarea>
+                                        class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus	border-[#999]">{{ old('content', $guideline->content) }}</textarea>
                                     <p class="text-xs text-gray-400 mt-1">Kamu bisa menggunakan HTML untuk formatting.</p>
                                 </div>
                             </div>
@@ -185,8 +218,6 @@
         
         // Handle image upload
         uploadBtn.addEventListener('click', function() {
-            // Here you would typically open a file picker or media library
-            // For simplicity, we'll just show an alert
             alert('Fitur upload akan segera tersedia. Untuk saat ini, masukkan nama file gambar yang sudah ada di folder public/images/guidelines/');
         });
     });
