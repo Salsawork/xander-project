@@ -26,7 +26,7 @@
                 <a href="{{ route('venue.dashboard') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('venue.dashboard') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-                    <span>Dashboard</span>
+                    <span>Dashboardd</span>
                     @if(request()->routeIs('venue.dashboard'))
                     <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif

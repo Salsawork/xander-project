@@ -6,6 +6,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+/public/events
+/vendor/
 .env
 .env.backup
 .env.production
@@ -26,4 +28,4 @@ yarn-error.log
 *.tar.bz2
 *.DS_Store
 *.sql
-node_modules
+/node_modules
