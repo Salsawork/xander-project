@@ -1,11 +1,44 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Guidelines List')
 
+@push('styles')
+<style>
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>
+@endpush
+
 @section('content')
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
                 @include('partials.topbar')
                 
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">

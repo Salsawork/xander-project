@@ -14,19 +14,46 @@
 
     /* Hide scrollbar for IE, Edge and Firefox */
     .scrollbar-hide {
-        -ms-overflow-style: none;
-        /* IE and Edge */
-        scrollbar-width: none;
-        /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none;    /* Firefox */
+    }
+
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 </style>
 @endpush
 
 @section('content')
+<div id="antiBounceBg" aria-hidden="true"></div>
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+        <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
             @include('partials.topbar')
             <h1 class="text-2xl font-bold p-4 sm:p-8 mt-12">Order Product Management</h1>
 
@@ -455,125 +482,123 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inisialisasi Alpine.js jika belum
-        if (typeof Alpine !== 'undefined' && !Alpine.initialized) {
-            Alpine.start();
-        }
+    // Inisialisasi Alpine.js jika belum
+    if (typeof Alpine !== 'undefined' && !Alpine.initialized) {
+        Alpine.start();
+    }
 
-        // Tampilkan SweetAlert jika ada session success
-        @if(session('success'))
-        Swal.fire({
-            title: 'Success!',
-            text: '{{ session('
-            success ') }}',
-            icon: 'success',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-        });
-        @endif
+    // Tampilkan SweetAlert jika ada session success
+    @if(session('success'))
+    Swal.fire({
+        title: 'Success!',
+        text: '{{ session('success') }}',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+    });
+    @endif
 
-        // Tambahkan event listener untuk link update status
-        const statusLinks = document.querySelectorAll('.status-link');
-        statusLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const statusValue = e.target.getAttribute('data-status');
+    // Tambahkan event listener untuk link update status
+    const statusLinks = document.querySelectorAll('.status-link');
+    statusLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const statusValue = e.target.getAttribute('data-status');
 
-                Swal.fire({
-                    title: 'Konfirmasi',
-                    text: `Are you sure you want to change the status to ${statusValue}?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Change!',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    background: '#1E1E1F',
-                    color: '#FFFFFF'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = e.target.href;
-                    }
-                });
+            Swal.fire({
+                title: 'Konfirmasi',
+                text: `Are you sure you want to change the status to ${statusValue}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Change!',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                background: '#1E1E1F',
+                color: '#FFFFFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = e.target.href;
+                }
             });
         });
+    });
 
-        // Tambahkan event listener untuk tombol hapus order
-        const deleteOrderButtons = document.querySelectorAll('.delete-order');
-        deleteOrderButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const orderId = this.getAttribute('data-id');
-                const orderName = this.getAttribute('data-name');
+    // Tambahkan event listener untuk tombol hapus order
+    const deleteOrderButtons = document.querySelectorAll('.delete-order');
+    deleteOrderButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-id');
+            const orderName = this.getAttribute('data-name');
 
-                Swal.fire({
-                    title: 'Konfirmasi',
-                    text: `Are you sure you want to delete order ${orderName}?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Delete!',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    background: '#1E1E1F',
-                    color: '#FFFFFF'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Kirim request hapus order ke server
-                        const deleteUrl = '{{ route('order.delete', ':id') }}'.replace(':id', orderId);
+            Swal.fire({
+                title: 'Konfirmasi',
+                text: `Are you sure you want to delete order ${orderName}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Delete!',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                background: '#1E1E1F',
+                color: '#FFFFFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Kirim request hapus order ke server
+                    const deleteUrl = '{{ route('order.delete', ':id') }}'.replace(':id', orderId);
 
-                        fetch(deleteUrl, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json'
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        title: 'Success!',
-                                        text: 'Order has been successfully deleted.',
-                                        icon: 'success',
-                                        confirmButtonText: 'OK',
-                                        confirmButtonColor: '#3085d6',
-                                        background: '#1E1E1F',
-                                        color: '#FFFFFF'
-                                    });
-                                    // Muat ulang halaman
-                                    window.location.reload();
-                                } else {
-                                    Swal.fire({
-                                        title: 'Error!',
-                                        text: data.message ||
-                                            'Failed to delete order.',
-                                        icon: 'error',
-                                        confirmButtonText: 'OK',
-                                        confirmButtonColor: '#3085d6',
-                                        background: '#1E1E1F',
-                                        color: '#FFFFFF'
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
+                    fetch(deleteUrl, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Order has been successfully deleted.',
+                                    icon: 'success',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#3085d6',
+                                    background: '#1E1E1F',
+                                    color: '#FFFFFF'
+                                });
+                                // Muat ulang halaman
+                                window.location.reload();
+                            } else {
                                 Swal.fire({
                                     title: 'Error!',
-                                    text: 'Failed to delete order.',
+                                    text: data.message || 'Failed to delete order.',
                                     icon: 'error',
                                     confirmButtonText: 'OK',
                                     confirmButtonColor: '#3085d6',
                                     background: '#1E1E1F',
                                     color: '#FFFFFF'
                                 });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to delete order.',
+                                icon: 'error',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#3085d6',
+                                background: '#1E1E1F',
+                                color: '#FFFFFF'
                             });
-                    }
-                });
+                        });
+                }
             });
         });
     });
+});
 </script>
 @endpush

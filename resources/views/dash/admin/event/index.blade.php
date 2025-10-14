@@ -1,12 +1,45 @@
 @extends('app')
 @section('title', 'Admin Dashboard - Daftar Event')
 
+@push('styles')
+<style>
+    /* ====== Anti overscroll / white bounce ====== */
+    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
+    html, body{
+        height:100%;
+        min-height:100%;
+        background:var(--page-bg);
+        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+        -webkit-text-size-adjust:100%;
+    }
+    /* Kanvas gelap tetap di belakang konten */
+    #antiBounceBg{
+        position: fixed;
+        left:0; right:0;
+        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        background:var(--page-bg);
+        z-index:-1;
+        pointer-events:none;
+    }
+    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
+    .scroll-safe{
+        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>
+@endpush
+
 @section('content')
+<div id="antiBounceBg" aria-hidden="true"></div>
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
 
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+        <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
             @include('partials.topbar')
 
             <div class="mt-20 sm:mt-28 px-4 sm:px-8">
@@ -58,11 +91,25 @@
                         </thead>
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
+                                @php
+                                    // Cari gambar berdasar ID event terlebih dahulu, lalu fallback ke lokasi lama
+                                    $imgPath = null;
+                                    if (!empty($event->image)) {
+                                        $candidates = [
+                                            'event_images/'.$event->id.'/'.$event->image,
+                                            'event_images/'.$event->image,
+                                            'storage/event_images/'.$event->id.'/'.$event->image,
+                                            'storage/event_images/'.$event->image,
+                                        ];
+                                        foreach ($candidates as $rel) {
+                                            if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
+                                        }
+                                    }
+                                @endphp
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
-                                        @if ($event->image && file_exists(public_path('event_images/' . $event->image)))
-                                            <img src="{{ asset('event_images/' . $event->image) }}"
-                                                class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
+                                        @if ($imgPath)
+                                            <img src="{{ $imgPath }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
                                         @else
                                             <div class="w-16 h-16 flex items-center justify-center bg-gray-700 text-xs text-gray-400 rounded">
                                                 No Img
@@ -112,10 +159,24 @@
                 <!-- Mobile Card View -->
                 <div class="sm:hidden space-y-4">
                     @forelse ($events as $event)
+                        @php
+                            $imgPath = null;
+                            if (!empty($event->image)) {
+                                $candidates = [
+                                    'event_images/'.$event->id.'/'.$event->image,
+                                    'event_images/'.$event->image,
+                                    'storage/event_images/'.$event->id.'/'.$event->image,
+                                    'storage/event_images/'.$event->image,
+                                ];
+                                foreach ($candidates as $rel) {
+                                    if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
+                                }
+                            }
+                        @endphp
                         <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
-                                @if ($event->image && file_exists(public_path('event_images/' . $event->image)))
-                                    <img src="{{ asset('event_images/' . $event->image) }}"
+                                @if ($imgPath)
+                                    <img src="{{ $imgPath }}"
                                         alt="{{ $event->name }}" class="h-16 w-16 rounded object-cover shrink-0">
                                 @else
                                     <div class="h-16 w-16 rounded bg-gray-700 flex items-center justify-center shrink-0">
