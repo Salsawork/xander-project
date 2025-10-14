@@ -3,32 +3,36 @@
 
 @push('styles')
 <style>
-    /* ====== Anti overscroll / white bounce ====== */
     :root{ color-scheme: dark; --page-bg:#0a0a0a; }
     html, body{
         height:100%;
         min-height:100%;
         background:var(--page-bg);
-        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-y: none;
         overscroll-behavior-x: none;
         touch-action: pan-y;
         -webkit-text-size-adjust:100%;
     }
-    /* Kanvas gelap tetap di belakang konten */
     #antiBounceBg{
         position: fixed;
         left:0; right:0;
-        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        top:-120svh; bottom:-120svh;
         background:var(--page-bg);
         z-index:-1;
         pointer-events:none;
     }
-    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
     .scroll-safe{
-        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        background-color:#171717;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
     }
+    .btn{
+        display:inline-flex; align-items:center; gap:.5rem;
+        padding:.6rem .9rem; border-radius:.55rem; font-weight:600; font-size:.9rem;
+        transition:.15s ease;
+    }
+    .btn-primary{ background:#16a34a; color:#fff; }
+    .btn-primary:hover{ background:#15803d; }
 </style>
 @endpush
 
@@ -59,10 +63,27 @@
                     @endif
 
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-                        <input name="search" value="{{ request('search') }}"
-                            class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-                            placeholder="Cari subscriber..." type="search"
-                            onchange="window.location.href='{{ route('dash.admin.subscriber') }}?search=' + this.value" />
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <input name="search" value="{{ request('search') }}"
+                                class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
+                                placeholder="Cari subscriber..." type="search"
+                                onchange="window.location.href='{{ route('dash.admin.subscriber') }}?search=' + encodeURIComponent(this.value)" />
+                        </div>
+
+                        <!-- Tombol Export Excel (ikut query ?search=...) -->
+                        <div class="flex items-center gap-2">
+                            <a
+                                href="{{ route('dash.admin.subscriber.export', request()->only('search')) }}"
+                                class="btn btn-primary"
+                            >
+                                <!-- icon download -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 3a1 1 0 011 1v9.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L11 13.586V4a1 1 0 011-1z"/>
+                                  <path d="M5 18a1 1 0 011-1h12a1 1 0 110 2H6a1 1 0 01-1-1z"/>
+                                </svg>
+                                Export Excel
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Desktop & Tablet Table View -->
@@ -79,7 +100,6 @@
                                     <tr>
                                         <td class="px-4 py-3">{{ $subscriber->email }}</td>
                                         <td class="px-4 py-3 text-gray-400">{{ $subscriber->created_at->format('d M Y') }}</td>
-                                    
                                     </tr>
                                 @empty
                                     <tr>
@@ -96,13 +116,10 @@
                     <div class="sm:hidden space-y-4">
                         @forelse ($subscribers as $subscriber)
                             <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
-                                <!-- Header -->
                                 <div class="mb-3 pb-3 border-b border-gray-700">
                                     <h3 class="font-semibold text-base mb-2">{{ $subscriber->email }}</h3>
                                     <p class="text-xs text-gray-400">{{ $subscriber->created_at->format('d M Y') }}</p>
                                 </div>
-
-                        
                             </div>
                         @empty
                             <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
@@ -118,54 +135,4 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    {{-- <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const deleteButtons = document.querySelectorAll('.delete-btn');
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    Swal.fire({
-                        title: 'Yakin ingin menghapus?',
-                        text: "subscriber yang dihapus tidak dapat dikembalikan!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, hapus!',
-                        cancelButtonText: 'Batal',
-                        background: '#222',
-                        color: '#fff'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            document.getElementById('delete-form-' + id).submit();
-                        }
-                    });
-                });
-            });
-
-            @if (session('success'))
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: '{{ session('success') }}',
-                    timer: 3000,
-                    showConfirmButton: false,
-                    background: '#222',
-                    color: '#fff'
-                });
-            @endif
-
-            @if (session('error'))
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: '{{ session('error') }}',
-                    timer: 3000,
-                    showConfirmButton: false,
-                    background: '#222',
-                    color: '#fff'
-                });
-            @endif
-        });
-    </script> --}}
 @endpush
