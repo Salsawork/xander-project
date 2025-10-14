@@ -10,6 +10,8 @@ use App\Models\Review;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\VenuesExport;
 
 class DashboardController extends Controller
 {
@@ -158,4 +160,13 @@ class DashboardController extends Controller
             'sessionPercentageChange' => $sessionPercentageChange,
         ]);
     }
+
+    public function export(Request $request)
+    {
+        $filename = 'venues_' . now()->format('Ymd_His') . '.xlsx';
+        $search   = $request->get('search');
+
+        return Excel::download(new VenuesExport($search), $filename);
+    }
+    
 }

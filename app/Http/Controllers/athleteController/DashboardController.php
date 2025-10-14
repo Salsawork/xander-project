@@ -11,7 +11,8 @@ use App\Models\AthleteReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AthleteExport;
 
 class DashboardController extends Controller
 {
@@ -140,5 +141,13 @@ class DashboardController extends Controller
             'firstDayOfWeek' => $firstDayOfWeek,
             'eventDates' => $eventDates
         ];
+    }
+
+    public function export(Request $request)
+    {
+        $filename = 'AthleteMatches_' . now()->format('Ymd_His') . '.xlsx';
+        $search   = $request->get('search');
+
+        return Excel::download(new AthleteExport($search), $filename);
     }
 }

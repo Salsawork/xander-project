@@ -5,6 +5,8 @@ namespace App\Http\Controllers\adminController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
+use App\Exports\EventExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\File;
 
 class EventController extends Controller
@@ -13,11 +15,22 @@ class EventController extends Controller
      * GET /dashboard/event
      * name: admin.event.index
      */
-    public function index()
-    {
-        $events = Event::orderBy('start_date', 'asc')->get();
-        return view('dash.admin.event.index', compact('events'));
-    }
+    public function index(Request $request)
+{
+    $search = $request->input('search');
+
+    $events = Event::query()
+        ->when($search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%");
+        })
+        ->orderBy('start_date', 'asc')
+        ->get();
+
+    return view('dash.admin.event.index', compact('events', 'search'));
+}
+
 
     /**
      * GET /dashboard/event/create
@@ -249,5 +262,13 @@ class EventController extends Controller
         }
 
         $request->merge($normalized);
+    }
+
+    public function export(Request $request)
+    {
+        $filename = 'events_' . now()->format('Ymd_His') . '.xlsx';
+        $search = $request->get('search');
+
+        return Excel::download(new EventExport($search), $filename);
     }
 }

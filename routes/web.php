@@ -294,6 +294,7 @@ Route::middleware('auth')->group(function () {
     /** Venue owner */
     Route::prefix('venue')->group(function () {
         Route::get('/dashboard', [VenueDashboardController::class, 'index'])->name('venue.dashboard');
+        Route::get('/dashboard/export', [VenueDashboardController::class, 'export'])->name('venue.export');
 
         // Booking management
         Route::get('/booking', [BookingController::class, 'index'])->name('venue.booking');
@@ -332,6 +333,7 @@ Route::middleware('auth')->group(function () {
     /** Athlete area */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
+        Route::get('/dashboard/athlete/export', [AthleteDashboardController::class, 'export'])->name('athlete.export');
         Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
@@ -384,6 +386,8 @@ Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('raj
 */
 Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
     Route::get('/', [AdminEventController::class, 'index'])->name('index');
+    Route::get('/export', [AdminEventController::class, 'export'])
+    ->name('export');
     Route::get('/create', [AdminEventController::class, 'create'])->name('create');
     Route::post('/', [AdminEventController::class, 'store'])->name('store');
 

@@ -62,13 +62,21 @@
                         name="search" value="{{ request('search') }}" placeholder="Cari event..."
                         type="search"
                         onchange="window.location.href='{{ route('admin.event.index') }}?search=' + encodeURIComponent(this.value)" />
-
-                    <a href="{{ route('admin.event.create') }}"
-                       class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
-                        <i class="fas fa-plus"></i>
-                        Tambah Event
-                    </a>
-                </div>
+                
+                    <div class="flex gap-2">
+                        <a href="{{ route('admin.event.export', ['search' => request('search')]) }}"
+                           class="flex items-center justify-center gap-1 border border-green-500 text-green-500 rounded px-3 py-2 text-xs sm:text-sm hover:bg-green-500 hover:text-white transition whitespace-nowrap">
+                            <i class="fas fa-file-excel"></i>
+                            Export Excel
+                        </a>
+                         
+                        <a href="{{ route('admin.event.create') }}"
+                           class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
+                            <i class="fas fa-plus"></i>
+                            Tambah Event
+                        </a>
+                    </div>
+                </div>                
 
                 <!-- Desktop & Tablet Table View -->
                 <div class="hidden sm:block overflow-x-auto">
