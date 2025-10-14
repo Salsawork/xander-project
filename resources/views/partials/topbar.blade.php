@@ -10,7 +10,7 @@
     <div class="relative" x-data="{ open: false }">
         <button aria-label="User menu"
             class="flex items-center text-gray-300 hover:text-white focus:outline-none transition duration-200"
-            @click="open = !open">
+            @click="open = !open">x
             <i class="fas fa-user-circle fa-lg"></i>
         </button>
 
