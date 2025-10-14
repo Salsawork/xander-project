@@ -6,12 +6,15 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
         <!-- Header -->
         <div class="flex items-center mb-6">
-            <i class="fas fa-chevron-left text-xl mr-4 cursor-pointer hover:text-blue-400 transition" onclick="window.history.back();"></i>
+            <i class="fas fa-chevron-left text-xl mr-4 cursor-pointer hover:text-blue-400 transition"
+                onclick="window.history.back();"></i>
             <h1 class="text-xl sm:text-2xl font-semibold items-center">
                 Session Detail
-                <span class="text-blue-500 font-bold">#XB12345678</span>
+                <span class="text-blue-500 font-bold">{{ $order->order_number }}</span>
                 <span>|</span>
-                <span class="text-sm text-gray-400 my-auto">02/06/2025 at 10.41</span>
+                <span class="text-sm text-gray-400 my-auto">
+                    {{ $order->created_at->setTimezone('Asia/Jakarta')->format('d/m/Y \a\t H:i') }}
+                </span>
             </h1>
         </div>
 
@@ -20,54 +23,73 @@
             <!-- Booking Info -->
             <div class="md:col-span-3 bg-neutral-900 rounded-lg p-5 shadow-sm border border-neutral-800">
                 <h2 class="text-lg font-semibold mb-4">Booking Information</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-y-3 text-sm">
+
+                @foreach ($bookings as $booking)
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-y-3 text-sm mb-6 border-b border-neutral-800 pb-4">
                     <div>
                         <p class="text-gray-400">Location</p>
-                        <p class="font-medium">The Cue Lounge</p>
+                        <p class="font-medium">{{ $booking->venue->name ?? '-' }}</p>
                     </div>
                     <div>
                         <p class="text-gray-400">Price</p>
-                        <p class="font-medium">Rp. 60.000 /session</p>
+                        <p class="font-medium">Rp. {{ number_format($booking->price, 0, ',', '.') }} /session</p>
                     </div>
                     <div>
                         <p class="text-gray-400">Table</p>
-                        <p class="font-medium">Table #125</p>
+                        <p class="font-medium">{{ $booking->table->table_number ?? '-' }}</p>
                     </div>
                     <div>
                         <p class="text-gray-400">Booking Date</p>
-                        <p class="font-medium">March 5, 2025</p>
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($booking->booking_date)->translatedFormat('d F Y') }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-gray-400">Session Time</p>
-                        <p class="font-medium">14.00–15.00<br>15.00–16.00</p>
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} –
+                            {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                        </p>
                     </div>
                     <div>
-                        <p class="text-gray-400">Promo Code</p>
-                        <p class="font-medium">JNTX1235</p>
+                        <p class="text-gray-400">Status</p>
+                        <p class="font-medium capitalize">{{ $booking->status }}</p>
                     </div>
                     <div class="sm:col-span-3">
                         <p class="text-gray-400">Booking ID</p>
                         <div class="flex items-center gap-2">
-                            <span class="font-medium">#BK202503021234</span>
-                            <button class="text-gray-400 rounded-xl border border-gray-400 px-2 py-0.5 text-xs">Copy</button>
+                            <span class="font-medium">#BK{{ $booking->id }}</span>
+                            <button onclick="navigator.clipboard.writeText('#BK{{ $booking->id }}')"
+                                class="text-gray-400 rounded-xl border border-gray-400 px-2 py-0.5 text-xs hover:bg-gray-700">
+                                Copy
+                            </button>
                         </div>
                     </div>
                 </div>
+                @endforeach
             </div>
 
             <!-- Customer Info -->
             <div class="bg-neutral-900 rounded-lg p-5 shadow-sm border border-neutral-800">
                 <h2 class="text-lg font-semibold mb-4">Customer Information</h2>
                 <div class="text-sm space-y-1">
-                    <p class="font-semibold text-base">Alex Johnson</p>
-                    <a href="mailto:alex.johnson@email.com" class="text-gray-300 hover:text-white block">alex.johnson@email.com</a>
-                    <p class="text-gray-300">+1 555-789-1234</p>
+                    <p class="font-semibold text-base">{{ $user->name ?? 'Alex Johnson' }}</p>
+                    <a href="mailto:{{ $user->email ?? 'alex.johnson@email.com' }}" class="text-gray-300 hover:text-white block">{{ $user->email ?? 'alex.johnson@email.com' }}</a>
+                    <p class="text-gray-300">{{ $user->phone ?? '+1 555-789-1234' }}</p>
+                </div>
+                <div class="mt-4">
+                    <p class="text-gray-400 text-sm mb-1">Address:</p>
+                    <p class="text-gray-300">{{ $order->products->first()->pivot->address ?? '-' }}</p>
                 </div>
                 <div class="mt-4">
                     <p class="text-gray-400 text-sm mb-1">Payment Details:</p>
-                    <p class="text-gray-300">Credit Card (Visa)</p>
+                    <p class="text-gray-300 capitalize">{{ str_replace('_', ' ', $order->payment_method) }}</p>
+                    <p class="text-gray-300">Status: <span class="text-green-400 font-semibold">{{ $order->payment_status ?? 'Paid' }}</span></p>
+                    <p class="text-gray-400 text-xs mt-1">Transaction ID: <span class="text-gray-300">{{ $order->transaction_id ?? '-' }}</span></p>
                 </div>
-                <button class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-md font-medium transition">Download Invoice</button>
+                @if ($order->payment_status === 'paid')
+                <a href="{{ route('invoice.booking', $order->id) }}" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-md font-medium transition inline-block text-center">Download Invoice</a>
+                @endif
             </div>
         </div>
 

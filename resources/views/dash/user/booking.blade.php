@@ -158,7 +158,7 @@
                             <span class="text-gray-300 text-sm">
                                 {{ $order->created_at->format('d F Y') }}
                             </span>
-                             @php
+                            @php
                             $badgeColor = [
                             'pending' => 'bg-blue-600 text-white',
                             'processing' => 'bg-yellow-400 text-gray-900',
@@ -174,33 +174,35 @@
 
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->bookings as $booking)
-                            <li class="flex items-center py-3 space-x-4">
-                                @php
-                                $images = $booking->venue->images ? (is_array($booking->venue->images) ? $booking->venue->images : json_decode($booking->venue->images, true)) : [];
-                                $firstImage = !empty($images) ? $images[0] : null;
-                                $idx = ($loop->index % 5) + 1;
-                                $defaultImg = asset("images/venues/{$idx}.png");
-                                @endphp
-                                <img
-                                    src="{{ $firstImage ? asset('storage/uploads/' . ltrim($firstImage, '/')) : $defaultImg }}"
-                                    alt="{{ $booking->venue->name }}"
-                                    class="w-[60px] h-[90px] rounded-md object-cover bg-gray-700"
-                                    onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
+                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                                <li class="flex items-center py-3 space-x-4">
+                                    @php
+                                    $images = $booking->venue->images ? (is_array($booking->venue->images) ? $booking->venue->images : json_decode($booking->venue->images, true)) : [];
+                                    $firstImage = !empty($images) ? $images[0] : null;
+                                    $idx = ($loop->index % 5) + 1;
+                                    $defaultImg = asset("images/venues/{$idx}.png");
+                                    @endphp
+                                    <img
+                                        src="{{ $firstImage ? asset('storage/uploads/' . ltrim($firstImage, '/')) : $defaultImg }}"
+                                        alt="{{ $booking->venue->name }}"
+                                        class="w-[60px] h-[90px] rounded-md object-cover bg-gray-700"
+                                        onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
 
-                                <div class="flex-1">
-                                    <p class="font-bold text-white text-sm leading-tight">
-                                        {{ $booking->venue->name }}
-                                    </p>
-                                    <p class="text-gray-300 text-xs mt-1">
-                                        {{ \Carbon\Carbon::parse($booking->booking_date)->format('d/m/Y') }}
-                                        {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
-                                    </p>
-                                </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold text-white text-sm leading-tight">
+                                            {{ $booking->venue->name }}
+                                        </p>
+                                        <p class="text-gray-300 text-xs mt-1">
+                                            {{ \Carbon\Carbon::parse($booking->booking_date)->format('d/m/Y') }}
+                                            {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                        </p>
+                                    </div>
 
-                                <p class="text-gray-300 text-sm whitespace-nowrap">
-                                    Rp. {{ number_format($booking->price, 0, ',', '.') }}
-                                </p>
-                            </li>
+                                    <p class="text-gray-300 text-sm whitespace-nowrap">
+                                        Rp. {{ number_format($booking->price, 0, ',', '.') }}
+                                    </p>
+                                </li>
+                            </a>
                             @endforeach
                         </ul>
 

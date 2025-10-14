@@ -113,7 +113,7 @@
             <div class="bg-[#2a2a2a] rounded-2xl shadow-xl p-6 space-y-6">
                 <form id="checkout-form" enctype="multipart/form-data" method="POST">
                     @csrf
-                    
+
                     <input type="hidden" name="tax" id="tax" value="{{ $tax }}">
 
                     <!-- Hidden input untuk produk -->
@@ -204,6 +204,12 @@
                                 <input type="hidden" name="subdistrict_name" id="subdistrict_name">
                             </div>
                         </div>
+                        <div class="mt-4">
+                            <label for="address" class="block font-semibold mb-1">Address</label>
+                            <textarea name="address" id="address" rows="3"
+                                class="w-full border rounded p-2 resize-none"
+                                required>{{ old('address', $user->address ?? '') }}</textarea>
+                        </div>
                         <div class="mt-4 grid grid-cols-2 gap-4">
                             <div>
                                 <label for="courier" class="block font-semibold mb-1">Courier</label>
@@ -217,25 +223,25 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="address" class="block font-semibold mb-1">Address</label>
-                                <input type="text" name="address" id="address"
-                                    value="{{ old('address', $user->address ?? '') }}"
-                                    class="w-full border rounded p-2" required>
+                                <label for="payment_method" class="block font-semibold mb-1">Payment Method</label>
+                                <select name="payment_method" id="payment_method" class="w-full border rounded p-2 bg-neutral-800 text-white" required>
+                                    <option value="transfer_manual">Bank Transfer (Manual)</option>
+                                </select>
                             </div>
                         </div>
                         <!-- Hidden input untuk cost -->
                         <input type="hidden" name="weight" id="weight" value="{{ $cart['weight'] }}">
                         <input type="hidden" name="shipping" id="shipping" value="0">
                     </div>
-                    @endif
-
-                    <!-- Payment Method -->
+                    @else
+                    <!-- Payment Method for non-product checkout -->
                     <div class="mb-6">
                         <label class="block font-semibold mb-1">Payment Method</label>
                         <select name="payment_method" class="w-full border rounded p-2" required>
                             <option value="transfer_manual">Bank Transfer (Manual)</option>
                         </select>
                     </div>
+                    @endif
 
                     <!-- Place Order Button -->
                     <div>
@@ -464,7 +470,7 @@
                     const courier = document.getElementById('courier').value;
                     const shipping = document.getElementById('shipping').value;
 
-                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0' ) {
+                    if (!province || !city || !district || !subdistrict || !courier || !shipping || shipping === '0') {
                         Swal.fire({
                             icon: 'warning',
                             title: 'Shipping Required',

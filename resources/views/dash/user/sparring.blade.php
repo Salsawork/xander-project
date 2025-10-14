@@ -77,24 +77,26 @@
                         </header>
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->orderSparrings as $sparring)
-                            <li class="flex items-center py-3 space-x-4">
-                                <img src="{{ $sparring->athlete_image ? asset('storage/uploads/' . $sparring->athlete_image) : 'https://placehold.co/400x600?text=No+Image' }}"
-                                    alt="{{ $sparring->athlete->name }}"
-                                    class="object-cover"
-                                    style="width: 60px; height: 90px; object-fit: cover;"
-                                    onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
-                                <div class="flex-1">
-                                    <p class="font-bold text-white text-sm leading-tight">
-                                        {{ $sparring->athlete->name }}
+                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                                <li class="flex items-center py-3 space-x-4">
+                                    <img src="{{ $sparring->athlete_image ? asset('storage/uploads/' . $sparring->athlete_image) : 'https://placehold.co/400x600?text=No+Image' }}"
+                                        alt="{{ $sparring->athlete->name }}"
+                                        class="object-cover"
+                                        style="width: 60px; height: 90px; object-fit: cover;"
+                                        onerror="this.src='https://placehold.co/400x600?text=No+Image'" />
+                                    <div class="flex-1">
+                                        <p class="font-bold text-white text-sm leading-tight">
+                                            {{ $sparring->athlete->name }}
+                                        </p>
+                                        <p class="text-gray-300 text-xs mt-1">
+                                            {{ \Carbon\Carbon::parse($sparring->schedule->date)->format('d/m/Y') }} {{ \Carbon\Carbon::parse($sparring->schedule->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($sparring->schedule->end_time)->format('H:i') }}
+                                        </p>
+                                    </div>
+                                    <p class="text-gray-300 text-sm whitespace-nowrap">
+                                        Rp. {{ number_format($sparring->price, 0, ',', '.') }}
                                     </p>
-                                    <p class="text-gray-300 text-xs mt-1">
-                                        {{ \Carbon\Carbon::parse($sparring->schedule->date)->format('d/m/Y') }} {{ \Carbon\Carbon::parse($sparring->schedule->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($sparring->schedule->end_time)->format('H:i') }}
-                                    </p>
-                                </div>
-                                <p class="text-gray-300 text-sm whitespace-nowrap">
-                                    Rp. {{ number_format($sparring->price, 0, ',', '.') }}
-                                </p>
-                            </li>
+                                </li>
+                            </a>
                             @endforeach
                         </ul>
                         <footer
