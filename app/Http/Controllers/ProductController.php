@@ -47,9 +47,9 @@ class ProductController extends Controller
         // 🔹 Filter Status
         if ($request->has('status')) {
             if ($request->status === 'in-stock') {
-                $query->where('quantity', '>', 0);
+                $query->where('stock', '>', 0);
             } elseif ($request->status === 'out-of-stock') {
-                $query->where('quantity', '=', 0);
+                $query->where('stock', '=', 0);
             }
         }
 
