@@ -82,6 +82,18 @@
           @endif
         </a>
       </li>
+
+      <!-- NEW: Ticket -->
+      <li>
+        <a href="{{ route('ticket.index') }}"
+           class="group flex items-center justify-between rounded-lg px-3 py-2
+           {{ request()->routeIs('ticket.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+          <span>Ticket</span>
+          @if(request()->routeIs('ticket.index'))
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+          @endif
+        </a>
+      </li>
     </ul>
   </nav>
 </aside>
@@ -167,6 +179,16 @@
            {{ request()->routeIs('favorite.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
           <i class="fas fa-heart w-5 text-gray-400"></i>
           <span>Favorite</span>
+        </a>
+      </li>
+
+      <!-- NEW: Ticket -->
+      <li>
+        <a href="{{ route('ticket.index') }}"
+           class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
+           {{ request()->routeIs('ticket.index') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+          <i class="fas fa-ticket-alt w-5 text-gray-400"></i>
+          <span>Ticket</span>
         </a>
       </li>
     </ul>
