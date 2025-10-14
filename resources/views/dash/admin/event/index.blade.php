@@ -3,29 +3,26 @@
 
 @push('styles')
 <style>
-    /* ====== Anti overscroll / white bounce ====== */
     :root{ color-scheme: dark; --page-bg:#0a0a0a; }
     html, body{
         height:100%;
         min-height:100%;
         background:var(--page-bg);
-        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+        overscroll-behavior-y: none;
         overscroll-behavior-x: none;
         touch-action: pan-y;
         -webkit-text-size-adjust:100%;
     }
-    /* Kanvas gelap tetap di belakang konten */
     #antiBounceBg{
         position: fixed;
         left:0; right:0;
-        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
+        top:-120svh; bottom:-120svh;
         background:var(--page-bg);
         z-index:-1;
         pointer-events:none;
     }
-    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
     .scroll-safe{
-        background-color:#171717;      /* senada dengan bg-neutral-900 */
+        background-color:#171717;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
     }
@@ -64,10 +61,10 @@
                         class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
                         name="search" value="{{ request('search') }}" placeholder="Cari event..."
                         type="search"
-                        onchange="window.location.href='{{ route('admin.event.index') }}?search=' + this.value" />
+                        onchange="window.location.href='{{ route('admin.event.index') }}?search=' + encodeURIComponent(this.value)" />
 
                     <a href="{{ route('admin.event.create') }}"
-                        class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
+                       class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
                         <i class="fas fa-plus"></i>
                         Tambah Event
                     </a>
@@ -83,8 +80,6 @@
                                 <th class="px-4 py-3">Date</th>
                                 <th class="px-4 py-3">Lokasi</th>
                                 <th class="px-4 py-3">Total Prize</th>
-                                {{-- <th class="px-4 py-3">Champhion Prize</th>
-                                <th class="px-4 py-3">Champhion Prize</th> --}}
                                 <th class="px-4 py-3">Status</th>
                                 <th class="px-4 py-3 text-right">Aksi</th>
                             </tr>
@@ -92,14 +87,11 @@
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
                                 @php
-                                    // Cari gambar berdasar ID event terlebih dahulu, lalu fallback ke lokasi lama
                                     $imgPath = null;
-                                    if (!empty($event->image)) {
+                                    if (!empty($event->image_url)) {
                                         $candidates = [
-                                            'event_images/'.$event->id.'/'.$event->image,
-                                            'event_images/'.$event->image,
-                                            'storage/event_images/'.$event->id.'/'.$event->image,
-                                            'storage/event_images/'.$event->image,
+                                            $event->image_url,                          // e.g. events/abc.jpg
+                                            'storage/'.$event->image_url,               // if symlink used
                                         ];
                                         foreach ($candidates as $rel) {
                                             if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
@@ -117,37 +109,37 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 font-medium">{{ $event->name }}</td>
-                                    <td class="px-4 py-3 text-gray-300">{{ \Carbon\Carbon::parse($event->start_date)->format('d M Y') }}</td>
+                                    <td class="px-4 py-3 text-gray-300">
+                                        {{ $event->start_date ? \Carbon\Carbon::parse($event->start_date)->format('d M Y') : '-' }}
+                                    </td>
                                     <td class="px-4 py-3 text-gray-300">{{ $event->location ?? '-' }}</td>
                                     <td class="px-4 py-3 text-gray-300">
                                         Rp {{ number_format($event->total_prize_money ?? 0, 0, ',', '.') }}
                                     </td>
-                                    {{-- <td class="px-4 py-3 text-gray-300">
-                                        Rp {{ number_format($event->champion_prize ?? 0, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-300">
-                                        Rp {{ number_format($event->champion_prize ?? 0, 0, ',', '.') }}
-                                    </td> --}}
-                                    <td class="px-4 py-3 text-gray-300">
-                                        {{$event->status}}
-                                    </td>
+                                    <td class="px-4 py-3 text-gray-300">{{ $event->status }}</td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex gap-3 text-gray-400 justify-end">
                                             <a href="{{ route('admin.event.edit', $event->id) }}"
-                                                class="hover:text-gray-200" title="Edit">
+                                               class="hover:text-gray-200" title="Edit">
                                                 <i class="fas fa-pen"></i>
                                             </a>
-                                            <button class="hover:text-gray-200 delete-btn"
-                                                data-id="{{ $event->id }}"
-                                                data-name="{{ $event->name }}" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+
+                        <!-- Delete form per-row agar URL pasti match route -->
+                        <form action="{{ route('admin.event.destroy', $event->id) }}"
+                              method="POST" class="inline-block"
+                              onsubmit="return confirm('Hapus event: {{ $event->name }} ?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="hover:text-gray-200" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr class="bg-[#1c1c1c]">
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-400">
+                                    <td colspan="7" class="px-4 py-6 text-center text-gray-400">
                                         Tidak ada data event.
                                     </td>
                                 </tr>
@@ -161,12 +153,10 @@
                     @forelse ($events as $event)
                         @php
                             $imgPath = null;
-                            if (!empty($event->image)) {
+                            if (!empty($event->image_url)) {
                                 $candidates = [
-                                    'event_images/'.$event->id.'/'.$event->image,
-                                    'event_images/'.$event->image,
-                                    'storage/event_images/'.$event->id.'/'.$event->image,
-                                    'storage/event_images/'.$event->image,
+                                    $event->image_url,
+                                    'storage/'.$event->image_url,
                                 ];
                                 foreach ($candidates as $rel) {
                                     if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
@@ -177,7 +167,7 @@
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
                                 @if ($imgPath)
                                     <img src="{{ $imgPath }}"
-                                        alt="{{ $event->name }}" class="h-16 w-16 rounded object-cover shrink-0">
+                                         alt="{{ $event->name }}" class="h-16 w-16 rounded object-cover shrink-0">
                                 @else
                                     <div class="h-16 w-16 rounded bg-gray-700 flex items-center justify-center shrink-0">
                                         <span class="text-xs text-gray-300">No Img</span>
@@ -185,7 +175,9 @@
                                 @endif
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold text-base mb-1">{{ $event->name }}</h3>
-                                    <p class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($event->date)->format('d M Y') }}</p>
+                                    <p class="text-xs text-gray-400">
+                                        {{ $event->start_date ? \Carbon\Carbon::parse($event->start_date)->format('d M Y') : '-' }}
+                                    </p>
                                 </div>
                             </div>
 
@@ -195,23 +187,30 @@
                                     <span class="text-xs text-right">{{ $event->location ?? '-' }}</span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-gray-400">Harga:</span>
-                                    <span class="text-xs font-medium">Rp {{ number_format($event->price ?? 0, 0, ',', '.') }}</span>
+                                    <span class="text-gray-400">Harga Tiket:</span>
+                                    <span class="text-xs font-medium">
+                                        Rp {{ number_format($event->price_ticket ?? 0, 0, ',', '.') }}
+                                    </span>
                                 </div>
                             </div>
 
                             <div class="flex gap-2 pt-3 border-t border-gray-700">
                                 <a href="{{ route('admin.event.edit', $event->id) }}" 
-                                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-pen text-xs"></i>
                                     Edit
                                 </a>
-                                <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition delete-btn"
-                                    data-id="{{ $event->id }}"
-                                    data-name="{{ $event->name }}">
-                                    <i class="fas fa-trash text-xs"></i>
-                                    Delete
-                                </button>
+
+                                <form action="{{ route('admin.event.destroy', $event->id) }}" method="POST" class="flex-1"
+                                      onsubmit="return confirm('Hapus event: {{ $event->name }} ?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                        <i class="fas fa-trash text-xs"></i>
+                                        Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @empty
@@ -225,54 +224,3 @@
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteButtons = document.querySelectorAll('.delete-btn');
-
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const name = this.getAttribute('data-name');
-
-            Swal.fire({
-                title: 'Hapus Event?',
-                text: `Apakah kamu yakin ingin menghapus event "${name}"?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal',
-                background: '#222',
-                color: '#fff'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ url('dashboard/event') }}/" + id;
-                    form.style.display = 'none';
-
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-
-                    const method = document.createElement('input');
-                    method.type = 'hidden';
-                    method.name = '_method';
-                    method.value = 'DELETE';
-
-                    form.appendChild(csrfToken);
-                    form.appendChild(method);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        });
-    });
-});
-</script>
-@endpush

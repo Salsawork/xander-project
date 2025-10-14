@@ -9,19 +9,36 @@ use Illuminate\Support\Facades\File;
 
 class EventController extends Controller
 {
+    /**
+     * GET /dashboard/event
+     * name: admin.event.index
+     */
     public function index()
     {
         $events = Event::orderBy('start_date', 'asc')->get();
         return view('dash.admin.event.index', compact('events'));
     }
 
+    /**
+     * GET /dashboard/event/create
+     * name: admin.event.create
+     */
     public function create()
     {
         return view('dash.admin.event.create');
     }
 
+    /**
+     * POST /dashboard/event
+     * name: admin.event.store
+     */
     public function store(Request $request)
     {
+        // 1) Sanitasi angka uang -> integer murni
+        $this->sanitizeMoneyFields($request);
+        // 2) Normalisasi string opsional -> '' (bukan null) agar aman untuk kolom NOT NULL
+        $this->normalizeOptionalTextFields($request);
+
         $request->validate([
             'name'                => 'required|string|max:255',
             'description'         => 'required|string',
@@ -29,65 +46,82 @@ class EventController extends Controller
             'start_date'          => 'required|date',
             'end_date'            => 'required|date|after_or_equal:start_date',
             'game_types'          => 'required|string',
-            'total_prize_money'   => 'nullable|numeric|min:0',
-            'champion_prize'      => 'nullable|numeric|min:0',
-            'runner_up_prize'     => 'nullable|numeric|min:0',
-            'third_place_prize'   => 'nullable|numeric|min:0',
+            'price_ticket'        => 'nullable|integer|min:0',
+            'stock'               => 'nullable|integer|min:0',
+            'total_prize_money'   => 'nullable|integer|min:0',
+            'champion_prize'      => 'nullable|integer|min:0',
+            'runner_up_prize'     => 'nullable|integer|min:0',
+            'third_place_prize'   => 'nullable|integer|min:0',
             'match_style'         => 'nullable|string|max:100',
             'finals_format'       => 'nullable|string|max:100',
             'divisions'           => 'nullable|string',
             'social_media_handle' => 'nullable|string|max:255',
             'status'              => 'nullable|string|in:Upcoming,Ongoing,Ended',
-            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
+        // Upload gambar (opsional)
         $imagePath = null;
-
         if ($request->hasFile('image_url')) {
-            $image = $request->file('image_url');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $image       = $request->file('image_url');
+            $imageName   = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $destination = public_path('events');
-
-            // Pastikan folder public/events ada
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
             }
-
             $image->move($destination, $imageName);
-            $imagePath = 'events/' . $imageName; // Disimpan relatif terhadap public/
+            $imagePath = 'events/' . $imageName; // path relatif public/
         }
 
-        $event = Event::create([
+        Event::create([
             'name'                => $request->name,
             'description'         => $request->description,
             'location'            => $request->location,
             'start_date'          => $request->start_date,
             'end_date'            => $request->end_date,
             'game_types'          => $request->game_types,
-            'total_prize_money'   => $request->total_prize_money ?? 0,
-            'champion_prize'      => $request->champion_prize ?? 0,
-            'runner_up_prize'     => $request->runner_up_prize ?? 0,
-            'third_place_prize'   => $request->third_place_prize ?? 0,
-            'match_style'         => $request->match_style ?? null,
-            'finals_format'       => $request->finals_format ?? null,
-            'divisions'           => $request->divisions ?? null,
-            'social_media_handle' => $request->social_media_handle ?? null,
+            'price_ticket'        => (int) ($request->price_ticket ?? 0),
+            'stock'               => (int) ($request->stock ?? 0),
+            'total_prize_money'   => (int) ($request->total_prize_money ?? 0),
+            'champion_prize'      => (int) ($request->champion_prize ?? 0),
+            'runner_up_prize'     => (int) ($request->runner_up_prize ?? 0),
+            'third_place_prize'   => (int) ($request->third_place_prize ?? 0),
+            'match_style'         => $request->match_style,
+            'finals_format'       => $request->finals_format,
+            'divisions'           => $request->divisions,
+            'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? 'Upcoming',
             'image_url'           => $imagePath,
         ]);
 
         return redirect()
-            ->route('admin.guidelines.create', $event)
+            ->route('admin.event.index')
             ->with('success', 'Event berhasil dibuat.');
     }
 
-    public function edit(Event $event)
+    /**
+     * GET /dashboard/event/{id}/edit
+     * name: admin.event.edit
+     */
+    public function edit($id)
     {
+        $event = Event::findOrFail($id);
         return view('dash.admin.event.edit', compact('event'));
     }
 
-    public function update(Request $request, Event $event)
+    /**
+     * PUT /dashboard/event/{id}
+     * name: admin.event.update
+     */
+    public function update(Request $request, $id)
     {
+        $event = Event::findOrFail($id);
+
+        // 1) Sanitasi angka uang -> integer murni
+        $this->sanitizeMoneyFields($request);
+        // 2) Normalisasi string opsional -> '' (bukan null)
+        $this->normalizeOptionalTextFields($request);
+
         $request->validate([
             'name'                => 'required|string|max:255',
             'description'         => 'required|string',
@@ -95,34 +129,33 @@ class EventController extends Controller
             'start_date'          => 'required|date',
             'end_date'            => 'required|date|after_or_equal:start_date',
             'game_types'          => 'required|string',
-            'total_prize_money'   => 'nullable|numeric|min:0',
-            'champion_prize'      => 'nullable|numeric|min:0',
-            'runner_up_prize'     => 'nullable|numeric|min:0',
-            'third_place_prize'   => 'nullable|numeric|min:0',
+            'price_ticket'        => 'nullable|integer|min:0',
+            'stock'               => 'nullable|integer|min:0',
+            'total_prize_money'   => 'nullable|integer|min:0',
+            'champion_prize'      => 'nullable|integer|min:0',
+            'runner_up_prize'     => 'nullable|integer|min:0',
+            'third_place_prize'   => 'nullable|integer|min:0',
             'match_style'         => 'nullable|string|max:100',
             'finals_format'       => 'nullable|string|max:100',
             'divisions'           => 'nullable|string',
             'social_media_handle' => 'nullable|string|max:255',
             'status'              => 'nullable|string|in:Upcoming,Ongoing,Ended',
-            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         $imagePath = $event->image_url;
 
+        // Ganti gambar jika diupload ulang
         if ($request->hasFile('image_url')) {
-            // Hapus gambar lama jika ada
             if ($event->image_url && File::exists(public_path($event->image_url))) {
                 File::delete(public_path($event->image_url));
             }
-
-            $image = $request->file('image_url');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $image       = $request->file('image_url');
+            $imageName   = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $destination = public_path('events');
-
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
             }
-
             $image->move($destination, $imageName);
             $imagePath = 'events/' . $imageName;
         }
@@ -134,25 +167,33 @@ class EventController extends Controller
             'start_date'          => $request->start_date,
             'end_date'            => $request->end_date,
             'game_types'          => $request->game_types,
-            'total_prize_money'   => $request->total_prize_money ?? 0,
-            'champion_prize'      => $request->champion_prize ?? 0,
-            'runner_up_prize'     => $request->runner_up_prize ?? 0,
-            'third_place_prize'   => $request->third_place_prize ?? 0,
-            'match_style'         => $request->match_style ?? null,
-            'finals_format'       => $request->finals_format ?? null,
-            'divisions'           => $request->divisions ?? null,
-            'social_media_handle' => $request->social_media_handle ?? null,
+            'price_ticket'        => (int) ($request->price_ticket ?? 0),
+            'stock'               => (int) ($request->stock ?? 0),
+            'total_prize_money'   => (int) ($request->total_prize_money ?? 0),
+            'champion_prize'      => (int) ($request->champion_prize ?? 0),
+            'runner_up_prize'     => (int) ($request->runner_up_prize ?? 0),
+            'third_place_prize'   => (int) ($request->third_place_prize ?? 0),
+            'match_style'         => $request->match_style,
+            'finals_format'       => $request->finals_format,
+            'divisions'           => $request->divisions,
+            'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? $event->status,
             'image_url'           => $imagePath,
         ]);
 
         return redirect()
-            ->route('admin.event.index', $event)
+            ->route('admin.event.index')
             ->with('success', 'Event berhasil diperbarui.');
     }
 
-    public function destroy(Event $event)
+    /**
+     * DELETE /dashboard/event/{id}
+     * name: admin.event.destroy
+     */
+    public function destroy($id)
     {
+        $event = Event::findOrFail($id);
+
         if ($event->image_url && File::exists(public_path($event->image_url))) {
             File::delete(public_path($event->image_url));
         }
@@ -164,4 +205,49 @@ class EventController extends Controller
             ->with('success', 'Event berhasil dihapus.');
     }
 
+    /**
+     * Hapus semua karakter non-digit dari field uang supaya selalu numerik.
+     * Aman untuk input "1.000.000", "1,000,000", "Rp 1.000.000", dll.
+     */
+    private function sanitizeMoneyFields(Request $request): void
+    {
+        $fields = [
+            'price_ticket',
+            'total_prize_money',
+            'champion_prize',
+            'runner_up_prize',
+            'third_place_prize',
+        ];
+
+        $clean = [];
+        foreach ($fields as $f) {
+            $raw = (string) $request->input($f, '');
+            $digits = preg_replace('/[^\d]/', '', $raw ?? '');
+            $clean[$f] = $digits === '' ? 0 : (int) $digits;
+        }
+
+        $request->merge($clean);
+    }
+
+    /**
+     * Pastikan field teks opsional tidak null (pakai '' jika kosong).
+     * Ini penting bila kolom DB bertipe NOT NULL.
+     */
+    private function normalizeOptionalTextFields(Request $request): void
+    {
+        $fields = [
+            'match_style',
+            'finals_format',
+            'divisions',
+            'social_media_handle',
+        ];
+
+        $normalized = [];
+        foreach ($fields as $f) {
+            $val = $request->input($f);
+            $normalized[$f] = is_null($val) ? '' : trim((string) $val);
+        }
+
+        $request->merge($normalized);
+    }
 }

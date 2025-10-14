@@ -11,17 +11,13 @@ use Illuminate\Support\Facades\Auth;
 class TransactionController extends Controller
 {
     /**
-     * Display the transaction history page for venue.
-     *
-     * @return \Illuminate\View\View
+     * Tampilkan daftar transaksi milik venue user yang login.
      */
     public function index()
     {
-        // Ambil venue yang terkait dengan user yang sedang login
         $venue = Venue::where('user_id', Auth::id())->first();
 
         if ($venue) {
-            // Jika venue ditemukan, ambil booking yang terkait dengan venue tersebut
             $transactions = Booking::where('venue_id', $venue->id)
                 ->with(['table', 'user'])
                 ->when(request('status'), function ($query) {
@@ -51,10 +47,24 @@ class TransactionController extends Controller
                 ->orderBy('start_time', 'desc')
                 ->paginate(10);
         } else {
-            // Jika venue tidak ditemukan, tampilkan data kosong
-            $transactions = Booking::where('id', 0)->paginate(10); // Tidak ada data
+            $transactions = Booking::where('id', 0)->paginate(10);
         }
 
         return view('dash.venue.transaction', compact('transactions'));
+    }
+
+    /**
+     * Tampilkan detail transaksi tertentu (hanya jika milik venue user).
+     */
+    public function show($bookingId)
+    {
+        $venue = Venue::where('user_id', Auth::id())->firstOrFail();
+
+        $transaction = Booking::with(['table', 'user', 'venue'])
+            ->where('venue_id', $venue->id)
+            ->where('id', $bookingId)
+            ->firstOrFail();
+
+        return view('dash.venue.transaction-show', compact('transaction'));
     }
 }

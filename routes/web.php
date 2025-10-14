@@ -308,6 +308,9 @@ Route::middleware('auth')->group(function () {
 
         // Transactions
         Route::get('/transaction', [TransactionController::class, 'index'])->name('venue.transaction');
+        Route::get('/transaction/{booking}', [TransactionController::class, 'show'])
+            ->where(['booking' => '[0-9]+'])
+            ->name('venue.transaction.show'); // NEW: detail transaksi
     });
 
     /** Admin: Athletes */
