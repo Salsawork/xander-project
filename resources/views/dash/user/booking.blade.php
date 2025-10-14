@@ -174,7 +174,7 @@
 
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->bookings as $booking)
-                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                            <a href="{{ $order->payment_status === 'pending' ? route('checkout.payment', ['order_number' => $order->order_number]) : route('order.detail', ['order' => $order->id]) }}">
                                 <li class="flex items-center py-3 space-x-4">
                                     @php
                                     $images = $booking->venue->images ? (is_array($booking->venue->images) ? $booking->venue->images : json_decode($booking->venue->images, true)) : [];

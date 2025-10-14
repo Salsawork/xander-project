@@ -77,7 +77,7 @@
                         </header>
                         <ul class="divide-y divide-gray-600">
                             @foreach($order->orderSparrings as $sparring)
-                            <a href="{{ route('order.detail', ['order' => $order->id]) }}">
+                            <a href="{{ $order->payment_status === 'pending' ? route('checkout.payment', ['order_number' => $order->order_number]) : route('order.detail', ['order' => $order->id]) }}">
                                 <li class="flex items-center py-3 space-x-4">
                                     <img src="{{ $sparring->athlete_image ? asset('storage/uploads/' . $sparring->athlete_image) : 'https://placehold.co/400x600?text=No+Image' }}"
                                         alt="{{ $sparring->athlete->name }}"
