@@ -362,11 +362,14 @@ Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->gr
     Route::get('/', [AdminEventController::class, 'index'])->name('index');
     Route::get('/create', [AdminEventController::class, 'create'])->name('create');
     Route::post('/', [AdminEventController::class, 'store'])->name('store');
+
+    // edit, update, destroy harus di atas show
     Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
     Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
     Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
-    Route::get('/{event}', [AdminEventController::class, 'show'])->name('show');
+
 });
+
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/event/{event}/bracket/update-winner', [EventController::class, 'updateBracketWinner'])

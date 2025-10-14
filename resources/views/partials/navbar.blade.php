@@ -127,9 +127,9 @@
         </a>
       @endguest
       @auth
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200">
+        {{-- <a href="{{ route('dashboard') }}" class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200">
           <i class="fas fa-gear w-5 text-gray-400"></i><span>Settings</span>
-        </a>
+        </a> --}}
         <form method="POST" action="{{ route('logout') }}" class="mt-2">
           @csrf
           <button type="submit" class="w-full flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200 text-left">
