@@ -117,7 +117,7 @@ class RouteUrlGenerator
      *
      * @param  \Illuminate\Routing\Route  $route
      * @param  array  $parameters
-     * @return string
+     * @return string|null
      */
     protected function getRouteDomain($route, &$parameters)
     {
@@ -197,9 +197,14 @@ class RouteUrlGenerator
                 unset($parameters[$name]);
 
                 continue;
-            } elseif (! isset($this->defaultParameters[$name]) && ! isset($optionalParameters[$name])) {
-                // No named parameter or default value for a required parameter, try to match to positional parameter below...
-                array_push($requiredRouteParametersWithoutDefaultsOrNamedParameters, $name);
+            } else {
+                $bindingField = $route->bindingFieldFor($name);
+                $defaultParameterKey = $bindingField ? "$name:$bindingField" : $name;
+
+                if (! isset($this->defaultParameters[$defaultParameterKey]) && ! isset($optionalParameters[$name])) {
+                    // No named parameter or default value for a required parameter, try to match to positional parameter below...
+                    array_push($requiredRouteParametersWithoutDefaultsOrNamedParameters, $name);
+                }
             }
 
             $namedParameters[$name] = '';
@@ -369,7 +374,7 @@ class RouteUrlGenerator
      *
      * @param  string  $uri
      * @param  array  $parameters
-     * @return mixed|string
+     * @return mixed
      */
     protected function addQueryString($uri, array $parameters)
     {

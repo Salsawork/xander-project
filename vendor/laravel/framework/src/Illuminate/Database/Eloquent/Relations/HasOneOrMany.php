@@ -291,7 +291,7 @@ abstract class HasOneOrMany extends Relation
      */
     public function upsert(array $values, $uniqueBy, $update = null)
     {
-        if (! empty($values) && ! is_array(reset($values))) {
+        if (! empty($values) && ! is_array(array_first($values))) {
             $values = [$values];
         }
 
@@ -437,6 +437,34 @@ abstract class HasOneOrMany extends Relation
     }
 
     /**
+     * Create a Collection of new instances of the related model, allowing mass-assignment.
+     *
+     * @param  iterable  $records
+     * @return \Illuminate\Database\Eloquent\Collection<int, TRelatedModel>
+     */
+    public function forceCreateMany(iterable $records)
+    {
+        $instances = $this->related->newCollection();
+
+        foreach ($records as $record) {
+            $instances->push($this->forceCreate($record));
+        }
+
+        return $instances;
+    }
+
+    /**
+     * Create a Collection of new instances of the related model, allowing mass-assignment and without raising any events to the parent model.
+     *
+     * @param  iterable  $records
+     * @return \Illuminate\Database\Eloquent\Collection<int, TRelatedModel>
+     */
+    public function forceCreateManyQuietly(iterable $records)
+    {
+        return Model::withoutEvents(fn () => $this->forceCreateMany($records));
+    }
+
+    /**
      * Set the foreign ID for creating a related model.
      *
      * @param  TRelatedModel  $model
@@ -472,7 +500,7 @@ abstract class HasOneOrMany extends Relation
      *
      * @param  \Illuminate\Database\Eloquent\Builder<TRelatedModel>  $query
      * @param  \Illuminate\Database\Eloquent\Builder<TDeclaringModel>  $parentQuery
-     * @param  array|mixed  $columns
+     * @param  mixed  $columns
      * @return \Illuminate\Database\Eloquent\Builder<TRelatedModel>
      */
     public function getRelationExistenceQueryForSelfRelation(Builder $query, Builder $parentQuery, $columns = ['*'])
@@ -553,7 +581,7 @@ abstract class HasOneOrMany extends Relation
     {
         $segments = explode('.', $this->getQualifiedForeignKeyName());
 
-        return end($segments);
+        return array_last($segments);
     }
 
     /**
