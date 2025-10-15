@@ -1,30 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <title>@yield('title', 'Xander Billiard')</title>
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Xander Biliard')</title>
-    @vite(['resources/js/app.js', 'resources/css/app.css'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    @stack('styles')
-</head>
+        {{-- Favicon / Logo --}}
+        <link rel="icon" type="image/png" href="{{ asset('images/logo/logo-x.png') }}?v={{ @filemtime(public_path('images/logo/logo-x.png')) }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo/logo-x.png') }}?v={{ @filemtime(public_path('images/logo/logo-x.png')) }}">
+        <meta name="theme-color" content="#111111">
 
-<body>
-    <div class="w-full">
-        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*') && !Request::is('athlete/*'))
-            @include('partials.navbar')
-        @endif
+        @vite(['resources/js/app.js', 'resources/css/app.css'])
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        @stack('styles')
+    </head>
 
-        @yield('content')
+    <body>
+        <div class="w-full">
+            @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*') && !Request::is('athlete/*'))
+                @include('partials.navbar')
+            @endif
 
-        @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*') && !Request::is('athlete/*'))
-            @include('partials.footer')
-        @endif
+            @yield('content')
 
-    </div>
-    @stack('scripts')
-</body>
+            @if (!Request::is('login') && !Request::is('register') && !Request::is('dashboard/*') && !Request::is('venue/*') && !Request::is('order/*') && !Request::is('athlete/*'))
+                @include('partials.footer')
+            @endif
+        </div>
 
-</html>
+        @stack('scripts')
+    </body>
+    </html>
