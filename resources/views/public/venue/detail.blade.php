@@ -306,11 +306,11 @@
                      placeholder="Ex. PROMO70%DAY">
             </div>
 
-            @if (Auth::check() && Auth::user()->roles === 'user')
-              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
-                Add to cart
-              </button>
-            @endif
+            <button type="button"
+              id="addToCartButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
+              <i class="fas fa-shopping-cart mr-2"></i>  
+              Add to cart
+            </button>
           </form>
         </div>
 
@@ -397,6 +397,40 @@
 <script>
 const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 function changeMainImage(src){ document.getElementById('mainImage').src = src; }
+const addBtn = document.getElementById('addToCartButton');
+  if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+        const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+
+        if (!isLoggedIn) {
+          Swal.fire({
+            title: 'Belum Login!',
+            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+            icon: 'warning',
+            confirmButtonText: 'Login Sekarang',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          }).then(() => { window.location.href = '/login'; });
+          return;
+        }
+
+        if (userRole !== 'user') {
+          Swal.fire({
+            title: 'Akses Ditolak!',
+            text: 'Hanya user yang bisa menambahkan ke keranjang.',
+            icon: 'error',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          });
+          return;
+        }
+
+        document.getElementById('addToCartForm').requestSubmit();
+      });
+    }
 
 document.addEventListener("DOMContentLoaded", function() {
   function alignCreateReview() {
@@ -544,6 +578,8 @@ document.addEventListener("DOMContentLoaded", function() {
       Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
     });
   });
+
+ 
 });
 </script>
 @endpush
