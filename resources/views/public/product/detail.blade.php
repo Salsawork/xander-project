@@ -325,9 +325,206 @@
   }
 
   // Add to Cart
+  document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    Swal.fire({
+      title: 'Mohon tunggu...',
+      text: 'Sedang memproses permintaan Anda.',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+      background: '#1E1E1F',
+      color: '#FFFFFF'
+    });
+
+    fetch(this.action, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: new FormData(this)
+    })
+    .then(async res => {
+      Swal.close();
+
+      if (res.status === 401) {
+        Swal.fire({
+          title: 'Belum Login!',
+          text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+          icon: 'warning',
+          confirmButtonText: 'Login Sekarang',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        }).then(() => {
+          window.location.href = '/login';
+        });
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.success) {
+        Swal.fire({
+          title: 'Berhasil!',
+          text: 'Produk ditambahkan ke keranjang',
+          icon: 'success',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF',
+          iconColor: '#4BB543'
+        }).then(() => location.reload());
+      } else {
+        Swal.fire({
+          title: 'Gagal!',
+          text: data.message || 'Terjadi kesalahan, coba lagi.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+      }
+    })
+    .catch(() => {
+      Swal.close();
+      Swal.fire({
+        title: 'Error!',
+        text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+        icon: 'error',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      });
+    });
+  });
+
+  // Smooth scroll untuk slider foto produk
+  function smoothScroll(el, left) {
+    if (!el) return;
+    el.scrollTo({ left, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-rel-prev]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const track = document.querySelector(btn.getAttribute('data-rel-prev'));
+      const step = (track?.clientWidth || 0) * 0.9;
+      smoothScroll(track, Math.max(0, track.scrollLeft - step));
+    });
+  });
+  document.querySelectorAll('[data-rel-next]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const track = document.querySelector(btn.getAttribute('data-rel-next'));
+      const step = (track?.clientWidth || 0) * 0.9;
+      smoothScroll(track, Math.min((track?.scrollWidth || 0), track.scrollLeft + step));
+    });
+  });
+
+ const cartForm = document.getElementById('addToCartForm');
+  if (cartForm) {
+    cartForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      Swal.fire({
+        title: 'Mohon tunggu...',
+        text: 'Sedang memproses permintaan Anda.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      });
+
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      const formData = new FormData(this);
+
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrf
+        },
+        body: formData
+      })
+      .then(async res => {
+        Swal.close();
+
+        if (res.status === 401) {
+          Swal.fire({
+            title: 'Belum Login!',
+            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+            icon: 'warning',
+            confirmButtonText: 'Login Sekarang',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          }).then(() => {
+            window.location.href = '/login';
+          });
+          return;
+        }
+
+        if (res.redirected) {
+          // Kalau server malah redirect 302, tampilkan pesan
+          Swal.fire({
+            title: 'Terjadi Redirect!',
+            text: 'Server mengembalikan respons 302. Pastikan middleware Auth dan route menerima AJAX.',
+            icon: 'info',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          });
+          console.warn('Redirected to:', res.url);
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+
+        if (data && data.success) {
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Produk berhasil ditambahkan ke keranjang!',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF',
+            iconColor: '#4BB543'
+          }).then(() => location.reload());
+        } else {
+          Swal.fire({
+            title: 'Gagal!',
+            text: data?.message || 'Terjadi kesalahan, coba lagi.',
+            icon: 'error',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.close();
+        Swal.fire({
+          title: 'Error!',
+          text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
+        });
+      });
+    });
+  }
+
+  // =====================================================
+  // ADD TO CART BUTTON CLICK HANDLER
+  // =====================================================
   const addBtn = document.getElementById('addToCartButton');
   if (addBtn) {
-    addBtn.addEventListener('click', () => {
+    addBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+
       const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
       const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
 
@@ -340,7 +537,9 @@
           confirmButtonColor: '#3085d6',
           background: '#1E1E1F',
           color: '#FFFFFF'
-        }).then(() => { window.location.href = '/login'; });
+        }).then(() => {
+          window.location.href = '/login';
+        });
         return;
       }
 
@@ -356,7 +555,12 @@
         return;
       }
 
-      document.getElementById('addToCartForm').requestSubmit();
+      // ✅ Trigger form submit event
+      const form = document.getElementById('addToCartForm');
+      if (form) {
+        const event = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(event);
+      }
     });
   }
 
