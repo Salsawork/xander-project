@@ -116,41 +116,83 @@
     <div class="p-6 pt-0 cart-body">
         <div class="mb-6">
             <h3 class="text-white font-bold text-lg mb-2 cart-section-title">Items</h3>
+          
             <ul class="space-y-4">
-                {{-- Product --}}
-                @forelse ($cartProducts as $cart)
+            {{-- Product --}}
+            @forelse ($cartProducts as $cart)
                 @php
-                $images = $cart['images'] ? (is_array($cart['images']) ? $cart['images'] : json_decode($cart['images'], true)) : [];
-                $firstImage = !empty($images) ? $images[0] : null;
-                $idx = ($loop->index % 5) + 1;
-                $defaultImg = asset("images/products/{$idx}.png");
+                    /**
+                     * Normalisasi gambar produk ke FE ../demo-xanders/images/products/
+                     * Terima bentuk: JSON array, array PHP, atau string path/URL.
+                     * Hasil akhir: https://demo-xanders.ptbmn.id/images/products/{basename} 
+                     * atau default.png jika kosong.
+                     */
+                    $raw = $cart['images'] ?? null;
+                    $first = null;
+
+                    if (is_string($raw)) {
+                        // Coba parse JSON array
+                        $maybe = json_decode($raw, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                            $first = $maybe[0] ?? null;
+                        } else {
+                            $first = $raw; // string tunggal (path atau url)
+                        }
+                    } elseif (is_array($raw)) {
+                        $first = $raw[0] ?? null;
+                    }
+
+                    // Rapikan slash
+                    if (is_string($first)) { $first = str_replace('\\','/',$first); }
+
+                    // Ambil nama file saja (abaikan prefix 'uploads/', '/storage/uploads', atau URL penuh)
+                    $filename = $first ? basename($first) : null;
+
+                    // Build URL final ke FE
+                    $imageUrl = $filename
+                        ? ('https://demo-xanders.ptbmn.id/images/products/' . $filename)
+                        : 'https://demo-xanders.ptbmn.id/images/products/default.png';
                 @endphp
+
                 <li class="flex items-center space-x-4 cart-item">
-                    <input type="checkbox" name="selected_items[]" data-type="product" value="product:{{ $cart['cart_id'] }}"
-                        onchange="handleCheckboxChange(this)" class="w-5 h-5 border border-gray-600 rounded-sm" />
-                    <img alt="{{ $cart['name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
-                        src="{{ $firstImage ?? $defaultImg }}" width="80" />
+                    <input type="checkbox" name="selected_items[]" data-type="product"
+                        value="product:{{ $cart['cart_id'] }}" onchange="handleCheckboxChange(this)"
+                        class="w-5 h-5 border border-gray-600 rounded-sm" />
+        
+                    <img alt="{{ $cart['name'] }}"
+                         class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
+                         height="80"
+                         src="{{ $imageUrl }}"
+                         width="80" />
+        
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-white text-base leading-tight cart-name">
                             {{ $cart['name'] }}
                         </p>
+        
                         <input type="hidden" id="price-{{ $cart['cart_id'] }}" value="{{ $cart['price'] }}">
                         <input type="hidden" id="discount-{{ $cart['cart_id'] }}" value="{{ $cart['discount'] ?? 0 }}">
-
-                        <!-- gunakan div untuk menghindari nested <p> -->
+        
                         <div class="text-sm mt-1 cart-price">
                             @if(isset($cart['discount']) && $cart['discount'] > 0)
-                            <div class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
-                            <div class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</div>
+                                <div class="text-gray-400 line-through">
+                                    Rp {{ number_format($cart['price'], 0, ',', '.') }} / item
+                                </div>
+                                <div class="text-green-400">
+                                    Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item
+                                </div>
                             @else
-                            <div class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
+                                <div class="text-white">
+                                    Rp {{ number_format($cart['price'], 0, ',', '.') }} / item
+                                </div>
                             @endif
                         </div>
-
+        
                         <p class="text-white text-xs mt-1 cart-meta">
                             Quantity: {{ $cart['quantity'] ?? 0 }}
                         </p>
                     </div>
+        
                     <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
                         <input type="hidden" name="id" value="{{ $cart['cart_id'] }}">
@@ -160,35 +202,40 @@
                         </button>
                     </form>
                 </li>
-                @empty
+            @empty
                 @if(empty($cartSparrings) && empty($cartVenues) && empty($cartProducts))
-                <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">
-                    Your cart is empty
-                </li>
+                    <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">
+                        Your cart is empty
+                    </li>
                 @endif
-                @endforelse
-
-                {{-- Venue --}}
-                @forelse ($cartVenues ?? [] as $index => $venue)
+            @endforelse
+        
+            {{-- Venue --}}
+            @forelse ($cartVenues ?? [] as $venue)
+                @php
+                    $venueImage = !empty($venue['image'])
+                        ? $venue['image']
+                        : 'https://placehold.co/400x400?text=No+Image';
+                @endphp
+            
                 <li class="flex items-center space-x-4 cart-item">
-                    <input
-                        type="checkbox"
-                        name="selected_items[]"
-                        data-type="venue"
-                        value="venue:{{ $venue['cart_id'] }}"
-                        onchange="handleCheckboxChange(this)"
+                    <input type="checkbox" name="selected_items[]" data-type="venue"
+                        value="venue:{{ $venue['cart_id'] }}" onchange="handleCheckboxChange(this)"
                         class="w-5 h-5 border border-gray-600 rounded-sm" />
-
-                    <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
-                        src="https://placehold.co/400x400?text=No+Image" width="80" />
+            
+                    <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
+                        src="{{ $venueImage }}" alt="{{ $venue['name'] }}" />
+            
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-white text-base leading-tight cart-name">
                             {{ $venue['name'] }}
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }} {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}
+                            {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}
+                            {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} -
+                            {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}
                         </p>
-
+            
                         <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}" value="{{ $venue['price'] }}">
                         <p class="text-white text-sm mt-1 cart-price">
                             Rp. {{ number_format($venue['price'], 0, ',', '.') }}
@@ -197,7 +244,7 @@
                             Table {{ $venue['table'] }}
                         </p>
                     </div>
-
+            
                     <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
                         <input type="hidden" name="id" value="{{ $venue['cart_id'] }}">
@@ -207,39 +254,47 @@
                         </button>
                     </form>
                 </li>
-                @empty
-                @endforelse
+            @empty
+            @endforelse
 
-                {{-- Sparring --}}
-                @forelse ($cartSparrings ?? [] as $index => $sparring)
+        
+            {{-- Sparring --}}
+            @forelse ($cartSparrings ?? [] as $sparring)
+                @php
+                    $sparringImage = $sparring['athlete_image']
+                        ? (Str::startsWith($sparring['athlete_image'], 'http')
+                            ? $sparring['athlete_image']
+                            : asset('images/athlete/' . $sparring['athlete_image']))
+                        : 'https://placehold.co/400x400?text=No+Image';
+                @endphp
+        
                 <li class="flex items-center space-x-4 cart-item">
-                    <input
-                        type="checkbox"
-                        name="selected_items[]"
-                        data-type="sparring"
-                        value="sparring:{{ $sparring['cart_id'] }}"
-                        onchange="handleCheckboxChange(this)"
+                    <input type="checkbox" name="selected_items[]" data-type="sparring"
+                        value="sparring:{{ $sparring['cart_id'] }}" onchange="handleCheckboxChange(this)"
                         class="w-5 h-5 border border-gray-600 rounded-sm" />
-                    <img alt="{{ $sparring['athlete_name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
-                        height="80"
-                        src="{{ $sparring['athlete_image'] ? asset('images/athlete/' . $sparring['athlete_image']) : 'https://placehold.co/400x400?text=No+Image' }}"
-                        width="80" />
+        
+                    <img alt="{{ $sparring['athlete_name'] }}"
+                        class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
+                        src="{{ $sparringImage }}" width="80" />
+        
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-white text-base leading-tight cart-name">
                             {{ $sparring['athlete_name'] }} (Sparring)
                         </p>
                         <p class="text-white text-xs mt-1 cart-meta">
-                            {{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }} {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}
+                            {{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }}
+                            {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} -
+                            {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}
                         </p>
-                        <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}"
-                            value="{{ $sparring['price'] }}">
+        
+                        <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}" value="{{ $sparring['price'] }}">
                         <p class="text-white text-sm mt-1 cart-price">
                             Rp. {{ number_format($sparring['price'], 0, ',', '.') }}
                         </p>
                     </div>
+        
                     <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                         @csrf
-                        @method('POST')
                         <input type="hidden" name="id" value="{{ $sparring['cart_id'] }}">
                         <button type="submit" aria-label="Delete {{ $sparring['athlete_name'] }}"
                             class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
@@ -247,9 +302,10 @@
                         </button>
                     </form>
                 </li>
-                @empty
-                @endforelse
-            </ul>
+            @empty
+            @endforelse
+        </ul>
+
         </div>
 
         <form action="{{ route('checkout.index') }}" method="GET" id="checkoutForm">
