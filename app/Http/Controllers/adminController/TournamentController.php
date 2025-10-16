@@ -15,24 +15,17 @@ use Xoco70\LaravelTournaments\Models\Team;
 use Xoco70\LaravelTournaments\Models\Tournament;
 use App\Models\Event;
 
-
-
-
 class TournamentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Tournament::with('event'); // panggil relasi event
+        $query = Tournament::with('event');
 
-        // Jika ada parameter search, filter berdasarkan nama tournament
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // Hanya ambil tournament yang punya event_id
         $query->whereNotNull('event_id');
-
-        // Urutkan data terbaru
         $tournaments = $query->orderBy('created_at', 'desc')->get();
 
         return view('dash.admin.tournament.index', compact('tournaments'));
@@ -45,10 +38,7 @@ class TournamentController extends Controller
 
     public function create()
     {
-        // Ambil semua events yang tersedia
         $events = Event::orderBy('start_date', 'desc')->get();
-
-        // Show the form to create a new tournament
         return view('dash.admin.tournament.create', compact('events'));
     }
 
@@ -68,7 +58,6 @@ class TournamentController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1️⃣ Buat Tournament dengan event_id
             $tournamentData = [
                 'name' => $data['name'],
                 'user_id' => auth()->id(),
@@ -80,13 +69,11 @@ class TournamentController extends Controller
 
             $tournament = Tournament::create($tournamentData);
 
-            // 2️⃣ Buat Championship
             $championship = $tournament->championships()->create([
                 'name' => $tournament->name . ' Championship',
                 'category_id' => 1,
             ]);
 
-            // 3️⃣ Update Event yang sudah ada dengan tournament_id
             $event = Event::find($data['event_id']);
             if ($event) {
                 $finalsFormat = $data['treeType'] == 1 ? 'Single Elimination' : 'Playoff';
@@ -98,24 +85,20 @@ class TournamentController extends Controller
                 ]);
             }
 
-            // 4️⃣ Generate fighters/competitors dan bracket tree
             $numFighters = (int) $data['numFighters'];
             $isTeam = (int) ($data['isTeam'] ?? 0);
 
-            // Provision fighters
             $championship = $this->provisionObjects($request, $isTeam, $numFighters, $tournament);
 
-            // Generate bracket tree dari championship
             $generation = $championship->chooseGenerationStrategy();
             $generation->run();
 
-            // 5️⃣ Generate brackets untuk event dari championship yang sudah ada
             $this->generateBracketsFromChampionship($event, $championship);
 
             DB::commit();
 
             return redirect()->route('tournament.edit', $tournament->slug)
-                ->with('success', 'Tournament dan Bracket berhasil dibuat dan terhubung dengan Event!');
+                ->with('success', 'Tournament dan Bracket berhasil dibuat!');
         } catch (TreeGenerationException $e) {
             DB::rollBack();
             return redirect()->back()
@@ -125,7 +108,7 @@ class TournamentController extends Controller
             DB::rollBack();
             return redirect()->back()
                 ->withInput()
-                ->withErrors('Terjadi kesalahan: ' . $e->getMessage());
+                ->withErrors('Error: ' . $e->getMessage());
         }
     }
 
@@ -137,20 +120,10 @@ class TournamentController extends Controller
             'championships.category'
         );
 
-        // Ambil semua events yang tersedia
         $events = Event::orderBy('start_date', 'desc')->get();
 
         return view('dash.admin.tournament.edit', compact('tournament', 'events'));
     }
-
-    // Update method update() di TournamentController.php
-    // Tambahkan setelah DB::commit() dan sebelum return
-
-    // Update method update() di TournamentController.php
-    // Tambahkan setelah DB::commit() dan sebelum return
-
-    // Update method update() di TournamentController.php
-    // Tambahkan setelah DB::commit() dan sebelum return
 
     public function update(Tournament $tournament, Championship $championship, Request $request)
     {
@@ -168,46 +141,37 @@ class TournamentController extends Controller
         DB::beginTransaction();
 
         try {
-            // Update tournament data including event_id
             $tournament->update([
                 'name' => $data['name'],
                 'event_id' => $data['event_id'],
             ]);
 
-            // Delete existing bracket data
             $this->deleteEverything($championship->id);
 
             $numFighters = $request->numFighters;
             $isTeam = $request->isTeam ?? 0;
 
-            // Re-generate championship data
             $championship = $this->provisionObjects($request, $isTeam, $numFighters, $tournament);
             $generation = $championship->chooseGenerationStrategy();
             $generation->run();
 
-            // Update atau ambil event
             $event = Event::find($data['event_id']);
             if ($event) {
                 $finalsFormat = $request->treeType == 1 ? 'Single Elimination' : 'Playoff';
 
-                // Update event dengan data tournament
                 $event->update([
                     'tournament_id' => $tournament->id,
                     'name' => $request->name,
                     'finals_format' => $finalsFormat,
                 ]);
 
-                // Re-generate brackets untuk event
                 $this->generateBracketsFromChampionship($event, $championship);
-
-                // 🆕 AUTO SYNC: Update winners dari fight results
-                $this->syncBracketsWithFights($event, $championship);
             }
 
             DB::commit();
 
             return back()
-                ->with('success', 'Tournament, Event, dan Bracket berhasil di-update!')
+                ->with('success', 'Tournament updated successfully!')
                 ->with('numFighters', $numFighters)
                 ->with('isTeam', $isTeam);
         } catch (TreeGenerationException $e) {
@@ -221,73 +185,6 @@ class TournamentController extends Controller
         }
     }
 
-    /**
-     * 🆕 Sync brackets dengan championship fights
-     */
-    private function syncBracketsWithFights(Event $event, Championship $championship)
-    {
-        // Ambil semua fights yang sudah ada winner
-        $fights = $championship->fights()
-            ->whereNotNull('winner_id')
-            ->with('winner')
-            ->get();
-
-        foreach ($fights as $fight) {
-            if (!$fight->winner) continue;
-
-            $winnerName = $fight->winner->fullName;
-            $round = $fight->round ?? 1;
-
-            // Update bracket: tandai sebagai winner
-            Bracket::where('event_id', $event->id)
-                ->where('player_name', $winnerName)
-                ->where('round', $round)
-                ->update(['is_winner' => true]);
-
-            // Advance winner ke round berikutnya
-            $this->advanceWinnerToNextRound($event, $winnerName, $round);
-        }
-    }
-
-    /**
-     * 🆕 Advance winner ke round berikutnya
-     */
-    private function advanceWinnerToNextRound(Event $event, string $winnerName, int $currentRound)
-    {
-        $nextRound = $currentRound + 1;
-
-        // Dapatkan total rounds
-        $maxRound = Bracket::where('event_id', $event->id)->max('round');
-
-        if ($currentRound >= $maxRound) {
-            // Sudah di final, tidak ada round berikutnya
-            return;
-        }
-
-        // Tentukan posisi di round berikutnya
-        $currentBracket = Bracket::where('event_id', $event->id)
-            ->where('player_name', $winnerName)
-            ->where('round', $currentRound)
-            ->first();
-
-        if (!$currentBracket) return;
-
-        $nextPosition = $currentBracket->next_match_position;
-
-        if (!$nextPosition) return;
-
-        // Cek apakah sudah ada bracket di round berikutnya
-        $nextBracket = Bracket::where('event_id', $event->id)
-            ->where('round', $nextRound)
-            ->where('position', $nextPosition)
-            ->first();
-
-        if ($nextBracket && $nextBracket->player_name === 'TBD') {
-            // Update existing bracket
-            $nextBracket->update(['player_name' => $winnerName]);
-        }
-    }
-
     public function destroy(Tournament $tournament)
     {
         $tournament->delete();
@@ -297,14 +194,12 @@ class TournamentController extends Controller
     }
 
     /**
-     * Generate brackets dari championship fighters ke dalam tabel brackets
+     * Generate brackets dari championship - FINAL ONLY
      */
     private function generateBracketsFromChampionship(Event $event, Championship $championship)
     {
-        // Hapus bracket lama jika ada
         Bracket::where('event_id', $event->id)->delete();
 
-        // Ambil semua fighters groups yang sudah di-generate
         $fightersGroups = $championship->fightersGroups()
             ->where('round', '>=', 1)
             ->orderBy('round')
@@ -317,16 +212,20 @@ class TournamentController extends Controller
         }
 
         $totalRounds = $fightersGroups->count();
+        $finalRound = $totalRounds;
 
-        // Generate brackets untuk setiap round
+        // Generate semua round KECUALI final
         foreach ($fightersGroups as $roundNumber => $groups) {
+            if ($roundNumber == $finalRound) {
+                continue;
+            }
+
             $position = 1;
 
             foreach ($groups as $group) {
                 $fighters = $group->getFightersWithBye();
 
                 foreach ($fighters as $fighter) {
-                    // Calculate next match position
                     $nextMatchPosition = $roundNumber < $totalRounds
                         ? (int) ceil($position / 2)
                         : null;
@@ -345,13 +244,114 @@ class TournamentController extends Controller
             }
         }
 
-        // Update winners berdasarkan fight results jika ada
+        // Create FINAL dengan HANYA 2 pemain dari semifinal winners
+        $this->createFinalBrackets($event, $championship, $finalRound);
+
+        // Update winners dari fight results
         $this->updateWinnersFromFights($event, $championship);
     }
 
     /**
-     * Update winners berdasarkan fight results
+     * Create final brackets dengan HANYA 2 pemain - TANPA 3rd place
      */
+    private function createFinalBrackets(Event $event, Championship $championship, int $finalRound)
+    {
+        $semifinalRound = $finalRound - 1;
+
+        $semifinalGroups = $championship->fightersGroups()
+            ->where('round', $semifinalRound)
+            ->with('fights')
+            ->get();
+
+        $semifinalWinners = [];
+
+        foreach ($semifinalGroups as $group) {
+            $fight = $group->fights->first();
+
+            if (!$fight) {
+                continue;
+            }
+
+            if ($fight->winner_id) {
+                $winner = $this->getFighterById($fight->winner_id, $championship);
+
+                if ($winner) {
+                    $semifinalWinners[] = [
+                        'id' => $fight->winner_id,
+                        'name' => $winner->fullName ?? $winner->name ?? 'Unknown',
+                    ];
+                }
+            }
+        }
+
+        // Jika ada 2 pemenang semifinal, buat final
+        if (count($semifinalWinners) === 2) {
+            $finalGroup = $championship->fightersGroups()
+                ->where('round', $finalRound)
+                ->with('fights')
+                ->first();
+
+            $finalWinnerId = null;
+            if ($finalGroup && $finalGroup->fights->first()) {
+                $finalWinnerId = $finalGroup->fights->first()->winner_id;
+            }
+
+            // Finalist 1
+            Bracket::create([
+                'event_id' => $event->id,
+                'player_name' => $semifinalWinners[0]['name'],
+                'round' => $finalRound,
+                'position' => 1,
+                'next_match_position' => null,
+                'is_winner' => ($finalWinnerId == $semifinalWinners[0]['id']),
+            ]);
+
+            // Finalist 2
+            Bracket::create([
+                'event_id' => $event->id,
+                'player_name' => $semifinalWinners[1]['name'],
+                'round' => $finalRound,
+                'position' => 2,
+                'next_match_position' => null,
+                'is_winner' => ($finalWinnerId == $semifinalWinners[1]['id']),
+            ]);
+        } else {
+            // TBD placeholders
+            Bracket::create([
+                'event_id' => $event->id,
+                'player_name' => 'TBD',
+                'round' => $finalRound,
+                'position' => 1,
+                'next_match_position' => null,
+                'is_winner' => false,
+            ]);
+
+            Bracket::create([
+                'event_id' => $event->id,
+                'player_name' => 'TBD',
+                'round' => $finalRound,
+                'position' => 2,
+                'next_match_position' => null,
+                'is_winner' => false,
+            ]);
+        }
+    }
+
+    private function getFighterById($fighterId, $championship)
+    {
+        $competitor = Competitor::where('championship_id', $championship->id)
+            ->where('id', $fighterId)
+            ->first();
+
+        if ($competitor) {
+            return $competitor;
+        }
+
+        return Team::where('championship_id', $championship->id)
+            ->where('id', $fighterId)
+            ->first();
+    }
+
     private function updateWinnersFromFights(Event $event, Championship $championship)
     {
         $fights = $championship->fights()
@@ -361,7 +361,7 @@ class TournamentController extends Controller
 
         foreach ($fights as $fight) {
             if ($fight->winner) {
-                $winnerName = $fight->winner->fullName;
+                $winnerName = $fight->winner->fullName ?? $fight->winner->name;
 
                 Bracket::where('event_id', $event->id)
                     ->where('player_name', $winnerName)
@@ -373,7 +373,6 @@ class TournamentController extends Controller
 
     private function deleteEverything($championshipId)
     {
-        // Get fighters groups and delete them
         $fightersGroups = DB::table('fighters_groups')->where('championship_id', $championshipId)->get();
         foreach ($fightersGroups as $fightersGroup) {
             DB::table('fight')->where('fighters_group_id', $fightersGroup->id)->delete();
