@@ -18,10 +18,6 @@ class CreateLtTournamentTable extends Migration
                 ->on('users')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-            $table->unsignedBigInteger('event_id')->nullable();
-            $table->unsignedBigInteger('venue_id')->nullable(); // sesuai diagrammu
-            $table->foreign('event_id')->references('id')->on('events')->onDelete('cascade');
-            $table->foreign('venue_id')->references('id')->on('venues')->onDelete('set null');
 
             $table->string('name');
             $table->string('slug')->unique();
