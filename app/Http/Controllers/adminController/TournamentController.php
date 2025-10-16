@@ -193,6 +193,187 @@ class TournamentController extends Controller
             ->with('success', 'Tournament deleted successfully');
     }
 
+    private function generateCompleteStructure($event, $championship)
+    {
+        // Hapus bracket lama
+        Bracket::where('event_id', $event->id)->delete();
+
+        // Hitung total rounds dari jumlah pemain di round 1
+        $allGroups = $championship->fightersGroups()
+            ->where('round', '>=', 1)
+            ->with('fights')
+            ->orderBy('round')
+            ->orderBy('order')
+            ->get();
+
+        if ($allGroups->isEmpty()) {
+            return;
+        }
+
+        // Cari jumlah pemain di round 1
+        $round1Groups = $allGroups->where('round', 1);
+        $totalPlayers = $round1Groups->count() * 2; // setiap group punya 2 fighters
+        $maxRound = (int) ceil(log($totalPlayers, 2));
+
+        \Log::info('Auto Generate Bracket Structure', [
+            'total_players' => $totalPlayers,
+            'max_rounds' => $maxRound,
+            'championship_id' => $championship->id
+        ]);
+
+        // Generate SEMUA rounds
+        for ($round = 1; $round <= $maxRound; $round++) {
+            $matchesInRound = (int) ($totalPlayers / pow(2, $round));
+            $position = 1;
+
+            \Log::info('Creating round structure', [
+                'round' => $round,
+                'matches' => $matchesInRound
+            ]);
+
+            for ($matchNum = 1; $matchNum <= $matchesInRound; $matchNum++) {
+                // Coba ambil data dari championship groups
+                $group = $allGroups->where('round', $round)
+                    ->where('order', $matchNum)
+                    ->first();
+
+                $player1Name = 'TBD';
+                $player2Name = 'TBD';
+                $isWinner1 = false;
+                $isWinner2 = false;
+
+                // Jika ada data group, ambil dari sana
+                if ($group && $group->fights->isNotEmpty()) {
+                    $fight = $group->fights->first();
+
+                    // Fighter 1
+                    if ($fight->c1) {
+                        $fighter1 = $this->getFighterById($fight->c1, $championship);
+                        $player1Name = $fighter1 ? $this->getPlayerName($fighter1) : 'TBD';
+                        $isWinner1 = ($fight->winner_id == $fight->c1);
+                    } else {
+                        $player1Name = 'TBD';
+                    }
+
+                    // Fighter 2
+                    if ($fight->c2) {
+                        $fighter2 = $this->getFighterById($fight->c2, $championship);
+                        $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
+                        $isWinner2 = ($fight->winner_id == $fight->c2);
+                    } else {
+                        $player2Name = 'TBD';
+                    }
+                }
+
+                // Buat bracket untuk player 1
+                Bracket::create([
+                    'event_id' => $event->id,
+                    'round' => $round,
+                    'position' => $position,
+                    'player_name' => $player1Name,
+                    'is_winner' => $isWinner1,
+                    'next_match_position' => $round < $maxRound ? (int) ceil($position / 2) : null
+                ]);
+
+                $position++;
+
+                // Buat bracket untuk player 2
+                Bracket::create([
+                    'event_id' => $event->id,
+                    'round' => $round,
+                    'position' => $position,
+                    'player_name' => $player2Name,
+                    'is_winner' => $isWinner2,
+                    'next_match_position' => $round < $maxRound ? (int) ceil($position / 2) : null
+                ]);
+
+                $position++;
+            }
+        }
+
+        // Summary
+        $totalBrackets = Bracket::where('event_id', $event->id)->count();
+        $byRound = Bracket::where('event_id', $event->id)
+            ->selectRaw('round, count(*) as count')
+            ->groupBy('round')
+            ->get()
+            ->pluck('count', 'round');
+
+        \Log::info('Complete Bracket Structure Generated', [
+            'event_id' => $event->id,
+            'total_brackets' => $totalBrackets,
+            'by_round' => $byRound
+        ]);
+    }
+    private function getPlayerName($fighter)
+    {
+        if (!$fighter) return 'TBD';
+
+        if (isset($fighter->fullName)) {
+            return $fighter->fullName;
+        }
+
+        if (isset($fighter->name)) {
+            return $fighter->name;
+        }
+
+        if (isset($fighter->user) && isset($fighter->user->name)) {
+            return $fighter->user->name;
+        }
+
+        return 'Unknown';
+    }
+
+    private function propagateWinnersInBracket($event, $championship)
+    {
+        $maxRound = Bracket::where('event_id', $event->id)->max('round');
+
+        // Loop setiap round (kecuali final)
+        for ($round = 1; $round < $maxRound; $round++) {
+            // Ambil semua pemenang di round ini
+            $winners = Bracket::where('event_id', $event->id)
+                ->where('round', $round)
+                ->where('is_winner', true)
+                ->where('player_name', '!=', 'TBD')
+                ->get();
+
+            foreach ($winners as $winner) {
+                if ($winner->next_match_position) {
+                    // Tentukan apakah pemenang ini di posisi ganjil atau genap
+                    // Posisi ganjil = player 1, genap = player 2
+                    $isFirstPosition = ($winner->position % 2 == 1);
+
+                    // Di round berikutnya, cari slot yang sesuai
+                    $nextRound = $round + 1;
+                    $nextMatches = Bracket::where('event_id', $event->id)
+                        ->where('round', $nextRound)
+                        ->where('next_match_position', '=', $winner->next_match_position)
+                        ->orderBy('position')
+                        ->get();
+
+                    if ($nextMatches->count() >= 2) {
+                        $targetPosition = $isFirstPosition ? 0 : 1;
+                        $targetBracket = $nextMatches[$targetPosition] ?? null;
+
+                        if ($targetBracket && $targetBracket->player_name === 'TBD') {
+                            $targetBracket->update([
+                                'player_name' => $winner->player_name
+                            ]);
+
+                            \Log::info('Winner propagated to next round', [
+                                'from_round' => $round,
+                                'from_position' => $winner->position,
+                                'to_round' => $nextRound,
+                                'to_position' => $targetBracket->position,
+                                'player' => $winner->player_name
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Generate brackets dari championship - FINAL ONLY
      */
