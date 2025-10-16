@@ -18,9 +18,6 @@ use Xoco70\LaravelTournaments\Models\Tournament;
 
 class TreeController extends Controller
 {
-    /**
-     * Display a listing of trees.
-     */
     public function index()
     {
         $tournament = Tournament::with(
@@ -33,9 +30,6 @@ class TreeController extends Controller
             ->with('tournament', $tournament);
     }
 
-    /**
-     * Build Tree.
-     */
     public function store(Request $request, $championshipId)
     {
         $this->deleteEverything();
@@ -66,9 +60,6 @@ class TreeController extends Controller
         DB::table('team')->delete();
     }
 
-    /**
-     * Provision objects for tournament
-     */
     protected function provisionObjects(Request $request, $isTeam, $numFighters)
     {
         if ($isTeam) {
@@ -94,61 +85,88 @@ class TreeController extends Controller
     }
 
     /**
-     * Update tree - Sync SEMUA data dari tree ke bracket
+     * Update tree - FIXED dengan safe array access
      */
     public function update(Request $request, Championship $championship)
     {
-        $numFighter = 0;
         $query = FightersGroup::with('fights')
             ->where('championship_id', $championship->id);
 
-        $fighters = $request->singleElimination_fighters;
-        $scores = $request->score;
+        // Safe array access - ensure arrays exist
+        $fighters = $request->singleElimination_fighters ?? [];
+        $scores = $request->score ?? [];
 
         if ($championship->hasPreliminary()) {
             $query = $query->where('round', '>', 1);
-            $fighters = $request->preliminary_fighters;
+            $fighters = $request->preliminary_fighters ?? [];
         }
 
-        $groups = $query->get();
+        $groups = $query->orderBy('round')->orderBy('order')->get();
 
         DB::beginTransaction();
         try {
+            // Convert to array if needed
+            if (!is_array($fighters)) {
+                $fighters = $fighters->toArray() ?? [];
+            }
+            if (!is_array($scores)) {
+                $scores = $scores->toArray() ?? [];
+            }
+
+            \Log::info('Update tree started', [
+                'fighters_count' => count($fighters),
+                'scores_count' => count($scores),
+                'groups_count' => $groups->count()
+            ]);
+
+            $numFighter = 0;
+
             // Save fight results
             foreach ($groups as $group) {
                 foreach ($group->fights as $fight) {
-                    $fight->c1 = $fighters[$numFighter];
-                    $fight->winner_id = $this->getWinnerId($fighters, $scores, $numFighter);
-                    $numFighter++;
-
-                    $fight->c2 = $fighters[$numFighter];
-                    if ($fight->winner_id == null) {
-                        $fight->winner_id = $this->getWinnerId($fighters, $scores, $numFighter);
+                    // SAFE: Check if keys exist before accessing
+                    if (isset($fighters[$numFighter])) {
+                        $fight->c1 = $fighters[$numFighter];
+                        if (isset($scores[$numFighter]) && $scores[$numFighter] != null) {
+                            $fight->winner_id = $fighters[$numFighter];
+                        }
                     }
                     $numFighter++;
+
+                    if (isset($fighters[$numFighter])) {
+                        $fight->c2 = $fighters[$numFighter];
+                        if ($fight->winner_id == null && isset($scores[$numFighter]) && $scores[$numFighter] != null) {
+                            $fight->winner_id = $fighters[$numFighter];
+                        }
+                    }
+                    $numFighter++;
+
                     $fight->save();
+
+                    \Log::info('Fight saved', [
+                        'fight_id' => $fight->id,
+                        'c1' => $fight->c1,
+                        'c2' => $fight->c2,
+                        'winner_id' => $fight->winner_id
+                    ]);
                 }
             }
 
-            \Log::info('Fights saved', [
+            \Log::info('Fights saved successfully', [
                 'championship_id' => $championship->id,
-                'total_groups' => $groups->count()
+                'total_groups' => $groups->count(),
+                'total_fighters_processed' => $numFighter
             ]);
+
+            // AUTO-FILL next rounds based on winners
+            $this->autoFillNextRounds($championship);
 
             // Sync ke brackets
             $tournament = $championship->tournament;
             if ($tournament && $tournament->event_id) {
                 $event = Event::find($tournament->event_id);
                 if ($event) {
-                    \Log::info('Starting bracket sync', [
-                        'event_id' => $event->id,
-                        'tournament_id' => $tournament->id
-                    ]);
-
-                    // Sync SEMUA fighters dari SEMUA rounds
                     $this->syncAllRoundsToBracket($event, $championship);
-
-                    \Log::info('Bracket sync completed', ['event_id' => $event->id]);
                 }
             }
 
@@ -165,89 +183,106 @@ class TreeController extends Controller
     }
 
     /**
-     * Get winner ID from fighters and scores
+     * AUTO-FILL fighters ke round berikutnya
      */
-    public function getWinnerId($fighters, $scores, $numFighter)
+    private function autoFillNextRounds($championship)
     {
-        return $scores[$numFighter] != null ? $fighters[$numFighter] : null;
-    }
-
-    /**
-     * Sync SEMUA rounds dari tree ke bracket
-     */
-    private function syncAllRoundsToBracket($event, $championship)
-    {
-        // Hapus semua brackets lama untuk event ini
-        Bracket::where('event_id', $event->id)->delete();
-        
-        \Log::info('Deleted old brackets', ['event_id' => $event->id]);
-
-        // Loop SEMUA fighters groups (semua rounds)
         $allGroups = $championship->fightersGroups()
             ->with('fights')
             ->orderBy('round')
             ->orderBy('order')
             ->get();
 
-        \Log::info('Total groups to sync', ['count' => $allGroups->count()]);
+        $maxRound = $allGroups->max('round');
 
-        $bracketPosition = 1;
+        for ($round = 1; $round < $maxRound; $round++) {
+            $currentRoundGroups = $allGroups->where('round', $round)->values();
+
+            foreach ($currentRoundGroups as $groupIndex => $group) {
+                $fight = $group->fights->first();
+
+                if ($fight && $fight->winner_id) {
+                    $nextPosition = (int) ceil(($groupIndex + 1) / 2);
+                    $nextRoundGroup = $allGroups->where('round', $round + 1)
+                        ->where('order', $nextPosition)
+                        ->first();
+
+                    if ($nextRoundGroup) {
+                        $nextFight = $nextRoundGroup->fights->first();
+
+                        if ($nextFight) {
+                            $isFirstInMatch = ($groupIndex % 2 == 0);
+
+                            if ($isFirstInMatch) {
+                                $nextFight->c1 = $fight->winner_id;
+                            } else {
+                                $nextFight->c2 = $fight->winner_id;
+                            }
+
+                            $nextFight->save();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Sync SEMUA rounds ke bracket
+     */
+    private function syncAllRoundsToBracket($event, $championship)
+    {
+        Bracket::where('event_id', $event->id)->delete();
+
+        $allGroups = $championship->fightersGroups()
+            ->with('fights')
+            ->orderBy('round')
+            ->orderBy('order')
+            ->get();
+
+        $maxRound = $allGroups->max('round');
 
         foreach ($allGroups->groupBy('round') as $round => $roundGroups) {
-            \Log::info('Processing round', ['round' => $round, 'groups' => $roundGroups->count()]);
-            
             $positionInRound = 1;
 
+            // Final: hanya ambil 1 group (2 pemain)
+            if ($round == $maxRound) {
+                $roundGroups = $roundGroups->take(1);
+            }
+
             foreach ($roundGroups as $group) {
-                // Get fights untuk group ini
                 $fight = $group->fights->first();
-                
-                // Get fighter 1
+
                 if ($fight && $fight->c1) {
                     $fighter1 = $this->getFighterById($fight->c1, $championship);
                     if ($fighter1) {
                         $isWinner1 = ($fight->winner_id == $fight->c1);
-                        
+
                         Bracket::create([
                             'event_id' => $event->id,
                             'round' => $round,
                             'position' => $positionInRound,
                             'player_name' => $this->getPlayerName($fighter1),
                             'is_winner' => $isWinner1,
-                            'next_match_position' => $this->calculateNextPosition($round, $positionInRound, $allGroups)
-                        ]);
-
-                        \Log::info('Created bracket for fighter 1', [
-                            'round' => $round,
-                            'position' => $positionInRound,
-                            'player' => $this->getPlayerName($fighter1),
-                            'is_winner' => $isWinner1
+                            'next_match_position' => $round < $maxRound ? (int) ceil($positionInRound / 2) : null
                         ]);
 
                         $positionInRound++;
                     }
                 }
 
-                // Get fighter 2
                 if ($fight && $fight->c2) {
                     $fighter2 = $this->getFighterById($fight->c2, $championship);
                     if ($fighter2) {
                         $isWinner2 = ($fight->winner_id == $fight->c2);
-                        
+
                         Bracket::create([
                             'event_id' => $event->id,
                             'round' => $round,
                             'position' => $positionInRound,
                             'player_name' => $this->getPlayerName($fighter2),
                             'is_winner' => $isWinner2,
-                            'next_match_position' => $this->calculateNextPosition($round, $positionInRound, $allGroups)
-                        ]);
-
-                        \Log::info('Created bracket for fighter 2', [
-                            'round' => $round,
-                            'position' => $positionInRound,
-                            'player' => $this->getPlayerName($fighter2),
-                            'is_winner' => $isWinner2
+                            'next_match_position' => $round < $maxRound ? (int) ceil($positionInRound / 2) : null
                         ]);
 
                         $positionInRound++;
@@ -255,73 +290,39 @@ class TreeController extends Controller
                 }
             }
         }
-
-        // Summary log
-        $totalBrackets = Bracket::where('event_id', $event->id)->count();
-        \Log::info('Bracket sync summary', [
-            'event_id' => $event->id,
-            'total_brackets_created' => $totalBrackets
-        ]);
     }
 
-    /**
-     * Get fighter by ID
-     */
     private function getFighterById($fighterId, $championship)
     {
-        // Try Competitor first
         $competitor = Competitor::where('championship_id', $championship->id)
             ->where('id', $fighterId)
             ->first();
-        
+
         if ($competitor) {
             return $competitor;
         }
 
-        // Try Team
-        $team = Team::where('championship_id', $championship->id)
+        return Team::where('championship_id', $championship->id)
             ->where('id', $fighterId)
             ->first();
-
-        return $team;
     }
 
-    /**
-     * Calculate next match position
-     */
-    private function calculateNextPosition($currentRound, $currentPosition, $allGroups)
-    {
-        $maxRound = $allGroups->max('round');
-        
-        if ($currentRound >= $maxRound) {
-            return null; // Final round
-        }
-
-        return (int) ceil($currentPosition / 2);
-    }
-
-    /**
-     * Get player name from fighter object
-     */
     private function getPlayerName($fighter)
     {
         if (!$fighter) return 'TBD';
-        
-        // Try fullName first
+
         if (isset($fighter->fullName)) {
             return $fighter->fullName;
         }
-        
-        // Try name
+
         if (isset($fighter->name)) {
             return $fighter->name;
         }
-        
-        // Try user->name for Competitor
+
         if (isset($fighter->user) && isset($fighter->user->name)) {
             return $fighter->user->name;
         }
-        
+
         return 'Unknown';
     }
 }
