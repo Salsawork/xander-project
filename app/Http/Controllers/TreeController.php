@@ -85,14 +85,13 @@ class TreeController extends Controller
     }
 
     /**
-     * Update tree - FIXED dengan safe array access
+     * Update tree dengan COMPLETE STRUCTURE
      */
     public function update(Request $request, Championship $championship)
     {
         $query = FightersGroup::with('fights')
             ->where('championship_id', $championship->id);
 
-        // Safe array access - ensure arrays exist
         $fighters = $request->singleElimination_fighters ?? [];
         $scores = $request->score ?? [];
 
@@ -105,7 +104,6 @@ class TreeController extends Controller
 
         DB::beginTransaction();
         try {
-            // Convert to array if needed
             if (!is_array($fighters)) {
                 $fighters = $fighters->toArray() ?? [];
             }
@@ -124,7 +122,6 @@ class TreeController extends Controller
             // Save fight results
             foreach ($groups as $group) {
                 foreach ($group->fights as $fight) {
-                    // SAFE: Check if keys exist before accessing
                     if (isset($fighters[$numFighter])) {
                         $fight->c1 = $fighters[$numFighter];
                         if (isset($scores[$numFighter]) && $scores[$numFighter] != null) {
@@ -161,12 +158,15 @@ class TreeController extends Controller
             // AUTO-FILL next rounds based on winners
             $this->autoFillNextRounds($championship);
 
-            // Sync ke brackets
+            // Sync ke brackets dengan COMPLETE STRUCTURE
             $tournament = $championship->tournament;
             if ($tournament && $tournament->event_id) {
                 $event = Event::find($tournament->event_id);
                 if ($event) {
-                    $this->syncAllRoundsToBracket($event, $championship);
+                    // Gunakan generateCompleteStructure BUKAN syncAllRoundsToBracket
+                    $this->generateCompleteStructure($event, $championship);
+                    // Propagate winners ke slot TBD berikutnya
+                    $this->propagateWinnersInBracket($event, $championship);
                 }
             }
 
@@ -228,64 +228,149 @@ class TreeController extends Controller
     }
 
     /**
-     * Sync SEMUA rounds ke bracket
+     * Generate COMPLETE bracket structure untuk SEMUA rounds
+     * Bahkan yang belum ada data - akan diisi dengan TBD
      */
-    private function syncAllRoundsToBracket($event, $championship)
+    private function generateCompleteStructure($event, $championship)
     {
         Bracket::where('event_id', $event->id)->delete();
 
         $allGroups = $championship->fightersGroups()
+            ->where('round', '>=', 1)
             ->with('fights')
             ->orderBy('round')
             ->orderBy('order')
             ->get();
 
-        $maxRound = $allGroups->max('round');
+        if ($allGroups->isEmpty()) {
+            return;
+        }
 
-        foreach ($allGroups->groupBy('round') as $round => $roundGroups) {
-            $positionInRound = 1;
+        // Hitung total rounds dari jumlah pemain di round 1
+        $round1Groups = $allGroups->where('round', 1);
+        $totalPlayers = $round1Groups->count() * 2;
+        $maxRound = (int) ceil(log($totalPlayers, 2));
 
-            // Final: hanya ambil 1 group (2 pemain)
-            if ($round == $maxRound) {
-                $roundGroups = $roundGroups->take(1);
-            }
+        \Log::info('Generate Complete Bracket Structure', [
+            'total_players' => $totalPlayers,
+            'max_rounds' => $maxRound,
+            'event_id' => $event->id
+        ]);
 
-            foreach ($roundGroups as $group) {
-                $fight = $group->fights->first();
+        // Generate SEMUA rounds
+        for ($round = 1; $round <= $maxRound; $round++) {
+            $matchesInRound = (int) ($totalPlayers / pow(2, $round));
+            $position = 1;
 
-                if ($fight && $fight->c1) {
-                    $fighter1 = $this->getFighterById($fight->c1, $championship);
-                    if ($fighter1) {
+            \Log::info('Creating round structure', [
+                'round' => $round,
+                'matches' => $matchesInRound
+            ]);
+
+            for ($matchNum = 1; $matchNum <= $matchesInRound; $matchNum++) {
+                $group = $allGroups->where('round', $round)
+                    ->where('order', $matchNum)
+                    ->first();
+
+                $player1Name = 'TBD';
+                $player2Name = 'TBD';
+                $isWinner1 = false;
+                $isWinner2 = false;
+
+                // Jika ada data group, ambil dari sana
+                if ($group && $group->fights->isNotEmpty()) {
+                    $fight = $group->fights->first();
+
+                    // Fighter 1
+                    if ($fight->c1) {
+                        $fighter1 = $this->getFighterById($fight->c1, $championship);
+                        $player1Name = $fighter1 ? $this->getPlayerName($fighter1) : 'TBD';
                         $isWinner1 = ($fight->winner_id == $fight->c1);
+                    }
 
-                        Bracket::create([
-                            'event_id' => $event->id,
-                            'round' => $round,
-                            'position' => $positionInRound,
-                            'player_name' => $this->getPlayerName($fighter1),
-                            'is_winner' => $isWinner1,
-                            'next_match_position' => $round < $maxRound ? (int) ceil($positionInRound / 2) : null
-                        ]);
-
-                        $positionInRound++;
+                    // Fighter 2
+                    if ($fight->c2) {
+                        $fighter2 = $this->getFighterById($fight->c2, $championship);
+                        $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
+                        $isWinner2 = ($fight->winner_id == $fight->c2);
                     }
                 }
 
-                if ($fight && $fight->c2) {
-                    $fighter2 = $this->getFighterById($fight->c2, $championship);
-                    if ($fighter2) {
-                        $isWinner2 = ($fight->winner_id == $fight->c2);
+                // Buat bracket untuk player 1
+                Bracket::create([
+                    'event_id' => $event->id,
+                    'round' => $round,
+                    'position' => $position,
+                    'player_name' => $player1Name,
+                    'is_winner' => $isWinner1,
+                    'next_match_position' => $round < $maxRound ? (int) ceil($position / 2) : null
+                ]);
 
-                        Bracket::create([
-                            'event_id' => $event->id,
-                            'round' => $round,
-                            'position' => $positionInRound,
-                            'player_name' => $this->getPlayerName($fighter2),
-                            'is_winner' => $isWinner2,
-                            'next_match_position' => $round < $maxRound ? (int) ceil($positionInRound / 2) : null
-                        ]);
+                $position++;
 
-                        $positionInRound++;
+                // Buat bracket untuk player 2
+                Bracket::create([
+                    'event_id' => $event->id,
+                    'round' => $round,
+                    'position' => $position,
+                    'player_name' => $player2Name,
+                    'is_winner' => $isWinner2,
+                    'next_match_position' => $round < $maxRound ? (int) ceil($position / 2) : null
+                ]);
+
+                $position++;
+            }
+        }
+
+        $totalBrackets = Bracket::where('event_id', $event->id)->count();
+        \Log::info('Complete Bracket Structure Generated', [
+            'event_id' => $event->id,
+            'total_brackets' => $totalBrackets
+        ]);
+    }
+
+    /**
+     * Propagate winners ketika update
+     * Ini untuk fill TBD dengan nama pemenang dari round sebelumnya
+     */
+    private function propagateWinnersInBracket($event, $championship)
+    {
+        $maxRound = Bracket::where('event_id', $event->id)->max('round');
+
+        // Loop setiap round (kecuali final)
+        for ($round = 1; $round < $maxRound; $round++) {
+            $winners = Bracket::where('event_id', $event->id)
+                ->where('round', $round)
+                ->where('is_winner', true)
+                ->where('player_name', '!=', 'TBD')
+                ->get();
+
+            foreach ($winners as $winner) {
+                if ($winner->next_match_position) {
+                    $isFirstPosition = ($winner->position % 2 == 1);
+                    $nextRound = $round + 1;
+                    
+                    $nextMatches = Bracket::where('event_id', $event->id)
+                        ->where('round', $nextRound)
+                        ->where('next_match_position', '=', $winner->next_match_position)
+                        ->orderBy('position')
+                        ->get();
+
+                    if ($nextMatches->count() >= 2) {
+                        $targetPosition = $isFirstPosition ? 0 : 1;
+                        $targetBracket = $nextMatches[$targetPosition] ?? null;
+
+                        if ($targetBracket && $targetBracket->player_name === 'TBD') {
+                            $targetBracket->update([
+                                'player_name' => $winner->player_name
+                            ]);
+
+                            \Log::info('Winner propagated to next round', [
+                                'from_round' => $round,
+                                'to_round' => $nextRound,
+                                'player' => $winner->player_name
+                            ]);
+                        }
                     }
                 }
             }
