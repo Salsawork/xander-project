@@ -167,13 +167,16 @@
                                                 class="hidden" onchange="previewImage(event)" />
                                             <div class="w-32 h-32 bg-gray-700 rounded-md overflow-hidden flex items-center justify-center">
                                                 @php
+                                                    // Normalisasi: jika URL penuh -> pakai apa adanya,
+                                                    // jika bukan -> gunakan /images/community/{filename}
                                                     $imagePath = 'https://placehold.co/600x400?text=No+Image';
                                                     if (!empty($news->image_url)) {
-                                                        // Jika path tidak dimulai dengan http:// atau https:// atau /storage/
-                                                        if (!str_starts_with($news->image_url, 'http://') && !str_starts_with($news->image_url, 'https://') && !str_starts_with($news->image_url, '/storage/')) {
-                                                            $imagePath = asset('storage/uploads/' . $news->image_url);
+                                                        $raw = trim($news->image_url);
+                                                        if (preg_match('/^https?:\/\//i', $raw)) {
+                                                            $imagePath = $raw;
                                                         } else {
-                                                            $imagePath = $news->image_url;
+                                                            $filename  = basename($raw);
+                                                            $imagePath = asset('images/community/' . $filename);
                                                         }
                                                     }
                                                 @endphp
@@ -189,7 +192,7 @@
                                         @error('image_url')
                                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                         @enderror
-                                        <p class="text-xs text-gray-500 mt-2">Format: JPG, PNG, GIF. Ukuran maksimal: 2MB</p>
+                                        <p class="text-xs text-gray-500 mt-2">Format: JPG, PNG, GIF. Ukuran maksimal: 4MB</p>
                                     </div>
                                 </div>
                             </div>
@@ -221,7 +224,9 @@
             const preview = document.getElementById('image_preview');
             preview.src = reader.result;
         }
-        reader.readAsDataURL(event.target.files[0]);
+        if (event.target.files && event.target.files[0]) {
+            reader.readAsDataURL(event.target.files[0]);
+        }
     }
 </script>
 @endpush

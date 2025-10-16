@@ -5,7 +5,8 @@ namespace App\Http\Controllers\adminController;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\File;
 
 class NewsController extends Controller
 {
@@ -14,18 +15,22 @@ class NewsController extends Controller
      */
     public function index(Request $request)
     {
-        $news = News::when($request->has('search'), function ($query) use ($request) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', '%' . $search . '%')
-                    ->orWhere('content', 'like', '%' . $search . '%');
-            });
-        })->when($request->has('category'), function ($query) use ($request) {
-            $category = $request->input('category');
-            if ($category) {
-                $query->where('category', $category);
-            }
-        })->orderBy('published_at', 'desc')->get();
+        $news = News::when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->input('search');
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('content', 'like', '%' . $search . '%');
+                });
+            })
+            ->when($request->filled('category'), function ($query) use ($request) {
+                $category = $request->input('category');
+                if ($category) {
+                    $query->where('category', $category);
+                }
+            })
+            ->orderBy('published_at', 'desc')
+            ->get();
+
         return view('dash.admin.comunity.index', compact('news'));
     }
 
@@ -43,26 +48,27 @@ class NewsController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'category' => 'nullable|string|max:100',
+            'title'        => 'required|string|max:255',
+            'content'      => 'required|string',
+            'category'     => 'nullable|string|max:100',
             'published_at' => 'required|date',
-            'image_url' => 'nullable|image|max:2048',
+            'image_url'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
         ]);
 
-        $data = $request->all();
+        $data = [
+            'title'        => $request->input('title'),
+            'content'      => $request->input('content'),
+            'category'     => $request->input('category'),
+            'published_at' => $request->input('published_at'),
+            // checkbox → boolean
+            'is_featured'  => $request->boolean('is_featured'),
+            'is_popular'   => $request->boolean('is_popular'),
+        ];
 
-        // Handle image upload
+        // Upload gambar (opsional) → simpan filename saja
         if ($request->hasFile('image_url')) {
-            $file = $request->file('image_url');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('uploads', $fileName, 'public');
-            $data['image_url'] = $fileName;
+            $data['image_url'] = $this->uploadFile($request->file('image_url'));
         }
-
-        // Set checkbox values
-        $data['is_featured'] = $request->has('is_featured');
-        $data['is_popular'] = $request->has('is_popular');
 
         News::create($data);
 
@@ -83,31 +89,29 @@ class NewsController extends Controller
     public function update(Request $request, News $news)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'category' => 'nullable|string|max:100',
+            'title'        => 'required|string|max:255',
+            'content'      => 'required|string',
+            'category'     => 'nullable|string|max:100',
             'published_at' => 'required|date',
-            'image_url' => 'nullable|image|max:2048',
+            'image_url'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
         ]);
 
-        $data = $request->all();
+        $data = [
+            'title'        => $request->input('title'),
+            'content'      => $request->input('content'),
+            'category'     => $request->input('category'),
+            'published_at' => $request->input('published_at'),
+            'is_featured'  => $request->boolean('is_featured'),
+            'is_popular'   => $request->boolean('is_popular'),
+        ];
 
-        // Handle image upload
+        // Ganti gambar jika upload baru
         if ($request->hasFile('image_url')) {
-            // Delete old image if exists
-            if ($news->image_url && !str_starts_with($news->image_url, 'http://') && !str_starts_with($news->image_url, 'https://') && Storage::disk('public')->exists('uploads/' . $news->image_url)) {
-                Storage::disk('public')->delete('uploads/' . $news->image_url);
-            }
-
-            $file = $request->file('image_url');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('uploads', $fileName, 'public');
-            $data['image_url'] = $fileName;
+            // Hapus file lama di CMS & FE (jika ada)
+            $this->deleteFile($news->image_url);
+            // Upload baru
+            $data['image_url'] = $this->uploadFile($request->file('image_url'));
         }
-
-        // Set checkbox values
-        $data['is_featured'] = $request->has('is_featured');
-        $data['is_popular'] = $request->has('is_popular');
 
         $news->update($data);
 
@@ -119,13 +123,66 @@ class NewsController extends Controller
      */
     public function destroy(News $news)
     {
-        // Delete image if exists
-        if ($news->image_url && !str_starts_with($news->image_url, 'http://') && !str_starts_with($news->image_url, 'https://') && Storage::disk('public')->exists('uploads/' . $news->image_url)) {
-            Storage::disk('public')->delete('uploads/' . $news->image_url);
-        }
+        // Hapus file gambar lama di CMS & FE
+        $this->deleteFile($news->image_url);
 
         $news->delete();
 
         return redirect()->route('comunity.index')->with('success', 'Berita berhasil dihapus!');
+    }
+
+    /* ============================================================
+     | Helpers upload/delete ala BannerController
+     | Target: CMS => public/demo-xanders/images/community
+     |         FE  => ../demo-xanders/images/community
+     * ============================================================*/
+
+    /**
+     * Upload file ke CMS & salin ke FE. Return: filename aman (tanpa path).
+     */
+    private function uploadFile($file): string
+    {
+        // Nama file aman
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName     = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
+        $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
+
+        // Path CMS & FE
+        $cmsPath = public_path('demo-xanders/images/community');
+        $fePath  = base_path('../demo-xanders/images/community');
+
+        // Pastikan folder ada
+        if (!File::exists($cmsPath)) {
+            File::makeDirectory($cmsPath, 0755, true);
+        }
+        if (!File::exists($fePath)) {
+            File::makeDirectory($fePath, 0755, true);
+        }
+
+        // Simpan di CMS
+        $file->move($cmsPath, $filename);
+
+        // Copy juga ke FE (abaikan error agar tidak fatal di shared hosting)
+        @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
+
+        return $filename;
+    }
+
+    /**
+     * Hapus file di CMS & FE (jika ada).
+     */
+    private function deleteFile(?string $filename): void
+    {
+        if (!$filename) return;
+
+        $cms = public_path('demo-xanders/images/community/' . $filename);
+        $fe  = base_path('../demo-xanders/images/community/' . $filename);
+
+        if (File::exists($cms)) {
+            @File::delete($cms);
+        }
+        if (File::exists($fe)) {
+            @File::delete($fe);
+        }
     }
 }

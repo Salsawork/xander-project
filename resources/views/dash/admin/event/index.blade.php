@@ -83,22 +83,28 @@
                         </thead>
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
+                                @php
+                                    /**
+                                     * Normalisasi path gambar:
+                                     * - Jika full URL (http/https) → pakai apa adanya
+                                     * - Jika hanya filename atau path lama (events/foo.jpg / images/events/foo.jpg)
+                                     *   → ambil basename lalu bangun ulang ke asset('images/events/{filename}')
+                                     */
+                                    $imgDesktop = null;
+                                    if (!empty($event->image_url)) {
+                                        $raw = trim($event->image_url);
+                                        if (preg_match('/^https?:\/\//i', $raw)) {
+                                            $imgDesktop = $raw;
+                                        } else {
+                                            $filename = basename($raw); // ambil nama file saja
+                                            $imgDesktop = asset('images/events/' . $filename);
+                                        }
+                                    }
+                                @endphp
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
-                                        @php
-                                            $imgPath = null;
-                                            if (!empty($event->image_url)) {
-                                                $candidates = [
-                                                    $event->image_url,
-                                                    'storage/'.$event->image_url,
-                                                ];
-                                                foreach ($candidates as $rel) {
-                                                    if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
-                                                }
-                                            }
-                                        @endphp
-                                        @if ($imgPath)
-                                            <img src="{{ $imgPath }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
+                                        @if ($imgDesktop)
+                                            <img src="{{ $imgDesktop }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
                                         @else
                                             <div class="w-16 h-16 flex items-center justify-center bg-gray-700 text-xs text-gray-400 rounded">
                                                 No Img
@@ -142,10 +148,23 @@
                 <!-- Mobile Card View -->
                 <div class="sm:hidden space-y-4">
                     @forelse ($events as $event)
+                        @php
+                            $mobileImg = null;
+                            if (!empty($event->image_url)) {
+                                $raw = trim($event->image_url);
+                                if (preg_match('/^https?:\/\//i', $raw)) {
+                                    $mobileImg = $raw;
+                                } else {
+                                    $mobileImg = asset('images/events/' . basename($raw));
+                                }
+                            }
+                            if (!$mobileImg) $mobileImg = 'https://placehold.co/160x160?text=No+Image';
+                        @endphp
+
                         <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
-                                <img src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/80' }}"
-                                     class="h-16 w-16 rounded object-cover shrink-0" alt="">
+                                <img src="{{ $mobileImg }}"
+                                     class="h-16 w-16 rounded object-cover shrink-0" alt="{{ $event->name }}">
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold text-base mb-1">{{ $event->name }}</h3>
                                     <p class="text-xs text-gray-400">
