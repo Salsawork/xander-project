@@ -19,15 +19,10 @@
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
 
   /* ==== BARIS RATING ==== */
-  .rating-row{
-    display:flex; align-items:center; gap:.75rem;
-    flex-wrap:wrap;                    /* boleh wrap bila sempit */
-  }
-  /* bintang + angka selalu satu baris */
+  .rating-row{ display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
   .rating-stars{ display:inline-flex; gap:6px; white-space:nowrap; line-height:1; flex:0 0 auto; }
   .rating-stars i{ font-size:22px; color:#fbbf24; }
   .rating-number{ font-size:28px; font-weight:800; letter-spacing:.5px; flex:0 0 auto; }
-  /* "out of 5" normalnya di baris yang sama */
   .rating-outof{ font-size:12px; color:#9ca3af; margin-left:.35rem; line-height:1.2; flex:0 0 auto; }
 
   /* Bar distribusi */
@@ -61,15 +56,14 @@
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
     .review-head .user-stars i{font-size:18px}
 
-    /* Saat sempit, pindahkan "out of 5" ke baris bawah agar tidak keluar */
     .rating-row{ gap:.6rem; }
     .rating-stars i{ font-size:20px; }
     .rating-number{ font-size:26px; }
     .rating-outof{
-      flex:1 1 100%;       /* ambil 1 baris sendiri */
-      order:3;             /* pastikan muncul setelah angka */
+      flex:1 1 100%;
+      order:3;
       margin-left:0; margin-top:2px;
-      text-align:left;     /* bisa diganti right kalau mau */
+      text-align:left;
       font-size:12px;
     }
   }
@@ -92,6 +86,8 @@
 
   $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
+  /* Resolver gambar: terima path/file apapun → pilih file name → cari di FE (fe-venue symlink),
+     kalau tidak ada jatuh ke CMS, Storage, lalu placeholder */
   $venueImgUrl = function (?string $pathLike) {
       $pathLike = $pathLike ? trim($pathLike) : '';
       if ($pathLike === '') return asset('images/placeholder/venue.png');
@@ -112,6 +108,7 @@
       return asset('images/placeholder/venue.png');
   };
 
+  // Ambil list images dari DB (array / JSON / fallback single image)
   $rawImages = [];
   if (!empty($detail->images)) {
       $rawImages = is_array($detail->images)
@@ -124,8 +121,6 @@
   if (!$resolvedImages) $resolvedImages = [asset('images/placeholder/venue.png')];
 
   $mainImage = $resolvedImages[0];
-  $thumbs = array_slice($resolvedImages, 1, 2);
-  while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
 
   $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
   $fullStars = floor((float)($averageRating ?? 0));
@@ -152,25 +147,13 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       {{-- LEFT --}}
       <div class="md:col-span-2 space-y-6">
-        {{-- Gallery --}}
-        <div class="grid grid-cols-3 gap-4">
-          <div class="col-span-2">
-            <img id="mainImage"
-                 src="{{ $mainImage }}"
-                 alt="{{ $detail->name }}"
-                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
-                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
-          </div>
-          <div class="flex flex-col gap-4">
-            @foreach ($thumbs as $t)
-              <img src="{{ $t }}"
-                   alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
-                   class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
-                   loading="lazy"
-                   onclick="changeMainImage('{{ $t }}')"
-                   onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
-            @endforeach
-          </div>
+        {{-- ====== GALLERY: HANYA 1 GAMBAR UTAMA (thumbnail dihapus) ====== --}}
+        <div>
+          <img id="mainImage"
+               src="{{ $mainImage }}"
+               alt="{{ $detail->name }}"
+               class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
+               onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
         </div>
 
         {{-- Info Venue --}}
@@ -398,39 +381,39 @@
 const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 const addBtn = document.getElementById('addToCartButton');
-  if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
-        const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+if (addBtn) {
+  addBtn.addEventListener('click', () => {
+    const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+    const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
 
-        if (!isLoggedIn) {
-          Swal.fire({
-            title: 'Belum Login!',
-            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-            icon: 'warning',
-            confirmButtonText: 'Login Sekarang',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          }).then(() => { window.location.href = '/login'; });
-          return;
-        }
-
-        if (userRole !== 'user') {
-          Swal.fire({
-            title: 'Akses Ditolak!',
-            text: 'Hanya user yang bisa menambahkan ke keranjang.',
-            icon: 'error',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        document.getElementById('addToCartForm').requestSubmit();
-      });
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Belum Login!',
+        text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+        icon: 'warning',
+        confirmButtonText: 'Login Sekarang',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      }).then(() => { window.location.href = '/login'; });
+      return;
     }
+
+    if (userRole !== 'user') {
+      Swal.fire({
+        title: 'Akses Ditolak!',
+        text: 'Hanya user yang bisa menambahkan ke keranjang.',
+        icon: 'error',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      });
+      return;
+    }
+
+    document.getElementById('addToCartForm').requestSubmit();
+  });
+}
 
 document.addEventListener("DOMContentLoaded", function() {
   function alignCreateReview() {
@@ -579,7 +562,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
- 
 });
 </script>
 @endpush
