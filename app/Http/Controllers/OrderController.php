@@ -15,6 +15,7 @@ use App\Models\OrderVenue;
 use App\Models\Product;
 use App\Models\Table;
 use App\Models\Venue;
+use App\Models\Voucher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
@@ -124,10 +125,42 @@ class OrderController extends Controller
                     'duration' => $item->start && $item->end
                         ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
                         : null,
+                    'code_promo' => $item->code_promo,
                 ]);
+
+            $venueDiscount = 0;
 
             foreach ($venues as $v) {
                 $total += (int) $v['price'];
+
+                if (!empty($v['code_promo'])) {
+                    $voucher = Voucher::where('code', $v['code_promo'])
+                        ->where('venue_id', $v['id'])
+                        ->where('is_active', 1)
+                        ->where('start_date', '<=', now())
+                        ->where('end_date', '>=', now())
+                        ->first();
+
+                    if ($voucher) {
+                        $venuePrice = (int) $v['price'];
+                        if ($venuePrice >= $voucher->minimum_purchase) {
+                            $discount = 0;
+                            if ($voucher->discount_percentage) {
+                                $discount = $venuePrice * ($voucher->discount_percentage / 100);
+                            } elseif ($voucher->discount_amount) {
+                                $discount = $voucher->discount_amount;
+                            }
+                            $venueDiscount += $discount;
+                            \Log::info("Voucher {$voucher->code} applied for venue {$v['name']}", [
+                                'discount' => $discount,
+                            ]);
+                        } else {
+                            \Log::warning("Voucher {$voucher->code} not applied (below minimum purchase)");
+                        }
+                    } else {
+                        \Log::warning("Invalid or expired voucher for venue", ['code' => $v['code_promo']]);
+                    }
+                }
             }
 
             // --- SPARRING ---
@@ -153,7 +186,7 @@ class OrderController extends Controller
             }
         }
 
-        $grandTotal = round($total + $shipping + $tax);
+        $grandTotal = round($total + $shipping + $tax - $venueDiscount);
 
         $user = $request->user();
         $banks = Bank::all();
@@ -166,6 +199,7 @@ class OrderController extends Controller
             'shipping',
             'tax',
             'grandTotal',
+            'venueDiscount',
             'user',
             'banks'
         ));
@@ -214,7 +248,8 @@ class OrderController extends Controller
             'venues.*.date'     => 'required',
             'venues.*.start'    => 'required',
             'venues.*.end'      => 'required',
-            'venues.*.table'    => 'nullable|exists:tables,table_number'
+            'venues.*.table'    => 'nullable|exists:tables,table_number',
+            'venues.*.code_promo'    => 'nullable'
         ]);
 
         if (!auth()->check()) {
@@ -316,7 +351,8 @@ class OrderController extends Controller
              *  Tambahkan Venues / Bookings
              *  ========================= */
             if ($orderType === 'venue') {
-                $venueTotal = 0; // simpan total semua venue di sini
+                $venueTotal = 0; 
+                $venueDiscount = 0; 
 
                 foreach ($request->venues as $venueData) {
                     $bookingDate = \Carbon\Carbon::parse($venueData['date'])->format('Y-m-d');
@@ -325,7 +361,6 @@ class OrderController extends Controller
                         throw new \Exception('Venue ID dan Table number wajib diisi.');
                     }
 
-                    // Cari table_id berdasarkan nomor meja
                     $tableId = DB::table('tables')
                         ->where('table_number', $venueData['table'])
                         ->where('venue_id', $venueData['id'])
@@ -335,7 +370,6 @@ class OrderController extends Controller
                         throw new \Exception('Table not found for venue: ' . $venueData['id']);
                     }
 
-                    // Pastikan tidak bentrok waktu
                     $existingBooking = Booking::where('table_id', $tableId)
                         ->where('booking_date', $bookingDate)
                         ->where('status', 'booked')
@@ -349,16 +383,63 @@ class OrderController extends Controller
                         throw new \Exception('Table ' . $venueData['table'] . ' pada venue ini sudah dipesan untuk tanggal dan waktu yang sama.');
                     }
 
+                    $venuePrice = (int) $venueData['price'];
+                    $discountValue = 0; 
+                    if (!empty($venueData['code_promo'])) {
+                        $voucher = Voucher::where('code', $venueData['code_promo'])
+                            ->where('venue_id', $venueData['id'])
+                            ->where('is_active', 1)
+                            ->where('start_date', '<=', now())
+                            ->where('end_date', '>=', now())
+                            ->first();
+
+                        if ($voucher) {
+                            // Cek apakah quota masih tersedia
+                            if ($voucher->claimed >= $voucher->quota) {
+                                \Log::warning("Voucher {$voucher->code} quota exceeded", [
+                                    'claimed' => $voucher->claimed,
+                                    'quota'   => $voucher->quota,
+                                ]);
+                            } elseif ($venuePrice >= $voucher->minimum_purchase) {
+                                $discount = 0;
+
+                                if ($voucher->discount_percentage) {
+                                    $discount = $venuePrice * ($voucher->discount_percentage / 100);
+                                } elseif ($voucher->discount_amount) {
+                                    $discount = $voucher->discount_amount;
+                                }
+
+                                $venuePrice -= $discount;
+                                $venueDiscount += $discount;
+                                $discountValue = $discount; // simpan nilai diskon
+
+                                // Increment claimed count
+                                $voucher->increment('claimed');
+
+                                \Log::info("Voucher {$voucher->code} applied for venue {$venueData['id']}", [
+                                    'discount' => $discount,
+                                    'final_price' => $venuePrice,
+                                    'claimed' => $voucher->claimed,
+                                ]);
+                            } else {
+                                \Log::warning("Voucher {$voucher->code} not applied (below minimum purchase)");
+                            }
+                        } else {
+                            \Log::warning("Invalid or expired voucher for venue", ['code' => $venueData['code_promo']]);
+                        }
+                    }
+
                     // Tambahkan ke tabel bookings
                     $order->bookings()->create([
                         'venue_id'     => $venueData['id'],
-                        'price'        => $venueData['price'],
+                        'price'        => $venuePrice, // harga setelah diskon
                         'table_id'     => $tableId,
                         'user_id'      => $user->id,
                         'booking_date' => $bookingDate,
                         'status'       => 'booked',
                         'start_time'   => $venueData['start'],
                         'end_time'     => $venueData['end'],
+                        'discount'     => $discountValue,
                     ]);
 
                     // Hapus item dari cart
@@ -370,13 +451,20 @@ class OrderController extends Controller
                         ->where('end', $venueData['end'])
                         ->delete();
 
-                    // Tambahkan harga venue ke total keseluruhan
-                    $venueTotal += $venueData['price'];
+                    // Tambahkan harga venue (setelah diskon) ke total keseluruhan
+                    $venueTotal += $venuePrice;
                 }
 
-                // Akumulasi ke total order global
+                // Akumulasi ke total order global (sudah dikurangi diskon)
                 $total += $venueTotal;
+
+                \Log::info('Total venue setelah diskon', [
+                    'venue_total' => $venueTotal,
+                    'venue_discount' => $venueDiscount,
+                    'total_order' => $total
+                ]);
             }
+
 
             /** =========================
              *  Tambahkan Sparring

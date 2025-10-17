@@ -77,6 +77,7 @@ class CartItemController extends Controller
             'schedule.end'   => 'required',
             'price'          => 'required|numeric',
             'table'          => 'nullable|string',
+            'code_promo'          => 'nullable|string',
         ]);
 
         $user  = auth()->user();
@@ -87,6 +88,7 @@ class CartItemController extends Controller
         $endTime   = $request->input('schedule.end');
         $price     = $request->input('price');
         $table     = $request->input('table');
+        $codePromo     = $request->input('code_promo');
 
         $exists = CartItem::where('user_id', $user->id)
             ->where('item_type', 'venue')
@@ -112,6 +114,7 @@ class CartItemController extends Controller
             'end'          => $endTime,
             'table_number' => $table,
             'price'        => $price,
+            'code_promo'   => $codePromo,
         ]);
 
         $cartVenues = CartItem::with('venue')
@@ -127,6 +130,7 @@ class CartItemController extends Controller
                 'start'   => $item->start,
                 'end'     => $item->end,
                 'table'   => $item->table_number,
+                'code_promo'   => $item->code_promo,
                 // venue tetap membaca dari images/venue/ (sudah benar)
                 'image'   => $this->buildVenueImageUrl($item->venue->image ?? null),
             ]);
