@@ -275,14 +275,27 @@ class EventController extends Controller
                 $unitPrice    = (float) $ticket->price;
                 $totalPayment = $unitPrice * $qty;
 
-                // Simpan bukti pembayaran ke storage public
-                $path = null;
+               $path = null;
                 if ($request->hasFile('bukti_payment')) {
                     $file    = $request->file('bukti_payment');
                     $ext     = $file->getClientOriginalExtension();
                     $fname   = 'evt_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
-                    $path    = $file->storeAs('payments/events', $fname, 'public');
+                
+                    // Path target yang benar (naik 2 level ke public_html/demo-xanders)
+                    $targetDir = base_path('../demo-xanders/images/payments/events');
+                
+                    // Pastikan folder ada
+                    if (!file_exists($targetDir)) {
+                        mkdir($targetDir, 0755, true);
+                    }
+                
+                    // Simpan file
+                    $file->move($targetDir, $fname);
+                
+                    // Simpan hanya nama file di DB
+                    $path = $fname;
                 }
+
 
                 // Generate order_number unik
                 $orderNumber = $this->generateUniqueOrderNumber();
