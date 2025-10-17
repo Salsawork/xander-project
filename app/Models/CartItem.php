@@ -25,6 +25,7 @@ class CartItem extends Model
         'table_number',
         'price',
         'schedule',
+        'code_promo',
     ];
 
 

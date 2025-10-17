@@ -140,6 +140,7 @@
                     <input type="hidden" name="venues[{{ $index }}][table]" value="{{ $venue['table'] ?? '' }}">
                     <input type="hidden" name="venues[{{ $index }}][start]" value="{{ $venue['start'] }}">
                     <input type="hidden" name="venues[{{ $index }}][end]" value="{{ $venue['end'] }}">
+                    <input type="hidden" name="venues[{{ $index }}][code_promo]" value="{{ $venue['code_promo'] }}">
                     @endforeach
                     @endif
 
@@ -259,8 +260,13 @@
                 <div class="bg-[#2a2a2a] rounded-2xl ring-1 ring-white/10 shadow-xl p-6">
                     <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
                     <p>Subtotal: Rp {{ number_format($total, 0, ',', '.') }}</p>
+                    @if(count($carts) > 0)
                     <p>Shipping: <span class="shipping-value">Rp {{ number_format($shipping, 0, ',', '.') }}</span></p>
                     <p>Tax: Rp {{ number_format($tax, 0, ',', '.') }}</p>
+                    @endif
+                    @if(isset($venues) && count($venues) > 0 && $venueDiscount > 0)
+                    <p>Discount: Rp {{ number_format($venueDiscount, 0, ',', '.') }}</p>
+                    @endif
                     <p class="font-bold mt-2">Grand Total: <span class="grand-total">Rp {{ number_format($grandTotal, 0, ',', '.') }}</span></p>
                 </div>
 
