@@ -40,15 +40,10 @@
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
 
   /* ==== BARIS RATING ==== */
-  .rating-row{
-    display:flex; align-items:center; gap:.75rem;
-    flex-wrap:wrap;
-  }
-  /* bintang + angka selalu satu baris */
+  .rating-row{ display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
   .rating-stars{ display:inline-flex; gap:6px; white-space:nowrap; line-height:1; flex:0 0 auto; }
   .rating-stars i{ font-size:22px; color:#fbbf24; }
   .rating-number{ font-size:28px; font-weight:800; letter-spacing:.5px; flex:0 0 auto; }
-  /* "out of 5" normalnya di baris yang sama */
   .rating-outof{ font-size:12px; color:#9ca3af; margin-left:.35rem; line-height:1.2; flex:0 0 auto; }
 
   /* Bar distribusi */
@@ -82,7 +77,6 @@
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
     .review-head .user-stars i{font-size:18px}
 
-    /* Saat sempit, pindahkan "out of 5" ke baris bawah agar tidak keluar */
     .rating-row{ gap:.6rem; }
     .rating-stars i{ font-size:20px; }
     .rating-number{ font-size:26px; }
@@ -113,6 +107,8 @@
 
   $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
+  /* Resolver gambar: terima path/file apapun → pilih file name → cari di FE (fe-venue symlink),
+     kalau tidak ada jatuh ke CMS, Storage, lalu placeholder */
   $venueImgUrl = function (?string $pathLike) {
       $pathLike = $pathLike ? trim($pathLike) : '';
       if ($pathLike === '') return asset('images/placeholder/venue.png');
@@ -133,6 +129,7 @@
       return asset('images/placeholder/venue.png');
   };
 
+  // Ambil list images dari DB (array / JSON / fallback single image)
   $rawImages = [];
   if (!empty($detail->images)) {
       $rawImages = is_array($detail->images)
@@ -145,8 +142,6 @@
   if (!$resolvedImages) $resolvedImages = [asset('images/placeholder/venue.png')];
 
   $mainImage = $resolvedImages[0];
-  $thumbs = array_slice($resolvedImages, 1, 2);
-  while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
 
   $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
   $fullStars = floor((float)($averageRating ?? 0));
@@ -173,25 +168,13 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       {{-- LEFT --}}
       <div class="md:col-span-2 space-y-6">
-        {{-- Gallery --}}
-        <div class="grid grid-cols-3 gap-4">
-          <div class="col-span-2">
-            <img id="mainImage"
-                 src="{{ $mainImage }}"
-                 alt="{{ $detail->name }}"
-                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
-                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
-          </div>
-          <div class="flex flex-col gap-4">
-            @foreach ($thumbs as $t)
-              <img src="{{ $t }}"
-                   alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
-                   class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
-                   loading="lazy"
-                   onclick="changeMainImage('{{ $t }}')"
-                   onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
-            @endforeach
-          </div>
+        {{-- ====== GALLERY: HANYA 1 GAMBAR UTAMA (thumbnail dihapus) ====== --}}
+        <div>
+          <img id="mainImage"
+               src="{{ $mainImage }}"
+               alt="{{ $detail->name }}"
+               class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
+               onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
         </div>
 
         {{-- Info Venue --}}
@@ -420,201 +403,60 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  const isLoggedIn = @json(auth()->check());
-  const userRole   = @json(Auth::check() ? Auth::user()->roles : null);
-  const venueId    = @json($detail->id);
-  const baseVenuesUrl = @json(url('/venues'));
+const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+function changeMainImage(src){ document.getElementById('mainImage').src = src; }
+const addBtn = document.getElementById('addToCartButton');
+if (addBtn) {
+  addBtn.addEventListener('click', () => {
+    const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+    const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
 
-  function changeMainImage(src){ document.getElementById('mainImage').src = src; }
-
-  document.addEventListener("DOMContentLoaded", function() {
-    // Elements
-    const datePicker = document.getElementById('datePicker');
-    const openDateBtn = document.getElementById('openDateBtn');
-    const addBtn = document.getElementById('addToCartButton');
-    const scheduleList = document.getElementById("scheduleList");
-    const tableList    = document.getElementById("tableList");
-    const form         = document.getElementById("addToCartForm");
-    const priceDisplay = document.getElementById("priceDisplay");
-
-    let selectedSchedule = null;
-    let selectedTableNumber = null;
-
-    // Initialize date picker with today's date
-    function initializeDatePicker() {
-      if (!datePicker) return;
-
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
-      
-      datePicker.min = todayStr;
-      datePicker.value = todayStr;
-      
-      // Load schedules for today
-      loadSchedules(todayStr);
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Belum Login!',
+        text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+        icon: 'warning',
+        confirmButtonText: 'Login Sekarang',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      }).then(() => { window.location.href = '/login'; });
+      return;
     }
 
-    // Open native date picker when clicking calendar icon
-    if (openDateBtn && datePicker) {
-      openDateBtn.addEventListener('click', () => {
-        datePicker.showPicker();
+    if (userRole !== 'user') {
+      Swal.fire({
+        title: 'Akses Ditolak!',
+        text: 'Hanya user yang bisa menambahkan ke keranjang.',
+        icon: 'error',
+        confirmButtonColor: '#3085d6',
+        background: '#1E1E1F',
+        color: '#FFFFFF'
       });
+      return;
     }
 
-    // Function to create schedule slot element
-    function createScheduleSlot(slot, price) {
-      const lbl = document.createElement("label");
-      const isBooked = slot.is_booked || false;
-      
-      lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
-      lbl.innerHTML = `
-        <input type="radio" name="schedule" value="${slot.start}-${slot.end}" 
-               class="hidden" required ${isBooked ? 'disabled' : ''}>
-        ${slot.start} - ${slot.end}
-      `;
+    document.getElementById('addToCartForm').requestSubmit();
+  });
+}
 
-      if (!isBooked) {
-        const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
-          document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
-          lbl.classList.add('slot--active');
-          
-          selectedSchedule = { start: slot.start, end: slot.end, price: price };
-          if (priceDisplay) {
-            const formattedPrice = new Intl.NumberFormat('id-ID', {
-              style: 'currency',
-              currency: 'IDR',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0
-            }).format(price);
-            priceDisplay.innerText = formattedPrice;
-          }
-          
-          if (slot.tables) {
-            renderTables(slot.tables);
-          } else {
-            tableList.innerHTML = "";
-          }
-        });
-      }
-
-      return lbl;
-    }
-
-    // Function to load schedules
-    async function loadSchedules(selectedDate) {
-      if (!selectedDate || !scheduleList) return;
-      
-      scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
-      if (tableList) tableList.innerHTML = "";
-      selectedSchedule = null;
-      selectedTableNumber = null;
-
-      try {
-        const response = await fetch(`${baseVenuesUrl}/${encodeURIComponent(venueId)}/price-schedules?date=${encodeURIComponent(selectedDate)}`);
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const data = await response.json();
-        scheduleList.innerHTML = "";
-        
-        const schedules = data.schedules || [];
-        if (schedules.length === 0) {
-          scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available for this date.</p>`;
-          return;
-        }
-
-        schedules.forEach(sch => {
-          (sch.schedule || []).forEach(slot => {
-            const scheduleSlot = createScheduleSlot(slot, sch.price);
-            scheduleList.appendChild(scheduleSlot);
-          });
-        });
-      } catch (error) {
-        console.error('Error loading schedules:', error);
-        scheduleList.innerHTML = `<p class="text-red-400 text-sm">Failed to load schedules. Please try again.</p>`;
-      }
-    }
-
-    // Add change event listener to date picker
-    if (datePicker) {
-      datePicker.addEventListener("change", function() {
-        loadSchedules(this.value);
-      });
-    }
-
-    // Button add-to-cart: check login and role
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        if (!isLoggedIn) {
-          Swal.fire({
-            title: 'Belum Login!',
-            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-            icon: 'warning',
-            confirmButtonText: 'Login Sekarang',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          }).then(() => { window.location.href = '/login'; });
-          return;
-        }
-
-        if (userRole !== 'user') {
-          Swal.fire({
-            title: 'Akses Ditolak!',
-            text: 'Hanya user yang bisa menambahkan ke keranjang.',
-            icon: 'error',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        // Validate form before submission
-        const date = datePicker?.value;
-        const schedule = document.querySelector('input[name="schedule"]:checked');
-        const table = document.querySelector('input[name="table_id"]:checked');
-
-        if (!date) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih tanggal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        if (!schedule) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih jadwal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        if (!table) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih meja terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        // Submit form if all validations pass
-        form.requestSubmit();
-      });
-    }
+document.addEventListener("DOMContentLoaded", function() {
+  function alignCreateReview() {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const anchor = document.getElementById('reviewsAnchor');
+    const createCard = document.getElementById('createReviewCard');
+    if (!anchor || !createCard) return;
+    if (!mq.matches) { createCard.style.marginTop = ''; return; }
+    const extraDown = 14;
+    const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
+    const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
+    const delta = anchorTop - cardTop;
+    createCard.style.marginTop = ((delta>0?delta:0)+extraDown) + 'px';
+  }
+  window.addEventListener('resize', alignCreateReview);
+  window.addEventListener('load', alignCreateReview);
+  setTimeout(alignCreateReview, 250);
+  alignCreateReview();
 
     /* Rating stars input */
     const stars = document.querySelectorAll('#ratingBox i');
@@ -679,54 +521,31 @@
 
         Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
 
-        fetch(this.action, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          },
-          body: fd
-        })
-        .then(res => {
-          // try to parse json even if not ok so backend message can be shown
-          return res.json().then(json => ({ ok: res.ok, json }));
-        })
-        .then(({ ok, json }) => {
-          Swal.close();
-          if (ok && json.success) {
-            Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
-              .then(() => location.reload());
-          } else {
-            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          Swal.close();
-          Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
-        });
-      });
-    }
+    fetch(this.action, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: fd
+    })
+    .then(res => res.json())
+    .then(data => {
+      Swal.close();
+      if (data.success) {
+        Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
+          .then(() => location.reload());
+      } else {
+        Swal.fire({ title:'Gagal!', text: data.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
+      }
+    })
+    .catch(() => {
+      Swal.close();
+      Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
+    });
+  });
 
-    /* alignCreateReview logic (kept as-is with small safety checks) */
-    function alignCreateReview() {
-      const mq = window.matchMedia('(min-width: 768px)');
-      const anchor = document.getElementById('reviewsAnchor');
-      const createCard = document.getElementById('createReviewCard');
-      if (!anchor || !createCard) return;
-      if (!mq.matches) { createCard.style.marginTop = ''; return; }
-      const extraDown = 14;
-      const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
-      const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
-      const delta = anchorTop - cardTop;
-      createCard.style.marginTop = ((delta>0?delta:0)+extraDown) + 'px';
-    }
-    window.addEventListener('resize', alignCreateReview);
-    window.addEventListener('load', alignCreateReview);
-    setTimeout(alignCreateReview, 250);
-    alignCreateReview();
-
-  }); 
+});
 </script>
 @endpush
