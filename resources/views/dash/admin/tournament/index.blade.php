@@ -7,7 +7,7 @@
             @include('partials.sidebar')
             <main class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
-                
+
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
                     <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">
                         Tournament
@@ -30,7 +30,7 @@
                             class="w-full sm:w-64 rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
                             placeholder="Cari tournament..." type="search"
                             onchange="window.location.href='{{ route('tournament.index') }}?search=' + this.value" />
-                        
+
                         <a href="{{ route('tournament.create') }}"
                             class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
                             <i class="fas fa-plus"></i>
@@ -52,15 +52,16 @@
                                 @forelse ($tournaments as $tournament)
                                     <tr>
                                         <td class="px-4 py-3">{{ $tournament->name }}</td>
-                                        <td class="px-4 py-3 text-gray-400">{{ $tournament->created_at->format('d M Y') }}</td>
+                                        <td class="px-4 py-3 text-gray-400">{{ $tournament->created_at->format('d M Y') }}
+                                        </td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center justify-end gap-3 text-gray-400">
                                                 <a href="{{ route('events.bracket', [
                                                     'event' => $tournament->event_id,
-                                                    'name' => $tournament->event ? Str::slug($tournament->event->name) : 'no-event'
+                                                    'name' => $tournament->event ? Str::slug($tournament->event->name) : 'no-event',
                                                 ]) }}"
-                                                target="_blank" title="View">
-                                                <i class="fas fa-eye"></i>
+                                                    target="_blank" title="View">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
 
 
@@ -104,7 +105,10 @@
 
                                 <!-- Actions -->
                                 <div class="flex gap-2">
-                                    <a href="{{ route('guideline.show', $tournament) }}" target="_blank"
+                                    <a href="{{ route('events.bracket', [
+                                        'event' => $tournament->event_id,
+                                        'name' => $tournament->event ? Str::slug($tournament->event->name) : 'no-event',
+                                    ]) }}"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-eye text-xs"></i>
                                         View
@@ -114,7 +118,8 @@
                                         <i class="fas fa-pen text-xs"></i>
                                         Edit
                                     </a>
-                                    <button type="button" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition delete-btn"
+                                    <button type="button"
+                                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition delete-btn"
                                         data-id="{{ $tournament->id }}">
                                         <i class="fas fa-trash text-xs"></i>
                                         Delete
