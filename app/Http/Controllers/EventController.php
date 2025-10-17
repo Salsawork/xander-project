@@ -296,7 +296,7 @@ class EventController extends Controller
                     'bank_id'       => (int) $validated['bank_id'],
                     'total_payment' => $totalPayment,
                     'bukti_payment' => $path,
-                    'status'        => 'pending',
+                    'status'        => 'paid',
                 ]);
 
                 // Kurangi stok ticket

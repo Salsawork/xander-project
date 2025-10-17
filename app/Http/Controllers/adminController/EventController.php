@@ -5,6 +5,7 @@ namespace App\Http\Controllers\adminController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
+use App\Models\OrderEvent;
 use App\Exports\EventExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\File;
@@ -307,5 +308,46 @@ class EventController extends Controller
         }
 
         $request->merge($normalized);
+    }
+
+    // Detail untuk verify pemesanan tiket event user
+    public function detail($id)
+    {
+        $event = Event::findOrFail($id);
+        $orders = OrderEvent::with(['user', 'event', 'ticket', 'bank'])
+        ->where('event_id', $id)
+        ->latest()
+        ->get();
+    
+        return view('dash.admin.event.detail', compact('event', 'orders'));
+    }
+    
+
+    public function verify($id)
+    {
+        $order = OrderEvent::findOrFail($id);
+
+        if ($order->status !== 'paid') {
+            return back()->with('error', 'Hanya pesanan berstatus "paid" yang bisa diverifikasi.');
+        }
+
+        $order->status = 'verified';
+        $order->save();
+
+        return back()->with('success', 'Pesanan berhasil diverifikasi.');
+    }
+
+    public function reject($id)
+    {
+        $order = OrderEvent::findOrFail($id);
+
+        if ($order->status !== 'paid') {
+            return back()->with('error', 'Hanya pesanan berstatus "paid" yang bisa ditolak.');
+        }
+
+        $order->status = 'rejected';
+        $order->save();
+
+        return back()->with('success', 'Pesanan berhasil ditolak.');
     }
 }

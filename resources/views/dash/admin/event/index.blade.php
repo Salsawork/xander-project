@@ -122,17 +122,26 @@
                                     <td class="px-4 py-3 text-gray-300">{{ $event->status }}</td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex gap-3 text-gray-400 justify-end">
+                                            <!-- Detail -->
+                                            <a href="{{ route('admin.event.detail', $event->id) }}"
+                                               class="hover:text-gray-200"
+                                               title="Detail Event">
+                                                <i class="fas fa-ticket"></i>
+                                            </a>
+                                    
+                                            <!-- Edit -->
                                             <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                                     class="hover:text-gray-200" title="Edit">
                                                 <i class="fas fa-pen"></i>
                                             </button>
-
+                                    
+                                            <!-- Delete -->
                                             <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                                     class="hover:text-gray-200" title="Delete">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
-                                    </td>
+                                    </td>                                    
                                 </tr>
                             @empty
                                 <tr class="bg-[#1c1c1c]">
@@ -174,18 +183,28 @@
                             </div>
 
                             <div class="flex gap-2 pt-3 border-t border-gray-700">
+                                <!-- Detail -->
+                                <a href="{{ route('admin.event.detail', $event->id) }}"
+                                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                    <i class="fas fa-ticket text-xs"></i>
+                                    Detail
+                                </a>
+                            
+                                <!-- Edit -->
                                 <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-pen text-xs"></i>
                                     Edit
                                 </button>
-
+                            
+                                <!-- Delete -->
                                 <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-trash text-xs"></i>
                                     Delete
                                 </button>
                             </div>
+                            
                         </div>
                     @empty
                         <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
