@@ -121,11 +121,13 @@
                                 <td>{{ $order->created_at?->format('d M Y H:i') ?? '-' }}</td>
                                 <td>
                                     @if($order->bukti_payment)
-                                        <a href="{{ asset('storage/payments/events/' . basename($order->bukti_payment)) }}" target="_blank"
-                                           class="text-blue-400 hover:underline">Lihat</a>
+                                        <a href="{{ asset('images/payments/events/' . $order->bukti_payment) }}" 
+                                        target="_blank" class="text-blue-400 hover:underline">
+                                        Lihat
+                                        </a>
                                     @else
                                         <span class="text-gray-500">Belum ada</span>
-                                    @endif
+                                    @endif                                
                                 </td>
                                 <td class="flex gap-2">
                                     @if($order->status === 'paid')
