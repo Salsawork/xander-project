@@ -1,101 +1,84 @@
 <style>
-    #cart {
-        background-color: #1e1e1f;
-        overflow: hidden;
+    :root { --cart-header-h: 64px; } /* default header height */
+
+    /* PANEL */
+    #cart{
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(420px, 100vw);       /* desktop ~420px, mobile full width */
+        height: 100vh;                  /* penuh layar */
+        background-color:#1e1e1f;
+        overflow: hidden;               /* body yang scroll, bukan panel */
+        z-index: 50;
+        /* cegah body ikut scroll saat panel di-scroll */
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        box-shadow: -8px 0 24px rgba(0,0,0,.35);
     }
 
+    /* KONTEN DI ATAS BACKGROUND */
     #cart .cart-header,
-    #cart .cart-body {
-        position: relative;
-        z-index: 1;
+    #cart .cart-body { position: relative; z-index: 1; }
+
+    /* HEADER */
+    #cart .cart-header{
+        height: var(--cart-header-h);
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background:#1e1e1f;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        position: sticky;   /* sticky agar selalu terlihat ketika isi scroll */
+        top: 0;
+    }
+    #cart .cart-title{ font-size:1.25rem; font-weight:800; line-height:1.25; }
+
+    /* BODY: selalu scroll (desktop & mobile) */
+    #cart .cart-body{
+        height: calc(100vh - var(--cart-header-h));
+        overflow-y: auto;
+        padding: 16px 20px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
-    @media (max-width: 640px) {
-        #cart {
-            width: 100vw;
-            max-width: 100vw;
-            right: 0;
-            left: auto;
-        }
+    /* Section & item */
+    #cart .cart-section-title { font-size:1.1rem; margin-bottom:.75rem; font-weight:800; }
+    #cart .cart-item { gap:16px; }
+    #cart .cart-img { width:80px; height:80px; border-radius:.75rem; object-fit:cover; flex-shrink:0; }
+    #cart .cart-name { font-size:1.05rem; line-height:1.2; }
+    #cart .cart-meta { font-size:.8rem; }
+    #cart .cart-price { font-size:.95rem; }
+    #cart .cart-total-row { margin-bottom:.75rem; }
+    #cart .checkout-btn { height:46px; border-radius:.6rem; font-weight:700; }
 
-        #cart .cart-header {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            padding: 14px 16px !important;
-            background: #1e1e1f;
-            border-bottom: 1px solid rgba(255, 255, 255, .08);
+    /* MOBILE: hanya tweak ukuran */
+    @media (max-width: 640px){
+        #cart{ width:100vw; max-width:100vw; }
+        #cart .cart-img { width:64px; height:64px; border-radius:.5rem; }
+        #cart .cart-name{
+            font-size:.95rem;
+            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
         }
-
-        #cart .cart-title {
-            font-size: 1.0625rem;
-            line-height: 1.25;
-        }
-
-        #cart .cart-body {
-            height: calc(100vh - 56px);
-            overflow-y: auto;
-            padding: 14px 16px !important;
-            padding-top: 10px !important;
-        }
-
-        #cart .cart-section-title {
-            font-size: 1rem;
-            margin-bottom: .75rem;
-        }
-
-        #cart .cart-item {
-            gap: 12px !important;
-        }
-
-        #cart .cart-img {
-            width: 64px !important;
-            height: 64px !important;
-            border-radius: .5rem;
-            object-fit: cover;
-            flex-shrink: 0;
-        }
-
-        #cart .cart-name {
-            font-size: .95rem;
-            line-height: 1.2;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        #cart .cart-meta {
-            font-size: .75rem;
-        }
-
-        #cart .cart-price {
-            font-size: .875rem;
-        }
-
-        #cart .cart-total-row {
-            margin-bottom: .75rem;
-        }
-
-        #cart .checkout-btn {
-            height: 44px;
-            border-radius: .5rem;
-            font-weight: 600;
-        }
+        #cart .cart-meta{ font-size:.75rem; }
+        #cart .cart-price{ font-size:.875rem; }
+        #cart .cart-title{ font-size:1.0625rem; }
     }
 </style>
 
-<div class="fixed top-0 right-0 bg-gray-900 min-h-screen max-w-1/3 z-50 hidden" id="cart">
-    <header class="flex items-center space-x-4 p-6 cart-header">
+<div class="hidden" id="cart"> {{-- tetap pakai .hidden utk toggle buka/tutup --}}
+    <header class="cart-header">
         <button aria-label="Back" class="text-gray-500 hover:text-gray-400 focus:outline-none" onclick="showCart()">
             <i class="fas fa-arrow-left text-xl"></i>
         </button>
-        <h2 class="text-white text-xl font-bold cart-title">Your Cart</h2>
+        <h2 class="text-white cart-title">Your Cart</h2>
     </header>
 
-    <div class="p-6 pt-0 cart-body">
+    <div class="cart-body">
         <div class="mb-6">
-            <h3 class="text-white font-bold text-lg mb-2 cart-section-title">Items</h3>
+            <h3 class="text-white cart-section-title">Items</h3>
 
             <ul class="space-y-4">
                 {{-- Product --}}
@@ -103,67 +86,45 @@
                     @php
                         $raw = $cart['images'] ?? null;
                         $first = null;
-
                         if (is_string($raw)) {
                             $maybe = json_decode($raw, true);
-                            $first =
-                                json_last_error() === JSON_ERROR_NONE && is_array($maybe) ? $maybe[0] ?? null : $raw;
-                        } elseif (is_array($raw)) {
-                            $first = $raw[0] ?? null;
-                        }
-
-                        if (is_string($first)) {
-                            $first = str_replace('\\', '/', $first);
-                        }
+                            $first = (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) ? ($maybe[0] ?? null) : $raw;
+                        } elseif (is_array($raw)) { $first = $raw[0] ?? null; }
+                        if (is_string($first)) { $first = str_replace('\\','/',$first); }
                         $filename = $first ? basename($first) : null;
-
                         $imageUrl = $filename
-                            ? 'https://demo-xanders.ptbmn.id/images/products/' . $filename
+                            ? ('https://demo-xanders.ptbmn.id/images/products/' . $filename)
                             : 'https://demo-xanders.ptbmn.id/images/products/default.png';
                     @endphp
-
-                    <li class="flex items-center space-x-4 cart-item">
+                    <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="product"
-                            value="product:{{ $cart['cart_id'] }}" onchange="updateCartTotal()"
-                            class="w-5 h-5 border border-gray-600 rounded-sm" />
-
-                        <img alt="{{ $cart['name'] }}" class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
-                            height="80" src="{{ $imageUrl }}" width="80" />
-
+                               value="product:{{ $cart['cart_id'] }}" onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                        <img alt="{{ $cart['name'] }}" class="cart-img" src="{{ $imageUrl }}" />
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-white text-base leading-tight cart-name">{{ $cart['name'] }}</p>
-
+                            <p class="font-bold text-white cart-name">{{ $cart['name'] }}</p>
                             <input type="hidden" id="price-{{ $cart['cart_id'] }}" value="{{ $cart['price'] }}">
-                            <input type="hidden" id="discount-{{ $cart['cart_id'] }}"
-                                value="{{ $cart['discount'] ?? 0 }}">
-
+                            <input type="hidden" id="discount-{{ $cart['cart_id'] }}" value="{{ $cart['discount'] ?? 0 }}">
                             <div class="text-sm mt-1 cart-price">
-                                @if (isset($cart['discount']) && $cart['discount'] > 0)
-                                    <div class="text-gray-400 line-through">Rp
-                                        {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
-                                    <div class="text-green-400">Rp
-                                        {{ number_format($cart['price'] - $cart['price'] * $cart['discount'], 0, ',', '.') }}
-                                        / item</div>
+                                @if(isset($cart['discount']) && $cart['discount'] > 0)
+                                    <div class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
+                                    <div class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</div>
                                 @else
-                                    <div class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item
-                                    </div>
+                                    <div class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
                                 @endif
                             </div>
-
                             <p class="text-white text-xs mt-1 cart-meta">Quantity: {{ $cart['quantity'] ?? 0 }}</p>
                         </div>
-
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $cart['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $cart['name'] }}"
-                                class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
+                            <button type="submit" aria-label="Delete {{ $cart['name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
                     </li>
                 @empty
-                    @if (empty($cartSparrings) && empty($cartVenues) && empty($cartProducts))
+                    @if(empty($cartSparrings) && empty($cartVenues) && empty($cartProducts))
                         <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">Your cart is empty</li>
                     @endif
                 @endforelse
@@ -171,66 +132,62 @@
                 {{-- Venue --}}
                 @forelse ($cartVenues ?? [] as $venue)
                     @php
-                        // Nama file yang sudah dikirim controller (images[0] / image)
                         $rawVenue = $venue['image'] ?? null;
-                        $filenameVenue = $rawVenue ? basename(str_replace('\\', '/', $rawVenue)) : null;
+                        if (!$rawVenue && !empty($venue['venue_id'])) {
+                            $__v = \App\Models\Venue::find($venue['venue_id']);
+                            if ($__v) {
+                                if (!empty($__v->images)) {
+                                    if (is_array($__v->images)) { $rawVenue = $__v->images[0] ?? null; }
+                                    elseif (is_string($__v->images)) {
+                                        $maybe = json_decode($__v->images, true);
+                                        if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) { $rawVenue = $maybe[0] ?? null; }
+                                    }
+                                }
+                                if (!$rawVenue && !empty($__v->image)) { $rawVenue = $__v->image; }
+                            }
+                        }
+                        $filenameVenue = $rawVenue ? basename(str_replace('\\','/',$rawVenue)) : null;
 
-                        // FE path via symlink public/fe-venue -> ../demo-xanders/images/venue
-                        $feAbs = $filenameVenue ? base_path('../demo-xanders/images/venue/' . $filenameVenue) : null;
-                        $feLink = public_path('fe-venue');
-
-                        if (
-                            $filenameVenue &&
-                            $feAbs &&
-                            \Illuminate\Support\Facades\File::exists($feAbs) &&
-                            is_dir($feLink)
-                        ) {
-                            $venueImageUrl = asset('fe-venue/' . $filenameVenue);
-                        } else {
-                            // Fallback ke CMS
-                            $cmsAbs = $filenameVenue ? public_path('images/venue/' . $filenameVenue) : null;
-                            if ($cmsAbs && \Illuminate\Support\Facades\File::exists($cmsAbs)) {
-                                $venueImageUrl = asset('images/venue/' . $filenameVenue);
+                        $venueImageUrl = asset('images/venue/default.png');
+                        if ($filenameVenue) {
+                            $feAbs  = base_path('../demo-xanders/images/venue/' . $filenameVenue);
+                            $feLink = public_path('fe-venue');
+                            if (\Illuminate\Support\Facades\File::exists($feAbs) && is_dir($feLink)) {
+                                $venueImageUrl = asset('fe-venue/' . $filenameVenue);
                             } else {
-                                // Fallback ke storage uploads
-                                $storAbs = $filenameVenue ? public_path('storage/uploads/' . $filenameVenue) : null;
-                                if ($storAbs && \Illuminate\Support\Facades\File::exists($storAbs)) {
-                                    $venueImageUrl = asset('storage/uploads/' . $filenameVenue);
+                                $cmsAbs = public_path('images/venue/' . $filenameVenue);
+                                if (\Illuminate\Support\Facades\File::exists($cmsAbs)) {
+                                    $venueImageUrl = asset('images/venue/' . $filenameVenue);
                                 } else {
-                                    $venueImageUrl = asset('images/venue/default.png');
+                                    $storAbs = public_path('storage/uploads/' . $filenameVenue);
+                                    if (\Illuminate\Support\Facades\File::exists($storAbs)) {
+                                        $venueImageUrl = asset('storage/uploads/' . $filenameVenue);
+                                    }
                                 }
                             }
                         }
                     @endphp
 
-                    <li class="flex items-center space-x-4 cart-item">
+                    <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
-                            value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                            class="w-5 h-5 border border-gray-600 rounded-sm" />
-
-                        <img class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img"
-                            src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
-
+                               value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-white text-base leading-tight cart-name">{{ $venue['name'] }}</p>
+                            <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
                             <p class="text-white text-xs mt-1 cart-meta">
                                 {{ \Carbon\Carbon::parse($venue['date'])->format('d M Y') }}
                                 {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} -
                                 {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}
                             </p>
-
-                            <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}"
-                                value="{{ $venue['price'] }}">
-                            <p class="text-white text-sm mt-1 cart-price">Rp.
-                                {{ number_format($venue['price'], 0, ',', '.') }}</p>
+                            <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}" value="{{ $venue['price'] }}">
+                            <p class="text-white text-sm mt-1 cart-price">Rp. {{ number_format($venue['price'], 0, ',', '.') }}</p>
                             <p class="text-white text-sm mt-1 cart-meta">Table {{ $venue['table'] }}</p>
                         </div>
-
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $venue['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $venue['name'] }}"
-                                class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
+                            <button type="submit" aria-label="Delete {{ $venue['name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
@@ -243,50 +200,34 @@
                     @php
                         $rawAthlete = $sparring['athlete_image'] ?? null;
                         $filenameAthlete = null;
-
                         if (!empty($rawAthlete)) {
-                            if (filter_var($rawAthlete, FILTER_VALIDATE_URL)) {
-                                $filenameAthlete = basename(parse_url($rawAthlete, PHP_URL_PATH));
-                            } else {
-                                $filenameAthlete = basename(str_replace('\\', '/', $rawAthlete));
-                            }
+                            if (filter_var($rawAthlete, FILTER_VALIDATE_URL)) { $filenameAthlete = basename(parse_url($rawAthlete, PHP_URL_PATH)); }
+                            else { $filenameAthlete = basename(str_replace('\\', '/', $rawAthlete)); }
                         }
-
                         $athleteImageUrl = $filenameAthlete
-                            ? 'https://demo-xanders.ptbmn.id/images/athlete/' . $filenameAthlete
+                            ? ('https://demo-xanders.ptbmn.id/images/athlete/' . $filenameAthlete)
                             : 'https://demo-xanders.ptbmn.id/images/athlete/default.png';
                     @endphp
 
-                    <li class="flex items-center space-x-4 cart-item">
+                    <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="sparring"
-                            value="sparring:{{ $sparring['cart_id'] }}" onchange="updateCartTotal()"
-                            class="w-5 h-5 border border-gray-600 rounded-sm" />
-
-                        <img alt="{{ $sparring['athlete_name'] }}"
-                            class="w-20 h-20 rounded-md object-cover flex-shrink-0 cart-img" height="80"
-                            src="{{ $athleteImageUrl }}" width="80" />
-
+                               value="sparring:{{ $sparring['cart_id'] }}" onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                        <img alt="{{ $sparring['athlete_name'] }}" class="cart-img" src="{{ $athleteImageUrl }}" />
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-white text-base leading-tight cart-name">
-                                {{ $sparring['athlete_name'] }} (Sparring)
-                            </p>
+                            <p class="font-bold text-white cart-name">{{ $sparring['athlete_name'] }} (Sparring)</p>
                             <p class="text-white text-xs mt-1 cart-meta">
                                 {{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }}
                                 {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} -
                                 {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}
                             </p>
-
-                            <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}"
-                                value="{{ $sparring['price'] }}">
-                            <p class="text-white text-sm mt-1 cart-price">Rp.
-                                {{ number_format($sparring['price'], 0, ',', '.') }}</p>
+                            <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}" value="{{ $sparring['price'] }}">
+                            <p class="text-white text-sm mt-1 cart-price">Rp. {{ number_format($sparring['price'], 0, ',', '.') }}</p>
                         </div>
-
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $sparring['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $sparring['athlete_name'] }}"
-                                class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
+                            <button type="submit" aria-label="Delete {{ $sparring['athlete_name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
@@ -304,7 +245,7 @@
                     <span id="cart-total-display">Rp. 0</span>
                 </div>
                 <button type="submit"
-                    class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-md checkout-btn">
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-md checkout-btn">
                     Checkout
                 </button>
             </div>
@@ -314,6 +255,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // Ukur tinggi header dinamis -> supaya calc(100vh - header) akurat
+    (function syncCartHeaderHeight(){
+        const cart = document.getElementById('cart');
+        const header = cart?.querySelector('.cart-header');
+        if (!cart || !header) return;
+        const h = header.getBoundingClientRect().height || 64;
+        cart.style.setProperty('--cart-header-h', h + 'px');
+        // update bila resize
+        window.addEventListener('resize', () => {
+            const nh = header.getBoundingClientRect().height || 64;
+            cart.style.setProperty('--cart-header-h', nh + 'px');
+        });
+    })();
+
     function updateCartTotal() {
         const scope = document.getElementById('cart');
         const checkboxes = scope.querySelectorAll('input[type="checkbox"]:checked');
@@ -349,13 +304,13 @@
             }
         });
 
-        document.getElementById('cart-total-display').textContent = 'Rp. ' + total.toLocaleString('id-ID');
+        document.getElementById('cart-total-display').textContent =
+            'Rp. ' + (total || 0).toLocaleString('id-ID');
     }
 
     document.querySelectorAll('#cart input[type="checkbox"]').forEach(function(checkbox) {
         checkbox.addEventListener('change', updateCartTotal);
     });
-
     updateCartTotal();
 
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {

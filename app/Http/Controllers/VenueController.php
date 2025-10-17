@@ -17,25 +17,6 @@ use Illuminate\Support\Facades\File;   // file helper
 
 class VenueController extends Controller
 {
-    /**
-     * Ambil gambar pertama venue (images[0] atau image) untuk thumbnail.
-     */
-    private function firstVenueImage(?Venue $v): ?string
-    {
-        if (!$v) return null;
-
-        $imgs = [];
-        if (!empty($v->images)) {
-            $imgs = is_array($v->images)
-                ? $v->images
-                : (is_string($v->images) ? (json_decode($v->images, true) ?? []) : []);
-        }
-        if (empty($imgs) && !empty($v->image)) {
-            $imgs = [$v->image];
-        }
-        return $imgs[0] ?? null;
-    }
-
     public function index(Request $request)
     {
         $favorites = collect(explode(',', $request->favorites ?? ''))
@@ -72,44 +53,70 @@ class VenueController extends Controller
         if (auth()->check()) {
             $userId = auth()->id();
 
+            // === PRODUCTS ===
             $cartProducts = CartItem::with('product')
                 ->where('user_id', $userId)
                 ->where('item_type', 'product')
                 ->get()
-                ->map(fn($item) => [
-                    'cart_id'    => $item->id,
-                    'product_id' => $item->product?->id,
-                    'name'       => $item->product?->name,
-                    'brand'      => $item->product?->brand,
-                    'category'   => $item->product?->category?->name ?? '-',
-                    'price'      => $item->product?->pricing,
-                    'quantity'   => $item->quantity,
-                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount'   => $item->product?->discount ?? 0,
-                    'images'     => $item->product?->images[0] ?? null,
-                ]);
+                ->map(function ($item) {
+                    return [
+                        'cart_id'    => $item->id,
+                        'product_id' => $item->product?->id,
+                        'name'       => $item->product?->name,
+                        'brand'      => $item->product?->brand,
+                        'category'   => $item->product?->category?->name ?? '-',
+                        'price'      => $item->product?->pricing,
+                        'quantity'   => $item->quantity,
+                        'total'      => $item->quantity * ($item->product?->pricing ?? 0),
+                        'discount'   => $item->product?->discount ?? 0,
+                        'images'     => $item->product?->images[0] ?? null,
+                    ];
+                });
 
+            // === VENUES === (DITAMBAH: field 'image')
             $cartVenues = CartItem::with('venue')
                 ->where('user_id', $userId)
                 ->where('item_type', 'venue')
                 ->get()
-                ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
-                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
-                        : null,
-                    // kirim gambar utk cart
-                    'image'    => $this->firstVenueImage($item->venue),
-                ]);
+                ->map(function ($item) {
+                    // Ambil kandidat gambar: images[0] kalau ada, else image tunggal
+                    $img = null;
+                    $v   = $item->venue;
 
+                    if ($v) {
+                        if (!empty($v->images)) {
+                            if (is_array($v->images)) {
+                                $img = $v->images[0] ?? null;
+                            } elseif (is_string($v->images)) {
+                                $maybe = json_decode($v->images, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                                    $img = $maybe[0] ?? null;
+                                }
+                            }
+                        }
+                        if (!$img && !empty($v->image)) {
+                            $img = $v->image;
+                        }
+                    }
+
+                    return [
+                        'cart_id'  => $item->id,
+                        'venue_id' => $item->venue?->id,
+                        'name'     => $item->venue?->name,
+                        'address'  => $item->venue?->address ?? '-',
+                        'date'     => $item->date,
+                        'start'    => $item->start,
+                        'end'      => $item->end,
+                        'table'    => $item->table_number,
+                        'price'    => $item->price,
+                        'duration' => $item->start && $item->end
+                            ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                            : null,
+                        'image'    => $img, // <— penting buat cart
+                    ];
+                });
+
+            // === SPARRING ===
             $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
                 ->where('user_id', $userId)
                 ->where('item_type', 'sparring')
@@ -137,13 +144,13 @@ class VenueController extends Controller
         try {
             $venue = Venue::findOrFail($venueId);
             $requestedTime = $request->query('date')
-                ? Carbon::parse($request->query('date'))
+                ? \Carbon\Carbon::parse($request->query('date'))
                 : now();
 
             $today = strtolower($requestedTime->format('l'));
             $requestedDate = $requestedTime->format('Y-m-d');
 
-            $tables = Table::where('venue_id', $venueId)->get();
+            $tables = \App\Models\Table::where('venue_id', $venueId)->get();
             $bookings = Booking::where('venue_id', $venueId)
                 ->where('booking_date', $requestedDate)
                 ->where('status', 'booked')
@@ -163,14 +170,15 @@ class VenueController extends Controller
                     if (is_string($tablesApplicable)) {
                         $tablesApplicable = json_decode($tablesApplicable, true);
                     }
+
                     if (!is_array($tablesApplicable)) {
                         $tablesApplicable = [];
                     }
 
                     $slots = collect(
-                        CarbonInterval::minutes(60)->toPeriod(
-                            Carbon::parse($item->start_time),
-                            Carbon::parse($item->end_time)->subHour()
+                        \Carbon\CarbonInterval::minutes(60)->toPeriod(
+                            \Carbon\Carbon::parse($item->start_time),
+                            \Carbon\Carbon::parse($item->end_time)->subHour()
                         )
                     )->map(function ($time) use ($tables, $bookings, $requestedDate, $tablesApplicable) {
                         $start = $time->format('H:i');
@@ -180,13 +188,13 @@ class VenueController extends Controller
                             $isInApplicableList = empty($tablesApplicable) || in_array($table->table_number ?? $table->id, $tablesApplicable);
 
                             $isBooked = $bookings->contains(function ($b) use ($table, $start, $end) {
-                                $bStart = Carbon::parse($b->start_time);
-                                $bEnd   = Carbon::parse($b->end_time);
-                                $sStart = Carbon::parse($start);
-                                $sEnd   = Carbon::parse($end);
+                                $bStart = \Carbon\Carbon::parse($b->start_time);
+                                $bEnd   = \Carbon\Carbon::parse($b->end_time);
+                                $sStart = \Carbon\Carbon::parse($start);
+                                $sEnd   = \Carbon\Carbon::parse($end);
 
                                 return $b->table_id == $table->id &&
-                                       $sStart->lt($bEnd) && $sEnd->gt($bStart);
+                                    $sStart->lt($bEnd) && $sEnd->gt($bStart);
                             });
 
                             return [
@@ -209,8 +217,8 @@ class VenueController extends Controller
                         'name'          => $item->name,
                         'price'         => $item->price,
                         'days'          => is_string($item->days) ? json_decode($item->days, true) ?? [] : (array) $item->days,
-                        'start_time'    => Carbon::parse($item->start_time)->format('H:i'),
-                        'end_time'      => Carbon::parse($item->end_time)->format('H:i'),
+                        'start_time'    => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
+                        'end_time'      => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
                         'time_category' => $item->time_category,
                         'schedule'      => $slots,
                         'date'          => $requestedDate,
@@ -300,26 +308,47 @@ class VenueController extends Controller
                     'images'     => $item->product?->images[0] ?? null,
                 ]);
 
+            // DITAMBAH: 'image' juga disini agar cart tampil konsisten
             $cartVenues = CartItem::with('venue')
                 ->where('user_id', $userId)
                 ->where('item_type', 'venue')
                 ->get()
-                ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
-                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
-                        : null,
-                    // kirim gambar utk cart
-                    'image'    => $this->firstVenueImage($item->venue),
-                ]);
+                ->map(function ($item) {
+                    $img = null;
+                    $v   = $item->venue;
+
+                    if ($v) {
+                        if (!empty($v->images)) {
+                            if (is_array($v->images)) {
+                                $img = $v->images[0] ?? null;
+                            } elseif (is_string($v->images)) {
+                                $maybe = json_decode($v->images, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                                    $img = $maybe[0] ?? null;
+                                }
+                            }
+                        }
+                        if (!$img && !empty($v->image)) {
+                            $img = $v->image;
+                        }
+                    }
+
+                    return [
+                        'cart_id'  => $item->id,
+                        'venue_id' => $item->venue?->id,
+                        'name'     => $item->venue?->name,
+                        'address'  => $item->venue?->address ?? '-',
+                        'date'     => $item->date,
+                        'start'    => $item->start,
+                        'end'      => $item->end,
+                        'table'    => $item->table_number,
+                        'price'    => $item->price,
+                        'duration' => $item->start && $item->end
+                            ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                            : null,
+                        'image'    => $img, // <— penting buat cart
+                    ];
+                });
 
             $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
                 ->where('user_id', $userId)
@@ -354,50 +383,8 @@ class VenueController extends Controller
         ));
     }
 
-    public function storeReview(Request $request, $venueId)
-    {
-        $request->validate([
-            'rating'  => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:3000',
-        ]);
-
-        if (!auth()->check()) {
-            return back()->with('error', 'Silakan login terlebih dahulu.');
-        }
-
-        $venue = Venue::findOrFail($venueId);
-        $user  = auth()->user();
-
-        $booking = Booking::where('user_id', $user->id)
-            ->where('venue_id', $venue->id)
-            ->orderByDesc('booking_date')
-            ->first();
-
-        if (!$booking) {
-            return back()->with('error', 'Kamu belum memiliki booking di venue ini.');
-        }
-
-        $already = Review::where('user_id', $user->id)
-            ->where('venue_id', $venue->id)
-            ->exists();
-
-        if ($already) {
-            return back()->with('error', 'Kamu sudah memberikan review untuk venue ini.');
-        }
-
-        Review::create([
-            'booking_id' => $booking->id,
-            'user_id'    => $user->id,
-            'venue_id'   => (int) $venue->id,
-            'rating'     => (int) $request->integer('rating'),
-            'comment'    => $request->string('comment')->toString(),
-        ]);
-
-        return back()->with('success', 'Terima kasih! Review kamu sudah tersimpan.');
-    }
-
     /**
-     * Upload Helper (CMS + FE)
+     * ================= Upload Helper (CMS + FE) =================
      * - CMS : public/images/venue
      * - FE  : ../demo-xanders/images/venue
      */
@@ -414,6 +401,7 @@ class VenueController extends Controller
         if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
 
         $file->move($cmsPath, $filename);
+
         @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
 
         return $filename;
@@ -430,6 +418,10 @@ class VenueController extends Controller
         if (File::exists($fePath))  @unlink($fePath);
     }
 
+    /**
+     * ======= Endpoint Update Gambar Venue =======
+     * Form bisa kirim field 'gambar' atau 'image'
+     */
     public function updateImage(Request $request, $id)
     {
         $request->validate([
