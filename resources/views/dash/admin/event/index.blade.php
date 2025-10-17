@@ -83,22 +83,28 @@
                         </thead>
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
+                                @php
+                                    /**
+                                     * Normalisasi path gambar:
+                                     * - Jika full URL (http/https) → pakai apa adanya
+                                     * - Jika hanya filename atau path lama (events/foo.jpg / images/events/foo.jpg)
+                                     *   → ambil basename lalu bangun ulang ke asset('images/events/{filename}')
+                                     */
+                                    $imgDesktop = null;
+                                    if (!empty($event->image_url)) {
+                                        $raw = trim($event->image_url);
+                                        if (preg_match('/^https?:\/\//i', $raw)) {
+                                            $imgDesktop = $raw;
+                                        } else {
+                                            $filename = basename($raw); // ambil nama file saja
+                                            $imgDesktop = asset('images/events/' . $filename);
+                                        }
+                                    }
+                                @endphp
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
-                                        @php
-                                            $imgPath = null;
-                                            if (!empty($event->image_url)) {
-                                                $candidates = [
-                                                    $event->image_url,
-                                                    'storage/'.$event->image_url,
-                                                ];
-                                                foreach ($candidates as $rel) {
-                                                    if (file_exists(public_path($rel))) { $imgPath = asset($rel); break; }
-                                                }
-                                            }
-                                        @endphp
-                                        @if ($imgPath)
-                                            <img src="{{ $imgPath }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
+                                        @if ($imgDesktop)
+                                            <img src="{{ $imgDesktop }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
                                         @else
                                             <div class="w-16 h-16 flex items-center justify-center bg-gray-700 text-xs text-gray-400 rounded">
                                                 No Img
@@ -116,17 +122,26 @@
                                     <td class="px-4 py-3 text-gray-300">{{ $event->status }}</td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex gap-3 text-gray-400 justify-end">
+                                            <!-- Detail -->
+                                            <a href="{{ route('admin.event.detail', $event->id) }}"
+                                               class="hover:text-gray-200"
+                                               title="Detail Event">
+                                                <i class="fas fa-ticket"></i>
+                                            </a>
+                                    
+                                            <!-- Edit -->
                                             <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                                     class="hover:text-gray-200" title="Edit">
                                                 <i class="fas fa-pen"></i>
                                             </button>
-
+                                    
+                                            <!-- Delete -->
                                             <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                                     class="hover:text-gray-200" title="Delete">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
-                                    </td>
+                                    </td>                                    
                                 </tr>
                             @empty
                                 <tr class="bg-[#1c1c1c]">
@@ -142,10 +157,23 @@
                 <!-- Mobile Card View -->
                 <div class="sm:hidden space-y-4">
                     @forelse ($events as $event)
+                        @php
+                            $mobileImg = null;
+                            if (!empty($event->image_url)) {
+                                $raw = trim($event->image_url);
+                                if (preg_match('/^https?:\/\//i', $raw)) {
+                                    $mobileImg = $raw;
+                                } else {
+                                    $mobileImg = asset('images/events/' . basename($raw));
+                                }
+                            }
+                            if (!$mobileImg) $mobileImg = 'https://placehold.co/160x160?text=No+Image';
+                        @endphp
+
                         <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
-                                <img src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/80' }}"
-                                     class="h-16 w-16 rounded object-cover shrink-0" alt="">
+                                <img src="{{ $mobileImg }}"
+                                     class="h-16 w-16 rounded object-cover shrink-0" alt="{{ $event->name }}">
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold text-base mb-1">{{ $event->name }}</h3>
                                     <p class="text-xs text-gray-400">
@@ -155,18 +183,28 @@
                             </div>
 
                             <div class="flex gap-2 pt-3 border-t border-gray-700">
+                                <!-- Detail -->
+                                <a href="{{ route('admin.event.detail', $event->id) }}"
+                                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                    <i class="fas fa-ticket text-xs"></i>
+                                    Detail
+                                </a>
+                            
+                                <!-- Edit -->
                                 <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-pen text-xs"></i>
                                     Edit
                                 </button>
-
+                            
+                                <!-- Delete -->
                                 <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-trash text-xs"></i>
                                     Delete
                                 </button>
                             </div>
+                            
                         </div>
                     @empty
                         <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">

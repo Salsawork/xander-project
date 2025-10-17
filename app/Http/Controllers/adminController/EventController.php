@@ -5,9 +5,11 @@ namespace App\Http\Controllers\adminController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
+use App\Models\OrderEvent;
 use App\Exports\EventExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class EventController extends Controller
 {
@@ -16,21 +18,20 @@ class EventController extends Controller
      * name: admin.event.index
      */
     public function index(Request $request)
-{
-    $search = $request->input('search');
+    {
+        $search = $request->input('search');
 
-    $events = Event::query()
-        ->when($search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%");
-        })
-        ->orderBy('start_date', 'asc')
-        ->get();
+        $events = Event::query()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%")
+                      ->orWhere('status', 'like', "%{$search}%");
+            })
+            ->orderBy('start_date', 'asc')
+            ->get();
 
-    return view('dash.admin.event.index', compact('events', 'search'));
-}
-
+        return view('dash.admin.event.index', compact('events', 'search'));
+    }
 
     /**
      * GET /dashboard/event/create
@@ -47,9 +48,9 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
-        // 1) Sanitasi angka uang -> integer murni
+        // 1) Sanitasi angka uang -> integer
         $this->sanitizeMoneyFields($request);
-        // 2) Normalisasi string opsional -> '' (bukan null) agar aman untuk kolom NOT NULL
+        // 2) Normalisasi teks opsional -> ''
         $this->normalizeOptionalTextFields($request);
 
         $request->validate([
@@ -73,17 +74,10 @@ class EventController extends Controller
             'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
-        // Upload gambar (opsional)
-        $imagePath = null;
+        // Upload gambar (opsional) — menyimpan filename saja
+        $filename = null;
         if ($request->hasFile('image_url')) {
-            $image       = $request->file('image_url');
-            $imageName   = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $destination = public_path('events');
-            if (!File::exists($destination)) {
-                File::makeDirectory($destination, 0755, true);
-            }
-            $image->move($destination, $imageName);
-            $imagePath = 'events/' . $imageName; // path relatif public/
+            $filename = $this->uploadFile($request->file('image_url'));
         }
 
         Event::create([
@@ -104,7 +98,7 @@ class EventController extends Controller
             'divisions'           => $request->divisions,
             'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? 'Upcoming',
-            'image_url'           => $imagePath,
+            'image_url'           => $filename, // simpan filename
         ]);
 
         return redirect()
@@ -130,9 +124,9 @@ class EventController extends Controller
     {
         $event = Event::findOrFail($id);
 
-        // 1) Sanitasi angka uang -> integer murni
+        // 1) Sanitasi angka uang -> integer
         $this->sanitizeMoneyFields($request);
-        // 2) Normalisasi string opsional -> '' (bukan null)
+        // 2) Normalisasi teks opsional -> ''
         $this->normalizeOptionalTextFields($request);
 
         $request->validate([
@@ -156,21 +150,14 @@ class EventController extends Controller
             'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
-        $imagePath = $event->image_url;
+        $filename = $event->image_url;
 
-        // Ganti gambar jika diupload ulang
+        // Ganti gambar jika upload baru
         if ($request->hasFile('image_url')) {
-            if ($event->image_url && File::exists(public_path($event->image_url))) {
-                File::delete(public_path($event->image_url));
-            }
-            $image       = $request->file('image_url');
-            $imageName   = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $destination = public_path('events');
-            if (!File::exists($destination)) {
-                File::makeDirectory($destination, 0755, true);
-            }
-            $image->move($destination, $imageName);
-            $imagePath = 'events/' . $imageName;
+            // hapus lama di CMS & FE
+            $this->deleteFile($event->image_url);
+            // upload baru
+            $filename = $this->uploadFile($request->file('image_url'));
         }
 
         $event->update([
@@ -191,7 +178,7 @@ class EventController extends Controller
             'divisions'           => $request->divisions,
             'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? $event->status,
-            'image_url'           => $imagePath,
+            'image_url'           => $filename, // simpan filename
         ]);
 
         return redirect()
@@ -206,25 +193,81 @@ class EventController extends Controller
     public function destroy($id)
     {
         $event = Event::withCount('tickets')->findOrFail($id);
-    
+
         if ($event->tickets_count > 0) {
             return back()->with('error', 'Tidak bisa menghapus event karena masih memiliki tiket.');
         }
-    
-        if ($event->image_url && File::exists(public_path($event->image_url))) {
-            File::delete(public_path($event->image_url));
-        }
-    
+
+        // hapus file di CMS & FE
+        $this->deleteFile($event->image_url);
+
         $event->delete();
-    
+
         return redirect()
             ->route('admin.event.index')
             ->with('success', 'Event berhasil dihapus.');
     }
-    
+
+    /**
+     * Export Excel
+     */
+    public function export(Request $request)
+    {
+        $filename = 'events_' . now()->format('Ymd_His') . '.xlsx';
+        $search = $request->get('search');
+
+        return Excel::download(new EventExport($search), $filename);
+    }
+
+    /* ============================================================
+     | Helpers upload/delete seperti BannerController
+     | Target: CMS => public/demo-xanders/images/events
+     |         FE  => ../demo-xanders/images/events
+     * ============================================================*/
+
+    /**
+     * Upload file, return filename aman (tanpa path).
+     */
+    private function uploadFile($file): string
+    {
+        // Nama aman
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName     = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
+        $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
+
+        // Path CMS & FE
+        $cmsPath = public_path('demo-xanders/images/events');
+        $fePath  = base_path('../demo-xanders/images/events');
+
+        // Buat folder jika belum ada
+        if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
+        if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
+
+        // Simpan di CMS
+        $file->move($cmsPath, $filename);
+
+        // Copy ke FE
+        @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
+
+        return $filename;
+    }
+
+    /**
+     * Hapus file di CMS & FE bila ada.
+     */
+    private function deleteFile(?string $filename): void
+    {
+        if (!$filename) return;
+
+        $cms = public_path('demo-xanders/images/events/' . $filename);
+        $fe  = base_path('../demo-xanders/images/events/' . $filename);
+
+        if (File::exists($cms)) @File::delete($cms);
+        if (File::exists($fe))  @File::delete($fe);
+    }
+
     /**
      * Hapus semua karakter non-digit dari field uang supaya selalu numerik.
-     * Aman untuk input "1.000.000", "1,000,000", "Rp 1.000.000", dll.
      */
     private function sanitizeMoneyFields(Request $request): void
     {
@@ -238,7 +281,7 @@ class EventController extends Controller
 
         $clean = [];
         foreach ($fields as $f) {
-            $raw = (string) $request->input($f, '');
+            $raw    = (string) $request->input($f, '');
             $digits = preg_replace('/[^\d]/', '', $raw ?? '');
             $clean[$f] = $digits === '' ? 0 : (int) $digits;
         }
@@ -248,7 +291,6 @@ class EventController extends Controller
 
     /**
      * Pastikan field teks opsional tidak null (pakai '' jika kosong).
-     * Ini penting bila kolom DB bertipe NOT NULL.
      */
     private function normalizeOptionalTextFields(Request $request): void
     {
@@ -268,11 +310,44 @@ class EventController extends Controller
         $request->merge($normalized);
     }
 
-    public function export(Request $request)
+    // Detail untuk verify pemesanan tiket event user
+    public function detail($id)
     {
-        $filename = 'events_' . now()->format('Ymd_His') . '.xlsx';
-        $search = $request->get('search');
+        $event = Event::findOrFail($id);
+        $orders = OrderEvent::with(['user', 'event', 'ticket', 'bank'])
+        ->where('event_id', $id)
+        ->latest()
+        ->get();
+    
+        return view('dash.admin.event.detail', compact('event', 'orders'));
+    }
+    
 
-        return Excel::download(new EventExport($search), $filename);
+    public function verify($id)
+    {
+        $order = OrderEvent::findOrFail($id);
+
+        if ($order->status !== 'paid') {
+            return back()->with('error', 'Hanya pesanan berstatus "paid" yang bisa diverifikasi.');
+        }
+
+        $order->status = 'verified';
+        $order->save();
+
+        return back()->with('success', 'Pesanan berhasil diverifikasi.');
+    }
+
+    public function reject($id)
+    {
+        $order = OrderEvent::findOrFail($id);
+
+        if ($order->status !== 'paid') {
+            return back()->with('error', 'Hanya pesanan berstatus "paid" yang bisa ditolak.');
+        }
+
+        $order->status = 'rejected';
+        $order->save();
+
+        return back()->with('success', 'Pesanan berhasil ditolak.');
     }
 }

@@ -62,6 +62,20 @@
 
     // Nilai untuk tampilan awal (diformat)
     $fmt = fn($n) => $n ? number_format((int)$n, 0, ',', '.') : '';
+
+    // ===== Normalisasi URL gambar saat ini =====
+    $currentImg = null;
+    if (!empty($event->image_url)) {
+        $raw = trim($event->image_url);
+        if (preg_match('/^https?:\/\//i', $raw)) {
+            // Sudah full URL (CDN/extern) → pakai apa adanya
+            $currentImg = $raw;
+        } else {
+            // Ambil filename saja, lalu bangun ulang ke /images/events/{filename}
+            $filename   = basename($raw);
+            $currentImg = asset('images/events/' . $filename);
+        }
+    }
 @endphp
 
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
@@ -157,6 +171,7 @@
                                            value="{{ old('end_date', $endDateValue) }}">
                                     @error('end_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                                 </div>
+
                             </div>
 
                             {{-- Biaya & Stok --}}
@@ -250,10 +265,10 @@
                                     @error('image_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                                 </div>
 
-                                @if($event->image_url)
+                                @if($currentImg)
                                     <div>
                                         <p class="text-xs text-gray-400 mb-2">Gambar saat ini:</p>
-                                        <img src="{{ asset($event->image_url) }}" alt="{{ $event->name }}"
+                                        <img src="{{ $currentImg }}" alt="{{ $event->name }}"
                                              class="w-56 max-w-full rounded-md border border-gray-700 object-cover">
                                     </div>
                                 @endif
@@ -319,10 +334,9 @@
         bindRupiahPair('runner_up_prize_view',   'runner_up_prize');
         bindRupiahPair('third_place_prize_view', 'third_place_prize');
 
-        // Saat submit: pastikan hidden tetap digits (sudah dijaga), tidak perlu utak-atik view lagi
+        // Saat submit: pastikan hidden tetap digits
         const form = document.getElementById('eventEditForm');
         form.addEventListener('submit', () => {
-            // optional: jaga-jaga, enforce digits di hidden
             ['price_ticket','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
                 .forEach(id => {
                     const el = document.getElementById(id);

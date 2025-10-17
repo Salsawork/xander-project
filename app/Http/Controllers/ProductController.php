@@ -11,10 +11,10 @@ use App\Models\Visit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class ProductController extends Controller
 {
-
     public function index(Request $request)
     {
         $query = Product::query();
@@ -39,8 +39,8 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%')
-                    ->orWhere('sku', 'like', '%' . $search . '%');
+                  ->orWhere('description', 'like', '%' . $search . '%')
+                  ->orWhere('sku', 'like', '%' . $search . '%');
             });
         }
 
@@ -60,7 +60,7 @@ class ProductController extends Controller
             $products = $query->orderBy('created_at', 'desc')->paginate(10);
         }
 
-        // 🔹 Track the visit (hanya sekali per hari per IP)
+        // 🔹 Track visit (sekali per hari per IP)
         $ipAddress = $request->ip();
         $visit = Visit::where('ip_address', $ipAddress)
             ->whereDate('visit_date', today())
@@ -76,10 +76,10 @@ class ProductController extends Controller
             $visit->increment('visit');
         }
 
-        // 🔹 Ambil kategori untuk filter di view (dashboard)
+        // 🔹 Kategori untuk filter di view (dashboard)
         $categories = Categories::all();
 
-        // 🔹 Pilih view sesuai kebutuhan
+        // 🔹 Pilih view
         if ($request->is('dashboard*')) {
             return view('dash.admin.product.index', compact('products', 'categories'));
         }
@@ -87,16 +87,13 @@ class ProductController extends Controller
         return view('landing', compact('products', 'categories'));
     }
 
-
     public function filterByLevel(Request $request)
     {
         $query = Product::query();
 
-        // semua filter lewat field level
         if ($request->has('level') && in_array($request->level, ['professional', 'beginner', 'under50', 'cue-cases'])) {
             $query->where('level', $request->level);
         } else {
-            // kalau gak ada filter, tampil random 4
             $query->inRandomOrder()->limit(4);
         }
 
@@ -113,16 +110,17 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // NB: name input file harus "images[]" multiple
         $validatedData = $request->validate([
             'name'        => 'required|string',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'stock'    => 'required|integer|min:0',
+            'stock'       => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku',
             'images'      => 'nullable|array',
-            'images.*'    => 'nullable|string',
+            'images.*'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
             'weight'      => 'required|integer|min:0',
             'length'      => 'required|integer|min:0',
             'breadth'     => 'required|integer|min:0',
@@ -130,6 +128,15 @@ class ProductController extends Controller
             'pricing'     => 'required|numeric|min:0',
             'discount'    => 'nullable|numeric|min:0|max:100'
         ]);
+
+        // Upload images -> simpan array filename (tanpa path)
+        $filenames = [];
+        if ($request->hasFile('images')) {
+            $filenames = $this->uploadImages($request->file('images'));
+        }
+
+        $validatedData['images']   = $filenames;          // array of filenames
+        $validatedData['discount'] = $request->discount ?? 0;
 
         Product::create($validatedData);
 
@@ -157,10 +164,10 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'stock'    => 'required|integer|min:0',
+            'stock'       => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku,' . $id,
             'images'      => 'nullable|array',
-            'images.*'    => 'nullable|string',
+            'images.*'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
             'weight'      => 'required|integer|min:0',
             'length'      => 'required|integer|min:0',
             'breadth'     => 'required|integer|min:0',
@@ -171,22 +178,17 @@ class ProductController extends Controller
 
         $product = Product::findOrFail($id);
 
-        // Handle file uploads if any
+        // ==== Upload baru? ganti semua gambar ====
         if ($request->hasFile('images')) {
-            $uploadedImages = [];
-            foreach ($request->file('images') as $image) {
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $image->storeAs('uploads', $imageName, 'public');
-                $uploadedImages[] = 'uploads/' . $imageName;
-            }
-        
-            // 🔥 Ganti semua gambar lama dengan yang baru
-            $validatedData['images'] = $uploadedImages;
+            // Hapus file lama di CMS & FE
+            $this->deleteImages((array) ($product->images ?? []));
+            // Upload baru
+            $uploaded = $this->uploadImages($request->file('images'));
+            $validatedData['images'] = $uploaded;
         } else {
-            // Tetap gunakan gambar lama kalau tidak upload baru
+            // Tidak upload → keep gambar lama (sudah array di DB)
             $validatedData['images'] = $product->images ?? [];
         }
-        
 
         Log::info('Data before update:', $product->toArray());
 
@@ -205,9 +207,9 @@ class ProductController extends Controller
         try {
             $product = Product::findOrFail($id);
 
-            // Hapus gambar jika ada (opsional)
-            if ($product->gambar && file_exists(public_path('images/products/' . $product->gambar))) {
-                unlink(public_path('images/products/' . $product->gambar));
+            // Hapus semua gambar terkait (array filename)
+            if (!empty($product->images) && is_array($product->images)) {
+                $this->deleteImages($product->images);
             }
 
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
@@ -222,7 +224,8 @@ class ProductController extends Controller
 
     /**
      * Halaman katalog publik /products (listing dengan filter).
-     */public function landing(Request $request)
+     */
+    public function landing(Request $request)
     {
         $products = Product::query()
             ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
@@ -235,15 +238,13 @@ class ProductController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        // Data filter bantu
         $categories = Categories::select('id','name')->orderBy('name')->get();
         $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
         $conditions = ['new' => 'New', 'used' => 'Used'];
 
-
         $cartProducts = collect();
-        $cartVenues = collect();
-        $cartSparrings = collect();
+        $cartVenues   = collect();
+        $cartSparrings= collect();
 
         if (auth()->check()) {
             $userId = auth()->id();
@@ -253,16 +254,16 @@ class ProductController extends Controller
                 ->where('item_type', 'product')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'  => $item->id,
+                    'cart_id'    => $item->id,
                     'product_id' => $item->product?->id,
-                    'name'     => $item->product?->name,
-                    'brand'    => $item->product?->brand,
-                    'category' => $item->product?->category?->name ?? '-',
-                    'price'    => $item->product?->pricing,
-                    'quantity' => $item->quantity,
-                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount' => $item->product?->discount ?? 0,
-                    'images'   => $item->product?->images[0] ?? null,
+                    'name'       => $item->product?->name,
+                    'brand'      => $item->product?->brand,
+                    'category'   => $item->product?->category?->name ?? '-',
+                    'price'      => $item->product?->pricing,
+                    'quantity'   => $item->quantity,
+                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'   => $item->product?->discount ?? 0,
+                    'images'     => $item->product?->images[0] ?? null, // filename saja
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -270,7 +271,7 @@ class ProductController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id' => $item->id,
+                    'cart_id'  => $item->id,
                     'venue_id' => $item->venue?->id,
                     'name'     => $item->venue?->name,
                     'address'  => $item->venue?->address ?? '-',
@@ -289,18 +290,17 @@ class ProductController extends Controller
                 ->where('item_type', 'sparring')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'      => $item->id,
-                    'schedule_id'  => $item->sparringSchedule?->id,
-                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image'=> $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'         => $item->date,
-                    'start'        => $item->start,
-                    'end'          => $item->end,
-                    'price'        => $item->price,
+                    'cart_id'       => $item->id,
+                    'schedule_id'   => $item->sparringSchedule?->id,
+                    'athlete_name'  => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'          => $item->date,
+                    'start'         => $item->start,
+                    'end'           => $item->end,
+                    'price'         => $item->price,
                 ]);
         }
 
-        // ✅ Tambahkan variabel ke compact()
         return view('public.product.index', compact(
             'products',
             'categories',
@@ -314,17 +314,15 @@ class ProductController extends Controller
 
     /**
      * Detail produk + related.
-     * Di sini kita hitung harga final (diskon) untuk dipakai di Blade,
-     * tanpa mengubah Model.
+     * Hitung harga final (diskon) untuk dipakai di Blade, tanpa mengubah Model.
      */
     public function detail(Request $request, $product)
     {
         $detail = Product::findOrFail($product);
         $cartProducts = collect();
-        $cartVenues = collect();
-        $cartSparrings = collect();
+        $cartVenues   = collect();
+        $cartSparrings= collect();
 
-        // ===== Related products =====
         $limit = 10;
 
         if (auth()->check()) {
@@ -335,16 +333,16 @@ class ProductController extends Controller
                 ->where('item_type', 'product')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'  => $item->id,
+                    'cart_id'    => $item->id,
                     'product_id' => $item->product?->id,
-                    'name'     => $item->product?->name,
-                    'brand'    => $item->product?->brand,
-                    'category' => $item->product?->category?->name ?? '-',
-                    'price'    => $item->product?->pricing,
-                    'quantity' => $item->quantity,
-                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount' => $item->product?->discount ?? 0,
-                    'images'    => $item->product?->images[0] ?? null,
+                    'name'       => $item->product?->name,
+                    'brand'      => $item->product?->brand,
+                    'category'   => $item->product?->category?->name ?? '-',
+                    'price'      => $item->product?->pricing,
+                    'quantity'   => $item->quantity,
+                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'   => $item->product?->discount ?? 0,
+                    'images'     => $item->product?->images[0] ?? null, // filename saja
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -352,7 +350,7 @@ class ProductController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id' => $item->id,
+                    'cart_id'  => $item->id,
                     'venue_id' => $item->venue?->id,
                     'name'     => $item->venue?->name,
                     'address'  => $item->venue?->address ?? '-',
@@ -371,14 +369,14 @@ class ProductController extends Controller
                 ->where('item_type', 'sparring')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'     => $item->id,
-                    'schedule_id' => $item->sparringSchedule?->id,
-                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'        => $item->date,
-                    'start'       => $item->start,
-                    'end'         => $item->end,
-                    'price'       => $item->price,
+                    'cart_id'        => $item->id,
+                    'schedule_id'    => $item->sparringSchedule?->id,
+                    'athlete_name'   => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image'  => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'           => $item->date,
+                    'start'          => $item->start,
+                    'end'            => $item->end,
+                    'price'          => $item->price,
                 ]);
         }
 
@@ -413,22 +411,21 @@ class ProductController extends Controller
             $relatedProducts = $relatedProducts->concat($extra);
         }
 
-        // ===== Hitung harga final & persen diskon (tanpa ubah model) =====
+        // ===== Hitung harga final & persen diskon =====
         $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount);
         $detailHasDiscount     = $detailDiscountPercent > 0;
         $detailFinalPrice      = $this->finalPrice((float)$detail->pricing, $detailDiscountPercent);
 
-        // Untuk related, kita buat array map id => perhitungan
         $relatedPriceMap = [];
         foreach ($relatedProducts as $p) {
             $dp = $this->normalizeDiscountPercent($p->discount);
             $relatedPriceMap[$p->id] = [
-                'has_discount'    => $dp > 0,
-                'discount_percent'=> $dp,
-                'final_price'     => $this->finalPrice((float)$p->pricing, $dp),
+                'has_discount'     => $dp > 0,
+                'discount_percent' => $dp,
+                'final_price'      => $this->finalPrice((float)$p->pricing, $dp),
             ];
         }
-        
+
         return view('public.product.detail', compact(
             'detail', 'relatedProducts', 'cartProducts', 'cartVenues', 'cartSparrings',
             'detailDiscountPercent', 'detailHasDiscount', 'detailFinalPrice',
@@ -443,14 +440,64 @@ class ProductController extends Controller
         return $d <= 1 ? $d * 100.0 : $d;
     }
 
-    /**
-     * Harga setelah diskon (dibulatkan).
-     */
     private function finalPrice(float $pricing, float $discountPercent): int
     {
         if ($discountPercent <= 0) return (int) round($pricing, 0);
         $final = $pricing - ($pricing * ($discountPercent / 100.0));
         return (int) round($final, 0);
     }
-}
 
+    /* ============================================================
+     | Helpers upload/delete ala BannerController
+     | Target: CMS => public/demo-xanders/images/products
+     |         FE  => ../demo-xanders/images/products
+     * ============================================================*/
+
+    /**
+     * Upload banyak gambar → return array filename (tanpa path).
+     * Input: array<UploadedFile>
+     */
+    private function uploadImages(array $files): array
+    {
+        $cmsPath = public_path('demo-xanders/images/products');
+        $fePath  = base_path('../demo-xanders/images/products');
+
+        if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
+        if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
+
+        $filenames = [];
+        foreach ($files as $file) {
+            if (!$file) continue;
+
+            $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '', \Str::slug($origName));
+            $filename = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
+
+            // Simpan ke CMS
+            $file->move($cmsPath, $filename);
+
+            // Copy ke FE (abaikan error)
+            @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
+
+            $filenames[] = $filename; // simpan filename saja
+        }
+
+        return $filenames;
+    }
+
+    /**
+     * Hapus banyak gambar (filename) di CMS & FE.
+     */
+    private function deleteImages(array $filenames): void
+    {
+        foreach ($filenames as $filename) {
+            if (!$filename) continue;
+
+            $cms = public_path('demo-xanders/images/products/' . $filename);
+            $fe  = base_path('../demo-xanders/images/products/' . $filename);
+
+            if (File::exists($cms)) @File::delete($cms);
+            if (File::exists($fe))  @File::delete($fe);
+        }
+    }
+}

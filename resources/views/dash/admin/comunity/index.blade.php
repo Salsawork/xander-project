@@ -99,12 +99,17 @@
                                                 <div class="flex items-center gap-4">
                                                     <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
                                                         @php
+                                                            // ===== Normalisasi gambar:
+                                                            // - Full URL → pakai apa adanya
+                                                            // - Lainnya   → jadikan /images/community/{filename}
                                                             $imagePath = 'https://placehold.co/600x400';
                                                             if (!empty($item->image_url)) {
-                                                                if (!str_starts_with($item->image_url, 'http://') && !str_starts_with($item->image_url, 'https://') && !str_starts_with($item->image_url, '/storage/')) {
-                                                                    $imagePath = asset('storage/uploads/' . $item->image_url);
+                                                                $raw = trim($item->image_url);
+                                                                if (preg_match('/^https?:\/\//i', $raw)) {
+                                                                    $imagePath = $raw;
                                                                 } else {
-                                                                    $imagePath = $item->image_url;
+                                                                    $filename  = basename($raw);
+                                                                    $imagePath = asset('images/community/' . $filename);
                                                                 }
                                                             }
                                                         @endphp
@@ -165,23 +170,24 @@
                         <!-- Mobile Card View -->
                         <div class="sm:hidden space-y-4">
                             @foreach ($news as $item)
+                                @php
+                                    $imagePathMobile = 'https://placehold.co/600x400';
+                                    if (!empty($item->image_url)) {
+                                        $raw = trim($item->image_url);
+                                        if (preg_match('/^https?:\/\//i', $raw)) {
+                                            $imagePathMobile = $raw;
+                                        } else {
+                                            $imagePathMobile = asset('images/community/' . basename($raw));
+                                        }
+                                    }
+                                @endphp
                                 <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                                     <!-- Header with Image and Title -->
                                     <div class="flex gap-3 mb-3">
                                         <div class="w-16 h-16 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                            @php
-                                                $imagePath = 'https://placehold.co/600x400';
-                                                if (!empty($item->image_url)) {
-                                                    if (!str_starts_with($item->image_url, 'http://') && !str_starts_with($item->image_url, 'https://') && !str_starts_with($item->image_url, '/storage/')) {
-                                                        $imagePath = asset('storage/uploads/' . $item->image_url);
-                                                    } else {
-                                                        $imagePath = $item->image_url;
-                                                    }
-                                                }
-                                            @endphp
                                             <img alt="Placeholder image for {{ $item->title }}"
                                                 class="w-full h-full object-cover rounded"
-                                                src="{{ $imagePath }}"
+                                                src="{{ $imagePathMobile }}"
                                                 onerror="this.src='https://placehold.co/600x400'" />
                                         </div>
                                         <div class="flex-1 min-w-0">

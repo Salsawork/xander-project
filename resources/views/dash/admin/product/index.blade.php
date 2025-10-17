@@ -118,17 +118,20 @@
                                           <div class="flex items-center gap-4">
                                               <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
                                                   @php
+                                                      // ===== Normalisasi gambar produk → /images/products/{filename}
                                                       $imagePath = 'https://placehold.co/600x400';
                                                       if (!empty($product->images) && is_array($product->images)) {
                                                           foreach ($product->images as $img) {
                                                               if (!empty($img)) {
-                                                                  if (
-                                                                      !str_starts_with($img, 'http') &&
-                                                                      !str_starts_with($img, '/storage/')
-                                                                  ) {
-                                                                      $imagePath = asset('storage/uploads/' . $img);
+                                                                  $raw = trim($img);
+                                                                  if (preg_match('/^https?:\/\//i', $raw)) {
+                                                                      // URL penuh -> pakai apa adanya
+                                                                      $imagePath = $raw;
                                                                   } else {
-                                                                      $imagePath = $img;
+                                                                      // Ambil nama file terakhir dari path apa pun
+                                                                      $filename = basename($raw);
+                                                                      // Arahkan ke public/images/products/{filename}
+                                                                      $imagePath = asset('images/products/' . $filename);
                                                                   }
                                                                   break;
                                                               }
@@ -182,14 +185,17 @@
                               <div class="flex items-start gap-3 mb-3">
                                   <div class="w-16 h-16 bg-gray-600 rounded flex items-center justify-center shrink-0">
                                       @php
+                                          // ===== Normalisasi gambar untuk mobile juga
                                           $imagePath = 'https://placehold.co/600x400';
                                           if (!empty($product->images) && is_array($product->images)) {
                                               foreach ($product->images as $img) {
                                                   if (!empty($img)) {
-                                                      if (!str_starts_with($img, 'http') && !str_starts_with($img, '/storage/')) {
-                                                          $imagePath = asset('storage/uploads/' . $img);
+                                                      $raw = trim($img);
+                                                      if (preg_match('/^https?:\/\//i', $raw)) {
+                                                          $imagePath = $raw;
                                                       } else {
-                                                          $imagePath = $img;
+                                                          $filename = basename($raw);
+                                                          $imagePath = asset('images/products/' . $filename);
                                                       }
                                                       break;
                                                   }

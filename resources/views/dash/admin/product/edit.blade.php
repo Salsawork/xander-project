@@ -175,15 +175,33 @@
                                            class="w-full border border-gray-600 bg-[#262626] px-3 py-2 text-sm rounded-md" />
                                     <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, GIF. Maks: 2MB</p>
                                 </div>
-                                @if(isset($product->images) && count($product->images) > 0)
+
+                                @php
+                                    // Ambil list gambar yang sudah ada (array)
+                                    $existingImages = is_array($product->images ?? null) ? $product->images : [];
+                                    // Helper: normalisasi ke /images/products/{filename} jika bukan URL penuh
+                                    $normalizeImg = function($img){
+                                        $raw = trim((string)$img);
+                                        if (preg_match('/^https?:\/\//i', $raw)) {
+                                            return $raw; // URL penuh -> pakai apa adanya
+                                        }
+                                        $filename = basename($raw);
+                                        return asset('images/products/' . $filename);
+                                    };
+                                @endphp
+
+                                @if(!empty($existingImages))
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
                                     <div class="flex flex-wrap gap-2">
-                                        @foreach($product->images as $image)
-                                        <div class="relative w-20 h-20">
-                                            <img src="{{ asset('storage/uploads/' . $image) }}"
-                                                 class="w-full h-full object-cover rounded-md" />
-                                        </div>
+                                        @foreach($existingImages as $img)
+                                            @php $src = $normalizeImg($img); @endphp
+                                            <div class="relative w-20 h-20">
+                                                <img src="{{ $src }}"
+                                                     alt="Product image"
+                                                     class="w-full h-full object-cover rounded-md"
+                                                     onerror="this.src='https://placehold.co/400x400?text=No+Img'"/>
+                                            </div>
                                         @endforeach
                                     </div>
                                 </div>

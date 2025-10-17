@@ -401,6 +401,9 @@ Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->gr
     Route::get('/{event}/edit', [AdminEventController::class, 'edit'])->name('edit');
     Route::put('/{event}', [AdminEventController::class, 'update'])->name('update');
     Route::delete('/{event}', [AdminEventController::class, 'destroy'])->name('destroy');
+    Route::get('/tickets/{id}', [AdminEventController::class, 'detail'])->name('detail');
+    Route::post('/tickets/{id}/verify', [AdminEventController::class, 'verify'])->name('verify');
+    Route::post('/tickets/{id}/reject', [AdminEventController::class, 'reject'])->name('reject');
 });
 
 /*
