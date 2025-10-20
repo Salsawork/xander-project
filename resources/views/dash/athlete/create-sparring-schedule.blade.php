@@ -1,10 +1,10 @@
 @extends('app')
-@section('title', 'Create Session')
+@section('title', 'Create Sparring Schedule')
 
 @push('styles')
 <style>
   /* ===== Global anti white-flash / rubber-band ===== */
-  :root{ color-scheme: dark; --page-bg:#0a0a0a; --panel:#1e1e1e; --panel-2:#232323; }
+  :root{ color-scheme: dark; --page-bg:#0a0a0a; }
   html, body{
     height:100%;
     min-height:100%;
@@ -34,8 +34,9 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* existing card styles */
   .card{
-    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)) , var(--panel-2);
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)) , #232323;
     border:1px solid rgba(255,255,255,.08);
     border-radius:1rem;
     box-shadow:0 10px 30px rgba(0,0,0,.35);
@@ -72,22 +73,33 @@
     <div class="flex flex-1 min-h-0">
       @include('partials.sidebar.athlete')
 
-      <!-- tambahkan class scroll-safe -->
       <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
         @include('partials.topbar')
 
-        <div class="mt-20 sm:mt-28 px-4 sm:px-8">
+        <div class="mt-12 sm:mt-28 px-4 sm:px-8">
           <!-- Page Header -->
           <div class="mb-6">
-            <h1 class="text-2xl sm:text-3xl font-extrabold">Create Session</h1>
-            <p class="text-sm text-gray-400 mt-1">Catat sesi sparring/latihanmu dengan detail yang rapi.</p>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Create Sparring Schedule</h1>
+            <p class="text-sm text-gray-400 mt-1">Catat kapan kamu akan siap untuk melakukan sparring.</p>
           </div>
+
+          <!-- Flash Messages -->
+          @if(session('success'))
+            <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
+              {{ session('success') }}
+            </div>
+          @endif
+          @if(session('error'))
+            <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
+              {{ session('error') }}
+            </div>
+          @endif
 
           <!-- Errors / Alerts -->
           @if ($errors->any())
-            <div class="mb-4 rounded-lg border border-red-700/40 bg-red-900/20 p-4">
-              <p class="font-semibold text-red-300 mb-2">Periksa kembali input kamu:</p>
-              <ul class="list-disc list-inside text-sm text-red-200 space-y-1">
+            <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
+              <p class="font-semibold mb-1">Periksa kembali input kamu:</p>
+              <ul class="list-disc list-inside text-xs space-y-1">
                 @foreach ($errors->all() as $error)
                   <li>{{ $error }}</li>
                 @endforeach
@@ -96,87 +108,13 @@
           @endif
 
           <!-- Form -->
-          <form id="createSessionForm" action="{{ route('athlete.match.store') }}" method="POST" class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          <form id="createSessionForm" action="{{ route('athlete.sparring.store') }}" method="POST" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             @csrf
+            <section class="card p-4 sm:p-6">
+              <h2 class="text-lg font-semibold mb-4">Schedule</h2>
+              <div class="divider mb-4"></div>
 
-            <!-- Left: Session Details -->
-            <section class="card p-6 sm:p-7">
-              <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Session Details</h2>
-              </div>
-              <div class="divider my-4"></div>
-
-              <div class="space-y-5">
-                <!-- Venue -->
-                <div>
-                  <label class="label" for="venue_id">Venue</label>
-                  <select id="venue_id" name="venue_id" class="field">
-                    <option value="">Pilih Venue</option>
-                    @foreach($venues as $venue)
-                      <option value="{{ $venue->id }}" {{ old('venue_id') == $venue->id ? 'selected' : '' }}>
-                        {{ $venue->name }}
-                      </option>
-                    @endforeach
-                  </select>
-                  @error('venue_id') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <!-- Opponent -->
-                <div>
-                  <label class="label" for="opponent_id">Opponent</label>
-                  <select id="opponent_id" name="opponent_id" class="field">
-                    <option value="">Pilih Lawan</option>
-                    @foreach($opponents as $opponent)
-                      <option value="{{ $opponent->id }}" {{ old('opponent_id') == $opponent->id ? 'selected' : '' }}>
-                        {{ $opponent->name }}
-                      </option>
-                    @endforeach
-                  </select>
-                  @error('opponent_id') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <!-- Payment Method -->
-                <div>
-                  <label class="label" for="payment_method">Payment Method</label>
-                  <input
-                    id="payment_method"
-                    type="text"
-                    name="payment_method"
-                    class="field"
-                    placeholder="Contoh: Cash, GoPay, DANA"
-                    value="{{ old('payment_method') }}"
-                  />
-                  <p class="hint mt-1">Metode pembayaran untuk sesi ini.</p>
-                  @error('payment_method') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <!-- Total Amount (formatted) -->
-                <div>
-                  <label class="label" for="total_amount">Total Amount (Rp)</label>
-                  <input
-                    id="total_amount"
-                    type="text"
-                    name="total_amount"
-                    class="field rupiah"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="Contoh: 50.000"
-                    value="{{ old('total_amount') }}"
-                  />
-                  <p class="hint mt-1">Ketik angka saja. Otomatis akan diformat ribuan. Saat dikirim akan jadi angka murni.</p>
-                  @error('total_amount') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-              </div>
-            </section>
-
-            <!-- Right: Schedule -->
-            <section class="card p-6 sm:p-7">
-              <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Schedule</h2>
-              </div>
-              <div class="divider my-4"></div>
-
-              <div class="space-y-5">
+              <div class="space-y-4">
                 <!-- Date -->
                 <div>
                   <label class="label" for="date">Date</label>
@@ -184,35 +122,35 @@
                     id="date"
                     type="date"
                     name="date"
-                    class="field"
+                    class="field text-right"
                     value="{{ old('date') }}"
                   />
                   @error('date') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
                 <!-- Time Range -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label class="label" for="time_start">Time Start</label>
+                    <label class="label" for="start_time">Time Start</label>
                     <input
-                      id="time_start"
+                      id="start_time"
                       type="time"
-                      name="time_start"
-                      class="field"
-                      value="{{ old('time_start') }}"
+                      name="start_time"
+                      class="field text-right"
+                      value="{{ old('start_time') }}"
                     />
-                    @error('time_start') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('start_time') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div>
-                    <label class="label" for="time_end">Time End</label>
+                    <label class="label" for="end_time">Time End</label>
                     <input
-                      id="time_end"
+                      id="end_time"
                       type="time"
-                      name="time_end"
-                      class="field"
-                      value="{{ old('time_end') }}"
+                      name="end_time"
+                      class="field text-right"
+                      value="{{ old('end_time') }}"
                     />
-                    @error('time_end') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('end_time') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                 </div>
 
@@ -273,3 +211,4 @@
   });
 </script>
 @endpush
+

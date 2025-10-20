@@ -231,6 +231,7 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Gagal mengubah status: ' . $e->getMessage());
         }
     }
+
     public function updateBookingStatus(Request $request, $orderId)
     {
         Log::info('Update booking status request', [
@@ -271,6 +272,66 @@ class OrderController extends Controller
             ]);
 
             return redirect()->back()->with('error', 'Gagal mengubah status booking: ' . $e->getMessage());
+        }
+    }
+    
+    public function updateSparringStatus(Request $request, $orderId)
+    {
+        Log::info('Update sparring status request', [
+            'order_id' => $orderId,
+            'status' => $request->query('status'),
+            'all_data' => $request->all()
+        ]);
+
+        $status = $request->query('status');
+        $validStatuses = [0, 1];
+
+        if (!in_array((int)$status, $validStatuses, true)) {
+            return redirect()->back()->with('error', 'Status sparring tidak valid');
+        }
+
+        try {
+            $order = Order::findOrFail($orderId);
+
+            // Ambil semua orderSparrings beserta schedule-nya
+            $sparrings = $order->orderSparrings()->with('schedule')->get();
+
+            if ($sparrings->isEmpty()) {
+                throw new \Exception('Jadwal sparring tidak ditemukan');
+            }
+
+            $updatedCount = 0;
+
+            foreach ($sparrings as $sparring) {
+                if ($sparring->schedule) {
+                    $oldStatus = $sparring->schedule->is_booked;
+                    $sparring->schedule->is_booked = (int)$status;
+                    $sparring->schedule->save();
+
+                    Log::info('Sparring status updated', [
+                        'order_id' => $order->id,
+                        'schedule_id' => $sparring->schedule->id,
+                        'old_status' => $oldStatus,
+                        'new_status' => $sparring->schedule->is_booked
+                    ]);
+
+                    $updatedCount++;
+                }
+            }
+
+            if ($updatedCount === 0) {
+                throw new \Exception('Tidak ada jadwal sparring yang berhasil diperbarui');
+            }
+
+            return redirect()->back()->with('success', 'Status sparring berhasil diperbarui');
+        } catch (\Exception $e) {
+            Log::error('Failed to update sparring status', [
+                'order_id' => $orderId,
+                'status' => $status,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal mengubah status sparring: ' . $e->getMessage());
         }
     }
 }
