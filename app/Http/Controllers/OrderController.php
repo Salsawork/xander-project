@@ -666,29 +666,69 @@ class OrderController extends Controller
     }
 
 
+    // public function updatePayment(Request $request, Order $order)
+    // {
+    //     $data = $request->validate([
+    //         'bank_id' => 'required|integer',
+    //         'no_rekening' => 'required|string',
+    //         'atas_nama' => 'required|string',
+    //         'file' => 'required|file|mimes:jpg,jpeg,png,pdf',
+    //     ]);
+
+    //     // Save file
+    //     $filePath = $data['file']->store('payment_proofs', 'public');
+
+    //     // Update order with file path
+    //     $order->bank_id = $data['bank_id'];
+    //     $order->no_rekening = $data['no_rekening'];
+    //     $order->atas_nama = $data['atas_nama'];
+    //     $order->file = $filePath;
+    //     $order->payment_status = 'processing';
+    //     $order->save();
+
+    //     return redirect()->route('checkout.success', ['order_id' => $order->id])->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
+    // }
     public function updatePayment(Request $request, Order $order)
-    {
-        $data = $request->validate([
-            'bank_id' => 'required|integer',
-            'no_rekening' => 'required|string',
-            'atas_nama' => 'required|string',
-            'file' => 'required|file|mimes:jpg,jpeg,png,pdf',
-        ]);
+{
+    $data = $request->validate([
+        'bank_id' => 'required|integer',
+        'no_rekening' => 'required|string',
+        'atas_nama' => 'required|string',
+        'file' => 'required|file|mimes:jpg,jpeg,png,pdf',
+    ]);
 
-        // Save file
-        $filePath = $data['file']->store('payment_proofs', 'public');
+    // ===== Upload manual ke folder demo-xanders/images/payment_proof =====
+    $file = $data['file'];
+    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+    $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
+    $filename = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
 
-        // Update order with file path
-        $order->bank_id = $data['bank_id'];
-        $order->no_rekening = $data['no_rekening'];
-        $order->atas_nama = $data['atas_nama'];
-        $order->file = $filePath;
-        $order->payment_status = 'processing';
-        $order->save();
+    // Path CMS dan Frontend
+    $cmsPath = public_path('demo-xanders/images/payment_proof');
+    $fePath  = base_path('../demo-xanders/images/payment_proof');
 
-        return redirect()->route('checkout.success', ['order_id' => $order->id])->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
-    }
+    // Pastikan foldernya ada
+    if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
+    if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
 
+    // Simpan di CMS
+    $file->move($cmsPath, $filename);
+
+    // Copy ke FE
+    @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
+
+    // Simpan ke database (hanya nama file)
+    $order->bank_id = $data['bank_id'];
+    $order->no_rekening = $data['no_rekening'];
+    $order->atas_nama = $data['atas_nama'];
+    $order->file = $filename; // hanya nama file
+    $order->payment_status = 'processing';
+    $order->save();
+
+    return redirect()
+        ->route('checkout.success', ['order_id' => $order->id])
+        ->with('success', 'Payment proof uploaded successfully. Please wait for confirmation.');
+}
     /**
      * Display payment success page
      */

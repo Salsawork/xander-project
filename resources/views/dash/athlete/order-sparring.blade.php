@@ -242,10 +242,15 @@
                             </td>
                             <td>
                                 @if ($order->file)
-                                <a href="{{ asset('storage/' . $order->file) }}" target="_blank"
+                                {{-- <a href="{{ asset('storage/' . $order->file) }}" target="_blank"
+                                    class="text-blue-400 hover:underline">
+                                    <i class="fas fa-file-alt"></i> View File
+                                </a> --}}
+                                <a href="{{ asset('/images/payment_proof/' . $order->file) }}" target="_blank"
                                     class="text-blue-400 hover:underline">
                                     <i class="fas fa-file-alt"></i> View File
                                 </a>
+                                
                                 @else
                                 <span class="text-gray-500">No File</span>
                                 @endif
