@@ -197,8 +197,8 @@
                         Save 20% on all our premium billiard accessories. Don’t miss out—shop now and grab this exclusive offer while it lasts!
                     </p>
                     <a href="{{ route('products.landing') }}"
-                       class="hero-btn inline-flex items-center rounded-md bg-blue-500 px-5 py-2.5 text-sm md:text-base font-medium
-                              text-white shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white/30">
+                       class="hero-btn inline-flex items-center rounded-md bg-[#2a2a2a] px-5 py-2.5 text-sm md:text-base font-medium
+                              text-white shadow hover:bg-[#2a2a2a]/90 focus:outline-none focus:ring-2 focus:ring-white/30">
                         Buy Now
                     </a>
                 </div>
@@ -357,7 +357,7 @@
 
 
     <!-- Jumbotron 2 - Guidelines -->
-    <section class="relative bg-cover bg-center min-h-[70vh] md:h-screen flex items-center"
+    <section class="relative bg-cover bg-center min-h=[70vh] md:h-screen flex items-center"
              style="background-image: url('/images/jumbotron2.png')">
         <div class="relative max-w-xl px-6 md:px-20 text-white z-10 py-16">
             <p class="font-semibold mb-2 text-sm md:text-base">Billiard Guidelines</p>
@@ -367,7 +367,7 @@
                 the game with more confidence.
             </p>
             <a href="{{ route('guideline.index') }}"
-               class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
+               class="inline-block px-4 py-2 bg-[#2a2a2a] hover:bg-[#2a2a2a]/90 text-white text-sm font-medium rounded">
                 Learn More
             </a>
         </div>
@@ -434,7 +434,7 @@
                     Be part of a vibrant and passionate community that shares your love for billiards. Connect with players of all skill levels, participate in events, share tips and tricks, and grow your game together.
                 </p>
                 <a href="{{ route('community.index') }}"
-                   class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded">
+                   class="inline-block px-4 py-2 bg-[#2a2a2a] hover:bg-[#2a2a2a]/90 text-white text-sm font-medium rounded">
                     Connect Now
                 </a>
             </div>
@@ -588,8 +588,6 @@
         background: rgba(82, 82, 82, 1);
     }
 </style>
-
-
 
 </div>
 @endsection

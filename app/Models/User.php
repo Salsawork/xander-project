@@ -86,4 +86,22 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return !empty($this->photo_profile) ? asset($this->photo_profile) : null;
     }
+
+    /**
+     * ====== Tambahan relasi untuk kolom "Event Diikuti" ======
+     * Relasi ke semua bracket berdasarkan nama pemain (player_name -> users.name)
+     * Catatan: relasi ini mengandalkan kesesuaian NAME. Untuk skema ideal, tambahkan user_id di tabel brackets.
+     */
+    public function bracketsByName()
+    {
+        return $this->hasMany(Bracket::class, 'player_name', 'name');
+    }
+
+    /**
+     * Bracket terbaru yang berkaitan dengan user (berdasarkan ID terbesar).
+     */
+    public function latestBracket()
+    {
+        return $this->hasOne(Bracket::class, 'player_name', 'name')->latestOfMany('id');
+    }
 }
