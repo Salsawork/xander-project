@@ -124,31 +124,31 @@
                         </thead>
                         <tbody class="text-sm font-normal">
                             @forelse($order->products as $product)
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        @php
-                                        $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
-                                        $firstImage = !empty($images) ? $images[0] : null;
-                                        $idx = ($loop->index % 5) + 1;
-                                        $defaultImg = asset("images/products/{$idx}.png");
-                                        $imagePath = $firstImage ? asset('storage/uploads/' . $firstImage) : $defaultImg;
-                                        @endphp
-                                        <img src="{{ $imagePath }}" alt="{{ $product->name }}" class="w-12 h-12 object-cover rounded-md flex-shrink-0">
-                                        <div>
-                                            <p class="font-medium">{{ $product->name }}</p>
-                                            <p class="text-xs text-gray-400">ID: {{ $product->id }}</p>
-                                        </div>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    @php
+                                    $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
+                                    $firstImage = !empty($images) ? $images[0] : null;
+                                    $idx = ($loop->index % 5) + 1;
+                                    $defaultImg = asset("images/products/{$idx}.png");
+                                    $imagePath = $firstImage ? asset('storage/uploads/' . $firstImage) : $defaultImg;
+                                    @endphp
+                                    <img src="{{ $imagePath }}" alt="{{ $product->name }}" class="w-12 h-12 object-cover rounded-md flex-shrink-0">
+                                    <div>
+                                        <p class="font-medium">{{ $product->name }}</p>
+                                        <p class="text-xs text-gray-400">ID: {{ $product->id }}</p>
                                     </div>
-                                </td>
-                                <td class="px-4 py-3">Product</td>
-                                <td class="px-4 py-3">
-                                    <div>Rp. {{ number_format($product->pivot->price, 0, ',', '.') }}</div>
-                                    @if($product->pivot->discount > 0)
-                                    <div class="text-xs text-green-400">Disc: -Rp. {{ number_format($product->pivot->discount, 0, ',', '.') }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">{{ $product->pivot->quantity }}</td>
-                                <td class="px-4 py-3">Rp. {{ number_format($product->pivot->subtotal, 0, ',', '.') }}</td>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">Product</td>
+                            <td class="px-4 py-3">
+                                <div>Rp. {{ number_format($product->pivot->price, 0, ',', '.') }}</div>
+                                @if($product->pivot->discount > 0)
+                                <div class="text-xs text-green-400">Disc: -Rp. {{ number_format($product->pivot->discount, 0, ',', '.') }}</div>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">{{ $product->pivot->quantity }}</td>
+                            <td class="px-4 py-3">Rp. {{ number_format($product->pivot->subtotal, 0, ',', '.') }}</td>
                             </tr>
                             @empty
                             @endforelse
@@ -205,16 +205,25 @@
                             $subtotal = 0;
                             $shipping = 0;
                             $tax = 0;
+
+                            // Hitung subtotal dari semua jenis order
                             if ($order->products->isNotEmpty()) {
-                            $subtotal = $order->products->sum('pivot.subtotal');
-                            $shipping = $order->products->first()->pivot->shipping ?? 0;
-                            $tax = $order->products->first()->pivot->tax ?? 0;
+                                $subtotal += $order->products->sum('pivot.subtotal');
+                                $shipping = $order->products->first()->pivot->shipping ?? 0;
+                                $tax = $order->products->first()->pivot->tax ?? 0;
+                            }
+                            if ($order->bookings->isNotEmpty()) {
+                                $subtotal += $order->bookings->sum('price');
+                            }
+                            if ($order->orderSparrings->isNotEmpty()) {
+                                $subtotal += $order->orderSparrings->sum('price');
                             }
                             @endphp
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Subtotal:</td>
                                 <td class="px-4 py-3">Rp. {{ number_format($subtotal, 0, ',', '.') }}</td>
                             </tr>
+                            @if($order->products->isNotEmpty())
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right">Shipping:</td>
                                 <td class="px-4 py-3">Rp. {{ number_format($shipping, 0, ',', '.') }}</td>
@@ -223,6 +232,7 @@
                                 <td colspan="4" class="px-4 py-3 text-right">Tax:</td>
                                 <td class="px-4 py-3">Rp. {{ number_format($tax, 0, ',', '.') }}</td>
                             </tr>
+                            @endif
                             <tr>
                                 <td colspan="4" class="px-4 py-3 text-right font-bold">Total:</td>
                                 <td class="px-4 py-3 font-bold">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>

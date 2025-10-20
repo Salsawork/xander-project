@@ -3,13 +3,9 @@
 namespace App\Http\Controllers\athleteController;
 
 use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\SparringSchedule;
-use App\Models\Venue;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use App\Http\Controllers\Controller;
-use App\Models\Order;
 
 class SparringScheduleController extends Controller
 {
@@ -68,40 +64,5 @@ class SparringScheduleController extends Controller
         ]);
 
         return back()->with('success', 'Jadwal sparring berhasil dibuat.');
-    }
-
-    public function indexSparring(Request $request)
-    {
-        $orders = Order::where('order_type', 'sparring')
-            ->whereHas('orderSparrings', function ($q) {
-                $q->where('athlete_id', Auth::id());
-            })
-            ->when($request->search, function ($query) use ($request) {
-                $query->whereHas('user', function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                        ->orWhere('email', 'like', '%' . $request->search . '%');
-                });
-            })
-            ->when($request->status, function ($query) use ($request) {
-                $query->where('payment_status', $request->status);
-            })
-            // hanya 1 orderBy, kasih default DESC
-            ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
-            ->get();
-
-        $pendingCount    = Order::where('order_type', 'sparring')->whereHas('orderSparrings', function ($q) {$q->where('athlete_id', Auth::id());})->where('payment_status', 'pending')->count();
-        $processingCount = Order::where('order_type', 'sparring')->whereHas('orderSparrings', function ($q) {$q->where('athlete_id', Auth::id());})->where('payment_status', 'processing')->count();
-        $paidCount       = Order::where('order_type', 'sparring')->whereHas('orderSparrings', function ($q) {$q->where('athlete_id', Auth::id());})->where('payment_status', 'paid')->count();
-        $failedCount     = Order::where('order_type', 'sparring')->whereHas('orderSparrings', function ($q) {$q->where('athlete_id', Auth::id());})->where('payment_status', 'failed')->count();
-        $refundedCount   = Order::where('order_type', 'sparring')->whereHas('orderSparrings', function ($q) {$q->where('athlete_id', Auth::id());})->where('payment_status', 'refunded')->count();
-
-        return view('dash.athlete.order-sparring', compact(
-            'orders',
-            'pendingCount',
-            'processingCount',
-            'paidCount',
-            'failedCount',
-            'refundedCount'
-        ));
     }
 }

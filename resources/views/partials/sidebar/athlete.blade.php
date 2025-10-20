@@ -52,11 +52,11 @@
       </li>
 
       <li>
-        <a href="{{ route('athlete.sparring.order') }}"
+        <a href="{{ route('athlete.transaction') }}"
            class="group flex items-center justify-between rounded-lg px-3 py-2
-           {{ request()->routeIs('athlete.sparring.order') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-          <span>Sparring Management</span>
-          @if(request()->routeIs('athlete.sparring.order'))
+           {{ request()->routeIs('athlete.transaction') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+          <span>Transaction Management</span>
+          @if(request()->routeIs('athlete.transaction'))
             <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
           @endif
         </a>
@@ -124,11 +124,11 @@
         </a>
       </li>
       <li>
-        <a href="{{ route('athlete.sparring.order') }}"
+        <a href="{{ route('athlete.transaction') }}"
            class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
-           {{ request()->routeIs('athlete.sparring.order') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+           {{ request()->routeIs('athlete.transaction') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
           <i class="fas fa-shopping-bag w-5 text-gray-400"></i>
-          <span>Sparring Management</span>
+          <span>Transaction Management</span>
         </a>
       </li>
     </ul>
