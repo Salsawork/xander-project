@@ -213,7 +213,7 @@
                 <!-- Row disusun sama seperti heading kategori: kiri & kanan -->
                 <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                     <!-- Kiri: Category + Search -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 w-full md:max-w-2xl">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 flex-1">
                         <label class="block">
                             <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Category</span>
                             @php
@@ -232,7 +232,7 @@
                     </div>
 
                     <!-- Kanan: Sort -->
-                    <div class="w-full md:w-auto md:min-w-[220px]">
+                    <div class="md:w-auto md:min-w-[220px]">
                         <label class="block w-full">
                             <span class="block text-xs uppercase tracking-wide text-white/60 mb-1">Sort</span>
                             <select id="sort" class="input-dark select-dark w-full md:w-[220px]" style="font-size:0.98rem; padding:0.5rem 0.7rem;">
