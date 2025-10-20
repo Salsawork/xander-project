@@ -13,7 +13,8 @@
 </style>
 
 <!-- DEKSTOP -->
-<aside class="sm-hidden bg-[#1f1f1f] w-64 min-w-[256px] flex-shrink-0 sticky top-0 h-[100dvh] border-r border-white/10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+<aside
+    class="sm-hidden bg-[#1f1f1f] w-64 min-w-[256px] flex-shrink-0 sticky top-0 h-[100dvh] border-r border-white/10 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
     <header class="h-16 flex items-center justify-center border-b border-white/10 flex-shrink-0">
         <a href="{{ route('index') }}" class="inline-flex items-center">
             <img src="{{ asset('/images/logo/logo-xander.png') }}" alt="Logo" class="h-9">
@@ -27,8 +28,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('dashboard') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Shop Overview</span>
-                    @if(request()->routeIs('dashboard'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('dashboard'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -38,8 +39,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('products.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Product Management</span>
-                    @if(request()->routeIs('products.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('products.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -48,7 +49,7 @@
             <li x-data="{ open: false }">
                 <button @click="open = !open"
                     class="w-full group flex items-center justify-between rounded-lg px-3 py-2
-                  {{ request()->routeIs(['order.index.product','order.index.booking','order.index.sparring']) ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+                  {{ request()->routeIs(['order.index.product', 'order.index.booking', 'order.index.sparring']) ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Order Management</span>
                     <i :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas text-xs"></i>
                 </button>
@@ -83,8 +84,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('promo.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Promo Management</span>
-                    @if(request()->routeIs('promo.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('promo.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -94,8 +95,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('comunity.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Community</span>
-                    @if(request()->routeIs('comunity.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('comunity.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -104,8 +105,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('admin.guidelines.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Guidelines</span>
-                    @if(request()->routeIs('admin.guidelines.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('admin.guidelines.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -114,8 +115,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('venue.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Venue</span>
-                    @if(request()->routeIs('venue.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('venue.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -124,8 +125,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('athlete.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Athlete</span>
-                    @if(request()->routeIs('athlete.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('athlete.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -134,8 +135,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('admin.event.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Event</span>
-                    @if(request()->routeIs('admin.event.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('admin.event.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -144,8 +145,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('tournament.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Tournament</span>
-                    @if(request()->routeIs('tournament.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('tournament.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -154,8 +155,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Verify Player</span>
-                    @if(request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -164,8 +165,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('dash.admin.subscriber') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Subscriber</span>
-                    @if(request()->routeIs('dash.admin.subscriber'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('dash.admin.subscriber'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -174,8 +175,8 @@
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('dash.admin.opinion') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
                     <span>Opinion</span>
-                    @if(request()->routeIs('dash.admin.opinion'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    @if (request()->routeIs('dash.admin.opinion'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -185,7 +186,8 @@
 
 <!-- MOBILE -->
 <!-- Hamburger Button (Mobile Only) -->
-<nav class="lg-hidden bg-[#1a1a1a] text-white px-6 py-3 flex items-center justify-between fixed top-0 left-0 right-0 z-50 shadow-md">
+<nav
+    class="lg-hidden bg-[#1a1a1a] text-white px-6 py-3 flex items-center justify-between fixed top-0 left-0 right-0 z-50 shadow-md">
     <!-- Logo kiri -->
     <div class="flex items-center space-x-3">
         <a href="{{ route('index') }}" class="flex items-center space-x-2">
@@ -207,7 +209,9 @@
 
 <!-- Sidebar Mobile (slide dari kanan) -->
 <aside id="sidebar"
-    class="lg-hidden hidden fixed top-0 right-0 h-full w-80 bg-[#1a1a1a] shadow-lg z-50 transform translate-x-full transition-transform duration-300">
+    class="lg-hidden hidden fixed top-0 right-0 h-full w-80 bg-[#1a1a1a] shadow-lg z-50 transform translate-x-full transition-transform duration-300 overflow-y-auto scrollbar-none"
+    style="scrollbar-width: none; -ms-overflow-style: none;">
+
 
     <!-- Header dengan tombol close -->
     <div class="flex items-center justify-between p-6 border-b border-gray-700">
@@ -243,7 +247,7 @@
             <li x-data="{ open: false }">
                 <button @click="open = !open"
                     class="w-full flex items-center justify-between text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
-                    {{ request()->routeIs(['order.index.product','order.index.booking','order.index.sparring']) ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+                    {{ request()->routeIs(['order.index.product', 'order.index.booking', 'order.index.sparring']) ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-shopping-cart w-5 text-gray-400"></i>
                         <span>Order Management</span>
@@ -318,9 +322,12 @@
                 <a href="{{ route('admin.event.index') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('admin.event.index') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-                    <span>Event</span>
-                    @if(request()->routeIs('admin.event.index'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-calendar-alt w-5 text-gray-400"></i>
+                        <span>Event</span>
+                    </div>
+                    @if (request()->routeIs('admin.event.index'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -336,9 +343,12 @@
                 <a href="{{ route('admin.users.index') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-                    <span>Verify Player</span>
-                    @if(request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-check w-5 text-gray-400"></i>
+                        <span>Verify Player</span>
+                    </div>
+                    @if (request()->routeIs('admin.users.index') || request()->routeIs('admin.users.create'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -346,9 +356,12 @@
                 <a href="{{ route('dash.admin.subscriber') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('dash.admin.subscriber') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-                    <span>Subscriber</span>
-                    @if(request()->routeIs('dash.admin.subscriber'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-plus w-5 text-gray-400"></i>
+                        <span>Subscriber</span>
+                    </div>
+                    @if (request()->routeIs('dash.admin.subscriber'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -356,9 +369,12 @@
                 <a href="{{ route('dash.admin.opinion') }}"
                     class="group flex items-center justify-between rounded-lg px-3 py-2
                   {{ request()->routeIs('dash.admin.opinion') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
-                    <span>Opinion</span>
-                    @if(request()->routeIs('dash.admin.opinion'))
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-comment-dots w-5 text-gray-400"></i>
+                        <span>Opinion</span>
+                    </div>
+                    @if (request()->routeIs('dash.admin.opinion'))
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
                     @endif
                 </a>
             </li>
@@ -366,13 +382,15 @@
 
         <div class="mt-8 pt-6 border-t border-gray-700">
             <h3 class="text-gray-400 text-sm font-medium mb-4">Account</h3>
-            <a href="{{ route('index') }}" class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200">
+            <a href="{{ route('index') }}"
+                class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200">
                 <i class="fas fa-home w-5 text-gray-400"></i>
                 <span>Home</span>
             </a>
             <form method="POST" action="{{ route('logout') }}" class="mt-2">
                 @csrf
-                <button type="submit" class="w-full flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200 text-left">
+                <button type="submit"
+                    class="w-full flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200 text-left">
                     <i class="fas fa-sign-out-alt w-5 text-gray-400"></i>
                     <span>Logout</span>
                 </button>
