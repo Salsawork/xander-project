@@ -25,7 +25,7 @@ class SparringScheduleController extends Controller
 
         $schedule = SparringSchedule::where('athlete_id', $user->id)
             ->when($request->status !== null, function ($q) use ($request) {
-                $q->where('is_booked', $request->status);
+                $q->where('is_booked', (int) $request->status);
             })->get();
         return view('dash.athlete.sparring', compact('schedule'));
     }

@@ -75,16 +75,19 @@
                 <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
                     {{-- Filter Form --}}
                     <form method="GET" action="{{ route('athlete.match') }}" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
-                        <input type="search" name="search" value="{{ request('search') }}" placeholder="Search" class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"/>
+                        <input type="search" name="search" value="{{ request('search') }}" placeholder="Search" 
+                               class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                               oninput="clearTimeout(this.searchTimeout); this.searchTimeout = setTimeout(() => this.form.submit(), 300);"/>
                         <div class="flex gap-2">
-                            <select name="status" class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-3 py-2 cursor-pointer">
+                            <select id="statusFilter"
+                                onchange="window.location.href = '{{ route('athlete.match') }}?search=' + (document.querySelector('input[type=search]')?.value || '') + '&status=' + this.value + '&date_range=' + (document.getElementById('dateRange')?.value || '');"
+                                class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-3 py-2 cursor-pointer">
                                 <option value="">-- Status --</option>
                                 <option value="pending" {{ request('status')=='pending'?'selected':'' }}>Pending</option>
                                 <option value="completed" {{ request('status')=='completed'?'selected':'' }}>Completed</option>
                                 <option value="cancelled" {{ request('status')=='cancelled'?'selected':'' }}>Cancelled</option>
                             </select>
                             <input type="text" id="dateRange" name="date_range" value="{{ request('date_range') }}" placeholder="Date Range" class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-3 py-2 focus:outline-none"/>
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white text-xs sm:text-sm">Filter</button>
                         </div>
                     </form>
 

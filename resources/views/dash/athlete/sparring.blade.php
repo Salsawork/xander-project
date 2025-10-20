@@ -74,7 +74,7 @@
                 <div class="flex justify-end mb-6">
                     <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
                         <select id="statusFilter"
-                            onchange="window.location.href = '{{ route('athlete.sparring') }}?search=' + document.querySelector('input[type=search]').value + '&status=' + this.value + '&date_range=' + document.getElementById('dateRange').value;"
+                            onchange="window.location.href = '{{ route('athlete.sparring') }}?search=' + (document.querySelector('input[type=search]')?.value || '') + '&status=' + this.value + '&date_range=' + (document.getElementById('dateRange')?.value || '');"
                             class="bg-[#2c2c2c] text-gray-400 text-xs sm:text-sm rounded border border-gray-700 px-2 py-2 cursor-pointer">
                             <option value="">-- Status --</option>
                             <option value="1" {{ request('status')=='1'?'selected':'' }}>Booked</option>
