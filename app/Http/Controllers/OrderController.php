@@ -492,7 +492,7 @@ class OrderController extends Controller
                         'price'       => $sparring['price'],
                     ]);
 
-                    SparringSchedule::where('id', $sparring['schedule_id'])->update(['is_booked' => true]);
+                    // SparringSchedule::where('id', $sparring['schedule_id'])->update(['is_booked' => true]);
 
                     $total += $sparring['price'];
 

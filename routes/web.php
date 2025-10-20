@@ -40,7 +40,7 @@ use App\Http\Controllers\venueController\TransactionController;
 // Athlete Controllers
 use App\Http\Controllers\athleteController\DashboardController as AthleteDashboardController;
 use App\Http\Controllers\athleteController\MatchHistoryController;
-use App\Http\Controllers\athleteController\SparringController as AthleteSparringController;
+use App\Http\Controllers\athleteController\SparringScheduleController;
 
 // Community & Admin Controllers
 use App\Http\Controllers\communityController\NewsController;
@@ -55,6 +55,7 @@ use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
 use App\Http\Controllers\adminController\VoucherController;
 use App\Http\Controllers\CartItemController;
 use App\Http\Controllers\InvoiceController;
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -218,6 +219,7 @@ Route::middleware('auth')->prefix('dashboard/order')->group(function () {
     Route::get('/update-status/{order}', [DashboardOrderController::class, 'updateStatus'])->name('admin.orders.update-status');
     Route::get('/update-payment-status/{order}', [DashboardOrderController::class, 'updatePaymentStatus'])->name('admin.orders.update-payment-status');
     Route::get('/update-booking-status/{order}', [DashboardOrderController::class, 'updateBookingStatus'])->name('admin.orders.update-booking-status');
+    Route::get('/update-sparring-status/{order}', [DashboardOrderController::class, 'updateSparringStatus'])->name('admin.orders.update-sparring-status');
 });
 
 /** Midtrans Notification (public) */
@@ -350,12 +352,16 @@ Route::middleware('auth')->group(function () {
     /** Athlete area */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-        Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
+        // Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
         Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
+        Route::get('/sparring', [SparringScheduleController::class, 'index'])->name('athlete.sparring');
+        Route::get('/sparring/create', [SparringScheduleController::class, 'create'])->name('athlete.sparring.create');
+        Route::post('/sparring', [SparringScheduleController::class, 'store'])->name('athlete.sparring.store');
+        Route::get('/sparring/order', [SparringScheduleController::class, 'indexSparring'])->name('athlete.sparring.order');
     });
 
     /** Admin: Partner (static) */
