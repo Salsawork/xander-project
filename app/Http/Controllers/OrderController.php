@@ -372,7 +372,7 @@ class OrderController extends Controller
 
                     $existingBooking = Booking::where('table_id', $tableId)
                         ->where('booking_date', $bookingDate)
-                        ->where('status', 'booked')
+                        ->whereIn('status', ['booked', 'confirmed'])
                         ->where(function ($q) use ($venueData) {
                             $q->where('start_time', '<', $venueData['end'])
                                 ->where('end_time', '>', $venueData['start']);
@@ -436,7 +436,7 @@ class OrderController extends Controller
                         'table_id'     => $tableId,
                         'user_id'      => $user->id,
                         'booking_date' => $bookingDate,
-                        'status'       => 'booked',
+                        'status'       => 'pending',
                         'start_time'   => $venueData['start'],
                         'end_time'     => $venueData['end'],
                         'discount'     => $discountValue,

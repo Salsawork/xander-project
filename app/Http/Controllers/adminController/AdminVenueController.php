@@ -5,6 +5,7 @@ namespace App\Http\Controllers\adminController;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Venue;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -246,4 +247,28 @@ class AdminVenueController extends Controller
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
+    public function showOrders($id)
+    {
+        $venue = Venue::with(['orders' => function ($q) {
+            $q->where('order_type', 'venue')
+            ->orderBy('created_at', 'desc');
+        }, 'orders.user'])->findOrFail($id);
+
+        return view('dash.admin.venue.detail', compact('venue'));
+    }
+
+    public function verifyPayment($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        if ($order->payment_status !== 'processing') {
+            return back()->with('error', 'Order ini tidak dalam status processing.');
+        }
+
+        $order->update(['payment_status' => 'paid']);
+
+        return back()->with('success', 'Pembayaran berhasil diverifikasi!');
+    }
+
 }

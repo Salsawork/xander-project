@@ -117,6 +117,10 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex gap-3 text-gray-400">
+                                                <a href="{{ route('venue.orders', $venue->id) }}" aria-label="Lihat Pesanan" class="hover:text-gray-200">
+                                                    <i class="fas fa-receipt"></i>
+                                                </a>
+                                                
                                                 <a href="{{ route('venue.edit', $venue->id) }}" aria-label="Edit {{ $venue->name }}" class="hover:text-gray-200">
                                                     <i class="fas fa-pen"></i>
                                                 </a>
@@ -175,6 +179,10 @@
                                 </div>
 
                                 <div class="flex gap-2 pt-3 border-t border-gray-700">
+                                    <a href="{{ route('venue.orders', $venue->id) }}" aria-label="Lihat Pesanan" class="hover:text-gray-200 flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                        <i class="fas fa-receipt"></i>
+                                    </a>
+                                    
                                     <a href="{{ route('venue.edit', $venue->id) }}" 
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-pen text-xs"></i> Edit

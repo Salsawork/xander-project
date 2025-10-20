@@ -67,4 +67,36 @@ class TransactionController extends Controller
 
         return view('dash.venue.transaction-show', compact('transaction'));
     }
+
+    public function verifyBooking($id)
+    {
+        $transaction = Booking::findOrFail($id);
+
+        // Pastikan status order sudah "paid"
+        if (!$transaction->order || $transaction->order->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'Pembayaran belum diverifikasi oleh admin pusat.');
+        }
+
+        // Update status booking
+        $transaction->update([
+            'status' => 'booked',
+        ]);
+
+        return redirect()->back()->with('success', 'Booking berhasil diverifikasi oleh admin venue.');
+    }
+
+    public function completeBooking($id)
+    {
+        $transaction = Booking::findOrFail($id);
+
+        if ($transaction->status !== 'booked') {
+            return back()->with('error', 'Hanya booking aktif yang bisa diselesaikan.');
+        }
+
+        $transaction->update(['status' => 'completed']);
+
+        return back()->with('success', 'Booking telah ditandai sebagai selesai.');
+    }
+
+
 }

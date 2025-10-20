@@ -129,11 +129,34 @@
               </div>
             @endif
 
-            <div class="pt-2">
+            <div class="pt-2 flex gap-3">
               <a href="{{ route('venue.transaction') }}" class="inline-block px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700">
                 Back
               </a>
+            
+              @if($transaction->status === 'pending' && $transaction->order && $transaction->order->payment_status === 'paid')
+              <form action="{{ route('transaction.verify', $transaction->id) }}" method="POST" onsubmit="return confirm('Yakin ingin verifikasi booking ini?')">
+                  @csrf
+                  @method('PUT')
+                  <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white">
+                      Verifikasi Booking
+                  </button>
+              </form>
+              @endif
+
+              {{-- Jika sudah diverifikasi, tampilkan tombol tandai selesai --}}
+              @if($transaction->status === 'booked')
+              <form action="{{ route('transaction.complete', $transaction->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menandai booking ini sebagai selesai?')">
+                  @csrf
+                  @method('PUT')
+                  <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white">
+                       Selesai
+                  </button>
+              </form>
+              @endif
+
             </div>
+            
           </div>
         </div>
       </main>

@@ -297,6 +297,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/{venue}/edit', [AdminVenueController::class, 'edit'])->name('venue.edit');
         Route::put('/{venue}', [AdminVenueController::class, 'update'])->name('venue.update');
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
+        Route::get('/{id}/orders', [AdminVenueController::class, 'showOrders'])->name('venue.orders');
+        Route::post('/order/{order}/verify', [AdminVenueController::class, 'verifyPayment'])->name('venue.verify');
+
     });
 
     /** Venue owner */
@@ -326,6 +329,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/transaction/{booking}', [TransactionController::class, 'show'])
             ->where(['booking' => '[0-9]+'])
             ->name('venue.transaction.show'); // detail transaksi
+
+        Route::put('/transaction/{id}/verify', [TransactionController::class, 'verifyBooking'])->name('transaction.verify');
+        Route::put('/transaction/{id}/complete', [TransactionController::class, 'completeBooking'])->name('transaction.complete');
+
+            
     });
 
     /** Admin: Athletes */
