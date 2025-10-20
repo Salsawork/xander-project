@@ -11,33 +11,32 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AthleteExport;
-
+use App\Models\Order;
 
 class AdminAthleteController extends Controller
 {
     /**
      * Display a listing of the athletes.
      */
-  public function index()
-{
-    $athletes = User::where('roles', 'athlete')
-        ->with('athleteDetail')
-        ->when(request('search'), function ($query) {
-            $search = request('search');
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhereHas('athleteDetail', function ($q) use ($search) {
-                    $q->where('specialty', 'like', "%{$search}%")
-                      ->orWhere('location', 'like', "%{$search}%");
-                });
-        })
-        ->get();
+    public function index()
+    {
+        $athletes = User::where('roles', 'athlete')
+            ->with('athleteDetail')
+            ->when(request('search'), function ($query) {
+                $search = request('search');
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('athleteDetail', function ($q) use ($search) {
+                        $q->where('specialty', 'like', "%{$search}%")
+                            ->orWhere('location', 'like', "%{$search}%");
+                    });
+            })
+            ->get();
 
-    return view('dash.admin.athlete.index', compact('athletes'));
-}
+        return view('dash.admin.athlete.index', compact('athletes'));
+    }
 
     /**
      * Show the form for creating a new athlete.
@@ -114,7 +113,7 @@ class AdminAthleteController extends Controller
     {
         // Load relasi user
         $athlete->load('user');
-        
+
         // Tambahkan log untuk debugging
         Log::info('Edit Athlete Data:', [
             'athlete_id' => $athlete->id,
@@ -122,7 +121,7 @@ class AdminAthleteController extends Controller
             'athlete_data' => $athlete->toArray(),
             'user_data' => $athlete->user ? $athlete->user->toArray() : 'User not found'
         ]);
-        
+
         return view('dash.admin.athlete.edit', compact('athlete'));
     }
 
@@ -159,12 +158,12 @@ class AdminAthleteController extends Controller
             $user = User::find($athlete->user_id);
             $user->name = $request->name;
             $user->email = $request->email;
-            
+
             // Update password jika diisi
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
-            
+
             $user->save();
 
             // Proses upload gambar jika ada
@@ -173,7 +172,7 @@ class AdminAthleteController extends Controller
                 if ($athlete->image && Storage::disk('public')->exists($athlete->image)) {
                     Storage::disk('public')->delete($athlete->image);
                 }
-                
+
                 // Upload gambar baru
                 $imagePath = $request->file('image')->store('athletes', 'public');
                 $athlete->image = $imagePath;
@@ -215,10 +214,10 @@ class AdminAthleteController extends Controller
 
             // Nonaktifkan foreign key checks sementara
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
-            
+
             // Hapus user (akan otomatis menghapus athlete detail karena relasi cascade)
             User::where('id', $athlete->user_id)->delete();
-            
+
             // Aktifkan kembali foreign key checks
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
@@ -239,5 +238,45 @@ class AdminAthleteController extends Controller
         $search = $request->get('search');
 
         return Excel::download(new AthleteExport($search), $filename);
+    }
+
+
+    public function showOrders($id)
+    {
+        $athlete = User::where('roles', 'athlete')->findOrFail($id);
+
+        $orders = Order::where('order_type', 'sparring')
+            ->whereHas('orderSparrings', function ($q) use ($id) {
+                $q->where('athlete_id', $id);
+            })
+            ->when(request('search'), function ($query) {
+                $query->whereHas('user', function ($q) {
+                    $q->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('email', 'like', '%' . request('search') . '%');
+                });
+            })
+            ->when(request('status'), function ($query) {
+                $query->where('payment_status', request('status'));
+            })
+            ->orderBy('created_at', request('orderBy') === 'asc' ? 'asc' : 'desc')
+            ->get();
+
+        return view('dash.admin.athlete.detail', compact(
+            'athlete',
+            'orders',
+        ));
+    }
+
+    public function verifyPayment($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        if ($order->payment_status !== 'processing') {
+            return back()->with('error', 'Order ini tidak dalam status processing.');
+        }
+
+        $order->update(['payment_status' => 'paid']);
+
+        return back()->with('success', 'Pembayaran berhasil diverifikasi!');
     }
 }

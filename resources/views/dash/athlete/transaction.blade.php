@@ -257,29 +257,10 @@
                             </td>
                             <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 flex gap-4 text-gray-500">
-                                <a href="{{ route('order.detail.index', $order->id) }}"
+                                <a href="{{ route('athlete.transaction.show', $order->id) }}"
                                     aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <div class="relative" x-data="{ openSparring: false }">
-                                    <button @click="openSparring = !openSparring"
-                                        aria-label="Update payment status order {{ $order->id }}"
-                                        class="hover:text-blue-400">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </button>
-                                    <div x-show="openSparring" x-cloak @click.away="openSparring = false"
-                                        class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50"
-                                        style="transform: translateX(-30%); min-width: 12rem;">
-                                        <div class="py-1">
-                                            <a href="{{ route('admin.orders.update-sparring-status', ['order' => $order->id, 'status' => 1]) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Booked">Booked</a>
-                                            <a href="{{ route('admin.orders.update-sparring-status', ['order' => $order->id, 'status' => 0]) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Pending">Pending</a>
-                                        </div>
-                                    </div>
-                                </div>
                             </td>
                         </tr>
                         @empty
@@ -353,24 +334,6 @@
                             class="text-gray-400 hover:text-gray-300">
                             <i class="fas fa-eye"></i> View
                         </a>
-                        <div class="relative">
-                            <button @click="open = !open"
-                                aria-label="Update status order {{ $order->id }}"
-                                class="text-gray-400 hover:text-blue-400">
-                                <i class="fas fa-calendar-check"></i> Jadwal
-                            </button>
-                            <div x-show="open" x-cloak @click.away="open = false"
-                                class="absolute right-0 bottom-full mb-2 w-48 bg-[#333333] rounded-md shadow-lg z-50">
-                                <div class="py-1">
-                                    <a href="{{ route('admin.orders.update-sparring-status', ['order' => $order->id, 'status' => 1]) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Booked">Booked</a>
-                                    <a href="{{ route('admin.orders.update-sparring-status', ['order' => $order->id, 'status' => 0]) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Pending">Pending</a>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 @empty

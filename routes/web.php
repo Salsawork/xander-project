@@ -41,6 +41,7 @@ use App\Http\Controllers\venueController\TransactionController;
 use App\Http\Controllers\athleteController\DashboardController as AthleteDashboardController;
 use App\Http\Controllers\athleteController\MatchHistoryController;
 use App\Http\Controllers\athleteController\SparringScheduleController;
+use App\Http\Controllers\athleteController\TransactionController as AthleteTransactionController;
 
 // Community & Admin Controllers
 use App\Http\Controllers\communityController\NewsController;
@@ -301,7 +302,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{venue}', [AdminVenueController::class, 'destroy'])->name('venue.destroy');
         Route::get('/{id}/orders', [AdminVenueController::class, 'showOrders'])->name('venue.orders');
         Route::post('/order/{order}/verify', [AdminVenueController::class, 'verifyPayment'])->name('venue.verify');
-
     });
 
     /** Venue owner */
@@ -334,8 +334,6 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/transaction/{id}/verify', [TransactionController::class, 'verifyBooking'])->name('transaction.verify');
         Route::put('/transaction/{id}/complete', [TransactionController::class, 'completeBooking'])->name('transaction.complete');
-
-            
     });
 
     /** Admin: Athletes */
@@ -347,21 +345,30 @@ Route::middleware('auth')->group(function () {
         Route::put('/{athlete}', [AdminAthleteController::class, 'update'])->name('athlete.update');
         Route::delete('/{athlete}', [AdminAthleteController::class, 'destroy'])->name('athlete.destroy');
         Route::get('/export', [AdminAthleteController::class, 'export'])->name('athlete.export');
+        Route::get('/{id}/orders', [AdminAthleteController::class, 'showOrders'])->name('athlete.orders');
+        Route::post('/order/{order}/verify', [AdminAthleteController::class, 'verifyPayment'])->name('athlete.verify');
     });
 
     /** Athlete area */
     Route::prefix('athlete')->group(function () {
         Route::get('/dashboard', [AthleteDashboardController::class, 'index'])->name('athlete.dashboard');
-        // Route::get('/sparring/create', function () { return view('dash.athlete.sparring.create'); })->name('athlete.sparring.create');
+        Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
+
+        // History Match
         Route::get('/match', [MatchHistoryController::class, 'index'])->name('athlete.match');
         Route::get('/match/create', [MatchHistoryController::class, 'create'])->name('athlete.match.create');
         Route::post('/match', [MatchHistoryController::class, 'store'])->name('athlete.match.store');
-        Route::get('/calendar/{year}/{month}', [AthleteDashboardController::class, 'getCalendar']);
         Route::get('/match/{id}', [MatchHistoryController::class, 'show'])->name('athlete.match.show');
+
+        // Sparring Schedule 
         Route::get('/sparring', [SparringScheduleController::class, 'index'])->name('athlete.sparring');
         Route::get('/sparring/create', [SparringScheduleController::class, 'create'])->name('athlete.sparring.create');
         Route::post('/sparring', [SparringScheduleController::class, 'store'])->name('athlete.sparring.store');
-        Route::get('/sparring/order', [SparringScheduleController::class, 'indexSparring'])->name('athlete.sparring.order');
+        
+        // Transaction
+        Route::get('/transaction', [AthleteTransactionController::class, 'index'])->name('athlete.transaction');
+        Route::get('/transaction/{orderId}', [AthleteTransactionController::class, 'show'])->name('athlete.transaction.show');
+        Route::put('/transaction/{id}/verify', [AthleteTransactionController::class, 'verifyBooking'])->name('athlete.transaction.verify');
     });
 
     /** Admin: Partner (static) */
@@ -373,7 +380,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/subscriber', [SubscriberController::class, 'index'])->name('dash.admin.subscriber');
     Route::get('/dashboard/subscriber/export', [SubscriberController::class, 'export'])->name('dash.admin.subscriber.export');
     Route::get('/dashboard/opinion', [OpinionController::class, 'index'])->name('dash.admin.opinion');
-    Route::get('/dashboard/opinion/export', [OpinionController::class, 'export'])->name('dash.admin.opinion.export'); 
+    Route::get('/dashboard/opinion/export', [OpinionController::class, 'export'])->name('dash.admin.opinion.export');
 
     /** Admin: Users */
     Route::prefix('dashboard/admin')->group(function () {
@@ -407,7 +414,7 @@ Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('raj
 Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
     Route::get('/', [AdminEventController::class, 'index'])->name('index');
     Route::get('/export', [AdminEventController::class, 'export'])
-    ->name('export');
+        ->name('export');
     Route::get('/create', [AdminEventController::class, 'create'])->name('create');
     Route::post('/', [AdminEventController::class, 'store'])->name('store');
 
