@@ -164,7 +164,7 @@
                                                 class="inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="button" onclick="deleteProduct({{ $voucher->id }})"
+                                                <button type="button" onclick="deletePromo({{ $voucher->id }})"
                                                     class="hover:text-gray-200">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
@@ -278,7 +278,7 @@
                                         action="{{ route('promo.destroy', $voucher->id) }}" method="POST" class="w-1/2">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="button" onclick="deleteProduct({{ $voucher->id }})"
+                                        <button type="button" onclick="deletePromo({{ $voucher->id }})"
                                             class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition h-10">
                                             <i class="fas fa-trash text-xs"></i>
                                             <span>Delete</span>
@@ -304,64 +304,59 @@
     </div>
 @endsection
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function deleteProduct(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                background: '#222',
-                color: '#fff'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/dashboard/products/${id}`;
-
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-                    form.appendChild(csrfToken);
-
-                    const methodField = document.createElement('input');
-                    methodField.type = 'hidden';
-                    methodField.name = '_method';
-                    methodField.value = 'DELETE';
-                    form.appendChild(methodField);
-
-                    document.body.appendChild(form);
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function deletePromo(id) {
+        Swal.fire({
+            title: 'Hapus promo ini?',
+            text: "Tindakan ini tidak dapat dibatalkan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal',
+            background: '#222',
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.getElementById(`delete-form-${id}`);
+                if (form) {
                     form.submit();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Form penghapusan tidak ditemukan.',
+                        background: '#222',
+                        color: '#fff'
+                    });
                 }
-            });
-        }
+            }
+        });
+    }
 
-        @if (session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: '{{ session('success') }}',
-                showConfirmButton: false,
-                timer: 3000,
-                background: '#222',
-                color: '#fff'
-            });
-        @endif
+    @if (session('success'))
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '{{ session('success') }}',
+        showConfirmButton: false,
+        timer: 3000,
+        background: '#222',
+        color: '#fff'
+    });
+    @endif
 
-        @if (session('error'))
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: '{{ session('error') }}',
-                background: '#222',
-                color: '#fff'
-            });
-        @endif
-    </script>
+    @if (session('error'))
+    Swal.fire({
+        icon: 'error',
+        title: 'Gagal!',
+        text: '{{ session('error') }}',
+        background: '#222',
+        color: '#fff'
+    });
+    @endif
+</script>
 @endpush
+
