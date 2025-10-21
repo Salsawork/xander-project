@@ -2,13 +2,67 @@
 @section('title', 'Admin Dashboard - Edit Tournament')
 
 @section('content')
-    <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
+    {{-- ================= Anti white flash / rubber-band iOS ================= --}}
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
+    <style>
+        /* Mode gelap bawaan browser */
+        :root { color-scheme: dark; }
+
+        /* Pastikan root gelap & tidak chain overscroll ke viewport */
+        :root, html, body { background:#0a0a0a; }
+        html, body {
+            height: 100%;
+            overscroll-behavior-y: none;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* Kanvas gelap besar di belakang segalanya (hilangkan putih saat bounce) */
+        #antiBounceBg{
+            position: fixed;
+            left: 0; right: 0;
+            top: -120svh;
+            bottom: -120svh;
+            background: #0a0a0a;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Pastikan wrapper gelap */
+        #app, main, .page-root { background:#0a0a0a; }
+
+        /* Kontainer scroll utama: hentikan rubber-band di dalam container */
+        #noBounceScroll{
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch; /* tetap smooth di iOS */
+            background:#0a0a0a;
+        }
+
+        /* Stabilkan tinggi viewport di mobile */
+        .min-h-dvh { min-height: 100dvh; }
+    </style>
+
+    {{-- Fallback SVH untuk Safari lama (hindari “lompat” saat address bar show/hide) --}}
+    <script>
+        (function(){
+            function setSVH(){
+                const svh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--svh', svh + 'px');
+            }
+            setSVH();
+            window.addEventListener('resize', setSVH, { passive:true });
+        })();
+    </script>
+
+    <div class="page-root flex flex-col min-h-dvh bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             {{-- Sidebar --}}
             @include('partials.sidebar')
 
-            {{-- Main Content --}}
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            {{-- Main Content (jadikan kontainer scroll utama) --}}
+            <main id="noBounceScroll" class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
 
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
@@ -97,8 +151,7 @@
                                             placeholder="Masukkan nama tournament"
                                             value="{{ old('name', $tournament->name) }}" required
                                             class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-xs text-gray-300 placeholder-gray-500 transition focus:outline-none focus:ring-1 focus:ring-[#1e90ff] focus:border-[#1e90ff]">
-                                        <p class="text-xs text-gray-500">Nama yang akan ditampilkan di seluruh
-                                            sistem</p>
+                                        <p class="text-xs text-gray-500">Nama yang akan ditampilkan di seluruh sistem</p>
                                     </div>
                                 </div>
 
@@ -119,8 +172,7 @@
                                                 placeholder="Masukkan nama tournament"
                                                 value="{{ old('name', $tournament->name) }}" required
                                                 class="w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-gray-300 placeholder-gray-500 transition focus:outline-none focus:ring-1 focus:ring-[#1e90ff] focus:border-[#1e90ff]">
-                                            <p class="text-xs text-gray-500 mt-1">Nama yang akan ditampilkan di seluruh
-                                                sistem</p>
+                                            <p class="text-xs text-gray-500 mt-1">Nama yang akan ditampilkan di seluruh sistem</p>
                                         </div>
                                     </div>
                                 </div>
@@ -176,8 +228,7 @@
                                     @if (isset($tournament->event_id))
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">Event:</span>
-                                            <span
-                                                class="font-medium truncate ml-2">{{ $tournament->event->name ?? 'N/A' }}</span>
+                                            <span class="font-medium truncate ml-2">{{ $tournament->event->name ?? 'N/A' }}</span>
                                         </div>
                                     @endif
                                     <div class="flex justify-between">
@@ -277,8 +328,7 @@
                                 <i class="fas fa-layer-group text-4xl text-gray-600"></i>
                             </div>
                             <p class="text-gray-400 text-lg">Generate tree terlebih dahulu</p>
-                            <p class="text-gray-500 text-sm mt-2">Klik tombol "Generate Tree" untuk membuat bracket
-                                tournament</p>
+                            <p class="text-gray-500 text-sm mt-2">Klik tombol "Generate Tree" untuk membuat bracket tournament</p>
                         </div>
                     @endif
                 </div>
@@ -292,31 +342,14 @@
             border-bottom-color: #1e90ff;
             color: white;
         }
-
-        .tab-button:not(.active) {
-            border-bottom-color: transparent;
-        }
-
-        .tab-button:not(.active):hover {
-            border-bottom-color: #4b5563;
-        }
+        .tab-button:not(.active) { border-bottom-color: transparent; }
+        .tab-button:not(.active):hover { border-bottom-color: #4b5563; }
 
         /* Smooth tab switching */
-        #treeContent,
-        #fightsContent {
-            animation: fadeIn 0.3s ease-out;
-        }
-
+        #treeContent, #fightsContent { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(5px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         /* Bracket responsive styles */
@@ -328,55 +361,33 @@
             border-radius: 0.5rem;
             overflow: hidden;
         }
-
-        .table-bordered th,
-        .table-bordered td {
+        .table-bordered th, .table-bordered td {
             border: 1px solid #444;
             padding: 0.75rem;
             text-align: center;
             color: #ccc;
             font-size: 0.875rem;
         }
-
-        .table-bordered th {
-            background: #1c1c1c;
-            font-weight: 600;
-            color: #999;
-        }
-
-        .table-bordered tr:hover {
-            background: #333;
-            transition: background 0.2s ease;
-        }
+        .table-bordered th { background: #1c1c1c; font-weight: 600; color: #999; }
+        .table-bordered tr:hover { background: #333; transition: background 0.2s ease; }
 
         /* Mobile responsif */
         @media (max-width: 768px) {
-            .table-bordered {
-                font-size: 0.75rem;
-            }
-
-            .table-bordered th,
-            .table-bordered td {
-                padding: 0.5rem;
-            }
-
-            .p-10 {
-                padding: 0.5rem !important;
-            }
+            .table-bordered { font-size: 0.75rem; }
+            .table-bordered th, .table-bordered td { padding: 0.5rem; }
+            .p-10 { padding: 0.5rem !important; }
         }
     </style>
 
     <script>
         function switchTab(event, tabName) {
             event.preventDefault();
-
             const treeTab = document.getElementById('treeTab');
             const fightsTab = document.getElementById('fightsTab');
             const treeContent = document.getElementById('treeContent');
             const fightsContent = document.getElementById('fightsContent');
 
             if (tabName === 'tree') {
-                // Tree tab active
                 treeTab.classList.add('active', 'text-white', 'border-[#1e90ff]');
                 treeTab.classList.remove('text-gray-400', 'border-transparent');
 
@@ -386,7 +397,6 @@
                 treeContent.classList.remove('hidden');
                 fightsContent.classList.add('hidden');
             } else {
-                // Fights tab active
                 fightsTab.classList.add('active', 'text-white', 'border-[#1e90ff]');
                 fightsTab.classList.remove('text-gray-400', 'border-transparent');
 

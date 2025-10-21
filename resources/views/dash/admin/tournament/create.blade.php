@@ -2,13 +2,68 @@
 @section('title', 'Admin Dashboard - Tambah Tournament')
 
 @section('content')
-    <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
+    {{-- ================= Anti white flash / rubber-band iOS ================= --}}
+    <div id="antiBounceBg" aria-hidden="true"></div>
+
+    <style>
+        /* Mode gelap bawaan browser */
+        :root { color-scheme: dark; }
+
+        /* Pastikan semua root gelap & tidak chain overscroll ke viewport */
+        :root, html, body { background:#0a0a0a; }
+        html, body {
+            height: 100%;
+            overscroll-behavior-y: none;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* Kanvas gelap super-besar di belakang segalanya (hilangkan putih saat bounce) */
+        #antiBounceBg{
+            position: fixed;
+            left: 0; right: 0;
+            top: -120svh;
+            bottom: -120svh;
+            background: #0a0a0a;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Pastikan wrapper gelap */
+        #app, main, .page-root { background:#0a0a0a; }
+
+        /* Kontainer scroll utama: hentikan rubber-band di dalam container */
+        #noBounceScroll{
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch; /* tetap smooth di iOS */
+            background:#0a0a0a;
+        }
+
+        /* Stabilkan tinggi viewport di mobile */
+        .min-h-dvh { min-height: 100dvh; }
+    </style>
+
+    {{-- Fallback SVH untuk Safari lama (hindari “lompat” saat address bar show/hide) --}}
+    <script>
+        (function(){
+            function setSVH(){
+                const svh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--svh', svh + 'px');
+            }
+            setSVH();
+            window.addEventListener('resize', setSVH, { passive:true });
+        })();
+    </script>
+
+    <div class="page-root flex flex-col min-h-dvh bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
 
-            <main class="flex-1 overflow-y-auto min-w-0 mb-8">
+            {{-- Tambahkan id="noBounceScroll" sebagai kontainer scroll agar tidak rubber-band --}}
+            <main id="noBounceScroll" class="flex-1 overflow-y-auto min-w-0 mb-8">
                 @include('partials.topbar')
-                
+
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
                     <div class="flex items-center mb-6">
                         <a href="{{ route('tournament.index') }}" class="text-gray-400 hover:text-white mr-3 sm:mr-4">
@@ -47,7 +102,7 @@
                         <!-- Tournament Settings -->
                         <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-6">
                             <h2 class="text-lg font-semibold mb-4">Tournament Settings</h2>
-                            
+
                             <!-- Row 1: Preliminary, Group Size, Fighter Qty -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
@@ -163,7 +218,7 @@
                                 class="w-full sm:w-auto px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-center text-sm transition order-2 sm:order-1">
                                 Batal
                             </a>
-                            <button type="submit" 
+                            <button type="submit"
                                 class="w-full sm:w-auto px-6 py-2 bg-[#1e90ff] hover:bg-blue-600 text-white rounded text-sm transition order-1 sm:order-2">
                                 Buat Tournament & Generate Bracket
                             </button>
