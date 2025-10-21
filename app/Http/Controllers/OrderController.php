@@ -705,7 +705,7 @@ class OrderController extends Controller
     $filename = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
 
     // Path CMS dan Frontend
-    $cmsPath = public_path('demo-xanders/images/payment_proof');
+    $cmsPath = public_path('images/payment_proof');
     $fePath  = base_path('../demo-xanders/images/payment_proof');
 
     // Pastikan foldernya ada

@@ -16,12 +16,8 @@
 
             <div class="mt-20 sm:mt-28 px-4 sm:px-8">
                 <h1 class="text-2xl sm:text-3xl font-extrabold mb-6">
-                    Pesanan Sparring: {{ $athlete->name }}
+                     Sparring: {{ $athlete->name }}
                 </h1>
-
-                <a href="{{ route('athlete.index') }}" class="text-blue-400 hover:underline text-sm mb-4 inline-block">
-                    ← Kembali ke daftar atlit
-                </a>
 
                 @if (session('success'))
                     <div class="mb-4 bg-green-600 text-white px-4 py-2 rounded text-sm">
@@ -68,9 +64,9 @@
                                         </td>
                                         <td class="px-4 py-3 text-center">
                                             @if($order->payment_status == 'processing')
-                                                <form action="{{ route('athlete.verify', $order->id) }}" method="POST" onsubmit="return confirm('Verifikasi pembayaran ini?');">
+                                                <form action="{{ route('athlete.verify', $order->id) }}" method="POST" class="verify-form inline-block">
                                                     @csrf
-                                                    <button type="submit" class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-1 rounded">
+                                                    <button type="button" class="verify-btn bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-1 rounded">
                                                         Verifikasi
                                                     </button>
                                                 </form>
@@ -86,8 +82,61 @@
                 @else
                     <p class="text-gray-400 mt-6">Belum ada pesanan untuk atlit ini.</p>
                 @endif
+
+                <!-- Tombol Kembali -->
+                <div class="mt-6">
+                    <a href="{{ route('athlete.index') }}" class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded inline-flex items-center gap-2">
+                        ← Kembali ke Daftar Athlete
+                    </a>
+                </div>
             </div>
         </main>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.querySelectorAll('.verify-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const form = this.closest('.verify-form');
+        Swal.fire({
+            title: 'Verifikasi Pembayaran?',
+            text: "Pastikan pembayaran sudah diterima.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, verifikasi!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+
+// Jika ada session success/error, tampilkan alert
+@if (session('success'))
+Swal.fire({
+    icon: 'success',
+    title: 'Berhasil!',
+    text: '{{ session('success') }}',
+    confirmButtonColor: '#16a34a'
+}).then(() => {
+    window.location.href = "{{ route('athlete.index') }}";
+});
+@endif
+
+@if (session('error'))
+Swal.fire({
+    icon: 'error',
+    title: 'Gagal!',
+    text: '{{ session('error') }}',
+    confirmButtonColor: '#d33'
+});
+@endif
+</script>
+@endpush
