@@ -183,7 +183,8 @@ $fullStars = floor((float)($averageRating ?? 0));
       <div class="card booking-card">
         <p class="text-sm text-gray-300">start from</p>
         <div class="flex items-baseline gap-2 mt-1">
-          <div class="price font-extrabold tracking-tight">Rp. {{ number_format($detail->price_per_session ?? 0, 0, ',', '.') }}.-</div>
+          {{-- HILANGKAN TITIK SETELAH Rp --}}
+          <div class="price font-extrabold tracking-tight">Rp {{ number_format($detail->price_per_session ?? 0, 0, ',', '.') }}.-</div>
           <span class="text-sm text-gray-300">/ session</span>
         </div>
         <hr class="border-white/20">
@@ -389,19 +390,13 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // Tambahkan offset kebawah 14px supaya terlihat sedikit di bawah judul "Customer Reviews"
     const extraDown = 14;
-
     const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
     const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
-
     const delta = anchorTop - cardTop;
     const topMargin = (delta > 0 ? delta : 0) + extraDown;
-
     createCard.style.marginTop = topMargin + 'px';
-    // Nudge kiri dilakukan via CSS (@media min-width:768px => margin-left:-8px)
   }
-  // panggil pada berbagai momen agar stabil
   window.addEventListener('resize', alignCreateReview);
   window.addEventListener('load', alignCreateReview);
   setTimeout(alignCreateReview, 250);

@@ -2,6 +2,13 @@
 @section('title', 'Venues Page - Xander Billiard')
 
 @push('styles')
+{{-- Leaflet CSS (gratis, tanpa billing) --}}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
 <style>
   /* ====== GLOBAL BG ====== */
   :root{ color-scheme: dark; --page-bg:#0a0a0a; }
@@ -21,8 +28,6 @@
 
   .input-pill{width:100%;padding:.80rem 2.75rem .80rem .9rem;border-radius:12px;background:#222222;color:#fff;border:1.5px solid rgba(255,255,255,.2);outline:none;appearance:none;font-size:13px}
   .input-pill:focus{box-shadow:0 0 0 2px #3b82f6;border-color:#3b82f6}
-  .input-pill::placeholder{color:#9ca3af}
-  /* Hide native date picker trigger; only button can open it */
   input[type="date"]::-webkit-calendar-picker-indicator{opacity:0;pointer-events:none;position:absolute;right:0;top:0;width:42px;height:100%;}
   input[type="date"]::-webkit-inner-spin-button,input[type="date"]::-webkit-clear-button{display:none}
   input[type="date"]{-moz-appearance:textfield;-webkit-appearance:none;color-scheme:dark;pointer-events:none;}
@@ -34,24 +39,16 @@
 
   label:has(input[type="radio"]:checked){ background-color:#2563eb; border-color:#2563eb; color:white; }
 
-  /* ====== Reviews (mirip sparring) ====== */
+  /* ====== Reviews ====== */
   .reviews-card{background:#171717;border-radius:14px;padding:18px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:100%}
   .reviews-card h3{font-weight:700}
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
 
-  /* ==== BARIS RATING ==== */
-  .rating-row{
-    display:flex; align-items:center; gap:.75rem;
-    flex-wrap:wrap;
-  }
-  /* bintang + angka selalu satu baris */
+  .rating-row{ display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
   .rating-stars{ display:inline-flex; gap:6px; white-space:nowrap; line-height:1; flex:0 0 auto; }
   .rating-stars i{ font-size:22px; color:#fbbf24; }
   .rating-number{ font-size:28px; font-weight:800; letter-spacing:.5px; flex:0 0 auto; }
-  /* "out of 5" normalnya di baris yang sama */
   .rating-outof{ font-size:12px; color:#9ca3af; margin-left:.35rem; line-height:1.2; flex:0 0 auto; }
-
-  /* Bar distribusi */
   .bar-row{display:flex;align-items:center;gap:.6rem;margin-top:.55rem}
   .bar-row .label{width:18px;color:#fbbf24;text-align:center;line-height:1}
   .bar-row .ratebar{flex:1;height:10px;background:#2a2a2a;border-radius:9999px;overflow:hidden}
@@ -66,13 +63,11 @@
   .review-stars-row{position:absolute;left:var(--indent);right:0;top:2px;display:flex;justify-content:flex-end;pointer-events:none}
   .user-stars i{font-size:26px;color:#e5e7eb}
 
-  /* Card form review di kanan */
   .create-card{background:#1f1f1f;border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   .stars-input i{font-size:22px;color:#6b7280;cursor:pointer;transition:transform .06s ease}
   .stars-input i.active{color:#f5c518}
   .helper{font-size:.8rem;color:#9ca3af}
 
-  /* Mobile tweaks */
   @media (max-width:640px){
     .review-item{--avatar:40px;--gap:12px;padding:16px 14px 14px}
     .review-left{gap:12px}
@@ -80,31 +75,17 @@
     .review-name{font-size:15px;line-height:1.2}
     .review-date{font-size:11px}
     .review-head .review-stars-row{position:static;margin-top:4px;justify-content:flex-start;pointer-events:none}
-    .review-head .user-stars i{font-size:18px}
-
-    /* Saat sempit, pindahkan "out of 5" ke baris bawah agar tidak keluar */
     .rating-row{ gap:.6rem; }
     .rating-stars i{ font-size:20px; }
     .rating-number{ font-size:26px; }
-    .rating-outof{
-      flex:1 1 100%;
-      order:3;
-      margin-left:0; margin-top:2px;
-      text-align:left;
-      font-size:12px;
-    }
+    .rating-outof{ flex:1 1 100%; order:3; margin-left:0; margin-top:2px; text-align:left; font-size:12px; }
   }
+  @media (max-width:380px){ .rating-stars i{font-size:18px} .rating-number{font-size:24px} }
+  @media (min-width:768px){ #createReviewCard{ margin-left:-8px; } }
 
-  /* Extra kecil */
-  @media (max-width:380px){
-    .rating-stars i{font-size:18px}
-    .rating-number{font-size:24px}
-  }
-
-  /* Nudge kiri untuk "Buat Review" di desktop */
-  @media (min-width:768px){
-    #createReviewCard{ margin-left:-8px; }
-  }
+  /* ====== Leaflet map (detail) ====== */
+  .leaflet-map{ height:260px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a; }
+  .muted{ color:#9ca3af; }
 </style>
 @endpush
 
@@ -150,6 +131,11 @@
 
   $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
   $fullStars = floor((float)($averageRating ?? 0));
+
+  // ===== Koordinat dari database (jika ada) =====
+  $lat = (float) ($detail->latitude ?? 0);
+  $lng = (float) ($detail->longitude ?? 0);
+  $hasCoords = ($lat !== 0.0 || $lng !== 0.0);
 @endphp
 
 @section('content')
@@ -211,23 +197,28 @@
             </ul>
           </div>
           <hr class="border-gray-400">
+
+          {{-- ===== LOCATION: alamat di ATAS, lalu peta Leaflet ===== --}}
           <div>
             <h2 class="font-semibold mb-2">Location</h2>
-            <a href="https://maps.google.com" target="_blank" class="text-blue-400 underline text-sm">
-              {{ $detail->address ?? 'No address available' }}
-            </a>
-            <div class="mt-3">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.601492962324!2d106.822823!3d-6.186487!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5c4dfdf!2sGrand%20Indonesia!5e0!3m2!1sen!2sid!4v1234567890"
-                width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+
+            {{-- Alamat di atas peta --}}
+            <div class="text-sm muted mb-2 flex items-start gap-2">
+              <i class="fas fa-map-marker-alt mt-0.5"></i>
+              <span>{{ $detail->address ?? 'No address available' }}</span>
             </div>
+
+            {{-- Peta --}}
+            <div id="mapDetail" class="leaflet-map"></div>
+
+            {{-- Info loading / error --}}
+            <p id="mapInfo" class="text-xs muted mt-2"></p>
           </div>
         </div>
 
-        {{-- ================= REVIEWS (ringkasan + list SAJA di kiri) ================= --}}
+        {{-- ================= REVIEWS ================= --}}
         <div id="reviewsStart" class="max-w-7xl mx-auto px-0 lg:px-0 pt-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {{-- Ringkasan kiri --}}
             <aside class="reviews-card">
               <h3 id="reviewsAnchor" class="text-base">Customer Reviews</h3>
               <hr>
@@ -257,7 +248,6 @@
               </div>
             </aside>
 
-            {{-- Daftar review (span 2 kolom) --}}
             <section class="md:col-span-2 space-y-6">
               @forelse ($reviews as $review)
                 <article class="review-item shadow-md ring-1 ring-black/20 hover:shadow-lg transition-shadow">
@@ -293,7 +283,7 @@
 
       </div>
 
-      {{-- RIGHT: Booking + Terms + CREATE REVIEW (di kanan) --}}
+      {{-- RIGHT: Booking + Terms + CREATE REVIEW --}}
       <div class="space-y-6" id="rightCol">
         <div class="card booking-card">
           <p class="text-sm text-gray-300">start from</p>
@@ -364,11 +354,6 @@
               @endif
               @if (session('error'))
                 <div class="mt-3 rounded-md bg-red-600/20 text-red-300 px-3 py-2 border border-green-600/30">
-                  {{ session('error') }}
-                </div>
-              @endif
-              @if ($errors->any())
-                <div class="mt-3 rounded-md bg-red-600/20 text-red-300 px-3 py-2 border border-green-600/30">
                   {{ $errors->first() }}
                 </div>
               @endif
@@ -418,20 +403,69 @@
 @endsection
 
 @push('scripts')
+{{-- Leaflet JS --}}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""></script>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  const isLoggedIn = @json(auth()->check());
-  const userRole   = @json(Auth::check() ? Auth::user()->roles : null);
-  const venueId    = @json($detail->id);
-  const baseVenuesUrl = @json(url('/venues'));
+  const isLoggedIn   = @json(auth()->check());
+  const userRole     = @json(Auth::check() ? Auth::user()->roles : null);
+  const venueId      = @json($detail->id);
+  const baseVenuesUrl= @json(url('/venues'));
+
+  // Data untuk map
+  const hasCoordsDb  = @json($hasCoords);
+  const latDb        = parseFloat(@json($lat));
+  const lngDb        = parseFloat(@json($lng));
+  const venueName    = {!! json_encode($detail->name) !!};
+  const venueAddress = {!! json_encode($detail->address ?? '') !!};
 
   function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 
   document.addEventListener("DOMContentLoaded", function() {
-    // Elements
-    const datePicker = document.getElementById('datePicker');
-    const openDateBtn = document.getElementById('openDateBtn');
-    const addBtn = document.getElementById('addToCartButton');
+    // ====== INIT LEAFLET MAP ======
+    const mapInfoEl = document.getElementById('mapInfo');
+    let map;
+
+    function initMap(lat, lng){
+      const mapDetail = L.map('mapDetail', { zoomControl:true, scrollWheelZoom:true }).setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      }).addTo(mapDetail);
+      L.marker([lat,lng]).addTo(mapDetail).bindPopup(venueName);
+      return mapDetail;
+    }
+
+    if (hasCoordsDb) {
+      map = initMap(latDb, lngDb);
+      mapInfoEl.textContent = '';
+    } else if (venueAddress) {
+      mapInfoEl.textContent = 'Mencari lokasi dari alamat…';
+      // Geocode gratis (OpenStreetMap Photon)
+      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(venueAddress)}&limit=1`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(json => {
+          const f = (json && json.features && json.features[0]) ? json.features[0] : null;
+          if (!f) throw new Error('Alamat tidak ditemukan');
+          const [lng, lat] = f.geometry.coordinates;
+          map = initMap(lat, lng);
+          mapInfoEl.textContent = '';
+        })
+        .catch(() => {
+          mapInfoEl.textContent = 'Gagal memuat peta dari alamat. Menampilkan area default.';
+          map = initMap(-6.2, 106.816666); // Jakarta Pusat sebagai default
+        });
+    } else {
+      mapInfoEl.textContent = 'Alamat belum tersedia. Menampilkan area default.';
+      map = initMap(-6.2, 106.816666);
+    }
+
+    // ====== Booking & Schedule logic (punyamu) ======
+    const datePicker   = document.getElementById('datePicker');
+    const openDateBtn  = document.getElementById('openDateBtn');
+    const addBtn       = document.getElementById('addToCartButton');
     const scheduleList = document.getElementById("scheduleList");
     const tableList    = document.getElementById("tableList");
     const form         = document.getElementById("addToCartForm");
@@ -440,74 +474,51 @@
     let selectedSchedule = null;
     let selectedTableNumber = null;
 
-    // Initialize date picker with today's date
     function initializeDatePicker() {
       if (!datePicker) return;
-
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
-      
       datePicker.min = todayStr;
       datePicker.value = todayStr;
-      
-      // Load schedules for today
       loadSchedules(todayStr);
     }
 
-    // Open native date picker when clicking calendar icon
     if (openDateBtn && datePicker) {
-      openDateBtn.addEventListener('click', () => {
-        datePicker.showPicker();
-      });
+      openDateBtn.addEventListener('click', () => { datePicker.showPicker(); });
     }
 
-    // Function to create schedule slot element
     function createScheduleSlot(slot, price) {
       const lbl = document.createElement("label");
       const isBooked = slot.is_booked || false;
-      
       lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
       lbl.innerHTML = `
-        <input type="radio" name="schedule" value="${slot.start}-${slot.end}" 
+        <input type="radio" name="schedule" value="${slot.start}-${slot.end}"
                class="hidden" required ${isBooked ? 'disabled' : ''}>
         ${slot.start} - ${slot.end}
       `;
-
       if (!isBooked) {
         const radio = lbl.querySelector("input");
         radio.addEventListener("change", () => {
           document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
           lbl.classList.add('slot--active');
-          
           selectedSchedule = { start: slot.start, end: slot.end, price: price };
           if (priceDisplay) {
-            const formattedPrice = new Intl.NumberFormat('id-ID', {
-              style: 'currency',
-              currency: 'IDR',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0
+            const formattedPrice = new Intl.NumberFormat('id-ID',{
+              style:'currency', currency:'IDR', minimumFractionDigits:0, maximumFractionDigits:0
             }).format(price);
             priceDisplay.innerText = formattedPrice;
           }
-          
-          if (slot.tables) {
-            renderTables(slot.tables);
-          } else {
-            tableList.innerHTML = "";
-          }
+          if (slot.tables) { renderTables(slot.tables); } else { tableList.innerHTML = ""; }
         });
       }
-
       return lbl;
     }
 
-    // Function to load schedules
     async function loadSchedules(selectedDate) {
       if (!selectedDate || !scheduleList) return;
-      
       scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
       if (tableList) tableList.innerHTML = "";
       selectedSchedule = null;
@@ -516,16 +527,13 @@
       try {
         const response = await fetch(`${baseVenuesUrl}/${encodeURIComponent(venueId)}/price-schedules?date=${encodeURIComponent(selectedDate)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        
         const data = await response.json();
         scheduleList.innerHTML = "";
-        
         const schedules = data.schedules || [];
         if (schedules.length === 0) {
           scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available for this date.</p>`;
           return;
         }
-
         schedules.forEach(sch => {
           (sch.schedule || []).forEach(slot => {
             const scheduleSlot = createScheduleSlot(slot, sch.price);
@@ -538,14 +546,10 @@
       }
     }
 
-    // Add change event listener to date picker
     if (datePicker) {
-      datePicker.addEventListener("change", function() {
-        loadSchedules(this.value);
-      });
+      datePicker.addEventListener("change", function(){ loadSchedules(this.value); });
     }
 
-    // Button add-to-cart: check login and role
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!isLoggedIn) {
@@ -555,68 +559,28 @@
             icon: 'warning',
             confirmButtonText: 'Login Sekarang',
             confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
+            background: '#1E1E1F', color: '#FFFFFF'
           }).then(() => { window.location.href = '/login'; });
           return;
         }
-
         if (userRole !== 'user') {
-          Swal.fire({
-            title: 'Akses Ditolak!',
-            text: 'Hanya user yang bisa menambahkan ke keranjang.',
-            icon: 'error',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
+          Swal.fire({ title:'Akses Ditolak!', text:'Hanya user yang bisa menambahkan ke keranjang.', icon:'error',
+            confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF' });
           return;
         }
 
-        // Validate form before submission
-        const date = datePicker?.value;
+        const date     = datePicker?.value;
         const schedule = document.querySelector('input[name="schedule"]:checked');
-        const table = document.querySelector('input[name="table_id"]:checked');
+        const table    = document.querySelector('input[name="table_id"]:checked');
 
-        if (!date) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih tanggal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
+        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
 
-        if (!schedule) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih jadwal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        if (!table) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih meja terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
-          return;
-        }
-
-        // Submit form if all validations pass
         form.requestSubmit();
       });
     }
 
-    /* Rating stars input */
     const stars = document.querySelectorAll('#ratingBox i');
     const ratingInput = document.getElementById('ratingInput');
     stars.forEach(st => {
@@ -627,7 +591,6 @@
       });
     });
 
-    // Initialize the page
     initializeDatePicker();
 
     function renderTables(tables = []) {
@@ -652,64 +615,6 @@
       });
     }
 
-    // Submit handler
-    if (form) {
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        if (!isLoggedIn) {
-          Swal.fire({ title: 'Belum Login!', text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.', icon:'warning' })
-            .then(() => { window.location.href = '/login'; });
-          return;
-        }
-
-        const date    = datePicker ? datePicker.value : null;
-        const schedule= document.querySelector('input[name="schedule"]:checked');
-        const table   = document.querySelector('input[name="table_id"]:checked');
-
-        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning' }); return; }
-        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning' }); return; }
-        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning' }); return; }
-
-        const fd = new FormData(this);
-        fd.append('schedule[start]', selectedSchedule.start);
-        fd.append('schedule[end]',   selectedSchedule.end);
-        fd.append('price',           selectedSchedule.price);
-        fd.append('table',           selectedTableNumber);
-
-        Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
-
-        fetch(this.action, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          },
-          body: fd
-        })
-        .then(res => {
-          // try to parse json even if not ok so backend message can be shown
-          return res.json().then(json => ({ ok: res.ok, json }));
-        })
-        .then(({ ok, json }) => {
-          Swal.close();
-          if (ok && json.success) {
-            Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
-              .then(() => location.reload());
-          } else {
-            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          Swal.close();
-          Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
-        });
-      });
-    }
-
-    /* alignCreateReview logic (kept as-is with small safety checks) */
     function alignCreateReview() {
       const mq = window.matchMedia('(min-width: 768px)');
       const anchor = document.getElementById('reviewsAnchor');
@@ -727,6 +632,6 @@
     setTimeout(alignCreateReview, 250);
     alignCreateReview();
 
-  }); 
+  });
 </script>
 @endpush

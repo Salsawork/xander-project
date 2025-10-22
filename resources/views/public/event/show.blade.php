@@ -14,7 +14,7 @@
   .hero{
     background:
       linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.75)),
-      url('{{ asset('images/bg/product_breadcrumb.png') }}'); /* <- diganti */
+      url('{{ asset('images/bg/product_breadcrumb.png') }}');
     background-size: cover; background-position: center;
     padding: 56px 0; color:#fff;
   }
@@ -22,7 +22,6 @@
   .breadcrumb{ font-size: 13px; color:#bbb; margin-bottom: 10px; }
   .hero h1{ font-weight: 800; font-size: clamp(28px, 4.8vw, 48px); letter-spacing:.4px; }
 
-  /* Napas ekstra di mobile */
   @media (max-width:1023px){
     .hero{ padding-bottom: 64px; }
   }
@@ -127,11 +126,32 @@
   use Illuminate\Support\Str;
   use Carbon\Carbon;
 
-  $resolveImage = function ($path) {
-      if (empty($path)) return null;
-      return Str::startsWith($path, ['http://','https://','/']) ? $path : asset($path);
+  /** ========== Fallback gambar serupa dengan index ========== */
+  $EVENT_IMG_DIR = 'images/events/';
+
+  $normalizeToEventsDir = function (?string $u) use ($EVENT_IMG_DIR) {
+      if (!$u) return null;
+      $u = trim($u);
+      if (Str::startsWith($u, ['http://','https://'])) {
+          return $u; // absolut, biarkan
+      }
+      $basename = basename($u);
+      return asset($EVENT_IMG_DIR . $basename);
   };
 
+  $buildEventImageCandidates = function ($e) use ($EVENT_IMG_DIR, $normalizeToEventsDir) {
+      $cand = [];
+      if (!empty($e->image_url)) {
+          $cand[] = $normalizeToEventsDir($e->image_url);
+      }
+      $id = $e->id ?? 'unknown';
+      $cand[] = asset($EVENT_IMG_DIR . $id . '.webp');
+      $cand[] = asset($EVENT_IMG_DIR . $id . '.jpg');
+      $cand[] = asset($EVENT_IMG_DIR . $id . '.png');
+      return array_values(array_unique(array_filter($cand)));
+  };
+
+  /** ========== Range tanggal ========== */
   $dateRange = function ($start, $end) {
       $s = $start ? Carbon::parse($start) : null;
       $e = $end ? Carbon::parse($end) : null;
@@ -296,21 +316,23 @@
     <!-- GRID LIST -->
     <section>
       @if (!empty($heading))
-        <h2 class="text-xl font-extrabold mb-3">{{ $heading }}</h2>
+        <h2 class="text-xl font-extrabold mb-3">
+          {{ str_ireplace('Ongoing', 'Ongoing', $heading) }}
+        </h2>
       @endif
 
       <div class="event-grid">
         {{-- FEATURED --}}
         @isset($featured)
           @php
-            $fImg   = $resolveImage($featured->image_url ?? null);
-            $fRange = $dateRange($featured->start_date ?? null, $featured->end_date ?? null);
-            $fUrl   = route('events.show', ['event' => $featured->id, 'name' => Str::slug($featured->name)]);
+            $fSrcs   = $buildEventImageCandidates($featured);
+            $fRange  = $dateRange($featured->start_date ?? null, $featured->end_date ?? null);
+            $fUrl    = route('events.show', ['event' => $featured->id, 'name' => Str::slug($featured->name)]);
           @endphp
           <a href="{{ $fUrl }}" class="ev-card" style="grid-column: span 2;">
             <div class="ev-thumb featured" style="height:260px;">
-              @if ($fImg)
-                <img src="{{ $fImg }}" alt="{{ $featured->name }}" onerror="this.style.display='none'">
+              @if (!empty($fSrcs))
+                <img class="js-img-fallback" data-srcs='@json($fSrcs)' data-idx="0" src="{{ $fSrcs[0] }}" alt="{{ $featured->name }}">
               @else
                 <i class="far fa-image" style="font-size:60px;color:#666;"></i>
               @endif
@@ -335,14 +357,14 @@
         {{-- LIST EVENTS --}}
         @forelse ($events as $ev)
           @php
-            $img   = $resolveImage($ev->image_url ?? null);
+            $srcs  = $buildEventImageCandidates($ev);
             $range = $dateRange($ev->start_date ?? null, $ev->end_date ?? null);
             $url   = route('events.show', ['event' => $ev->id, 'name' => Str::slug($ev->name)]);
           @endphp
           <a href="{{ $url }}" class="ev-card">
             <div class="ev-thumb">
-              @if ($img)
-                <img src="{{ $img }}" alt="{{ $ev->name }}" onerror="this.style.display='none'">
+              @if (!empty($srcs))
+                <img class="js-img-fallback" data-srcs='@json($srcs)' data-idx="0" src="{{ $srcs[0] }}" alt="{{ $ev->name }}">
               @else
                 <i class="far fa-image" style="font-size:50px;color:#666;"></i>
               @endif
@@ -407,6 +429,41 @@
     openBtn?.addEventListener("click", openDrawer);
     closeBtn?.addEventListener("click", closeDrawer);
     overlay?.addEventListener("click", closeDrawer);
+
+    // ===== Rantai fallback gambar (sama seperti index) =====
+    function showPlaceholder(img) {
+      img.onerror = null;
+      img.style.display = 'none';
+      const wrap = img.closest('.ev-thumb');
+      if (wrap && !wrap.querySelector('.placeholder')) {
+        const ph = document.createElement('div');
+        ph.className = 'placeholder w-full h-full grid place-items-center text-gray-400';
+        ph.innerHTML = '<i class="far fa-image" style="font-size:50px;color:#666;"></i>';
+        wrap.appendChild(ph);
+      }
+    }
+
+    function tryNext(img) {
+      try {
+        const list = img.dataset.srcs ? JSON.parse(img.dataset.srcs) : [];
+        const idx = parseInt(img.dataset.idx || '0', 10);
+        if ((idx + 1) < list.length) {
+          img.dataset.idx = String(idx + 1);
+          img.src = list[idx + 1];
+        } else {
+          showPlaceholder(img);
+        }
+      } catch (e) {
+        showPlaceholder(img);
+      }
+    }
+
+    document.addEventListener('error', function (ev) {
+      const t = ev.target;
+      if (t && t.classList && t.classList.contains('js-img-fallback')) {
+        tryNext(t);
+      }
+    }, true);
   });
 </script>
 @endpush

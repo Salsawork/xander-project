@@ -4,22 +4,81 @@
 @php
     use Illuminate\Support\Str;
 
-    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    // FE base folder absolut
+    $feBaseProducts = 'https://demo-xanders.ptbmn.id/images/products/';
 
-    use Illuminate\Pagination\LengthAwarePaginator;
-    // deteksi sederhana mobile/desktop via User-Agent
-    $ua       = request()->header('User-Agent', '');
-    $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
-    $perPage  = $isMobile ? 4 : 12;
-    $page   = max((int) request('page', 1), 1);
-    $products = $products ?? collect(); 
-    $products = new LengthAwarePaginator(
-        $products->slice(($page - 1) * $perPage, $perPage)->values(),
-        $products->count(),
-        $perPage,
-        $page,
-        ['path' => request()->url(), 'query' => request()->query()]
-    );
+    // Normalizer: apapun input (URL penuh/relative/nama file) -> absolut ke $feBaseProducts
+    $normalizeToFeBase = function ($s) use ($feBaseProducts) {
+        if (!is_string($s) || trim($s) === '') return null;
+        $s = trim($s);
+
+        // Jika sudah URL http(s)
+        if (preg_match('#^https?://#i', $s)) {
+            $parts = parse_url($s);
+            $base  = strtolower($parts['host'] ?? '');
+            $path  = $parts['path'] ?? '';
+            $name  = basename($path);
+
+            if ($base === 'demo-xanders.ptbmn.id') {
+                return $name ? $feBaseProducts . $name : $s;
+            }
+            return $s; // CDN eksternal dll
+        }
+
+        if (str_starts_with($s, '/images/products/')) {
+            return $feBaseProducts . basename($s);
+        }
+
+        $name = basename($s);
+        if ($name !== '' && $name !== '/' && $name !== '.') {
+            return $feBaseProducts . $name;
+        }
+        return null;
+    };
+
+    // Kandidat nama file berdasar id/slug + data DB
+    $buildIdImageCandidates = function($product) use ($feBaseProducts, $normalizeToFeBase) {
+        $id   = (string) ($product->id ?? '');
+        $slug = Str::slug((string) ($product->name ?? ''));
+        $exts = ['jpeg','jpg','png','webp'];
+        $c    = [];
+
+        if ($id !== '') {
+            if ($slug !== '') {
+                foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}-{$slug}.{$e}"; }
+                foreach ([1,2,3] as $ver) {
+                    foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}-{$slug}-{$ver}.{$e}"; }
+                }
+            }
+            foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}.{$e}"; }
+            foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}_1.{$e}"; }
+        }
+
+        // DB filenames/urls
+        if (!empty($product->first_image_url)) {
+            $norm = $normalizeToFeBase((string)$product->first_image_url);
+            if ($norm) $c[] = $norm;
+        }
+        if (!empty($product->images)) {
+            $arr = is_array($product->images) ? $product->images : json_decode($product->images, true);
+            if (is_array($arr) && !empty($arr)) {
+                $norm = $normalizeToFeBase((string)$arr[0]);
+                if ($norm) $c[] = $norm;
+            }
+        }
+
+        // Placeholder di FE folder + eksternal
+        $c[] = "{$feBaseProducts}placeholder.webp";
+        $c[] = "{$feBaseProducts}placeholder.png";
+        $c[] = 'https://placehold.co/600x800?text=No+Image';
+
+        // Unik
+        $uniq = [];
+        foreach ($c as $x) {
+            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
+        }
+        return $uniq;
+    };
 @endphp
 
 @push('styles')
@@ -49,7 +108,6 @@
   .pager-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(20%);}
   @media (max-width:640px){.pager{padding:4px 8px;gap:8px}.pager-btn{width:40px;height:40px}.pager-label{min-width:80px;font-size:.9rem}}
 
-  /* Badge diskon */
   .disc-badge{
     position:absolute; top:.5rem; left:.5rem;
     background:#ef4444; color:#fff; font-weight:700;
@@ -219,7 +277,6 @@
     {{-- PRODUCT GRID --}}
     <section class="lg:col-span-4 flex flex-col gap-6">
       @php
-        // Helper sama seperti di landing:
         $normDisc = function($d){
           $d = (float)($d ?? 0);
           if ($d <= 0) return 0.0;
@@ -232,15 +289,17 @@
         };
       @endphp
 
-      <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         @forelse ($products as $product)
           @php
-            $slug  = \Illuminate\Support\Str::slug($product->name);
-            $img   = $product->first_image_url; // accessor dari model
+            $slug  = Str::slug($product->name);
             $praw  = (float) ($product->pricing ?? 0);
-            $dp    = $normDisc($product->discount ?? 0);     // persen 0–100
+            $dp    = $normDisc($product->discount ?? 0); // 0–100
             $hasD  = $dp > 0;
-            $final = $finalPrice($praw, $dp);                // integer
+            $final = $finalPrice($praw, $dp);
+
+            $candidates = $buildIdImageCandidates($product);
+            $primarySrc = $candidates[0] ?? "{$feBaseProducts}placeholder.png";
           @endphp
 
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="cursor-pointer">
@@ -249,19 +308,20 @@
                 @if($hasD)
                   <span class="disc-badge">-{{ rtrim(rtrim(number_format($dp, 2, ',', '.'), '0'), ',') }}%</span>
                 @endif
+
                 <img
-                  src="{{ $img }}"
+                  class="h-full w-full object-cover js-img-fallback"
+                  src="{{ $primarySrc }}"
+                  data-src-candidates='@json($candidates)'
                   alt="{{ $product->name }}"
-                  class="h-full w-full object-cover"
                   loading="lazy"
                   decoding="async"
-                  onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image';"
                 />
               </div>
+
               <h4 class="text-xs sm:text-sm font-medium line-clamp-2">{{ $product->name }}</h4>
               <p class="text-[11px] sm:text-xs text-gray-400 mt-0.5">{{ $product->brand }} • {{ ucfirst($product->condition) }}</p>
 
-              {{-- HARGA: jika ada diskon, tampilkan final & coret harga asli --}}
               @if($hasD)
                 <div class="mt-1">
                   <div class="text-xs sm:text-sm text-white font-semibold">
@@ -285,12 +345,11 @@
         @endforelse
       </div>
 
-      {{-- PAGINATION --}}
       @php
         $current = $products->currentPage();
         $last    = $products->lastPage();
-        $prevUrl = $current > 1   ? $products->appends(request()->query())->url($current - 1) : null;
-        $nextUrl = $current < $last ? $products->appends(request()->query())->url($current + 1) : null;
+        $prevUrl = $current > 1    ? $products->appends(request()->query())->url($current - 1) : null;
+        $nextUrl = $current < $last? $products->appends(request()->query())->url($current + 1) : null;
       @endphp
       <div class="flex justify-center mt-6">
         <nav class="pager" role="navigation" aria-label="Pagination">
@@ -320,9 +379,8 @@
     </section>
   </div>
 
-  {{-- Floating cart button (opsional) --}}
   @php
-    $cartCount = count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []);
+    $cartCount = (count($cartProducts ?? []) + count($cartVenues ?? []) + count($cartSparrings ?? []));
   @endphp
 
   @if (Auth::check() && Auth::user()->roles === 'user')
@@ -340,10 +398,10 @@
     </button>
   @endif
 
-  @include('public.cart')
+  {{-- gunakan includeIf agar tidak 500 bila partial belum ada --}}
+  @includeIf('public.cart')
 </div>
 
-{{-- Helpers untuk format angka & mobile drawer --}}
 <script>
   function formatNumberInput(input) {
     let v = input.value.replace(/\D/g,"");
@@ -358,14 +416,11 @@
     if(maxI?.value) maxI.value = new Intl.NumberFormat("id-ID").format(maxI.value);
     minI?.addEventListener("input", () => formatNumberInput(minI));
     maxI?.addEventListener("input", () => formatNumberInput(maxI));
-
-    // Bersihkan format ribuan saat submit
     minI?.form?.addEventListener("submit", () => {
       if(minI) minI.value = unformatNumberInput(minI);
       if(maxI) maxI.value = unformatNumberInput(maxI);
     });
 
-    // Expand/collapse sections
     document.querySelectorAll(".toggleBtn").forEach((btn) => {
       const content = btn.parentElement.nextElementSibling;
       btn.addEventListener("click", () => {
@@ -374,7 +429,6 @@
       });
     });
 
-    // Mobile drawer open/close
     const mobileFilterBtn     = document.getElementById("mobileFilterBtn");
     const filterProduct       = document.getElementById("filterProduct");
     const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
@@ -393,6 +447,20 @@
     mobileFilterBtn?.addEventListener("click", openMobileFilter);
     closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
     mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
+
+    document.querySelectorAll('.js-img-fallback').forEach((img) => {
+      try {
+        const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+        let i = 0;
+        const tryNext = () => {
+          i++;
+          if (i < list.length) {
+            if (img.src !== list[i]) img.src = list[i];
+          }
+        };
+        img.addEventListener('error', tryNext, { passive: true });
+      } catch (e) {}
+    });
   });
 </script>
 @endsection

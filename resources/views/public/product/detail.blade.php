@@ -4,8 +4,94 @@
 @php
     use Illuminate\Support\Str;
 
-    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
-    $relCount  = count($relatedProducts ?? []);
+    // ===== FE base URL untuk gambar produk =====
+    $feBaseProducts = 'https://demo-xanders.ptbmn.id/images/products/';
+
+    // Normalizer: apapun input (URL penuh / relative / nama file) -> absolut ke FE base di atas
+    $normalizeToFeBase = function ($s) use ($feBaseProducts) {
+        if (!is_string($s) || trim($s) === '') return null;
+        $s = trim($s);
+
+        // Sudah http(s)? — kalau domain FE, pakai basename-nya (anti duplikat path), kalau bukan biarkan apa adanya
+        if (preg_match('#^https?://#i', $s)) {
+            $parts = parse_url($s);
+            $host  = strtolower($parts['host'] ?? '');
+            $path  = $parts['path'] ?? '';
+            $name  = basename($path);
+            if ($host === 'demo-xanders.ptbmn.id') {
+                return $name ? $feBaseProducts . $name : $s;
+            }
+            return $s; // CDN eksternal tetap dipakai apa adanya
+        }
+
+        // Relatif dari /images/products
+        if (str_starts_with($s, '/images/products/')) {
+            return $feBaseProducts . basename($s);
+        }
+
+        // Nama file saja
+        $name = basename($s);
+        if ($name !== '' && $name !== '/' && $name !== '.') {
+            return $feBaseProducts . $name;
+        }
+
+        return null;
+    };
+
+    // ===== Safe helpers =====
+    $toCount = function ($v) {
+        return is_countable($v) ? count($v) : (is_null($v) ? 0 : (is_array($v) ? count($v) : 0));
+    };
+
+    // Pastikan semua variabel ada
+    $cartProducts    = $cartProducts    ?? [];
+    $cartVenues      = $cartVenues      ?? [];
+    $cartSparrings   = $cartSparrings   ?? [];
+    $relatedProducts = $relatedProducts ?? [];
+    $relatedPriceMap = $relatedPriceMap ?? [];
+
+    // Hitung cartCount dengan aman
+    $cartCount = $toCount($cartProducts) + $toCount($cartVenues) + $toCount($cartSparrings);
+    $relCount  = $toCount($relatedProducts);
+
+    // Detail product guard
+    $detail      = $detail ?? null;
+    $detailId    = $detail->id    ?? 0;
+    $detailName  = $detail->name  ?? 'Product';
+    $detailDesc  = $detail->description ?? '';
+    $detailPrice = (int) ($detail->pricing ?? 0);
+
+    // Diskon (opsional dari controller)
+    $detailHasDiscount     = $detailHasDiscount     ?? false;
+    $detailDiscountPercent = (float) ($detailDiscountPercent ?? 0);
+    $detailFinalPrice      = (int)   ($detailFinalPrice ?? $detailPrice);
+
+    // ===== Kumpulkan gambar detail lalu normalisasi ke FE base =====
+    $imagesRaw = [];
+    if ($detail) {
+        if (is_array($detail->images)) {
+            $imagesRaw = $detail->images;
+        } elseif (is_string($detail->images ?? '') && trim($detail->images) !== '') {
+            $decoded = json_decode($detail->images, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) $imagesRaw = $decoded;
+        }
+        // fallback dari kolom lain (kalau ada)
+        if (empty($imagesRaw) && !empty($detail->first_image_url ?? null)) {
+            $imagesRaw = [$detail->first_image_url];
+        }
+    }
+
+    // Normalisasi ke FE base (hasil akhir: URL absolut ke demo-xanders)
+    $images = [];
+    foreach ($imagesRaw as $im) {
+        $norm = $normalizeToFeBase($im);
+        if ($norm) $images[] = $norm;
+    }
+    // unique & reindex
+    $images = array_values(array_unique($images));
+
+    // Main image: gunakan gambar pertama; kalau kosong, pakai placeholder
+    $mainImagePath = $images[0] ?? 'https://placehold.co/400x600?text=No+Image';
 @endphp
 
 @push('styles')
@@ -96,31 +182,18 @@
       <nav class="text-[11px] sm:text-xs text-gray-400 mb-1 md:mb-3 self-start">
         <a href="{{ route('index') }}">Home</a> /
         <a href="{{ route('products.landing') }}">Product</a> /
-        <a href="{{ route('products.detail', ['id'=>$detail->id, 'slug'=>Str::slug($detail->name)]) }}">{{ $detail->name }}</a>
+        @if($detailId)
+          <a href="{{ route('products.detail', ['id'=>$detailId, 'slug'=>Str::slug($detailName)]) }}">{{ $detailName }}</a>
+        @else
+          <span>{{ $detailName }}</span>
+        @endif
       </nav>
 
-      @php
-        $mainImagePath = 'https://placehold.co/400x600?text=No+Image';
-        $images = [];
-        if (is_array($detail->images)) {
-            $images = $detail->images;
-        } elseif (is_string($detail->images) && trim($detail->images) !== '') {
-            $decoded = json_decode($detail->images, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) { $images = $decoded; }
-        }
-        if (!empty($images) && !empty($images[0])) {
-            $img0 = $images[0];
-            $mainImagePath = preg_match('/^https?:\/\//i', $img0) ? $img0 : asset(ltrim($img0,'/'));
-        }
-
-        $hasDisc  = $detailHasDiscount ?? false;
-        $discPct  = (float)($detailDiscountPercent ?? 0);
-        $final    = (int)($detailFinalPrice ?? $detail->pricing);
-      @endphp
-
-      <img id="mainImage" alt="{{ $detail->name }}"
+      <img id="mainImage" alt="{{ $detailName }}"
            class="rounded-md w-full max-w-[320px] object-cover bg-neutral-800"
-           height="400" width="320" src="{{ $mainImagePath }}" loading="eager" decoding="async"
+           height="400" width="320"
+           src="{{ $mainImagePath }}"
+           loading="eager" decoding="async"
            onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image';" />
 
       <div class="flex items-center justify-between w-full max-w-[320px]">
@@ -129,19 +202,13 @@
         </button>
 
         <div class="flex gap-2">
-          @foreach ($images as $index => $image)
-            @php
-              $thumbImagePath = 'https://placehold.co/400x600?text=No+Image';
-              if (!empty($image)) {
-                  $thumbImagePath = preg_match('/^https?:\/\//i', $image) ? $image : asset(ltrim($image,'/'));
-              }
-            @endphp
+          @foreach ($images as $index => $thumbUrl)
             <img
-              alt="{{ $detail->name.' #'.$index }}"
+              alt="{{ $detailName.' #'.$index }}"
               class="rounded-md w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] object-cover cursor-pointer border-2 {{ $index==0 ? 'border-blue-600' : 'border-gray-600' }} thumbnail-image bg-neutral-800"
-              height="60" width="60" src="{{ $thumbImagePath }}" loading="lazy" decoding="async"
+              height="60" width="60" src="{{ $thumbUrl }}" loading="lazy" decoding="async"
               onerror="this.src='https://placehold.co/400x600?text=No+Image'"
-              onclick="changeMainImage('{{ $thumbImagePath }}', this)"
+              onclick="changeMainImage('{{ $thumbUrl }}', this)"
             />
           @endforeach
         </div>
@@ -153,35 +220,37 @@
     </div>
 
     <section class="flex-1 mt-8 md:mt-0">
-      <h1 class="text-white font-extrabold text-xl md:text-2xl leading-tight">{{ $detail->name }}</h1>
+      <h1 class="text-white font-extrabold text-xl md:text-2xl leading-tight">{{ $detailName }}</h1>
 
       <div class="mt-2 mb-6">
-        @if ($hasDisc)
+        @if ($detailHasDiscount)
           <div class="inline-flex items-center gap-2">
             <span class="text-gray-400 text-sm line-through">
-              Rp. {{ number_format($detail->pricing, 0, ',', '.') }}
+              Rp. {{ number_format($detailPrice, 0, ',', '.') }}
             </span>
             <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[11px] font-bold px-2 py-0.5">
-              -{{ number_format($discPct, 0) }}%
+              -{{ number_format($detailDiscountPercent, 0) }}%
             </span>
           </div>
           <div class="text-white font-extrabold text-2xl leading-tight mt-1">
-            Rp. {{ number_format($final, 0, ',', '.') }},-
+            Rp. {{ number_format($detailFinalPrice, 0, ',', '.') }},-
           </div>
         @else
           <p class="text-gray-300 text-xl md:text-2xl">
-            Rp. {{ number_format($detail->pricing, 0, ',', '.') }},-
+            Rp. {{ number_format($detailPrice, 0, ',', '.') }},-
           </p>
         @endif
       </div>
 
       <hr class="border-gray-700 mb-6" />
 
-      <p class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl">{{ $detail->description }}</p>
+      <p class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl">{{ $detailDesc }}</p>
 
-      <form id="addToCartForm" action="{{ route('cart.add.product') }}" method="POST">
+      <form id="addToCartForm"
+            action="{{ \Illuminate\Support\Facades\Route::has('cart.add.product') ? route('cart.add.product') : url('/cart/add/product') }}"
+            method="POST">
         @csrf
-        <input type="hidden" name="id" value="{{ $detail->id }}">
+        <input type="hidden" name="id" value="{{ $detailId }}">
         <div class="flex items-center gap-3 mt-4">
           <div class="flex items-center gap-2">
             <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepDown()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">-</button>
@@ -238,40 +307,45 @@
         <div id="relRow" class="{{ $relMode === 'carousel' ? 'rel-row-scroll' : 'rel-row-grid' }}">
           @forelse ($relatedProducts as $product)
             @php
-              $slug = Str::slug($product->name);
+              $slug = Str::slug($product->name ?? 'product');
 
-              $rImages = [];
-              if (is_array($product->images)) { $rImages = $product->images; }
-              elseif (is_string($product->images) && trim($product->images) !== '') {
+              // Kumpulkan gambar related → normalisasi ke FE base juga
+              $rImagesRaw = [];
+              if (is_array($product->images ?? null)) { $rImagesRaw = $product->images; }
+              elseif (is_string($product->images ?? '') && trim($product->images) !== '') {
                 $dec = json_decode($product->images, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) $rImages = $dec;
+                if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) $rImagesRaw = $dec;
               }
-              $img = 'https://placehold.co/800x800?text=No+Image';
-              if (!empty($rImages) && !empty($rImages[0])) {
-                  $img0 = $rImages[0];
-                  $img = preg_match('/^https?:\/\//i', $img0) ? $img0 : asset(ltrim($img0,'/'));
+              $rImages = [];
+              foreach ($rImagesRaw as $im) {
+                $norm = $normalizeToFeBase($im);
+                if ($norm) $rImages[] = $norm;
               }
+              $rImages = array_values(array_unique($rImages));
+              $img = $rImages[0] ?? 'https://placehold.co/800x800?text=No+Image';
 
-              $map = $relatedPriceMap[$product->id] ?? ['has_discount'=>false, 'discount_percent'=>0, 'final_price'=>$product->pricing];
-              $rHas = $map['has_discount'];
-              $rPct = (float) $map['discount_percent'];
-              $rFin = (int) $map['final_price'];
+              // Harga
+              $basePrice = (int) ($product->pricing ?? 0);
+              $map = $relatedPriceMap[$product->id] ?? ['has_discount'=>false, 'discount_percent'=>0, 'final_price'=>$basePrice];
+              $rHas = (bool) ($map['has_discount'] ?? false);
+              $rPct = (float) ($map['discount_percent'] ?? 0);
+              $rFin = (int)   ($map['final_price'] ?? $basePrice);
             @endphp
 
             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}"
                class="rel-card product-card block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 {{ $relMode === 'carousel' ? 'carousel-item' : '' }}"
                data-product-id="{{ $product->id }}">
               <div class="product-image-wrapper">
-                <img src="{{ $img }}" alt="{{ $product->name }}" loading="lazy"
+                <img src="{{ $img }}" alt="{{ $product->name ?? 'Product' }}" loading="lazy"
                      onerror="this.onerror=null;this.src='https://placehold.co/800x800?text=No+Image';" />
               </div>
               <div class="product-info">
-                <h3 class="product-title" title="{{ $product->name }}">{{ $product->name }}</h3>
+                <h3 class="product-title" title="{{ $product->name ?? 'Product' }}">{{ $product->name ?? 'Product' }}</h3>
 
                 @if ($rHas)
                   <div class="flex items-center gap-2 mb-1">
                     <span class="text-[12px] text-gray-400 line-through">
-                      Rp. {{ number_format($product->pricing, 0, ',', '.') }}
+                      Rp. {{ number_format($basePrice, 0, ',', '.') }}
                     </span>
                     <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5">
                       -{{ number_format($rPct, 0) }}%
@@ -282,7 +356,7 @@
                   </p>
                 @else
                   <p class="product-price">
-                    Rp. {{ number_format($product->pricing, 0, ',', '.') }},-
+                    Rp. {{ number_format($basePrice, 0, ',', '.') }},-
                   </p>
                 @endif
               </div>
@@ -295,8 +369,8 @@
     </div>
   </section>
 
-  @if (Auth::check() && Auth::user()->roles === 'user')
-  <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
+  @if (Auth::check() && (Auth::user()->roles ?? '') === 'user')
+  <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart && showCart()"
           class="fixed right-4 sm:right-6 top-[60%] bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
     <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
     @if ($cartCount > 0)
@@ -307,7 +381,8 @@
   </button>
   @endif
 
-  @include('public.cart')
+  {{-- aman walau partial belum ada --}}
+  @includeIf('public.cart')
 </main>
 @endsection
 
@@ -325,111 +400,93 @@
   }
 
   const cartForm = document.getElementById('addToCartForm');
-      if (cartForm) {
-        cartForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-    
+  if (cartForm) {
+    cartForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      Swal.fire({
+        title: 'Mohon tunggu...',
+        text: 'Sedang memproses permintaan Anda.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        background: '#1E1E1F',
+        color: '#FFFFFF'
+      });
+
+      const formData = new FormData(this);
+
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(async res => {
+        Swal.close();
+
+        if (res.status === 401) {
           Swal.fire({
-            title: 'Mohon tunggu...',
-            text: 'Sedang memproses permintaan Anda.',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
+            title: 'Belum Login!',
+            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+            icon: 'warning',
+            confirmButtonText: 'Login Sekarang',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF'
+          }).then(() => {
+            window.location.href = '/login';
+          });
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+
+        if (res.ok && data && (data.success ?? false)) {
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Produk berhasil ditambahkan ke keranjang!',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#3085d6',
+            background: '#1E1E1F',
+            color: '#FFFFFF',
+            iconColor: '#4BB543'
+          }).then(() => location.reload());
+        } else {
+          Swal.fire({
+            title: 'Gagal!',
+            text: data?.message || 'Terjadi kesalahan, coba lagi.',
+            icon: 'error',
+            confirmButtonColor: '#3085d6',
             background: '#1E1E1F',
             color: '#FFFFFF'
           });
-    
-          const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-          const formData = new FormData(this);
-    
-          fetch(this.action, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-              'X-CSRF-TOKEN': csrf
-            },
-            body: formData
-          })
-          .then(async res => {
-            Swal.close();
-    
-            if (res.status === 401) {
-              Swal.fire({
-                title: 'Belum Login!',
-                text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-                icon: 'warning',
-                confirmButtonText: 'Login Sekarang',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF'
-              }).then(() => {
-                window.location.href = '/login';
-              });
-              return;
-            }
-    
-            if (res.redirected) {
-              // Kalau server malah redirect 302, tampilkan pesan
-              Swal.fire({
-                title: 'Terjadi Redirect!',
-                text: 'Server mengembalikan respons 302. Pastikan middleware Auth dan route menerima AJAX.',
-                icon: 'info',
-                background: '#1E1E1F',
-                color: '#FFFFFF'
-              });
-              console.warn('Redirected to:', res.url);
-              return;
-            }
-    
-            const data = await res.json().catch(() => null);
-    
-            if (data && data.success) {
-              Swal.fire({
-                title: 'Berhasil!',
-                text: 'Produk berhasil ditambahkan ke keranjang!',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF',
-                iconColor: '#4BB543'
-              }).then(() => location.reload());
-            } else {
-              Swal.fire({
-                title: 'Gagal!',
-                text: data?.message || 'Terjadi kesalahan, coba lagi.',
-                icon: 'error',
-                confirmButtonColor: '#3085d6',
-                background: '#1E1E1F',
-                color: '#FFFFFF'
-              });
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            Swal.close();
-            Swal.fire({
-              title: 'Error!',
-              text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
-              icon: 'error',
-              confirmButtonColor: '#3085d6',
-              background: '#1E1E1F',
-              color: '#FFFFFF'
-            });
-          });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.close();
+        Swal.fire({
+          title: 'Error!',
+          text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          background: '#1E1E1F',
+          color: '#FFFFFF'
         });
-      }
+      });
+    });
+  }
 
-  // =====================================================
-  // ADD TO CART BUTTON CLICK HANDLER
-  // =====================================================
   const addBtn = document.getElementById('addToCartButton');
   if (addBtn) {
     addBtn.addEventListener('click', (e) => {
       e.preventDefault();
 
       const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
-      const userRole = "{{ Auth::check() ? Auth::user()->roles : '' }}";
+      const userRole = "{{ Auth::check() ? (Auth::user()->roles ?? '') : '' }}";
 
       if (!isLoggedIn) {
         Swal.fire({
@@ -458,7 +515,6 @@
         return;
       }
 
-      // ✅ Trigger form submit event
       const form = document.getElementById('addToCartForm');
       if (form) {
         const event = new Event('submit', { bubbles: true, cancelable: true });
@@ -467,29 +523,7 @@
     });
   }
 
-  // Smooth scroll untuk slider foto produk
-  function smoothScroll(el, left) {
-    if (!el) return;
-    el.scrollTo({ left, behavior: 'smooth' });
-  }
-  document.querySelectorAll('[data-rel-prev]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const track = document.querySelector(btn.getAttribute('data-rel-prev'));
-      const step = (track?.clientWidth || 0) * 0.9;
-      smoothScroll(track, Math.max(0, track.scrollLeft - step));
-    });
-  });
-  document.querySelectorAll('[data-rel-next]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const track = document.querySelector(btn.getAttribute('data-rel-next'));
-      const step = (track?.clientWidth || 0) * 0.9;
-      smoothScroll(track, Math.min((track?.scrollWidth || 0), track.scrollLeft + step));
-    });
-  });
-
-  // ============================================
-  // INFINITE LOOPING CAROUSEL (PERFECT VERSION)
-  // ============================================
+  // ===== INFINITE LOOPING CAROUSEL =====
   (function() {
     const wrapper = document.querySelector('.rel-wrapper');
     const track = document.getElementById('relTrack');
@@ -504,12 +538,10 @@
 
     const originals = Array.from(row.children).filter(el => !el.classList.contains('cloned'));
     const itemCount = originals.length;
-    
     if (itemCount === 0) return;
     if (row.dataset.loopInit === '1') return;
     row.dataset.loopInit = '1';
 
-    // Clone 3x: before(1x) + original + after(1x) = total 3x items
     function createClones() {
       const before = document.createDocumentFragment();
       const after = document.createDocumentFragment();
@@ -521,7 +553,7 @@
         after.appendChild(cloneAfter);
       });
 
-      originals.forEach(el => {
+      originals.slice().forEach(el => {
         const cloneBefore = el.cloneNode(true);
         cloneBefore.classList.add('cloned');
         cloneBefore.setAttribute('aria-hidden', 'true');
@@ -534,185 +566,115 @@
 
     createClones();
 
-    // Get card width including gap
     function getItemWidth() {
       const allCards = row.querySelectorAll('.rel-card');
       if (!allCards.length) return 0;
-      
       const card = allCards[0];
       const cardWidth = card.offsetWidth;
       const gap = parseFloat(getComputedStyle(row).gap || '16');
-      
       return cardWidth + gap;
     }
 
     let itemWidth = 0;
     let isAdjusting = false;
 
-    // Position at center (original items)
     function resetPosition() {
       itemWidth = getItemWidth();
       if (!itemWidth) return;
-      
-      // Start position: skip first cloned batch
       const centerPos = itemWidth * itemCount;
-      
       isAdjusting = true;
       track.scrollLeft = centerPos;
-      
-      setTimeout(() => {
-        isAdjusting = false;
-        updateFades();
-      }, 50);
+      setTimeout(() => { isAdjusting = false; updateFades(); }, 50);
+    }
+
+    function updateFades() {
+      fadeL?.classList.add('show');
+      fadeR?.classList.add('show');
     }
 
     resetPosition();
 
-    // Update fade indicators
-    function updateFades() {
-      if (!fadeL || !fadeR) return;
-      
-      // Always show fades in infinite mode
-      fadeL.classList.add('show');
-      fadeR.classList.add('show');
-    }
-
-    // Handle infinite scroll wrapping
     let scrollTimer;
     function handleScroll() {
       clearTimeout(scrollTimer);
-      
       scrollTimer = setTimeout(() => {
         if (isAdjusting) return;
-        
         itemWidth = getItemWidth();
         if (!itemWidth) return;
 
         const scrollPos = track.scrollLeft;
-        const batchWidth = itemWidth * itemCount;
-        
-        // Calculate relative position
-        const relativePos = scrollPos % batchWidth;
-        const currentBatch = Math.floor(scrollPos / batchWidth);
+        const batch = itemWidth * itemCount;
+        const rel = scrollPos % batch;
+        const idx = Math.floor(scrollPos / batch);
 
-        // If scrolled too far right (into last clone batch)
-        if (currentBatch >= 2) {
-          isAdjusting = true;
-          track.scrollLeft = batchWidth + relativePos;
+        if (idx >= 2) {
+          isAdjusting = true; track.scrollLeft = batch + rel;
+          setTimeout(() => { isAdjusting = false; }, 50);
+        } else if (idx <= 0 && scrollPos < batch * 0.5) {
+          isAdjusting = true; track.scrollLeft = batch + rel;
           setTimeout(() => { isAdjusting = false; }, 50);
         }
-        // If scrolled too far left (into first clone batch) 
-        else if (currentBatch <= 0 && scrollPos < batchWidth * 0.5) {
-          isAdjusting = true;
-          track.scrollLeft = batchWidth + relativePos;
-          setTimeout(() => { isAdjusting = false; }, 50);
-        }
-
         updateFades();
       }, 100);
     }
 
     track.addEventListener('scroll', handleScroll, { passive: true });
 
-    // Smooth scroll function
     function smoothScrollBy(delta) {
-      const currentScroll = track.scrollLeft;
-      const targetScroll = currentScroll + delta;
-      
-      track.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
-      });
+      track.scrollTo({ left: track.scrollLeft + delta, behavior: 'smooth' });
     }
 
-    // Navigation buttons
-    if (btnPrev) {
-      btnPrev.addEventListener('click', () => {
-        const scrollAmount = Math.floor(track.clientWidth * 0.75);
-        smoothScrollBy(-scrollAmount);
-      });
-    }
+    btnPrev?.addEventListener('click', () => {
+      const step = Math.floor(track.clientWidth * 0.75);
+      smoothScrollBy(-step);
+    });
+    btnNext?.addEventListener('click', () => {
+      const step = Math.floor(track.clientWidth * 0.75);
+      smoothScrollBy(step);
+    });
 
-    if (btnNext) {
-      btnNext.addEventListener('click', () => {
-        const scrollAmount = Math.floor(track.clientWidth * 0.75);
-        smoothScrollBy(scrollAmount);
-      });
-    }
-
-    // Resize handler
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        resetPosition();
-      }, 200);
+      resizeTimer = setTimeout(() => { resetPosition(); }, 200);
     });
 
-    // Touch/swipe support
-    let touchStartX = 0;
-    let touchStartScroll = 0;
-    let isTouching = false;
-
+    let touchStartX = 0, touchStartScroll = 0, isTouching = false;
     track.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
       touchStartScroll = track.scrollLeft;
       isTouching = true;
     }, { passive: true });
-
     track.addEventListener('touchmove', (e) => {
       if (!isTouching) return;
-      
-      const touchX = e.touches[0].clientX;
-      const diff = touchStartX - touchX;
-      track.scrollLeft = touchStartScroll + diff;
+      const x = e.touches[0].clientX;
+      track.scrollLeft = touchStartScroll + (touchStartX - x);
     }, { passive: true });
+    track.addEventListener('touchend', () => { isTouching = false; }, { passive: true });
 
-    track.addEventListener('touchend', () => {
-      isTouching = false;
-    }, { passive: true });
-
-    // Mouse wheel horizontal scroll
     track.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        return; // Already horizontal
-      }
-      
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
       if (e.shiftKey) {
         e.preventDefault();
         track.scrollLeft += e.deltaY;
       }
     }, { passive: false });
 
-    // Keyboard navigation
     track.setAttribute('tabindex', '0');
     track.addEventListener('keydown', (e) => {
-      const scrollAmount = Math.floor(track.clientWidth * 0.75);
-      
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        smoothScrollBy(-scrollAmount);
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        smoothScrollBy(scrollAmount);
-      }
+      const step = Math.floor(track.clientWidth * 0.75);
+      if (e.key === 'ArrowLeft') { e.preventDefault(); smoothScrollBy(-step); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); smoothScrollBy(step); }
     });
 
-    // Initial fade update
     updateFades();
-
-    // Auto-adjust if layout shifts
     const observer = new ResizeObserver(() => {
       if (!isAdjusting) {
-        const currentItemWidth = getItemWidth();
-        if (currentItemWidth !== itemWidth && currentItemWidth > 0) {
-          resetPosition();
-        }
+        const w = getItemWidth();
+        if (w !== itemWidth && w > 0) resetPosition();
       }
     });
-
     observer.observe(row);
-
   })();
 </script>
 @endpush
