@@ -20,7 +20,8 @@ class Venue extends Model
         'phone',
         'description',
         'date',
-        'operating_hours',
+        'operating_hour',
+        'closing_hour',
         'rating',
         'price',
         'image',
@@ -32,6 +33,8 @@ class Venue extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'operating_hour' => 'datetime:H:i',
+        'closing_hour' => 'datetime:H:i',
         'rating' => 'decimal:2',
     ];
 

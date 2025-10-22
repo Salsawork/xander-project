@@ -21,6 +21,7 @@ class PriceSchedule extends Model
         'days',
         'price',
         'is_active',
+        'time_category',
         'tables_applicable',
     ];
 
