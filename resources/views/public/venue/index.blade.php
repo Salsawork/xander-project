@@ -32,6 +32,72 @@
         // 4) Fallback placeholder
         return asset('images/placeholder/venue.png');
     };
+
+    /**
+     * Ekstrak "kota" dari string alamat Indonesia.
+     */
+    $extractCity = function (?string $address) {
+        $address = (string) $address;
+        if ($address === '') return null;
+        $parts = array_values(array_filter(array_map('trim', explode(',', $address)), fn($p) => $p !== ''));
+
+        // 1) Jakarta xxx
+        foreach ($parts as $p) {
+            if (preg_match('~^Jakarta\s+(Pusat|Barat|Timur|Selatan|Utara)$~i', $p, $m)) {
+                return 'Jakarta ' . ucfirst(strtolower($m[1]));
+            }
+        }
+
+        // 2) Kota / Kabupaten / Kab.
+        foreach ($parts as $p) {
+            if (preg_match('~^(Kota|Kabupaten|Kab\.)\s*(.+)$~i', $p, $m)) {
+                $prefix = strtolower($m[1]) === 'kab.' ? 'Kabupaten' : $m[1];
+                return trim($prefix . ' ' . $m[2]);
+            }
+        }
+
+        // 3) Sebelum provinsi
+        $prov = [
+            'Daerah Khusus Ibukota Jakarta','DKI Jakarta','Banten','Jawa Barat','Jawa Tengah','Jawa Timur','DI Yogyakarta','Bali',
+            'Aceh','Sumatera Utara','Sumatera Barat','Riau','Kepulauan Riau','Jambi','Bengkulu','Sumatera Selatan','Kepulauan Bangka Belitung','Lampung',
+            'Kalimantan Barat','Kalimantan Tengah','Kalimantan Selatan','Kalimantan Timur','Kalimantan Utara',
+            'Sulawesi Utara','Sulawesi Tengah','Sulawesi Selatan','Sulawesi Tenggara','Gorontalo','Sulawesi Barat',
+            'Maluku','Maluku Utara','Nusa Tenggara Barat','Nusa Tenggara Timur',
+            'Papua','Papua Barat','Papua Tengah','Papua Selatan','Papua Pegunungan','Papua Barat Daya'
+        ];
+        foreach ($parts as $i => $p) {
+            if (in_array($p, $prov, true)) {
+                if ($i > 0) return $parts[$i-1];
+            }
+        }
+
+        // 4) Fallback aman
+        $n = count($parts);
+        if ($n >= 3) return $parts[$n-3];
+        if ($n >= 2) return $parts[$n-2];
+        return $parts[0] ?? null;
+    };
+
+    /**
+     * Build daftar kota unik dari $addresses (distinct address dari controller)
+     * atau dari $venues jika $addresses kosong.
+     */
+    $citySet = [];
+    if (isset($addresses) && count($addresses)) {
+        foreach ($addresses as $addr) {
+            $c = $extractCity($addr ?? '');
+            if ($c) $citySet[$c] = true;
+        }
+    } else {
+        foreach ($venues as $v) {
+            $c = $extractCity($v->address ?? '');
+            if ($c) $citySet[$c] = true;
+        }
+    }
+    $cities = array_keys($citySet);
+    sort($cities, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $selectedCity = request('city');
 @endphp
 
 @push('styles')
@@ -66,6 +132,18 @@
         .pager-btn { width:40px; height:40px; }
         .pager-label { min-width:80px; font-size:.9rem; }
     }
+
+    /* City pill */
+    .city-pill {
+        display:inline-flex; align-items:center; gap:.4rem;
+        padding:.35rem .75rem; border-radius:9999px;
+        border:1px solid rgba(255,255,255,.32);
+        color:#9ca3af; cursor:pointer; user-select:none;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .city-pill:hover { border-color:#60a5fa; color:#dbeafe; }
+    .city-pill.selected { background:#1f2937; border-color:#3b82f6; color:#93c5fd; }
+    .city-pill input { display:none; }
 </style>
 @endpush
 
@@ -109,54 +187,36 @@
                 <form method="GET" action="{{ route('venues.index') }}">
                     <input type="hidden" name="pp" value="{{ request('pp', 4) }}">
 
+                    {{-- Search --}}
                     <div>
                         <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
 
-                    <div x-data="calendar('{{ request('date') }}')" class="pt-4 text-white rounded-xl text-sm">
-                        <div class="flex items-center justify-between mb-2 font-semibold">
-                            <span>Date</span>
-                            <span class="toggleBtn cursor-pointer text-xl">–</span>
-                        </div>
-
-                        <div class="toggleContent">
-                            <input type="hidden" name="date" x-model="selectedDate">
-
-                            <div class="flex items-center justify-center gap-2 mb-2">
-                                <button type="button" @click="prevMonth()" class="text-gray-400 hover:text-white">&lt;</button>
-                                <span x-text="monthNames[month] + ' ' + year"></span>
-                                <button type="button" @click="nextMonth()" class="text-gray-400 hover:text-white">&gt;</button>
-                            </div>
-
-                            <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
-                                <template x-for="d in daysInMonth()" :key="d">
-                                    <span
-                                        class="py-1 cursor-pointer rounded transition-colors"
-                                        :class="selectedDate === formatDate(year, month, d) ? 'bg-blue-500 text-white' : 'hover:bg-gray-600'"
-                                        @click="selectDate(d)"
-                                        x-text="d">
-                                    </span>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-
+                    {{-- CITY FILTER (hanya nama kota) --}}
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
-                            <span>Location</span>
+                            <span>City</span>
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
-                        <div class="toggleContent flex flex-wrap gap-2 mb-4">
-                            @foreach ($addresses as $loc)
-                                <label class="px-3 py-1 rounded-full border cursor-pointer {{ request('address') == $loc ? 'border-blue-500 text-blue-400' : 'border-gray-500 text-gray-400' }}">
-                                    <input type="radio" name="address" value="{{ $loc }}" class="hidden" @checked(request('address')==$loc) />
-                                    {{ $loc }}
+                        <div id="cityFilter" class="toggleContent flex flex-wrap gap-2 mb-4">
+                            @php $isAll = empty($selectedCity); @endphp
+                            <label class="city-pill {{ $isAll ? 'selected' : '' }}" data-city-pill>
+                                <input type="radio" name="city" value="" {{ $isAll ? 'checked' : '' }}>
+                                All Cities
+                            </label>
+
+                            @foreach ($cities as $city)
+                                @php $id = 'city_' . md5($city); $isSelected = $selectedCity === $city; @endphp
+                                <label for="{{ $id }}" class="city-pill {{ $isSelected ? 'selected' : '' }}" data-city-pill>
+                                    <input id="{{ $id }}" type="radio" name="city" value="{{ $city }}" {{ $isSelected ? 'checked' : '' }}>
+                                    {{ $city }}
                                 </label>
                             @endforeach
                         </div>
                     </div>
 
+                    {{-- Price Range --}}
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>Price Range</span>
@@ -172,7 +232,8 @@
 
                     <div class="flex gap-2 pt-2">
                         <button type="submit" class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">Filter</button>
-                        <a href="{{ route('venues.index', array_merge(request()->except('page'), ['pp' => 4])) }}" class="flex-1 rounded border border-blue-500 px-4 py-2 font-medium text-blue-500 hover:bg-blue-500 hover:text-white">Reset</a>
+                        {{-- Reset: clear semua filter --}}
+                        <a href="{{ route('venues.index', ['pp' => 4]) }}" class="flex-1 rounded border border-blue-500 px-4 py-2 font-medium text-blue-500 hover:bg-blue-500 hover:text-white">Reset</a>
                     </div>
                 </form>
             </div>
@@ -217,7 +278,8 @@
                             <div class="mt-12">
                                 <div class="flex items-baseline gap-1 text-sm">
                                     <span class="text-gray-400">start from</span>
-                                    <span class="text-lg sm:text-xl font-bold">Rp. {{ number_format($venue->price ?? 0, 0, ',', '.') }}</span>
+                                    {{-- Hilangkan titik setelah "Rp" --}}
+                                    <span class="text-lg sm:text-xl font-bold">Rp {{ number_format($venue->price ?? 0, 0, ',', '.') }}</span>
                                     <span class="text-gray-400">/ session</span>
                                 </div>
                             </div>
@@ -330,6 +392,24 @@
         mobileFilterBtn?.addEventListener("click", openMobileFilter);
         closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
         mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
+
+        // City pill active state
+        const cityWrap = document.getElementById('cityFilter');
+        if (cityWrap) {
+            const pills = cityWrap.querySelectorAll('[data-city-pill]');
+            pills.forEach(pill => {
+                const input = pill.querySelector('input[type="radio"]');
+                if (!input) return;
+
+                if (input.checked) pill.classList.add('selected');
+
+                pill.addEventListener('click', () => {
+                    input.checked = true;
+                    pills.forEach(p => p.classList.remove('selected'));
+                    pill.classList.add('selected');
+                });
+            });
+        }
     });
 </script>
 
@@ -365,25 +445,3 @@
     .toggleContent.max-h-0 { max-height: 0; }
 </style>
 @endsection
-
-@push('scripts')
-<script>
-    function calendar(defaultDate = '') {
-        const today = new Date();
-        let initialDate = defaultDate ? new Date(defaultDate) : today;
-
-        return {
-            month: initialDate.getMonth(),
-            year: initialDate.getFullYear(),
-            selectedDate: defaultDate || '',
-            toggle: true,
-            monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
-            daysInMonth() { return new Date(this.year, this.month + 1, 0).getDate(); },
-            prevMonth() { this.month === 0 ? (this.month = 11, this.year--) : this.month--; },
-            nextMonth() { this.month === 11 ? (this.month = 0, this.year++) : this.month++; },
-            formatDate(year, month, day) { return `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; },
-            selectDate(day) { this.selectedDate = this.formatDate(this.year, this.month, day); }
-        }
-    }
-</script>
-@endpush

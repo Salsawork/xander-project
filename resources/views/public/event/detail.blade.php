@@ -51,13 +51,60 @@
 
         $pretty   = Str::slug($event->name);
         $now      = Carbon::now();
-        $endDate  = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
 
-        // Sumber harga & stok dari ticket default jika dikirim controller
+        // Pakai tanggal hari (bukan jam) untuk aturan tombol
+        $startDate = $event->start_date instanceof Carbon ? $event->start_date->copy()->startOfDay() : Carbon::parse($event->start_date)->startOfDay();
+        $endDate   = $event->end_date   instanceof Carbon ? $event->end_date->copy()->startOfDay()   : Carbon::parse($event->end_date)->startOfDay();
+
+        // Harga & stok dari ticket default jika dikirim controller
         $ticketPrice  = isset($ticket) ? (float) ($ticket->price ?? 0) : (float) ($event->price_ticket ?? 0);
         $stockLeft    = isset($ticket) ? (int) ($ticket->stock ?? 0) : (int) ($event->stock ?? 0);
 
-        $showRegister = ($event->status === 'Upcoming') && $now->lte($endDate);
+        // Aturan tombol:
+        // Register: hanya sebelum hari start_date (sampai H-1)
+        $showRegister = $now->lt($startDate);
+
+        // Buy Ticket: sebelum start_date dan selama Ongoing (sebelum masuk hari end_date)
+        $showBuyTicket = $now->lt($endDate);
+
+        /**
+         * ==== Normalisasi gambar: fallback berantai ====
+         */
+        $raw         = $event->image_url ?? null;
+        $rawPath     = $raw ? (parse_url($raw, PHP_URL_PATH) ?? $raw) : null;
+        $filename    = $rawPath ? basename($rawPath) : null;
+
+        $placeholder = asset('images/placeholder.jpg');
+
+        $imgCandidates = [];
+        if ($raw && preg_match('#^https?://#i', $raw)) {
+            $host = strtolower(parse_url($raw, PHP_URL_HOST) ?? '');
+            if ($host && $host !== 'demo-xanders.ptbmn.id') {
+                $imgCandidates[] = $raw;
+            }
+        }
+        if ($raw && !preg_match('#^https?://#i', $raw)) {
+            $imgCandidates[] = asset($raw);
+        }
+        if ($filename) {
+            $imgCandidates[] = asset('images/events/' . $filename);
+            $imgCandidates[] = asset('images/' . $filename);
+            $imgCandidates[] = asset('storage/events/' . $filename);
+            $imgCandidates[] = asset('storage/' . $filename);
+            $imgCandidates[] = asset($filename);
+        }
+        $imgCandidates[] = $placeholder;
+
+        $imgCandidates = array_values(array_unique(array_filter($imgCandidates)));
+        $primaryImage  = $imgCandidates[0] ?? $placeholder;
+
+        /**
+         * ==== Deskripsi dari DB (tanpa hardcode) ====
+         */
+        $descSource = $event->description ?? $event->deskripsi ?? null;
+        $descInline = $descSource
+            ? trim(preg_replace('/\s+/', ' ', strip_tags($descSource)))
+            : null;
     @endphp
 
     <div class="min-h-screen bg-neutral-900 text-white">
@@ -107,9 +154,13 @@
                     <div class="bg-neutral-800 rounded-xl p-6 h-auto">
                         <div class="mb-6 rounded-lg overflow-hidden">
                             <img
-                                src="{{ $event->image_url ? asset($event->image_url) : 'https://via.placeholder.com/1200x600' }}"
+                                src="{{ $primaryImage }}"
                                 alt="{{ $event->name }}"
-                                class="w-full h-auto object-cover rounded-lg">
+                                class="w-full h-auto object-cover rounded-lg js-img-fallback"
+                                data-src-candidates='@json($imgCandidates)'
+                                loading="lazy"
+                                decoding="async"
+                            >
                         </div>
 
                         <div>
@@ -147,11 +198,11 @@
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
                                             <p class="font-medium mb-1">Player Registration</p>
-                                            <p class="text-gray-300">Until {{ $endDate->format('F d, Y') }}</p>
+                                            <p class="text-gray-300">Until {{ $startDate->copy()->subDay()->format('F d, Y') }}</p>
                                         </div>
                                         <div>
                                             <p class="font-medium mb-1">Ticket Price</p>
-                                            <p class="text-gray-300">Rp. {{ number_format($ticketPrice, 0, ',', '.') }}</p>
+                                            <p class="text-gray-300">Rp {{ number_format($ticketPrice, 0, ',', '.') }}</p>
                                         </div>
                                         <div>
                                             <p class="font-medium mb-1">Stock Left</p>
@@ -174,18 +225,20 @@
                                             @endguest
                                         @endif
 
-                                        @guest
-                                            <a href="{{ route('login') }}"
-                                               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                                Buy Ticket
-                                            </a>
-                                        @else
-                                            <button type="button"
+                                        @if($showBuyTicket)
+                                            @guest
+                                                <a href="{{ route('login') }}"
+                                                   class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                                                    Buy Ticket
+                                                </a>
+                                            @else
+                                                <button type="button"
                                                     onclick="openModal('#buyTicketModal')"
                                                     class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                                Buy Ticket
-                                            </button>
-                                        @endguest
+                                                    Buy Ticket
+                                                </button>
+                                            @endguest
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -199,10 +252,9 @@
                     <div class="bg-neutral-800 rounded-xl p-6">
                         <h3 class="text-xl font-bold mb-4">About the Event</h3>
                         <p class="text-gray-300">
-                            The {{ $event->name }} is the ultimate battleground for elite billiard players across the country.
-                            This annual event brings together top-ranked professionals, rising stars, and passionate cue sports
-                            enthusiasts to compete for national glory and a prize pool of over
-                            <strong>Rp. {{ number_format($event->total_prize_money, 0, ',', '.') }}</strong>.
+                            The {{ $event->name }}
+                            {{ $descInline ? ' ' . $descInline : '' }}
+                            <strong>Rp {{ number_format((float)($event->total_prize_money ?? 0), 0, ',', '.') }}</strong>.
                         </p>
                     </div>
 
@@ -211,19 +263,19 @@
                         <div class="space-y-2">
                             <div>
                                 <p class="font-medium">Total Prize Pool:</p>
-                                <p class="text-gray-300">Rp. {{ number_format($event->total_prize_money, 0, ',', '.') }}+</p>
+                                <p class="text-gray-300">Rp {{ number_format((float)($event->total_prize_money ?? 0), 0, ',', '.') }}+</p>
                             </div>
                             <div>
                                 <p class="font-medium">Champion:</p>
-                                <p class="text-gray-300">Rp. {{ number_format($event->champion_prize, 0, ',', '.') }} + National Champion Trophy</p>
+                                <p class="text-gray-300">Rp {{ number_format((float)($event->champion_prize ?? 0), 0, ',', '.') }} + National Champion Trophy</p>
                             </div>
                             <div>
                                 <p class="font-medium">Runner-up:</p>
-                                <p class="text-gray-300">Rp. {{ number_format($event->runner_up_prize, 0, ',', '.') }}</p>
+                                <p class="text-gray-300">Rp {{ number_format((float)($event->runner_up_prize ?? 0), 0, ',', '.') }}</p>
                             </div>
                             <div>
                                 <p class="font-medium">Third Place:</p>
-                                <p class="text-gray-300">Rp. {{ number_format($event->third_place_prize, 0, ',', '.') }}</p>
+                                <p class="text-gray-300">Rp {{ number_format((float)($event->third_place_prize ?? 0), 0, ',', '.') }}</p>
                             </div>
                             <div>
                                 <p class="font-medium">Top 8 Finalists:</p>
@@ -347,6 +399,7 @@
 
     {{-- ========== MODAL: Buy Ticket ========== --}}
     @auth
+    @if($showBuyTicket)
     <div id="buyTicketModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -363,7 +416,7 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label">Ticket Price</label>
-                        <input type="text" class="form-input" value="Rp. {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
+                        <input type="text" class="form-input" value="Rp {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
                     </div>
 
                     <div class="form-group">
@@ -390,7 +443,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Total Payment</label>
-                        <input type="text" id="totalPaymentDisplay" class="form-input" value="Rp. {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
+                        <input type="text" id="totalPaymentDisplay" class="form-input" value="Rp {{ number_format($ticketPrice, 0, ',', '.') }}" readonly>
                         <input type="hidden" id="unitPrice" value="{{ $ticketPrice }}">
                     </div>
                 </div>
@@ -402,11 +455,26 @@
             </form>
         </div>
     </div>
+    @endif
     @endauth
 
     <script>
         function openModal(sel){ const m = document.querySelector(sel); if(!m) return; m.classList.add('active'); document.body.style.overflow='hidden'; }
         function closeModal(sel){ const m = document.querySelector(sel); if(!m) return; m.classList.remove('active'); document.body.style.overflow='auto'; }
+
+        // Gambar fallback: coba kandidat URL berikutnya saat gagal load
+        document.querySelectorAll('img.js-img-fallback').forEach((img) => {
+            try {
+                const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+                let i = 0;
+                img.addEventListener('error', () => {
+                    i++;
+                    if (i < list.length && list[i] && img.src !== list[i]) {
+                        img.src = list[i];
+                    }
+                });
+            } catch (e) { /* ignore */ }
+        });
 
         // Auto-calc total payment pada Buy Ticket
         (function(){
@@ -415,8 +483,8 @@
             const outEl   = document.getElementById('totalPaymentDisplay');
 
             function formatRupiah(n){
-                n = Math.floor(n);
-                return 'Rp. ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                n = Math.floor(n || 0);
+                return 'Rp ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             }
 
             function recalc(){

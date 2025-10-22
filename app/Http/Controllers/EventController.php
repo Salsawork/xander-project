@@ -17,32 +17,32 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-
 class EventController extends Controller
 {
     /**
-     * Landing/hero page — berisi section "Upcoming" & "Current".
+     * Landing/hero page — berisi section "Upcoming" & "Ongoing".
      * Route: GET /events  (name: events.index)
      */
     public function index()
     {
+        // Pastikan status up to date (pakai guard bila method tidak ada)
+        if (method_exists(Event::class, 'refreshStatuses')) {
+            Event::refreshStatuses();
+        }
+
         $upcomingEvents = Event::when(
             method_exists(Event::class, 'scopeUpcoming'),
             fn($q) => $q->upcoming(),
             fn($q) => $q->where('status', 'Upcoming')
-        )
-            ->orderBy('start_date', 'asc')
-            ->get();
+        )->orderBy('start_date', 'asc')->get();
 
-        $currentEvents = Event::when(
+        $ongoingEvents = Event::when(
             method_exists(Event::class, 'scopeOngoing'),
             fn($q) => $q->ongoing(),
             fn($q) => $q->where('status', 'Ongoing')
-        )
-            ->orderBy('start_date', 'asc')
-            ->get();
+        )->orderBy('start_date', 'asc')->get();
 
-        return view('public.event.index', compact('upcomingEvents', 'currentEvents'));
+        return view('public.event.index', compact('upcomingEvents', 'ongoingEvents'));
     }
 
     /**
@@ -51,6 +51,11 @@ class EventController extends Controller
      */
     public function list(Request $request)
     {
+        // Pastikan status up to date
+        if (method_exists(Event::class, 'refreshStatuses')) {
+            Event::refreshStatuses();
+        }
+
         $q = Event::query();
 
         // Search (q)
@@ -113,13 +118,17 @@ class EventController extends Controller
      */
     public function show($event, $name = null)
     {
+        // Pastikan status up to date
+        if (method_exists(Event::class, 'refreshStatuses')) {
+            Event::refreshStatuses();
+        }
+
         $event = Event::findOrFail($event);
 
         // Load bank untuk dropdown modal Buy Ticket
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
 
-        // Ambil/siapkan ticket default untuk event ini agar order_events.ticket_id terisi
-        // - Jika belum ada baris di event_tickets, kita buat "General Admission" dari price_ticket & stock event
+        // Ticket default agar order_events.ticket_id terisi
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
 
         if (!$ticket) {
@@ -173,13 +182,19 @@ class EventController extends Controller
     }
 
     /**
-     * Register (POST) — update data user login ke role "player".
+     * Register (POST) — hanya boleh sampai H-1 sebelum start_date.
      * Route: POST /event/{event}/register (name: events.register) [auth]
      * Field dari modal: username (alias name), email, phone
      */
     public function register(Request $request, $event)
     {
-        $event = Event::findOrFail($event);
+        // Lock row event untuk konsistensi status
+        $event = Event::lockForUpdate()->findOrFail($event);
+
+        // Pastikan status up to date
+        if (method_exists(Event::class, 'refreshStatuses')) {
+            Event::refreshStatuses();
+        }
 
         // Map "username" -> "name"
         if (!$request->filled('name') && $request->filled('username')) {
@@ -196,12 +211,15 @@ class EventController extends Controller
             '_from' => 'nullable|string'
         ]);
 
-        // Hanya boleh daftar jika Upcoming dan belum lewat end_date
-        $endDate = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
-        if ($event->status !== 'Upcoming' || now()->gt($endDate)) {
+        // Hanya boleh daftar sampai H-1 sebelum start_date
+        $startDate = $event->start_date instanceof Carbon
+            ? $event->start_date->copy()->startOfDay()
+            : Carbon::parse($event->start_date)->startOfDay();
+
+        if (!now()->lt($startDate)) {
             return back()
                 ->withInput()
-                ->with('error', 'Pendaftaran tidak tersedia untuk event ini.');
+                ->with('error', 'Pendaftaran sudah ditutup (sudah memasuki hari mulai event).');
         }
 
         try {
@@ -227,14 +245,20 @@ class EventController extends Controller
     }
 
     /**
-     * Buy Ticket (POST) — validasi qty, bank, bukti_payment;
-     * simpan ke order_events; kurangi stok di event_tickets (sinkron ke events.stock).
+     * Buy Ticket (POST)
+     * - Diizinkan sebelum start_date (Upcoming) dan selama Ongoing
+     * - Dilarang saat sudah memasuki hari end_date
      * Route: POST /event/{event}/buy (name: events.buy) [auth]
      */
     public function buyTicket(Request $request, $event)
     {
         // Lock baris event saat transaksi untuk menghindari race
         $event = Event::lockForUpdate()->findOrFail($event);
+
+        // Pastikan status up to date
+        if (method_exists(Event::class, 'refreshStatuses')) {
+            Event::refreshStatuses();
+        }
 
         $user = Auth::user();
 
@@ -247,13 +271,20 @@ class EventController extends Controller
             '_from'          => 'nullable|string',
         ]);
 
-        // Cek ketersediaan event (boleh beli tiket untuk status Upcoming atau Ongoing)
-        $endDate = $event->end_date instanceof Carbon ? $event->end_date : Carbon::parse($event->end_date);
-        if (!in_array($event->status, ['Upcoming', 'Ongoing']) || now()->gt($endDate)) {
-            return back()
-                ->withInput()
-                ->with('error', 'Pembelian tiket tidak tersedia untuk event ini.');
+        // Aturan waktu pembelian
+        $startDate = $event->start_date instanceof Carbon
+            ? $event->start_date->copy()->startOfDay()
+            : Carbon::parse($event->start_date)->startOfDay();
+        $endDate   = $event->end_date instanceof Carbon
+            ? $event->end_date->copy()->startOfDay()
+            : Carbon::parse($event->end_date)->startOfDay();
+
+        // Tidak boleh saat sudah memasuki hari end_date
+        if (!now()->lt($endDate)) {
+            return back()->withInput()->with('error', 'Penjualan tiket sudah berakhir.');
         }
+
+        // Boleh sebelum start & saat Ongoing
 
         $qty = (int) $validated['qty'];
 
@@ -275,27 +306,26 @@ class EventController extends Controller
                 $unitPrice    = (float) $ticket->price;
                 $totalPayment = $unitPrice * $qty;
 
-               $path = null;
+                $path = null;
                 if ($request->hasFile('bukti_payment')) {
                     $file    = $request->file('bukti_payment');
                     $ext     = $file->getClientOriginalExtension();
                     $fname   = 'evt_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
-                
+
                     // Path target yang benar (naik 2 level ke public_html/demo-xanders)
                     $targetDir = base_path('../demo-xanders/images/payments/events');
-                
+
                     // Pastikan folder ada
                     if (!file_exists($targetDir)) {
                         mkdir($targetDir, 0755, true);
                     }
-                
+
                     // Simpan file
                     $file->move($targetDir, $fname);
-                
+
                     // Simpan hanya nama file di DB
                     $path = $fname;
                 }
-
 
                 // Generate order_number unik
                 $orderNumber = $this->generateUniqueOrderNumber();
@@ -365,12 +395,6 @@ class EventController extends Controller
 
         return $candidate;
     }
-    // Tambahkan method ini ke EventController.php
-
-    /**
-     * Update bracket winners dari fight results
-     */
-    // Tambahkan method ini ke EventController.php
 
     /**
      * Update bracket winners dari fight results

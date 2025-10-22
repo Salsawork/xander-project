@@ -197,7 +197,8 @@
                                 </div>
                                 <h3 class="text-xs sm:text-sm font-medium line-clamp-2">{{ $athlete->name }}</h3>
                                 <p class="text-xs sm:text-sm text-gray-400 mt-1">
-                                    Rp. {{ number_format($athlete->athleteDetail->price_per_session ?? 0, 0, ',', '.') }} / session
+                                    {{-- HILANGKAN TITIK SETELAH Rp --}}
+                                    Rp {{ number_format($athlete->athleteDetail->price_per_session ?? 0, 0, ',', '.') }} / session
                                 </p>
                             </div>
                         </a>

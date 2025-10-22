@@ -39,8 +39,8 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%')
-                  ->orWhere('sku', 'like', '%' . $search . '%');
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhere('sku', 'like', '%' . $search . '%');
             });
         }
 
@@ -53,7 +53,7 @@ class ProductController extends Controller
             }
         }
 
-        // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing)
+        // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing admin/index)
         if (!$request->hasAny(['level', 'filter', 'category', 'search', 'status'])) {
             $products = $query->inRandomOrder()->limit(4)->get();
         } else {
@@ -223,28 +223,50 @@ class ProductController extends Controller
     }
 
     /**
-     * Halaman katalog publik /products (listing dengan filter).
+     * Halaman katalog publik /products (listing dengan filter + pagination responsif).
+     * Desktop: 8 item/hal (2 baris × 4 kolom)
+     * Mobile : 4 item/hal (2 baris × 2 kolom)
      */
     public function landing(Request $request)
     {
-        $products = Product::query()
-            ->when($request->search, fn($q) => $q->where('name', 'like', "%{$request->search}%"))
+        // Deteksi Mobile/Desktop
+        $isMobile = $this->isMobile($request);
+        $perPage  = $isMobile ? 4 : 8;
+
+        // Build query + filter
+        $query = Product::query()
+            ->when($request->search, fn($q) => $q->where(function ($sub) use ($request) {
+                $s = $request->search;
+                $sub->where('name', 'like', "%{$s}%")
+                    ->orWhere('description', 'like', "%{$s}%")
+                    ->orWhere('sku', 'like', "%{$s}%");
+            }))
             ->when($request->category, fn($q) => $q->where('category_id', $request->category))
             ->when($request->brand, fn($q) => $q->where('brand', $request->brand))
             ->when($request->condition, fn($q) => $q->where('condition', $request->condition))
             ->when($request->price_min, fn($q) => $q->where('pricing', '>=', $request->price_min))
             ->when($request->price_max, fn($q) => $q->where('pricing', '<=', $request->price_max))
-            ->orderBy('created_at', 'desc')
-            ->paginate(12)
-            ->withQueryString();
+            ->orderBy('created_at', 'desc');
 
-        $categories = Categories::select('id','name')->orderBy('name')->get();
+        // Paginate sesuai device
+        $products = $query->paginate($perPage)->withQueryString();
+
+        // Jika user akses ?page > lastPage, redirect ke lastPage agar tidak "No products found"
+        $requestedPage = (int) $request->query('page', 1);
+        $lastPage      = max(1, $products->lastPage());
+        if ($requestedPage > $lastPage && $products->total() > 0) {
+            return redirect()->to($request->fullUrlWithQuery(['page' => $lastPage]));
+        }
+
+        // Data dropdown filter
+        $categories = Categories::select('id', 'name')->orderBy('name')->get();
         $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
         $conditions = ['new' => 'New', 'used' => 'Used'];
 
+        // Cart sidebar badge
         $cartProducts = collect();
         $cartVenues   = collect();
-        $cartSparrings= collect();
+        $cartSparrings = collect();
 
         if (auth()->check()) {
             $userId = auth()->id();
@@ -263,7 +285,7 @@ class ProductController extends Controller
                     'quantity'   => $item->quantity,
                     'total'      => $item->quantity * ($item->product?->pricing ?? 0),
                     'discount'   => $item->product?->discount ?? 0,
-                    'images'     => $item->product?->images[0] ?? null, // filename saja
+                    'images'     => $item->product?->images[0] ?? null,
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -309,127 +331,6 @@ class ProductController extends Controller
             'cartProducts',
             'cartVenues',
             'cartSparrings'
-        ));
-    }
-
-    /**
-     * Detail produk + related.
-     * Hitung harga final (diskon) untuk dipakai di Blade, tanpa mengubah Model.
-     */
-    public function detail(Request $request, $product)
-    {
-        $detail = Product::findOrFail($product);
-        $cartProducts = collect();
-        $cartVenues   = collect();
-        $cartSparrings= collect();
-
-        $limit = 10;
-
-        if (auth()->check()) {
-            $userId = auth()->id();
-
-            $cartProducts = CartItem::with('product')
-                ->where('user_id', $userId)
-                ->where('item_type', 'product')
-                ->get()
-                ->map(fn($item) => [
-                    'cart_id'    => $item->id,
-                    'product_id' => $item->product?->id,
-                    'name'       => $item->product?->name,
-                    'brand'      => $item->product?->brand,
-                    'category'   => $item->product?->category?->name ?? '-',
-                    'price'      => $item->product?->pricing,
-                    'quantity'   => $item->quantity,
-                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount'   => $item->product?->discount ?? 0,
-                    'images'     => $item->product?->images[0] ?? null, // filename saja
-                ]);
-
-            $cartVenues = CartItem::with('venue')
-                ->where('user_id', $userId)
-                ->where('item_type', 'venue')
-                ->get()
-                ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
-                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
-                        : null,
-                ]);
-
-            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
-                ->where('user_id', $userId)
-                ->where('item_type', 'sparring')
-                ->get()
-                ->map(fn($item) => [
-                    'cart_id'        => $item->id,
-                    'schedule_id'    => $item->sparringSchedule?->id,
-                    'athlete_name'   => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image'  => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'           => $item->date,
-                    'start'          => $item->start,
-                    'end'            => $item->end,
-                    'price'          => $item->price,
-                ]);
-        }
-
-        $baseQuery = Product::query()
-            ->where('id', '!=', $detail->id)
-            ->where(function ($q) use ($detail) {
-                $hasCat   = !empty($detail->category_id);
-                $hasBrand = !empty($detail->brand);
-                if ($hasCat && $hasBrand) {
-                    $q->where('category_id', $detail->category_id)
-                      ->orWhere('brand', $detail->brand);
-                } elseif ($hasCat) {
-                    $q->where('category_id', $detail->category_id);
-                } elseif ($hasBrand) {
-                    $q->where('brand', $detail->brand);
-                } else {
-                    $q->whereNotNull('id');
-                }
-            })
-            ->orderByRaw("CASE WHEN category_id = ? THEN 0 ELSE 1 END", [$detail->category_id])
-            ->orderBy('created_at', 'desc')
-            ->limit($limit);
-
-        $relatedProducts = $baseQuery->get();
-
-        if ($relatedProducts->count() < $limit) {
-            $extra = Product::where('id', '!=', $detail->id)
-                ->whereNotIn('id', $relatedProducts->pluck('id'))
-                ->inRandomOrder()
-                ->limit($limit - $relatedProducts->count())
-                ->get();
-            $relatedProducts = $relatedProducts->concat($extra);
-        }
-
-        // ===== Hitung harga final & persen diskon =====
-        $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount);
-        $detailHasDiscount     = $detailDiscountPercent > 0;
-        $detailFinalPrice      = $this->finalPrice((float)$detail->pricing, $detailDiscountPercent);
-
-        $relatedPriceMap = [];
-        foreach ($relatedProducts as $p) {
-            $dp = $this->normalizeDiscountPercent($p->discount);
-            $relatedPriceMap[$p->id] = [
-                'has_discount'     => $dp > 0,
-                'discount_percent' => $dp,
-                'final_price'      => $this->finalPrice((float)$p->pricing, $dp),
-            ];
-        }
-
-        return view('public.product.detail', compact(
-            'detail', 'relatedProducts', 'cartProducts', 'cartVenues', 'cartSparrings',
-            'detailDiscountPercent', 'detailHasDiscount', 'detailFinalPrice',
-            'relatedPriceMap'
         ));
     }
 
@@ -499,5 +400,14 @@ class ProductController extends Controller
             if (File::exists($cms)) @File::delete($cms);
             if (File::exists($fe))  @File::delete($fe);
         }
+    }
+
+    /**
+     * UA helper: deteksi mobile sederhana
+     */
+    private function isMobile(Request $request): bool
+    {
+        $ua = $request->header('User-Agent', '');
+        return (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
     }
 }

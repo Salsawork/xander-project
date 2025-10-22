@@ -37,28 +37,28 @@
         }
 
         /* ==== CARD & GRID EQUAL HEIGHT ==== */
-        .grid-equal { grid-auto-rows: 1fr; }              /* semua item pada baris sama tinggi */
+        .grid-equal { grid-auto-rows: 1fr; }
         .ev-card {
             background: #1f1f1f;
             border: 1px solid rgba(255, 255, 255, .12);
             border-radius: 14px;
             overflow: hidden;
             transition: .25s ease;
-            display: flex;                 /* kolom fleksibel */
+            display: flex;
             flex-direction: column;
-            height: 100%;                  /* penuhi tinggi cell grid */
+            height: 100%;
         }
         .ev-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
 
-        .ev-thumb { background: #2b2b2b; height: 11rem; }  /* h-44 default */
+        .ev-thumb { background: #2b2b2b; height: 11rem; }
         @media (min-width: 768px){ .ev-thumb { height: 11rem; } }
         .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .ev-body { flex: 1; display: flex; flex-direction: column; padding: 1rem; }
         .ev-title { font-weight: 600; font-size: 15px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        .ev-info { margin-top: auto; }     /* dorong ke bawah agar rata */
-        .ev-rule { border-color: #374151; }/* border-gray-700 */
+        .ev-info { margin-top: auto; }
+        .ev-rule { border-color: #374151; }
     </style>
 @endpush
 
@@ -67,17 +67,8 @@
         use Illuminate\Support\Str;
         use Carbon\Carbon;
 
-        /**
-         * Pastikan semua gambar event dibaca dari /images/events/{filename}
-         * Contoh absolut: https://demo-xanders.ptbmn.id/images/events/{filename}
-         */
         $EVENT_IMG_DIR = 'images/events/';
 
-        /**
-         * Normalisasi sumber dari DB:
-         * - http/https → biarkan (absolut)
-         * - selain itu (root-absolute "/", relatif, atau mengandung folder lain) → pakai basename ke /images/events/{basename}
-         */
         $normalizeToEventsDir = function (?string $u) use ($EVENT_IMG_DIR) {
             if (!$u) return null;
             $u = trim($u);
@@ -88,9 +79,6 @@
             return asset($EVENT_IMG_DIR . $basename);
         };
 
-        /**
-         * Fallback range tanggal
-         */
         $dateRange = function ($start, $end) {
             $s = $start ? Carbon::parse($start) : null;
             $e = $end ? Carbon::parse($end) : null;
@@ -105,30 +93,19 @@
             return '-';
         };
 
-        /**
-         * Detail URL
-         */
         $eventDetailUrl = function ($e) {
             return route('events.show', ['event' => $e->id, 'name' => Str::slug($e->name)]);
         };
 
-        /**
-         * Kandidat gambar untuk tiap event:
-         * 1) image_url (dinormalisasi ke /images/events/{basename} kecuali absolut http/https)
-         * 2) Fallback by ID: {id}.webp → {id}.jpg → {id}.png (semua di /images/events/)
-         */
         $buildEventImageCandidates = function ($e) use ($EVENT_IMG_DIR, $normalizeToEventsDir) {
             $cand = [];
-
             if (!empty($e->image_url)) {
                 $cand[] = $normalizeToEventsDir($e->image_url);
             }
-
             $id = $e->id ?? 'unknown';
             $cand[] = asset($EVENT_IMG_DIR . $id . '.webp');
             $cand[] = asset($EVENT_IMG_DIR . $id . '.jpg');
             $cand[] = asset($EVENT_IMG_DIR . $id . '.png');
-
             return array_values(array_unique(array_filter($cand)));
         };
     @endphp
@@ -161,7 +138,7 @@
         <!-- UPCOMING -->
         <section class="max-w-7xl mx-auto px-4 md:px-12 lg:px-16 py-10">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-2xl font-extrabold">Upcoming Event</h2>
+                <h2 class="text-2xl font-extrabold">Upcoming Events</h2>
                 <a href="{{ route('events.list', ['status' => 'upcoming']) }}" class="text-sm text-gray-300 hover:text-white">view all</a>
             </div>
 
@@ -220,15 +197,15 @@
             </div>
         </section>
 
-        <!-- CURRENT -->
+        <!-- ONGOING -->
         <section class="max-w-7xl mx-auto px-4 md:px-12 lg:px-16 pb-14">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-2xl font-extrabold">Current Tournaments</h2>
+                <h2 class="text-2xl font-extrabold">Ongoing Tournaments</h2>
                 <a href="{{ route('events.list', ['status' => 'ongoing']) }}" class="text-sm text-gray-300 hover:text-white">view all</a>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 grid-equal">
-                @forelse (($currentEvents ?? collect()) as $ev)
+                @forelse (($ongoingEvents ?? collect()) as $ev)
                     @php
                         $srcs  = $buildEventImageCandidates($ev);
                         $range = $dateRange($ev->start_date ?? null, $ev->end_date ?? null);
@@ -277,7 +254,7 @@
                         </div>
                     </a>
                 @empty
-                    <div class="col-span-full text-gray-400 py-10 text-center">No current tournaments.</div>
+                    <div class="col-span-full text-gray-400 py-10 text-center">No ongoing tournaments.</div>
                 @endforelse
             </div>
         </section>

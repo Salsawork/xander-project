@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Xoco70\LaravelTournaments\Models\Tournament;
+use Illuminate\Support\Carbon;
 
 class Event extends Model
 {
@@ -70,5 +71,30 @@ class Event extends Model
     public function tickets()
     {
         return $this->hasMany(EventTicket::class, 'event_id');
+    }
+
+    /**
+     * Refresh status semua event berdasarkan tanggal start/end HARI INI (timezone app).
+     * - Upcoming  : today < start_date
+     * - Ongoing   : start_date <= today <= end_date
+     * - Ended     : today > end_date
+     */
+    public static function refreshStatuses(): void
+    {
+        $today = Carbon::today();
+
+        // Ended: today > end_date
+        static::whereDate('end_date', '<', $today)->where('status', '!=', 'Ended')->update(['status' => 'Ended']);
+
+        // Ongoing: start_date <= today <= end_date
+        static::whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->where('status', '!=', 'Ongoing')
+            ->update(['status' => 'Ongoing']);
+
+        // Upcoming: today < start_date
+        static::whereDate('start_date', '>', $today)
+            ->where('status', '!=', 'Upcoming')
+            ->update(['status' => 'Upcoming']);
     }
 }
