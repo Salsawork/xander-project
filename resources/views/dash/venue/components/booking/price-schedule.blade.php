@@ -26,15 +26,23 @@
                         <label
                             class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div> --}}
+                    <a href="{{ route('price-schedule.edit', $schedule->id) }}"
+                       class="text-white hover:text-gray-300 transition inline-flex items-center justify-center" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </a>
                     <form action="{{ route('price-schedule.destroy', $schedule->id) }}" method="POST" id="delete-form-{{ $schedule->id }}">
                         @csrf
                         @method('DELETE')
-                        <button type="button" class="ml-2 text-red-500 hover:text-red-700 transition"
-                            title="Delete" onclick="confirmDelete({{ $schedule->id }})">
+                        <button type="button" class="text-red-500 hover:text-red-700 transition"
+                                title="Delete" onclick="confirmDelete({{ $schedule->id }})">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
+                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
+                                      d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </form>

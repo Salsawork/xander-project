@@ -108,7 +108,7 @@
                                         </td>
                                         <td class="px-4 py-3">{{ $venue->address ?? 'Belum diisi' }}</td>
                                         <td class="px-4 py-3">{{ $venue->phone ?? 'Belum diisi' }}</td>
-                                        <td class="px-4 py-3">{{ $venue->operating_hours ?? 'Belum diisi' }}</td>
+                                        <td class="px-4 py-3">{{ $venue->operating_hour->format('H:i') ?? 'Belum diisi' }} - {{ $venue->closing_hour->format('H:i') ?? 'Belum diisi' }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
                                                 <span class="text-yellow-400 mr-1"><i class="fas fa-star"></i></span>
