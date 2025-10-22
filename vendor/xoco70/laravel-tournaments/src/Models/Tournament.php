@@ -4,6 +4,13 @@ namespace Xoco70\LaravelTournaments\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Xoco70\LaravelTournaments\Models\Championship;
+use Xoco70\LaravelTournaments\Models\ChampionshipSettings;
+use Xoco70\LaravelTournaments\Models\Category;
+use Xoco70\LaravelTournaments\Models\Competitor;
+use Xoco70\LaravelTournaments\Models\FightersGroup;
+use Xoco70\LaravelTournaments\Models\Team;
+use Xoco70\LaravelTournaments\Models\Venue;
 use App\Models\Event;
 
 /**
@@ -50,10 +57,8 @@ class Tournament extends Model
         'type',
         'venue_id',
         'level_id',
-        'event_id',
     ];
 
- 
     protected $dates = ['dateIni', 'dateFin', 'registerDateLimit', 'created_at', 'updated_at', 'deleted_at'];
 
     protected static function boot()
@@ -112,7 +117,7 @@ class Tournament extends Model
      */
     public function championships()
     {
-        return $this->hasMany(Championship::class, 'tournament_id');
+        return $this->hasMany(Championship::class);
     }
 
     /**
@@ -285,9 +290,8 @@ class Tournament extends Model
             ->count();
     }
 
-    public function event()
+       public function event()
     {
-        return $this->belongsTo(Event::class, 'event_id', 'id');
+        return $this->belongsTo(Event::class);
     }
-   
 }
