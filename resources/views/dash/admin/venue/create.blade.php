@@ -144,12 +144,28 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs text-gray-400 mb-1" for="operating_hours">Jam Operasional</label>
-                    <input name="operating_hours" value="{{ old('operating_hours') }}"
-                      class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      id="operating_hours" type="text" placeholder="Contoh: 09:00 - 22:00" />
-                    @error('operating_hours') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                  </div>
+                    <label class="block text-xs text-gray-400 mb-1">
+                        Jam Operasional
+                    </label>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <input name="operating_hour" value="{{ old('operating_hour') }}"
+                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                id="operating_hour" type="time" />
+                            @error('operating_hour')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="flex-1">
+                            <input name="closing_hour" value="{{ old('closing_hour') }}"
+                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                id="closing_hour" type="time" />
+                            @error('closing_hour')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
 
                   <div>
                     <label class="block text-xs text-gray-400 mb-1" for="description">Deskripsi</label>
