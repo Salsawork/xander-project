@@ -17,6 +17,7 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\CategoryProductController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\OpinionController;
 use App\Http\Controllers\Auth\GoogleController;
@@ -260,6 +261,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('/{product}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+    });
+     /** Admin: Product Category */
+     Route::prefix('dashboard/category')->group(function () {
+        Route::get('/', [CategoryProductController::class, 'index'])->name('category.index');
+        Route::get('/create', [CategoryProductController::class, 'create'])->name('category.create');
+        Route::post('/', [CategoryProductController::class, 'store'])->name('category.store');
+        Route::put('/{category}', [CategoryProductController::class, 'update'])->name('category.update');
+        Route::delete('/{category}', [CategoryProductController::class, 'destroy'])->name('category.destroy');
     });
 
     /** Admin: Community News */

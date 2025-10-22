@@ -84,8 +84,13 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getAvatarUrlAttribute(): ?string
     {
-        return !empty($this->photo_profile) ? asset($this->photo_profile) : null;
+        if (!empty($this->photo_profile)) {
+            return asset('images/avatars/' . $this->photo_profile);
+            // return 'https://demo-xanders.ptbmn.id/images/avatars/' . $this->photo_profile;
+        }
+        return null;
     }
+    
 
     /**
      * ====== Tambahan relasi untuk kolom "Event Diikuti" ======

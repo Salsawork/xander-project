@@ -30,6 +30,17 @@
       </li>
 
       <li>
+        <a href="{{ route('profile.edit') }}"
+           class="group flex items-center justify-between rounded-lg px-3 py-2
+           {{ request()->routeIs('profile.edit') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
+          <span>Profile</span>
+          @if(request()->routeIs('profile.edit'))
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0a8aff]"></span>
+          @endif
+        </a>
+      </li>
+
+      <li>
         <a href="{{ route('athlete.match') }}"
            class="group flex items-center justify-between rounded-lg px-3 py-2
            {{ request()->routeIs('athlete.match') ? 'text-[#0a8aff] bg-white/5' : 'text-gray-300 hover:text-white hover:bg-white/5' }}">
@@ -105,6 +116,15 @@
            {{ request()->routeIs('athlete.dashboard') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
           <i class="fas fa-user w-5 text-gray-400"></i>
           <span>Dashboard</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ route('profile.edit') }}"
+           class="flex items-center gap-3 text-gray-200 hover:text-white hover:bg-[#2a2a2a] px-3 py-2 rounded-md transition duration-200
+           {{ request()->routeIs('profile.edit') ? 'text-[#0a8aff] bg-[#2a2a2a]' : '' }}">
+          <i class="fas fa-user w-5 text-gray-400"></i>
+          <span>Profile</span>
         </a>
       </li>
       <li>
