@@ -9,10 +9,9 @@ use App\Models\AthleteReview;
 use App\Models\CartItem;
 use App\Models\SparringSchedule;
 use App\Models\Order;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class SparringController extends Controller
 {
@@ -21,52 +20,68 @@ class SparringController extends Controller
      */
     public function index(Request $request)
     {
-        // Filter dasar: hanya role athlete yang punya detail
+        // Normalisasi & ambil parameter
+        $search    = trim((string) $request->input('search', ''));
+        $address   = trim((string) $request->input('address', ''));
+        $priceMinI = preg_replace('/\D+/', '', (string) $request->input('price_min', ''));
+        $priceMaxI = preg_replace('/\D+/', '', (string) $request->input('price_max', ''));
+
+        $priceMin = $priceMinI !== '' ? (int) $priceMinI : null;
+        $priceMax = $priceMaxI !== '' ? (int) $priceMaxI : null;
+
+        // Query dasar: hanya role athlete yang punya detail
         $query = User::where('roles', 'athlete')
             ->whereHas('athleteDetail')
             ->with('athleteDetail');
 
-        // Filter search
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('athleteDetail', function ($q2) use ($request) {
-                      $q2->where('location', 'like', '%' . $request->search . '%');
+        // Filter: search pada nama atlet atau lokasi
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhereHas('athleteDetail', function ($q2) use ($search) {
+                      $q2->where('location', 'like', '%' . $search . '%');
                   });
             });
         }
 
-        // Filter location
-        if ($request->filled('address')) {
-            $query->whereHas('athleteDetail', function ($q) use ($request) {
-                $q->where('location', $request->address);
+        // Filter: lokasi (klik chip)
+        if ($address !== '') {
+            $query->whereHas('athleteDetail', function ($q) use ($address) {
+                $q->where('location', 'like', $address); // exact atau "like"; ganti ke 'like', '%' . $address . '%' jika perlu partial
             });
         }
 
-        // Filter price range
-        if ($request->filled('price_min')) {
-            $query->whereHas('athleteDetail', function ($q) use ($request) {
-                $q->where('price_per_session', '>=', $request->price_min);
+        // Filter: rentang harga
+        if (!is_null($priceMin)) {
+            $query->whereHas('athleteDetail', function ($q) use ($priceMin) {
+                $q->where('price_per_session', '>=', $priceMin);
             });
         }
-        if ($request->filled('price_max')) {
-            $query->whereHas('athleteDetail', function ($q) use ($request) {
-                $q->where('price_per_session', '<=', $request->price_max);
+        if (!is_null($priceMax)) {
+            $query->whereHas('athleteDetail', function ($q) use ($priceMax) {
+                $q->where('price_per_session', '<=', $priceMax);
             });
         }
 
         // Ambil data
         $athletes = $query->get();
 
-        // Lokasi unik
-        $locations = AthleteDetail::distinct('location')->pluck('location');
+        // Lokasi unik (rapi & terurut)
+        $locations = AthleteDetail::query()
+            ->select('location')
+            ->whereNotNull('location')
+            ->where('location', '<>', '')
+            ->distinct()
+            ->orderBy('location')
+            ->pluck('location');
 
-        // Harga min dan max (placeholder di filter)
-        $minPrice = AthleteDetail::min('price_per_session');
-        $maxPrice = AthleteDetail::max('price_per_session');
+        // Placeholder min/max price untuk UI
+        $minPrice = (int) (AthleteDetail::min('price_per_session') ?? 0);
+        $maxPrice = (int) (AthleteDetail::max('price_per_session') ?? 0);
 
-        $cartProducts = collect();
-        $cartVenues = collect();
+        // Sidebar cart
+        $cartProducts  = collect();
+        $cartVenues    = collect();
         $cartSparrings = collect();
 
         if (auth()->check()) {
@@ -77,16 +92,16 @@ class SparringController extends Controller
                 ->where('item_type', 'product')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'product_id' => $item->product?->id,
-                    'name'     => $item->product?->name,
-                    'brand'    => $item->product?->brand,
-                    'category' => $item->product?->category?->name ?? '-',
-                    'price'    => $item->product?->pricing,
-                    'quantity' => $item->quantity,
-                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount' => $item->product?->discount ?? 0,
-                    'images'    => $item->product?->images[0] ?? null,
+                    'cart_id'     => $item->id,
+                    'product_id'  => $item->product?->id,
+                    'name'        => $item->product?->name,
+                    'brand'       => $item->product?->brand,
+                    'category'    => $item->product?->category?->name ?? '-',
+                    'price'       => $item->product?->pricing,
+                    'quantity'    => $item->quantity,
+                    'total'       => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'    => $item->product?->discount ?? 0,
+                    'images'      => $item->product?->images[0] ?? null,
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -94,16 +109,16 @@ class SparringController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id' => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
+                    'cart_id'   => $item->id,
+                    'venue_id'  => $item->venue?->id,
+                    'name'      => $item->venue?->name,
+                    'address'   => $item->venue?->address ?? '-',
+                    'date'      => $item->date,
+                    'start'     => $item->start,
+                    'end'       => $item->end,
+                    'table'     => $item->table_number,
+                    'price'     => $item->price,
+                    'duration'  => $item->start && $item->end
                         ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
                         : null,
                 ]);
@@ -113,14 +128,14 @@ class SparringController extends Controller
                 ->where('item_type', 'sparring')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'     => $item->id,
-                    'schedule_id' => $item->sparringSchedule?->id,
-                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'        => $item->date,
-                    'start'       => $item->start,
-                    'end'         => $item->end,
-                    'price'       => $item->price,
+                    'cart_id'        => $item->id,
+                    'schedule_id'    => $item->sparringSchedule?->id,
+                    'athlete_name'   => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image'  => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'           => $item->date,
+                    'start'          => $item->start,
+                    'end'            => $item->end,
+                    'price'          => $item->price,
                 ]);
         }
 
@@ -161,10 +176,10 @@ class SparringController extends Controller
             ->map(fn($item) => [
                 'id'         => $item->id,
                 'athlete_id' => $item->athlete_id,
-                'date' => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
+                'date'       => \Carbon\Carbon::parse($item->date)->format('Y-m-d'),
                 'start_time' => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
-                'end_time' => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
-                'is_booked' => $item->is_booked,
+                'end_time'   => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                'is_booked'  => $item->is_booked,
             ]);
 
         // Ambil tanggal unik untuk date picker
@@ -199,8 +214,8 @@ class SparringController extends Controller
                 ->exists();
         }
 
-        $cartProducts = collect();
-        $cartVenues = collect();
+        $cartProducts  = collect();
+        $cartVenues    = collect();
         $cartSparrings = collect();
 
         if (auth()->check()) {
@@ -211,16 +226,16 @@ class SparringController extends Controller
                 ->where('item_type', 'product')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'product_id' => $item->product?->id,
-                    'name'     => $item->product?->name,
-                    'brand'    => $item->product?->brand,
-                    'category' => $item->product?->category?->name ?? '-',
-                    'price'    => $item->product?->pricing,
-                    'quantity' => $item->quantity,
-                    'total'    => $item->quantity * ($item->product?->pricing ?? 0),
-                    'discount' => $item->product?->discount ?? 0,
-                    'images'    => $item->product?->images[0] ?? null,
+                    'cart_id'     => $item->id,
+                    'product_id'  => $item->product?->id,
+                    'name'        => $item->product?->name,
+                    'brand'       => $item->product?->brand,
+                    'category'    => $item->product?->category?->name ?? '-',
+                    'price'       => $item->product?->pricing,
+                    'quantity'    => $item->quantity,
+                    'total'       => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'    => $item->product?->discount ?? 0,
+                    'images'      => $item->product?->images[0] ?? null,
                 ]);
 
             $cartVenues = CartItem::with('venue')
@@ -228,16 +243,16 @@ class SparringController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id' => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
+                    'cart_id'   => $item->id,
+                    'venue_id'  => $item->venue?->id,
+                    'name'      => $item->venue?->name,
+                    'address'   => $item->venue?->address ?? '-',
+                    'date'      => $item->date,
+                    'start'     => $item->start,
+                    'end'       => $item->end,
+                    'table'     => $item->table_number,
+                    'price'     => $item->price,
+                    'duration'  => $item->start && $item->end
                         ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
                         : null,
                 ]);
@@ -247,14 +262,14 @@ class SparringController extends Controller
                 ->where('item_type', 'sparring')
                 ->get()
                 ->map(fn($item) => [
-                    'cart_id'     => $item->id,
-                    'schedule_id' => $item->sparringSchedule?->id,
-                    'athlete_name' => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
-                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
-                    'date'        => $item->date,
-                    'start'       => $item->start,
-                    'end'         => $item->end,
-                    'price'       => $item->price,
+                    'cart_id'        => $item->id,
+                    'schedule_id'    => $item->sparringSchedule?->id,
+                    'athlete_name'   => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image'  => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'           => $item->date,
+                    'start'          => $item->start,
+                    'end'            => $item->end,
+                    'price'          => $item->price,
                 ]);
         }
         
@@ -275,9 +290,6 @@ class SparringController extends Controller
         ));
     }
 
-    /**
-     * Store review atlet (gunakan tabel athlete_reviews)
-     */
     public function storeReview(Request $request, $id)
     {
         $request->validate([

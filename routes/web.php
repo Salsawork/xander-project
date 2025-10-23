@@ -17,6 +17,7 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\TreeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\CategoryProductController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\OpinionController;
 use App\Http\Controllers\Auth\GoogleController;
@@ -261,6 +262,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/{product}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     });
+     /** Admin: Product Category */
+     Route::prefix('dashboard/category')->group(function () {
+        Route::get('/', [CategoryProductController::class, 'index'])->name('category.index');
+        Route::get('/create', [CategoryProductController::class, 'create'])->name('category.create');
+        Route::post('/', [CategoryProductController::class, 'store'])->name('category.store');
+        Route::put('/{category}', [CategoryProductController::class, 'update'])->name('category.update');
+        Route::delete('/{category}', [CategoryProductController::class, 'destroy'])->name('category.destroy');
+    });
 
     /** Admin: Community News */
     Route::prefix('dashboard/comunity')->group(function () {
@@ -319,6 +328,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/booking/delete-price-schedule/{priceSchedule}', [PriceScheduleController::class, 'destroy'])->name('price-schedule.destroy');
         Route::get('/booking/create-price-schedule', [PriceScheduleController::class, 'create'])->name('price-schedule.create');
         Route::post('/booking/create-price-schedule', [PriceScheduleController::class, 'store'])->name('price-schedule.store');
+        Route::get('/booking/edit-price-schedule/{priceSchedule}', [PriceScheduleController::class, 'edit'])->name('price-schedule.edit');
+        Route::put('/booking/edit-price-schedule/{priceSchedule}', [PriceScheduleController::class, 'update'])->name('price-schedule.update');
 
         // Promo
         Route::get('/promo', [PromoController::class, 'index'])->name('venue.promo');
@@ -363,7 +374,10 @@ Route::middleware('auth')->group(function () {
         // Sparring Schedule 
         Route::get('/sparring', [SparringScheduleController::class, 'index'])->name('athlete.sparring');
         Route::get('/sparring/create', [SparringScheduleController::class, 'create'])->name('athlete.sparring.create');
-        Route::post('/sparring', [SparringScheduleController::class, 'store'])->name('athlete.sparring.store');
+        Route::post('/sparring/create', [SparringScheduleController::class, 'store'])->name('athlete.sparring.store');
+        Route::get('/sparring/{schedule}/edit', [SparringScheduleController::class, 'edit'])->name('athlete.sparring.edit');
+        Route::put('/sparring/{schedule}/update', [SparringScheduleController::class, 'update'])->name('athlete.sparring.update');
+        Route::delete('/sparring/{schedule}/delete', [SparringScheduleController::class, 'destroy'])->name('athlete.sparring.destroy');
         
         // Transaction
         Route::get('/transaction', [AthleteTransactionController::class, 'index'])->name('athlete.transaction');
