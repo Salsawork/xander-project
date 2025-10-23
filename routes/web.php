@@ -486,3 +486,4 @@ Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');
 });
+

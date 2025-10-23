@@ -18,7 +18,8 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query();
+        // Eager-load category supaya aman & hemat query
+        $query = Product::query()->with('category');
 
         // 🔹 Filter Level
         if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
@@ -31,12 +32,12 @@ class ProductController extends Controller
         }
 
         // 🔹 Filter Kategori
-        if ($request->has('category') && $request->category) {
+        if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
         // 🔹 Filter Search
-        if ($request->has('search') && $request->search) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
@@ -54,35 +55,36 @@ class ProductController extends Controller
             }
         }
 
-        /**
-         * 🔄 UBAHAN PENTING:
-         * - Hapus logic "random 4".
-         * - Selalu paginate dengan 6 item per halaman (urut terbaru → ke bawah).
-         * - withQueryString() supaya filter & search nempel saat pindah halaman.
-         */
+        // Pagination konsisten: 6 item/hal
         $perPage  = 6;
         $products = $query->orderBy('created_at', 'desc')
                           ->paginate($perPage)
                           ->withQueryString();
 
-        // 🔹 Track visit (sekali per hari per IP)
-        $ipAddress = $request->ip();
-        $visit = Visit::where('ip_address', $ipAddress)
-            ->whereDate('visit_date', today())
-            ->first();
+        // 🔹 Track visit: HANYA untuk halaman publik (bukan /dashboard/*)
+        if (!$request->is('dashboard*')) {
+            try {
+                $ipAddress = $request->ip();
+                $visit = Visit::where('ip_address', $ipAddress)
+                    ->whereDate('visit_date', today())
+                    ->first();
 
-        if (!$visit) {
-            Visit::create([
-                'ip_address' => $ipAddress,
-                'visit'      => 1,
-                'visit_date' => now(),
-            ]);
-        } else {
-            $visit->increment('visit');
+                if (!$visit) {
+                    Visit::create([
+                        'ip_address' => $ipAddress,
+                        'visit'      => 1,
+                        'visit_date' => now(),
+                    ]);
+                } else {
+                    $visit->increment('visit');
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Skip visit tracking: ' . $e->getMessage());
+            }
         }
 
         // 🔹 Kategori untuk filter di view (dashboard)
-        $categories = Categories::all();
+        $categories = Categories::orderBy('name')->get();
 
         // 🔹 Pilih view
         if ($request->is('dashboard*')) {
@@ -94,7 +96,7 @@ class ProductController extends Controller
 
     public function filterByLevel(Request $request)
     {
-        $query = Product::query();
+        $query = Product::query()->with('category');
 
         if ($request->has('level') && in_array($request->level, ['professional', 'beginner', 'under50', 'cue-cases'])) {
             $query->where('level', $request->level);
@@ -150,7 +152,7 @@ class ProductController extends Controller
 
     public function edit(string $id)
     {
-        $product    = Product::findOrFail($id);
+        $product    = Product::with('category')->findOrFail($id);
         $categories = Categories::all();
         return view('dash.admin.product.edit', compact('product', 'categories'));
     }
@@ -191,7 +193,7 @@ class ProductController extends Controller
             $uploaded = $this->uploadImages($request->file('images'));
             $validatedData['images'] = $uploaded;
         } else {
-            // Tidak upload → keep gambar lama (sudah array di DB)
+            // Tidak upload → keep gambar lama
             $validatedData['images'] = $product->images ?? [];
         }
 
@@ -227,19 +229,13 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * Halaman katalog publik /products (listing dengan filter + pagination responsif).
-     * Desktop: 8 item/hal (2 baris × 4 kolom)
-     * Mobile : 4 item/hal (2 baris × 2 kolom)
-     */
     public function landing(Request $request)
     {
-        // Deteksi Mobile/Desktop
         $isMobile = $this->isMobile($request);
         $perPage  = $isMobile ? 4 : 8;
 
-        // Build query + filter
         $query = Product::query()
+            ->with('category')
             ->when($request->search, fn($q) => $q->where(function ($sub) use ($request) {
                 $s = $request->search;
                 $sub->where('name', 'like', "%{$s}%")
@@ -253,22 +249,18 @@ class ProductController extends Controller
             ->when($request->price_max, fn($q) => $q->where('pricing', '<=', $request->price_max))
             ->orderBy('created_at', 'desc');
 
-        // Paginate sesuai device
         $products = $query->paginate($perPage)->withQueryString();
 
-        // Jika user akses ?page > lastPage, redirect ke lastPage agar tidak "No products found"
         $requestedPage = (int) $request->query('page', 1);
         $lastPage      = max(1, $products->lastPage());
         if ($requestedPage > $lastPage && $products->total() > 0) {
             return redirect()->to($request->fullUrlWithQuery(['page' => $lastPage]));
         }
 
-        // Data dropdown filter
         $categories = Categories::select('id', 'name')->orderBy('name')->get();
         $brands     = Product::select('brand')->whereNotNull('brand')->distinct()->pluck('brand')->filter()->values();
         $conditions = ['new' => 'New', 'used' => 'Used'];
 
-        // Cart sidebar badge
         $cartProducts = collect();
         $cartVenues   = collect();
         $cartSparrings = collect();
@@ -339,27 +331,19 @@ class ProductController extends Controller
         ));
     }
 
-    /**
-     * DETAIL PRODUK (public): /products/{id}/{slug?}
-     * Memperbaiki error 500 karena sebelumnya method ini belum ada.
-     */
     public function detail(Request $request, int $id, ?string $slug = null)
     {
-        // Ambil produk atau 404
-        $detail = Product::findOrFail($id);
+        $detail = Product::with('category')->findOrFail($id);
 
-        // Canonical slug (SEO-friendly URL)
         $expectedSlug = Str::slug($detail->name ?? 'product');
         if ($slug !== $expectedSlug) {
             return redirect()->route('products.detail', ['id' => $id, 'slug' => $expectedSlug], 301);
         }
 
-        // Hitung diskon & final price
         $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount ?? 0);
         $detailHasDiscount     = $detailDiscountPercent > 0;
         $detailFinalPrice      = $this->finalPrice((float) ($detail->pricing ?? 0), $detailDiscountPercent);
 
-        // Related products: satu kategori yang sama, exclude diri sendiri
         $relatedQuery = Product::query()->where('id', '!=', $detail->id);
         if (!empty($detail->category_id)) {
             $relatedQuery->where('category_id', $detail->category_id);
@@ -369,7 +353,6 @@ class ProductController extends Controller
             ->limit(12)
             ->get();
 
-        // Map harga terkait (diskon/final price) agar view tidak perlu menghitung lagi
         $relatedPriceMap = [];
         foreach ($relatedProducts as $p) {
             $pct = $this->normalizeDiscountPercent($p->discount ?? 0);
@@ -380,7 +363,6 @@ class ProductController extends Controller
             ];
         }
 
-        // Cart sidebar badge
         $cartProducts  = collect();
         $cartVenues    = collect();
         $cartSparrings = collect();
@@ -467,16 +449,6 @@ class ProductController extends Controller
         return (int) round($final, 0);
     }
 
-    /* ============================================================
-     | Helpers upload/delete ala BannerController
-     | Target: CMS => public/demo-xanders/images/products
-     |         FE  => ../demo-xanders/images/products
-     * ============================================================*/
-
-    /**
-     * Upload banyak gambar → return array filename (tanpa path).
-     * Input: array<UploadedFile>
-     */
     private function uploadImages(array $files): array
     {
         $cmsPath = public_path('demo-xanders/images/products');
@@ -490,7 +462,7 @@ class ProductController extends Controller
             if (!$file) continue;
 
             $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '', \Str::slug($origName));
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($origName));
             $filename = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
 
             // Simpan ke CMS
@@ -505,9 +477,6 @@ class ProductController extends Controller
         return $filenames;
     }
 
-    /**
-     * Hapus banyak gambar (filename) di CMS & FE.
-     */
     private function deleteImages(array $filenames): void
     {
         foreach ($filenames as $filename) {
@@ -521,9 +490,6 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * UA helper: deteksi mobile sederhana
-     */
     private function isMobile(Request $request): bool
     {
         $ua = $request->header('User-Agent', '');
