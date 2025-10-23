@@ -1,5 +1,4 @@
 <?php
-
 $isAWinner = (optional($match['playerA'])->id == $match['winner_id'] && $match['winner_id'] != null) ? 'X' : null;
 $isBWinner = (optional($match['playerB'])->id == $match['winner_id'] && $match['winner_id'] != null) ? 'X' : null;
 ?>
@@ -10,7 +9,8 @@ $isBWinner = (optional($match['playerB'])->id == $match['winner_id'] && $match['
         @include('dash.admin.tournament.partials.tree.brackets.playerList',
             ['selected' => $match['playerA'],
             'roundNumber'=>$roundNumber,
-            'isSuccess' => $isAWinner
+            'isSuccess' => $isAWinner,
+            'treeGen' => $treeGen
             ])
     </div>
     <div class="match-divider"></div>
@@ -21,7 +21,8 @@ $isBWinner = (optional($match['playerB'])->id == $match['winner_id'] && $match['
         @include('dash.admin.tournament.partials.tree.brackets.playerList',
             ['selected' => $match['playerB'],
              'roundNumber'=>$roundNumber,
-             'isSuccess' => $isBWinner
+             'isSuccess' => $isBWinner,
+             'treeGen' => $treeGen
               ])
     </div>
 </div>

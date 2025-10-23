@@ -55,6 +55,14 @@ class TournamentController extends Controller
             'event_id' => 'required|exists:events,id',
         ]);
 
+        $validationError = $this->validateBracketSize((int) $data['numFighters']);
+        if ($validationError) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['bracket_error' => $validationError]);
+        }
+
+
         DB::beginTransaction();
 
         try {
@@ -137,6 +145,12 @@ class TournamentController extends Controller
             'fightingAreas' => 'required',
             'event_id' => 'required|exists:events,id',
         ]);
+        $validationError = $this->validateBracketSize((int) $data['numFighters']);
+        if ($validationError) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['bracket_error' => $validationError]);
+        }
 
         DB::beginTransaction();
 
@@ -587,5 +601,28 @@ class TournamentController extends Controller
         $championship->settings = ChampionshipSettings::createOrUpdate($request, $championship);
 
         return $championship;
+    }
+
+    private function validateBracketSize($numFighters, $actualPlayersCount = null)
+    {
+        // Only check if actual players exceed the bracket size
+        if ($actualPlayersCount !== null) {
+            if ($actualPlayersCount > $numFighters) {
+                return "Jumlah pemain terdaftar ({$actualPlayersCount}) melebihi kapasitas bracket yang dipilih ({$numFighters}). " .
+                    "Silakan pilih bracket size yang lebih besar atau kurangi jumlah pemain.";
+            }
+        }
+
+        // Validate minimum number of players
+        if ($numFighters < 2) {
+            return "Minimal jumlah pemain adalah 2 orang";
+        }
+
+        // Validate maximum number for performance/practical reasons
+        if ($numFighters > 64) {
+            return "Maksimal jumlah pemain adalah 64 orang untuk performa sistem";
+        }
+
+        return null;
     }
 }

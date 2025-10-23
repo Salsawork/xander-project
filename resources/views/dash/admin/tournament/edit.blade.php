@@ -80,26 +80,59 @@
                     </div>
 
                     {{-- Alert Messages --}}
+                    {{-- IMPROVED ALERT MESSAGES - Replace existing alert section in edit.blade.php --}}
+
                     @if ($errors->any())
-                        <div
-                            class="mb-6 bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg flex items-start gap-3">
-                            <i class="fas fa-exclamation-circle mt-1 flex-shrink-0"></i>
-                            <div class="flex-1">
-                                <p class="font-medium">Validation Error</p>
-                                <ul class="text-sm mt-2 space-y-1 list-disc list-inside">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
+                        <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-exclamation-triangle mt-1 flex-shrink-0 text-xl"></i>
+                                <div class="flex-1">
+                                    <p class="font-bold text-base mb-2">Terjadi Kesalahan!</p>
+                                    <ul class="text-sm space-y-1.5">
+                                        @foreach ($errors->all() as $error)
+                                            <li class="flex items-start gap-2">
+                                                <i class="fas fa-circle text-xs mt-1.5 flex-shrink-0"
+                                                    style="font-size: 4px;"></i>
+                                                <span>
+                                                    @if (str_contains($error, 'numFighters') || str_contains($error, 'pemain'))
+                                                        <span class="font-semibold">Jumlah Pemain Tidak Valid!</span>
+                                                        {{-- Jumlah pemain tidak sesuai dengan format bracket tournament. Gunakan
+                                                        angka:
+                                                        <span class="font-mono bg-red-600/30 px-1.5 py-0.5 rounded">2, 4, 8,
+                                                            16, 32, 64</span> --}}
+                                                    @else
+                                                        {{ $error }}
+                                                    @endif
+                                                </span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     @endif
 
                     @if (session('success'))
-                        <div
-                            class="mb-6 bg-green-500/10 border border-green-500/30 text-green-300 px-4 py-3 rounded-lg flex items-start gap-3">
-                            <i class="fas fa-check-circle mt-1 flex-shrink-0"></i>
-                            <p>{{ session('success') }}</p>
+                        <div class="mb-6 bg-green-500/10 border border-green-500/30 text-green-300 px-4 py-3 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-check-circle mt-1 flex-shrink-0 text-xl"></i>
+                                <div class="flex-1">
+                                    <p class="font-bold text-base">Berhasil!</p>
+                                    <p class="text-sm mt-1">{{ session('success') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-times-circle mt-1 flex-shrink-0 text-xl"></i>
+                                <div class="flex-1">
+                                    <p class="font-bold text-base">Error!</p>
+                                    <p class="text-sm mt-1">{{ session('error') }}</p>
+                                </div>
+                            </div>
                         </div>
                     @endif
 

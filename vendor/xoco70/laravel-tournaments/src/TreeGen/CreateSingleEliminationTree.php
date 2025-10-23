@@ -18,6 +18,10 @@ class CreateSingleEliminationTree
     public $roundSpacing = 40;
     public $matchSpacing = 42;
     public $borderWidth = 3;
+    
+    // NEW: Track eliminated fighters per round
+    private $eliminatedFighters = [];
+    private $activeFightersPerRound = [];
 
     public function __construct($groupsByRound, $championship, $hasPreliminary)
     {
@@ -58,20 +62,99 @@ class CreateSingleEliminationTree
         // Assign fighters to bracket for all rounds
         $this->assignFightersToBracket($roundNumber, $this->hasPreliminary);
         
-        // Adjust final round to only have 1 match (2 players)
+        // CRITICAL: Adjust final round to only have 2 players (1 match)
         $this->adjustFinalRound();
+        
+        // NEW: Track eliminated fighters per round
+        $this->trackEliminatedFighters();
         
         // Assign positions after adjustment
         $this->assignPositions();
     }
 
     /**
-     * Adjust final round to only have 1 match with 2 players
+     * NEW: Track which fighters are eliminated in each round
+     */
+    private function trackEliminatedFighters()
+    {
+        $this->eliminatedFighters = [];
+        $this->activeFightersPerRound = [];
+        
+        // Start with all fighters active in round 1
+        $allFighters = [];
+        foreach ($this->brackets as $roundNumber => $round) {
+            foreach ($round as $matchNumber => $match) {
+                if (isset($match[0]) && $match[0] != null) {
+                    $allFighters[$match[0]->id] = $match[0];
+                }
+                if (isset($match[1]) && $match[1] != null) {
+                    $allFighters[$match[1]->id] = $match[1];
+                }
+            }
+        }
+        $this->activeFightersPerRound[1] = $allFighters;
+        
+        // For each round, determine who got eliminated
+        foreach ($this->brackets as $roundNumber => $round) {
+            $winnersThisRound = [];
+            $losersThisRound = [];
+            
+            foreach ($round as $matchNumber => $match) {
+                $fighter1 = $match[0] ?? null;
+                $fighter2 = $match[1] ?? null;
+                $winnerId = $match[2] ?? null;
+                
+                if ($winnerId != null) {
+                    // Determine winner and loser
+                    if ($fighter1 && $fighter1->id == $winnerId) {
+                        $winnersThisRound[$fighter1->id] = $fighter1;
+                        if ($fighter2) {
+                            $losersThisRound[$fighter2->id] = $fighter2;
+                        }
+                    } elseif ($fighter2 && $fighter2->id == $winnerId) {
+                        $winnersThisRound[$fighter2->id] = $fighter2;
+                        if ($fighter1) {
+                            $losersThisRound[$fighter1->id] = $fighter1;
+                        }
+                    }
+                }
+            }
+            
+            // Store eliminated fighters for this round
+            if (!empty($losersThisRound)) {
+                $this->eliminatedFighters[$roundNumber] = $losersThisRound;
+            }
+            
+            // Calculate active fighters for next round
+            if ($roundNumber < $this->noRounds) {
+                $nextRound = $roundNumber + 1;
+                $currentActive = $this->activeFightersPerRound[$roundNumber];
+                
+                // Remove losers from active list
+                foreach ($losersThisRound as $loserId => $loser) {
+                    unset($currentActive[$loserId]);
+                }
+                
+                $this->activeFightersPerRound[$nextRound] = $currentActive;
+            }
+        }
+    }
+
+    /**
+     * NEW: Get active fighters for a specific round (excludes eliminated fighters)
+     */
+    public function getActiveFightersForRound($roundNumber)
+    {
+        return $this->activeFightersPerRound[$roundNumber] ?? $this->championship->fighters;
+    }
+
+    /**
+     * CRITICAL: Adjust final round to only have 2 players from semifinal winners
      */
     private function adjustFinalRound()
     {
-        $finalRound = (int) $this->noRounds;
-        $semifinalRound = $finalRound - 1;
+        $finalRound = $this->noRounds;
+        $semifinalRound = $this->noRounds - 1;
 
         // Get semifinal winners
         $semifinalWinners = [];
@@ -105,11 +188,12 @@ class CreateSingleEliminationTree
                 1 => [
                     $semifinalWinners[0],
                     $semifinalWinners[1],
-                    $currentWinnerId
+                    $currentWinnerId  // Preserve winner if already set
                 ]
             ];
         } else {
             // If no semifinal winners yet, ensure final only has 1 match
+            // Keep existing final structure but make sure it's only 1 match
             if (isset($this->brackets[$finalRound])) {
                 $firstMatch = reset($this->brackets[$finalRound]);
                 $this->brackets[$finalRound] = [
@@ -214,16 +298,23 @@ class CreateSingleEliminationTree
     }
 
     /**
+     * MODIFIED: Get player list - only show active fighters for the round
+     * Fighters who lost in previous rounds are excluded
+     * 
      * @param $selected
+     * @param $currentRound - Round number to determine which fighters are still active
      *
      * @return string
      */
-    public function getPlayerList($selected)
+    public function getPlayerList($selected, $currentRound = 1)
     {
         $html = '<select>
                 <option' . ($selected == '' ? ' selected' : '') . '></option>';
 
-        foreach ($this->championship->fighters as $fighter) {
+        // Get only active fighters for this round (excludes eliminated fighters)
+        $availableFighters = $this->getActiveFightersForRound($currentRound);
+
+        foreach ($availableFighters as $fighter) {
             $html = $this->addOptionToSelect($selected, $fighter, $html);
         }
 
@@ -243,7 +334,8 @@ class CreateSingleEliminationTree
 
     /**
      * Assign fighters to bracket for all rounds
-     * CRITICAL: Final round hanya 1 match (2 players)
+     * 
+     * @param $numRound
      */
     private function assignFightersToBracket($numRound, $hasPreliminary)
     {
@@ -254,10 +346,10 @@ class CreateSingleEliminationTree
                 continue;
             }
 
-            // CRITICAL: Untuk final round, hanya proses 1 match (2 players)
+            // For final round, only process the FIRST match (2 players only)
             $maxMatches = ($roundNumber == $this->noRounds) 
-                ? 1  // Final: HANYA 1 match
-                : ($this->numFighters / pow(2, $roundNumber)); // Round lain: normal calculation
+                ? 1  // Final: Only 1 match
+                : ($this->numFighters / pow(2, $roundNumber)); // Other rounds: Normal calculation
 
             for ($matchNumber = 1; $matchNumber <= $maxMatches; $matchNumber++) {
                 if (!isset($groupsByRound[$matchNumber - 1])) {
@@ -286,7 +378,7 @@ class CreateSingleEliminationTree
         if ($fighter != null) {
             $select = $selected != null && $selected->id == $fighter->id ? ' selected' : '';
             $html .= '<option' . $select
-                . ' value='
+                . '    ue='
                 . ($fighter->id ?? '')
                 . '>'
                 . $fighter->name
