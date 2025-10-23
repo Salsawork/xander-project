@@ -148,23 +148,26 @@
                         Jam Operasional
                     </label>
                     <div class="flex gap-3">
-                        <div class="flex-1">
-                            <input name="operating_hour" value="{{ old('operating_hour') }}"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                id="operating_hour" type="time" />
-                            @error('operating_hour')
-                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div class="flex-1">
-                            <input name="closing_hour" value="{{ old('closing_hour') }}"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                id="closing_hour" type="time" />
-                            @error('closing_hour')
-                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
+                      <div class="flex-1">
+                          <label class="block text-xs text-gray-400 mb-1" for="operating_hour">Jam Buka</label>
+                          <input name="operating_hour" value="{{ old('operating_hour') }}"
+                              class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              id="operating_hour" type="time" placeholder="08:00" />
+                          @error('operating_hour')
+                              <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                          @enderror
+                      </div>
+                      <div class="flex-1">
+                          <label class="block text-xs text-gray-400 mb-1" for="closing_hour">Jam Tutup</label>
+                          <input name="closing_hour" value="{{ old('closing_hour') }}"
+                              class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              id="closing_hour" type="time" placeholder="17:00" />
+                          @error('closing_hour')
+                              <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                          @enderror
+                      </div>
+                  </div>
+                  
                 </div>
 
                   <div>

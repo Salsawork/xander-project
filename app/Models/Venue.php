@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\User;
+use Carbon\Carbon;
 
 class Venue extends Model
 {
@@ -82,4 +83,14 @@ class Venue extends Model
     {
         return $this->hasMany(Review::class);
     }
+    public function getOperatingHourAttribute($value)
+    {
+        return $value ? Carbon::createFromFormat('H:i:s', $value) : null;
+    }
+
+    public function getClosingHourAttribute($value)
+    {
+        return $value ? Carbon::createFromFormat('H:i:s', $value) : null;
+    }
+
 }
