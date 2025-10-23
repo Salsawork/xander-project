@@ -103,7 +103,6 @@
 
   /* ===== Sidebar ===== */
   .sidebar-card {
-    /* background: #111827; */
     border: 1px solid rgba(255,255,255,.06);
     border-radius: 16px;
   }
@@ -151,6 +150,11 @@
             $imagePath = asset($raw);
         }
     }
+
+    // ==== Content fallback: jika user tidak pakai HTML, tetap hormati newline ====
+    $contentRaw = (string) ($guideline->content ?? '');
+    $looksHtml = Str::contains(Str::lower($contentRaw), ['<p','<br','<h','<ul','<ol','<div','<section','<table','</']);
+    $contentSafe = $looksHtml ? $contentRaw : nl2br(e($contentRaw));
 @endphp
 
 <div class="bg-neutral-900 text-white min-h-screen">
@@ -207,16 +211,16 @@
                 <!-- Main -->
                 <article class="lg:col-span-2">
                     <div class="article-content">
-                        {{-- Short description --}}
+                        {{-- Short description: HORMATI NEWLINE --}}
                         @if(!empty($guideline->description))
-                            <p class="text-[0.98rem] sm:text-base text-gray-300 mb-4">
-                                {{ $guideline->description }}
-                            </p>
+                            <div class="text-[0.98rem] sm:text-base text-gray-300 mb-4 whitespace-pre-line break-words">
+                                {!! nl2br(e($guideline->description)) !!}
+                            </div>
                         @endif
 
-                        {{-- Main content (HTML) --}}
+                        {{-- Main content (HTML atau plain text fallback) --}}
                         <div class="mt-4">
-                            {!! $guideline->content !!}
+                            {!! $contentSafe !!}
                         </div>
 
                         {{-- Video --}}
@@ -280,52 +284,52 @@
 
                 <!-- Sidebar -->
                 <aside class="lg:col-span-1">
-  <div class="sidebar-card p-5 lg:p-6 sticky-desktop bg-[#1f1f1f] rounded-xl text-white">
-    <h3 class="text-lg sm:text-xl font-bold mb-5">Recommended</h3>
+                  <div class="sidebar-card p-5 lg:p-6 sticky-desktop bg-[#1f1f1f] rounded-xl text-white">
+                    <h3 class="text-lg sm:text-xl font-bold mb-5">Recommended</h3>
 
-    <div class="space-y-5">
-      @foreach ($relatedGuidelines as $related)
-        @php
-            $rImage = null;
-            if (!empty($related->featured_image)) {
-                $rawR = $related->featured_image;
-                if (!file_exists(public_path($rawR)) && file_exists(public_path('images/guidelines/' . basename($rawR)))) {
-                    $rImage = asset('images/guidelines/' . basename($rawR));
-                } else {
-                    $rImage = asset($rawR);
-                }
-            }
-            $rDate = optional($related->published_at)->format('d F Y');
-        @endphp
+                    <div class="space-y-5">
+                      @foreach ($relatedGuidelines as $related)
+                        @php
+                            $rImage = null;
+                            if (!empty($related->featured_image)) {
+                                $rawR = $related->featured_image;
+                                if (!file_exists(public_path($rawR)) && file_exists(public_path('images/guidelines/' . basename($rawR)))) {
+                                    $rImage = asset('images/guidelines/' . basename($rawR));
+                                } else {
+                                    $rImage = asset($rawR);
+                                }
+                            }
+                            $rDate = optional($related->published_at)->format('d F Y');
+                        @endphp
 
-        <div class="flex gap-4">
-          <div class="rec-thumb w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
-            @if ($rImage)
-              <img src="{{ $rImage }}" alt="{{ $related->title }}" class="w-full h-full object-cover">
-            @endif
-          </div>
+                        <div class="flex gap-4">
+                          <div class="rec-thumb w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
+                            @if ($rImage)
+                              <img src="{{ $rImage }}" alt="{{ $related->title }}" class="w-full h-full object-cover">
+                            @endif
+                          </div>
 
-          <div class="min-w-0">
-            <a href="{{ route('guideline.show', ['slug' => $related->slug]) }}"
-               class="font-medium text-white/90 hover:text-gray-200 transition line-clamp-2">
-              {{ $related->title }}
-            </a>
-            @if($rDate)
-              <p class="text-[12px] text-gray-400 mt-1">{{ $rDate }}</p>
-            @endif
-          </div>
-        </div>
-      @endforeach
-    </div>
+                          <div class="min-w-0">
+                            <a href="{{ route('guideline.show', ['slug' => $related->slug]) }}"
+                               class="font-medium text-white/90 hover:text-gray-200 transition line-clamp-2">
+                              {{ $related->title }}
+                            </a>
+                            @if($rDate)
+                              <p class="text-[12px] text-gray-400 mt-1">{{ $rDate }}</p>
+                            @endif
+                          </div>
+                        </div>
+                      @endforeach
+                    </div>
 
-    <div class="mt-7">
-      <a href="{{ route('guideline.index') }}"
-         class="block w-full text-center rounded-lg bg-[#2a2a2a] hover:bg-[#333] transition px-4 py-2.5 text-white font-medium">
-        View All Guidelines
-      </a>
-    </div>
-  </div>
-</aside>
+                    <div class="mt-7">
+                      <a href="{{ route('guideline.index') }}"
+                         class="block w-full text-center rounded-lg bg-[#2a2a2a] hover:bg-[#333] transition px-4 py-2.5 text-white font-medium">
+                        View All Guidelines
+                      </a>
+                    </div>
+                  </div>
+                </aside>
 
             </div>
         </div>

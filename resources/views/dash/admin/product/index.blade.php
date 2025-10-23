@@ -248,6 +248,11 @@
                           </div>
                       @endforeach
                   </div>
+
+                  <!-- Pagination -->
+                  <div class="mt-8 flex justify-center">
+                      {{ $products->onEachSide(1)->links() }}
+                  </div>
               </div>
           </main>
       </div>
