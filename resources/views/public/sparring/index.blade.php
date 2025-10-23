@@ -6,7 +6,7 @@
     $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     // Koleksi lokasi (array/Collection) dari controller, fallback default jika kosong
-    $locations = (isset($locations) && count($locations)) ? $locations : collect(['Jakarta', 'Bandung', 'Surabaya', 'Medan']);
+    $locations = (isset($locations) && count($locations)) ? collect($locations) : collect(['Jakarta', 'Bandung', 'Surabaya', 'Medan']);
 
     // Paginasi manual dari collection agar konsisten dengan desain grid
     $existingItems = collect(
@@ -28,6 +28,12 @@
     );
 
     $currentAddress = trim((string) request('address', ''));
+
+    // ====== Format awal nilai price_min & price_max ke format angka Indonesia (1.000.000) ======
+    $reqPriceMinRaw = preg_replace('/\D+/', '', (string) request('price_min', ''));
+    $reqPriceMaxRaw = preg_replace('/\D+/', '', (string) request('price_max', ''));
+    $reqPriceMinFmt = $reqPriceMinRaw !== '' ? number_format((int) $reqPriceMinRaw, 0, ',', '.') : '';
+    $reqPriceMaxFmt = $reqPriceMaxRaw !== '' ? number_format((int) $reqPriceMaxRaw, 0, ',', '.') : '';
 @endphp
 
 @push('styles')
@@ -44,7 +50,16 @@
   @media (max-width:1023px){
     .mobile-filter-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40; display:none; }
     .mobile-filter-overlay.active{ display:block; }
-    .mobile-filter-sidebar{ position:fixed; top:0; left:-100%; width:85%; max-width:340px; height:100%; background:rgb(23,23,23); z-index:50; transition:left .3s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:24px; border-right:1px solid rgba(255,255,255,.08); }
+    /* HILANGKAN BACKGROUND HITAM DI FILTER (sidebar) */
+    .mobile-filter-sidebar{
+      position:fixed; top:0; left:-100%;
+      width:85%; max-width:340px; height:100%;
+      background:transparent; /* transparan */
+      z-index:50; transition:left .3s ease;
+      overflow-y:auto; -webkit-overflow-scrolling:touch;
+      padding-bottom:24px;
+      border-right:0; /* hilangkan border gelap */
+    }
     .mobile-filter-sidebar.open{ left:0; }
   }
   .toggleContent{ overflow:hidden; transition:max-height .3s ease; max-height:1000px; }
@@ -116,43 +131,27 @@
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 lg:py-12" id="list">
     <!-- Filter -->
     <aside id="filterSparring" class="mobile-filter-sidebar lg:relative lg:left-0 lg:col-span-1">
-      <div class="px-4 lg:px-0 space-y-6 text-white text-sm lg:sticky lg:top-24">
+      <!-- GANTI top-24 -> top-0 AGAR SEJAJAR DENGAN ATAS KARTU -->
+      <div class="px-4 lg:px-0 space-y-6 text-white text-sm lg:sticky lg:top-0">
         <div class="flex items-center justify-between mb-4 lg-hidden">
           <h3 class="text-lg font-semibold">Filter & Search</h3>
           <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
         </div>
 
-        <form method="GET" action="{{ route('sparring.index') }}" class="space-y-4 rounded-xl lg:bg-neutral-900 lg:p-4" id="filterForm">
+        <!-- HILANGKAN BACKGROUND HITAM DI FORM FILTER: hapus lg:bg-neutral-900 -->
+        <form method="GET" action="{{ route('sparring.index') }}" class="space-y-4 rounded-xl lg:p-3" id="filterForm">
           <input type="hidden" name="pp" id="ppInput" value="{{ $pp }}"/>
 
           <!-- Search -->
           <div>
-            <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
+            <input id="searchInput" type="text" name="search" placeholder="Search"
+                   value="{{ request('search') }}"
+                   autocomplete="off"
                    class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            <p class="text-xs text-gray-400 mt-1">Ketik kata kunci lalu klik tombol <strong>Filter</strong> untuk menerapkan.</p>
           </div>
 
-          <!-- Date (opsional UI; tidak auto-submit) -->
-          <div x-data="calendar('{{ request('date') }}')" class="pt-2 text-white rounded-xl text-sm">
-            <input type="hidden" name="date" x-model="selectedDate">
-            <div class="flex items-center justify-between my-2 font-semibold border-b border-gray-500 pb-1">
-              <span>Date</span>
-              <span @click="toggle = !toggle" class="cursor-pointer text-xl leading-none text-gray-300">–</span>
-            </div>
-            <div x-show="toggle" x-transition>
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <button type="button" @click="prevMonth()" class="text-gray-400 hover:text-white">&lt;</button>
-                <span x-text="monthNames[month] + ' ' + year"></span>
-                <button type="button" @click="nextMonth()" class="text-gray-400 hover:text-white">&gt;</button>
-              </div>
-              <div class="grid grid-cols-7 gap-1 text-center text-gray-400 text-xs">
-                <template x-for="d in daysInMonth()" :key="d">
-                  <span class="py-1 cursor-pointer rounded transition-colors"
-                        :class="selectedDate === formatDate(year, month, d) ? 'bg-blue-500 text-white' : 'hover:bg-gray-600'"
-                        @click="selectDate(d)" x-text="d"></span>
-                </template>
-              </div>
-            </div>
-          </div>
+          <!-- (HAPUS) Date: blok tanggal dihilangkan -->
 
           <!-- Location (klik = submit otomatis) -->
           <div>
@@ -161,40 +160,54 @@
               <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
             </div>
 
-            <div class="toggleContent flex flex-wrap gap-2">
+            <div id="locationsChips" class="toggleContent flex flex-wrap gap-2">
               {{-- Chip "All" untuk reset filter lokasi --}}
               <button type="submit" name="address" value=""
                       class="chip {{ $currentAddress === '' ? 'active' : '' }}"
+                      data-all="1"
                       title="All locations">
                 All
               </button>
 
-              @foreach ($locations as $loc)
+              @forelse ($locations as $loc)
                 @php $isActive = ($currentAddress !== '' && $currentAddress === $loc); @endphp
                 <button type="submit"
                         name="address"
                         value="{{ $loc }}"
                         class="chip {{ $isActive ? 'active' : '' }}"
+                        data-loc="{{ $loc }}"
                         title="{{ $loc }}">
                   {{ $loc }}
                 </button>
-              @endforeach
+              @empty
+                <span id="locationsEmpty" class="text-gray-400 text-xs">No locations match your search.</span>
+              @endforelse
             </div>
           </div>
 
-          <!-- Price Range -->
+          <!-- Price Range (INPUT TERFORMAT 1.000.000) -->
           <div>
             <div class="flex items-center justify-between my-2 font-semibold border-b border-gray-500 pb-1">
               <span>Price Range</span>
               <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
             </div>
             <div class="toggleContent w-full flex items-center gap-2">
-              <input type="text" id="price_min" name="price_min" placeholder="Min"
-                     value="{{ request('price_min') }}"
-                     class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
-              <input type="text" id="price_max" name="price_max" placeholder="Max"
-                     value="{{ request('price_max') }}"
-                     class="w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
+              <input type="text"
+                     id="price_min"
+                     name="price_min"
+                     placeholder="Min"
+                     inputmode="numeric"
+                     pattern="[0-9\.]*"
+                     value="{{ $reqPriceMinFmt }}"
+                     class="money-input w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
+              <input type="text"
+                     id="price_max"
+                     name="price_max"
+                     placeholder="Max"
+                     inputmode="numeric"
+                     pattern="[0-9\.]*"
+                     value="{{ $reqPriceMaxFmt }}"
+                     class="money-input w-1/2 rounded border border-gray-400 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-500" />
             </div>
           </div>
 
@@ -212,7 +225,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         @forelse ($athletes as $athlete)
           {{-- LINK DENGAN SLUG --}}
-          <a href="{{ route('sparring.detail', ['id' => $athlete->id, 'slug' => Str::slug($athlete->name)]) }}" class="block">
+          <a href="{{ route('sparring.detail', ['id' => $athlete->id, 'slug' => \Illuminate\Support\Str::slug($athlete->name)]) }}" class="block">
             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow">
               <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
                 @if ($athlete->athleteDetail && $athlete->athleteDetail->image)
@@ -354,22 +367,54 @@
       mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
   });
 
-  // Calendar mini (Alpine-like API dump)
-  function calendar(defaultDate = '') {
-      const today = new Date();
-      let initialDate = defaultDate ? new Date(defaultDate) : today;
-      return {
-          month: initialDate.getMonth(),
-          year : initialDate.getFullYear(),
-          selectedDate: defaultDate || '',
-          toggle: true,
-          monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
-          daysInMonth(){ return new Date(this.year, this.month + 1, 0).getDate(); },
-          prevMonth(){ this.month === 0 ? (this.month = 11, this.year--) : this.month--; },
-          nextMonth(){ this.month === 11 ? (this.month = 0, this.year++) : this.month++; },
-          formatDate(y, m, d){ return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; },
-          selectDate(d){ this.selectedDate = this.formatDate(this.year, this.month, d); }
+  // ====== FORMAT INPUT UANG (IDR) UNTUK PRICE RANGE ======
+  function unformatIDR(str) {
+      return (str || '').replace(/[^\d]/g, ''); // ambil digit saja
+  }
+  function formatIDR(str) {
+      const digits = unformatIDR(str);
+      if (!digits) return '';
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // 1000000 -> 1.000.000
+  }
+
+  function attachMoneyFormatter() {
+      const inputs = document.querySelectorAll('.money-input');
+      inputs.forEach((inp) => {
+          // Format awal (jaga-jaga kalau belum diformat server)
+          inp.value = formatIDR(inp.value);
+
+          // Format saat user mengetik (caret bisa lompat ke ujung; acceptable)
+          inp.addEventListener('input', () => {
+              const before = inp.value;
+              const caretBefore = inp.selectionStart;
+              const lenBefore = before.length;
+
+              inp.value = formatIDR(before);
+
+              // perkiraan posisi caret (sederhana: tahan di akhir)
+              const lenAfter = inp.value.length;
+              const delta = lenAfter - lenBefore;
+              const newPos = typeof caretBefore === 'number' ? Math.max(0, Math.min(lenAfter, caretBefore + delta)) : lenAfter;
+              try { inp.setSelectionRange(newPos, newPos); } catch(e) {}
+          });
+
+          // Pastikan terformat saat blur
+          inp.addEventListener('blur', () => {
+              inp.value = formatIDR(inp.value);
+          });
+      });
+
+      // Saat submit form, kirimkan angka mentah (tanpa titik) ke server
+      const form = document.getElementById('filterForm');
+      if (form) {
+          form.addEventListener('submit', () => {
+              inputs.forEach((inp) => {
+                  inp.value = unformatIDR(inp.value);
+              });
+          });
       }
   }
+
+  document.addEventListener('DOMContentLoaded', attachMoneyFormatter);
 </script>
 @endpush

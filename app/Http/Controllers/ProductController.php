@@ -18,93 +18,105 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        // Eager-load category supaya aman & hemat query
-        $query = Product::query()->with('category');
-
-        // 🔹 Filter Level
-        if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
-            $query->where('level', $request->level);
-        }
-
-        // 🔹 Filter Harga
-        if ($request->filter === 'under50') {
-            $query->where('pricing', '<', 50000);
-        }
-
-        // 🔹 Filter Kategori
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-
-        // 🔹 Filter Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%')
-                    ->orWhere('sku', 'like', '%' . $search . '%');
-            });
-        }
-
-        // 🔹 Filter Status
-        if ($request->has('status')) {
-            if ($request->status === 'in-stock') {
-                $query->where('stock', '>', 0);
-            } elseif ($request->status === 'out-of-stock') {
-                $query->where('stock', '=', 0);
-            }
-        }
-
-        // Pagination konsisten: 6 item/hal
-        $perPage  = 6;
-        $products = $query->orderBy('created_at', 'desc')
-                          ->paginate($perPage)
-                          ->withQueryString();
-
-        // 🔹 Track visit: HANYA untuk halaman publik (bukan /dashboard/*)
-        if (!$request->is('dashboard*')) {
-            try {
-                $ipAddress = $request->ip();
-                $visit = Visit::where('ip_address', $ipAddress)
-                    ->whereDate('visit_date', today())
-                    ->first();
-
-                if (!$visit) {
-                    Visit::create([
-                        'ip_address' => $ipAddress,
-                        'visit'      => 1,
-                        'visit_date' => now(),
-                    ]);
-                } else {
-                    $visit->increment('visit');
-                }
-            } catch (\Throwable $e) {
-                Log::warning('Skip visit tracking: ' . $e->getMessage());
-            }
-        }
-
-        // 🔹 Kategori untuk filter di view (dashboard)
-        $categories = Categories::orderBy('name')->get();
-
-        // 🔹 Pilih view
+        // ==== ADMIN: /dashboard/* → listing + paginate (6/hal) ====
         if ($request->is('dashboard*')) {
+            // Eager-load category supaya aman & hemat query
+            $query = Product::query()->with('category');
+
+            // 🔹 Filter Level
+            if ($request->has('level') && in_array($request->level, ['professional', 'beginner'])) {
+                $query->where('level', $request->level);
+            }
+
+            // 🔹 Filter Harga
+            if ($request->filter === 'under50') {
+                $query->where('pricing', '<', 50000);
+            }
+
+            // 🔹 Filter Kategori
+            if ($request->filled('category')) {
+                $query->where('category_id', $request->category);
+            }
+
+            // 🔹 Filter Search
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%')
+                      ->orWhere('sku', 'like', '%' . $search . '%');
+                });
+            }
+
+            // 🔹 Filter Status
+            if ($request->has('status')) {
+                if ($request->status === 'in-stock') {
+                    $query->where('stock', '>', 0);
+                } elseif ($request->status === 'out-of-stock') {
+                    $query->where('stock', '=', 0);
+                }
+            }
+
+            // Pagination konsisten: 6 item/hal
+            $perPage  = 6;
+            $products = $query->orderBy('created_at', 'desc')
+                              ->paginate($perPage)
+                              ->withQueryString();
+
+            // Kategori untuk filter di view (dashboard)
+            $categories = Categories::orderBy('name')->get();
+
             return view('dash.admin.product.index', compact('products', 'categories'));
         }
 
-        return view('landing', compact('products', 'categories'));
+        // ==== PUBLIK (beranda): Top Picks 4 item saja ====
+        // Strategi: terbaru & in-stock; bebas diubah ke "terlaris" dll.
+        $products = Product::query()
+            ->with('category')
+            ->where('stock', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->take(4)
+            ->get();
+
+        // Track visit: HANYA untuk halaman publik (bukan /dashboard/*)
+        try {
+            $ipAddress = $request->ip();
+            $visit = Visit::where('ip_address', $ipAddress)
+                ->whereDate('visit_date', today())
+                ->first();
+
+            if (!$visit) {
+                Visit::create([
+                    'ip_address' => $ipAddress,
+                    'visit'      => 1,
+                    'visit_date' => now(),
+                ]);
+            } else {
+                $visit->increment('visit');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Skip visit tracking: ' . $e->getMessage());
+        }
+
+        // Kirim ke view landing. (Variabel $products = 4 item → Top Picks pasti 4)
+        return view('landing', compact('products'));
     }
 
     public function filterByLevel(Request $request)
     {
         $query = Product::query()->with('category');
 
+        // Catatan: di project kamu, chip "under50" & "cue-cases" diarahkan ke param "level".
+        // Agar aman, tetap batasi 4 item untuk Top Picks.
         if ($request->has('level') && in_array($request->level, ['professional', 'beginner', 'under50', 'cue-cases'])) {
+            // Default: filter berdasarkan 'level' saja (mengikuti struktur yang sudah ada)
             $query->where('level', $request->level);
         } else {
-            $query->inRandomOrder()->limit(4);
+            $query->inRandomOrder();
         }
 
-        $products = $query->orderBy('created_at', 'desc')->get();
+        // Selalu batasi ke 4 item untuk konsistensi Top Picks
+        $products = $query->orderBy('created_at', 'desc')->take(4)->get();
 
         return view('landing', compact('products'));
     }
@@ -229,6 +241,7 @@ class ProductController extends Controller
         }
     }
 
+    // Halaman listing publik /products – tetap paginate
     public function landing(Request $request)
     {
         $isMobile = $this->isMobile($request);

@@ -12,6 +12,7 @@ use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SparringController extends Controller
 {
@@ -36,18 +37,21 @@ class SparringController extends Controller
 
         // Filter: search pada nama atlet atau lokasi
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhereHas('athleteDetail', function ($q2) use ($search) {
-                      $q2->where('location', 'like', '%' . $search . '%');
+            $srch = $search;
+            $query->where(function ($q) use ($srch) {
+                $q->where('name', 'like', '%' . $srch . '%')
+                  ->orWhereHas('athleteDetail', function ($q2) use ($srch) {
+                      $q2->where('location', 'like', '%' . $srch . '%');
                   });
             });
         }
 
         // Filter: lokasi (klik chip)
         if ($address !== '') {
-            $query->whereHas('athleteDetail', function ($q) use ($address) {
-                $q->where('location', 'like', $address); // exact atau "like"; ganti ke 'like', '%' . $address . '%' jika perlu partial
+            $addr = $address;
+            // gunakan like agar lebih fleksibel (mis. "Jakarta" vs "Jakarta Selatan")
+            $query->whereHas('athleteDetail', function ($q) use ($addr) {
+                $q->where('location', 'like', '%' . $addr . '%');
             });
         }
 
@@ -64,7 +68,7 @@ class SparringController extends Controller
         }
 
         // Ambil data
-        $athletes = $query->get();
+        $athletes = $query->orderBy('created_at', 'desc')->get();
 
         // Lokasi unik (rapi & terurut)
         $locations = AthleteDetail::query()
@@ -74,6 +78,14 @@ class SparringController extends Controller
             ->distinct()
             ->orderBy('location')
             ->pluck('location');
+
+        // SSR fallback: jika user mengetik di search, filter juga daftar chip lokasi di server
+        if ($search !== '') {
+            $s = mb_strtolower($search);
+            $locations = $locations->filter(function ($loc) use ($s) {
+                return mb_strpos(mb_strtolower($loc), $s) !== false;
+            })->values();
+        }
 
         // Placeholder min/max price untuk UI
         $minPrice = (int) (AthleteDetail::min('price_per_session') ?? 0);
