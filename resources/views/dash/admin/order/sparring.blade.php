@@ -185,6 +185,7 @@
                             <th class="px-4 py-3">Status Payment</th>
                             <th class="px-4 py-3">File</th>
                             <th class="px-4 py-3">Total</th>
+                            <th class="px-4 py-3">Fee admin</th>
                             <th class="px-4 py-3">Action</th>
                         </tr>
                     </thead>
@@ -224,6 +225,9 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
+                            <td class="px-4 py-3 text-gray-300">
+                                Rp {{ number_format($order->fee_admin_total ?? 0, 0, ',', '.') }}
+                            </td>                            
                             <td class="px-4 py-3 flex gap-4 text-gray-500">
                                 <a href="{{ route('order.detail.index', $order->id) }}"
                                     aria-label="View order {{ $order->id }}" class="hover:text-gray-300">

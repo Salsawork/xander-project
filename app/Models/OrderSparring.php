@@ -19,6 +19,8 @@ class OrderSparring extends Model
         'athlete_id',
         'schedule_id',
         'price',
+        'admin_fee',
+        'athlete_earning',
     ];
 
     /**

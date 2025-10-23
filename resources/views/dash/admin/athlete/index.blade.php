@@ -104,6 +104,7 @@
                                 <th class="px-4 py-3">Spesialisasi</th>
                                 <th class="px-4 py-3">Lokasi</th>
                                 <th class="px-4 py-3">Harga/Sesi</th>
+                                <th class="px-4 py-3">Total Fee</th>
                                 <th class="px-4 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
@@ -134,6 +135,9 @@
                                 <td class="px-4 py-3 text-gray-300">
                                     Rp {{ number_format($athlete->athleteDetail ? $athlete->athleteDetail->price_per_session : 0, 0, ',', '.') }}
                                 </td>
+                                <td class="px-4 py-3 text-gray-300">
+                                    Rp {{ number_format($athlete->total_admin_fee ?? 0, 0, ',', '.') }}
+                                </td>                                
                                 <td class="px-4 py-3">
                                     <div class="flex gap-3 text-gray-400 justify-end">
                                         @if ($athlete->athleteDetail?->id)

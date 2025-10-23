@@ -77,6 +77,7 @@ class OrderController extends Controller
     public function indexSparring(Request $request)
     {
         $orders = Order::where('order_type', 'sparring')
+            ->with('orderSparrings')
             ->when($request->search, function ($query) use ($request) {
                 $query->whereHas('user', function ($q) use ($request) {
                     $q->where('name', 'like', '%' . $request->search . '%')
@@ -89,6 +90,11 @@ class OrderController extends Controller
             // hanya 1 orderBy, kasih default DESC
             ->orderBy('created_at', $request->orderBy === 'asc' ? 'asc' : 'desc')
             ->get();
+
+
+             foreach ($orders as $order) {
+                $order->fee_admin_total = $order->orderSparrings->sum('admin_fee');
+            }
 
         $pendingCount    = Order::where('order_type', 'sparring')->where('payment_status', 'pending')->count();
         $processingCount = Order::where('order_type', 'sparring')->where('payment_status', 'processing')->count();

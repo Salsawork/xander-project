@@ -255,7 +255,9 @@
                                 <span class="text-gray-500">No File</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
+                            <td class="px-4 py-3">
+                                Rp. {{ number_format($order->orderSparrings->sum('athlete_earning'), 0, ',', '.') }}
+                            </td>
                             <td class="px-4 py-3 flex gap-4 text-gray-500">
                                 <a href="{{ route('athlete.transaction.show', $order->id) }}"
                                     aria-label="View order {{ $order->id }}" class="hover:text-gray-300">

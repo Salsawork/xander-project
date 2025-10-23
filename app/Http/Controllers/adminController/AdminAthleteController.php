@@ -4,6 +4,7 @@ namespace App\Http\Controllers\adminController;
 
 use App\Http\Controllers\Controller;
 use App\Models\AthleteDetail;
+use App\Models\OrderSparring;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +36,18 @@ class AdminAthleteController extends Controller
             })
             ->get();
 
+            $orderSparrings = OrderSparring::select('athlete_id', 'admin_fee')->get();
+
+            $feeByAthlete = $orderSparrings
+                ->groupBy('athlete_id')
+                ->map(function ($group) {
+                    return $group->sum('admin_fee');
+                });
+        
+            // Tambahkan total_admin_fee ke setiap athlete
+            foreach ($athletes as $athlete) {
+                $athlete->total_admin_fee = $feeByAthlete[$athlete->id] ?? 0;
+            }
         return view('dash.admin.athlete.index', compact('athletes'));
     }
 
@@ -267,16 +280,53 @@ class AdminAthleteController extends Controller
         ));
     }
 
-    public function verifyPayment($orderId)
-    {
-        $order = Order::findOrFail($orderId);
+    // public function verifyPayment(Request $request, $orderId)
+    // {
+    //     $order = Order::with('orderSparrings')->findOrFail($orderId);
 
-        if ($order->payment_status !== 'processing') {
-            return back()->with('error', 'Order ini tidak dalam status processing.');
-        }
+    //     // ubah status pembayaran jadi paid
+    //     $order->update(['payment_status' => 'paid']);
 
-        $order->update(['payment_status' => 'paid']);
+    //     // hitung fee untuk setiap sparring di order ini
+    //     foreach ($order->orderSparrings as $sparring) {
+    //         $price = $sparring->price;
 
-        return back()->with('success', 'Pembayaran berhasil diverifikasi!');
+    //         $adminFee = $price * 0.10;
+    //         $athleteEarning = $price - $adminFee;
+
+    //         $sparring->update([
+    //             'admin_fee' => $adminFee,
+    //             'athlete_earning' => $athleteEarning,
+    //         ]);
+    //     }
+
+    //     return back()->with('success', 'Payment verified and fees distributed!');
+    // }
+    public function verifyPayment(Request $request, $orderId)
+{
+    $order = Order::with('orderSparrings')->findOrFail($orderId);
+
+    // 1️⃣ Ubah status pembayaran jadi paid
+    $order->update(['payment_status' => 'paid']);
+
+    $totalAdminFee = 0;
+
+    // 2️⃣ Hitung fee untuk setiap sparring di order ini
+    foreach ($order->orderSparrings as $sparring) {
+        $price = $sparring->price;
+        $adminFee = $price * 0.10;
+        $athleteEarning = $price - $adminFee;
+
+        $sparring->update([
+            'admin_fee' => $adminFee,
+            'athlete_earning' => $athleteEarning,
+        ]);
+
+        $totalAdminFee += $adminFee;
     }
+
+    return back()->with('success', "Payment verified. Total fee admin: Rp " . number_format($totalAdminFee, 0, ',', '.'));
+}
+
+
 }
