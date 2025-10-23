@@ -25,7 +25,7 @@ class Venue extends Model
         'closing_hour',
         'rating',
         'price',
-        'image',
+        'images',
     ];
 
     /**
@@ -37,6 +37,7 @@ class Venue extends Model
         'operating_hour' => 'datetime:H:i',
         'closing_hour' => 'datetime:H:i',
         'rating' => 'decimal:2',
+        'images'   => 'json',
     ];
 
     /**
@@ -92,5 +93,4 @@ class Venue extends Model
     {
         return $value ? Carbon::createFromFormat('H:i:s', $value) : null;
     }
-
 }

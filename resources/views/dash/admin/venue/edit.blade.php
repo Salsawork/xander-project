@@ -86,7 +86,7 @@
               </div>
 
               <!-- Kolom Kanan -->
-              <div class="space-y-6">
+              <div class="space-y-6>
                 <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                   <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                     <i class="fas fa-store mr-2 text-green-400"></i> Informasi Venue
@@ -100,13 +100,35 @@
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    <div>
-                      <label class="block text-xs text-gray-400 mb-1" for="image">Gambar Venue</label>
-                      <input name="image" id="image" type="file"
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                      @error('image') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+                   <div>
+                      <label class="block text-xs text-gray-400 mb-1">Upload Gambar (Opsional)</label>
+                      <input type="file" name="images[]" multiple class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, WEBP, GIF. Maks: 4MB/berkas</p>
 
+                      @php
+                        $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
+                        $normalizeImg = function($img){
+                          $raw = trim((string)$img);
+                          if (preg_match('/^https?:\/\//i', $raw)) return $raw;
+                          $filename = basename($raw);
+                          return asset('images/venues/' . $filename);
+                        };
+                      @endphp
+
+                      @if(!empty($existingImages))
+                      <div class="mt-4">
+                        <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
+                        <div class="flex flex-wrap gap-2">
+                          @foreach($existingImages as $img)
+                            @php $src = $normalizeImg($img); @endphp
+                            <div class="relative w-20 h-20">
+                              <img src="{{ $src }}" alt="venue image" class="w-full h-full object-cover rounded-md" onerror="this.src='https://placehold.co/400x400?text=No+Img'"/>
+                            </div>
+                          @endforeach
+                        </div>
+                      </div>
+                      @endif
+                    </div>
                     {{-- ADDRESS + MAP (Leaflet) --}}
                     <div class="space-y-3">
                       <label class="block text-xs text-gray-400">Lokasi Venue</label>
