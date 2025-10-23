@@ -433,7 +433,7 @@ class OrderController extends Controller
                     // Tambahkan ke tabel bookings
                     $order->bookings()->create([
                         'venue_id'     => $venueData['id'],
-                        'price'        => $venuePrice, // harga setelah diskon
+                        'price'        => $venuePrice, 
                         'table_id'     => $tableId,
                         'user_id'      => $user->id,
                         'booking_date' => $bookingDate,
@@ -441,6 +441,7 @@ class OrderController extends Controller
                         'start_time'   => $venueData['start'],
                         'end_time'     => $venueData['end'],
                         'discount'     => $discountValue,
+                        'admin_fee'    => 2000,
                     ]);
 
                     // Hapus item dari cart
@@ -452,11 +453,9 @@ class OrderController extends Controller
                         ->where('end', $venueData['end'])
                         ->delete();
 
-                    // Tambahkan harga venue (setelah diskon) ke total keseluruhan
                     $venueTotal += $venuePrice;
                 }
 
-                // Akumulasi ke total order global (sudah dikurangi diskon)
                 $total += $venueTotal;
 
                 \Log::info('Total venue setelah diskon', [

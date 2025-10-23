@@ -24,6 +24,7 @@ class Booking extends Model
         'end_time',
         'price',
         'discount',
+        'admin_fee',
         'payment_method',
         'status',
     ];
@@ -39,6 +40,7 @@ class Booking extends Model
         'end_time' => 'datetime:H:i',
         'price' => 'decimal:2',
         'discount' => 'decimal:2',
+        'admin_fee' => 'decimal:2',
     ];
 
     /**

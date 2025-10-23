@@ -14,33 +14,47 @@
 
     /* Hide scrollbar for IE, Edge and Firefox */
     .scrollbar-hide {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none;    /* Firefox */
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
     }
 
     /* ====== Anti overscroll / white bounce ====== */
-    :root{ color-scheme: dark; --page-bg:#0a0a0a; }
-    html, body{
-        height:100%;
-        min-height:100%;
-        background:var(--page-bg);
-        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
+    :root {
+        color-scheme: dark;
+        --page-bg: #0a0a0a;
+    }
+
+    html,
+    body {
+        height: 100%;
+        min-height: 100%;
+        background: var(--page-bg);
+        overscroll-behavior-y: none;
+        /* cegah rubber-band ke body */
         overscroll-behavior-x: none;
         touch-action: pan-y;
-        -webkit-text-size-adjust:100%;
+        -webkit-text-size-adjust: 100%;
     }
+
     /* Kanvas gelap tetap di belakang konten */
-    #antiBounceBg{
+    #antiBounceBg {
         position: fixed;
-        left:0; right:0;
-        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
-        background:var(--page-bg);
-        z-index:-1;
-        pointer-events:none;
+        left: 0;
+        right: 0;
+        top: -120svh;
+        bottom: -120svh;
+        /* svh stabil di mobile */
+        background: var(--page-bg);
+        z-index: -1;
+        pointer-events: none;
     }
+
     /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
-    .scroll-safe{
-        background-color:#171717;      /* senada bg-neutral-900 */
+    .scroll-safe {
+        background-color: #171717;
+        /* senada bg-neutral-900 */
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
     }
@@ -186,6 +200,7 @@
                             <th class="px-4 py-3">Status Booking</th>
                             <th class="px-4 py-3">File</th>
                             <th class="px-4 py-3">Total</th>
+                            <th class="px-4 py-3">Admin Fee</th>
                             <th class="px-4 py-3">Action</th>
                         </tr>
                     </thead>
@@ -216,15 +231,15 @@
                             </td>
                             <td class="px-4 py-3">
                                 @php
-                                    $statusClass = [
-                                        'pending'   => 'bg-blue-600 text-white',
-                                        'confirmed' => 'bg-yellow-400 text-gray-900',
-                                        'cancelled' => 'bg-red-600 text-white',
-                                        'completed' => 'bg-green-600 text-white',
-                                        'booking'   => 'bg-gray-600 text-white',
-                                    ];
+                                $statusClass = [
+                                'pending' => 'bg-blue-600 text-white',
+                                'confirmed' => 'bg-yellow-400 text-gray-900',
+                                'cancelled' => 'bg-red-600 text-white',
+                                'completed' => 'bg-green-600 text-white',
+                                'booking' => 'bg-gray-600 text-white',
+                                ];
 
-                                    $status = optional($order->bookings->first())->status;
+                                $status = optional($order->bookings->first())->status;
                                 @endphp
 
                                 <span class="{{ $statusClass[$status] ?? 'bg-gray-500 text-white' }} 
@@ -242,7 +257,9 @@
                                 <span class="text-gray-500">No File</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
+                            <td class="px-4 py-3">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                           <td class="px-4 py-3">Rp {{ number_format($order->bookings->sum('admin_fee'), 0, ',', '.') }}</td>
+
                             <td class="px-4 py-3 flex gap-4 text-gray-500">
                                 <a href="{{ route('order.detail.index', $order->id) }}"
                                     aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
@@ -361,7 +378,11 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-400">Total:</span>
-                            <span class="font-semibold">Rp. {{ number_format($order->total, 0, ',', '.') }}</span>
+                            <span class="font-semibold">Rp {{ number_format($order->total, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Admin Fee:</span>
+                            <span class="font-semibold">Rp {{ number_format($order->bookings->sum('admin_fee'), 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-400">File:</span>
@@ -501,7 +522,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Kirim request hapus order ke server
-                        const deleteUrl = '{{ route('order.delete',':id') }}'.replace(':id', orderId);
+                        const deleteUrl = '{{ route('order.delete',': id ') }}'.replace(':id', orderId);
 
                         fetch(deleteUrl, {
                                 method: 'DELETE',
