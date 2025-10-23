@@ -194,12 +194,10 @@
         featuredImage.addEventListener('change', function() {
             if (this.files && this.files[0]) {
                 const reader = new FileReader();
-                
                 reader.onload = function(e) {
                     previewImg.src = e.target.result;
                     imagePreview.classList.remove('hidden');
                 }
-                
                 reader.readAsDataURL(this.files[0]);
             } else {
                 imagePreview.classList.add('hidden');

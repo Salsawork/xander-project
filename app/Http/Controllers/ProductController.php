@@ -54,12 +54,16 @@ class ProductController extends Controller
             }
         }
 
-        // 🔹 Kalau tidak ada filter → tampilkan random 4 (untuk landing admin/index)
-        if (!$request->hasAny(['level', 'filter', 'category', 'search', 'status'])) {
-            $products = $query->inRandomOrder()->limit(4)->get();
-        } else {
-            $products = $query->orderBy('created_at', 'desc')->paginate(10);
-        }
+        /**
+         * 🔄 UBAHAN PENTING:
+         * - Hapus logic "random 4".
+         * - Selalu paginate dengan 6 item per halaman (urut terbaru → ke bawah).
+         * - withQueryString() supaya filter & search nempel saat pindah halaman.
+         */
+        $perPage  = 6;
+        $products = $query->orderBy('created_at', 'desc')
+                          ->paginate($perPage)
+                          ->withQueryString();
 
         // 🔹 Track visit (sekali per hari per IP)
         $ipAddress = $request->ip();

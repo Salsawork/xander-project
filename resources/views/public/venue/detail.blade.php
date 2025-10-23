@@ -2,7 +2,6 @@
 @section('title', 'Venues Page - Xander Billiard')
 
 @push('styles')
-{{-- Leaflet CSS (gratis, tanpa billing) --}}
 <link
   rel="stylesheet"
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -10,7 +9,6 @@
   crossorigin=""
 />
 <style>
-  /* ====== GLOBAL BG ====== */
   :root{ color-scheme: dark; --page-bg:#0a0a0a; }
   :root, html, body{ background:var(--page-bg); }
   html, body{ height:100%; overscroll-behavior: none; touch-action: pan-y; -webkit-text-size-adjust: 100%; }
@@ -18,7 +16,6 @@
   #app, main{ background:var(--page-bg); }
   .scroll-root, .scroll-inner{ overscroll-behavior: contain; background:var(--page-bg); }
 
-  /* ====== UI Elements ====== */
   .card{background:#171717;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   .booking-card{padding:25px;border-radius:12px}
   .booking-card hr{margin-top:8px;margin-bottom:14px}
@@ -39,7 +36,6 @@
 
   label:has(input[type="radio"]:checked){ background-color:#2563eb; border-color:#2563eb; color:white; }
 
-  /* ====== Reviews ====== */
   .reviews-card{background:#171717;border-radius:14px;padding:18px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:100%}
   .reviews-card h3{font-weight:700}
   .reviews-card hr{border-color:rgba(255,255,255,.12);margin:8px 0 14px}
@@ -83,7 +79,6 @@
   @media (max-width:380px){ .rating-stars i{font-size:18px} .rating-number{font-size:24px} }
   @media (min-width:768px){ #createReviewCard{ margin-left:-8px; } }
 
-  /* ====== Leaflet map (detail) ====== */
   .leaflet-map{ height:260px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a; }
   .muted{ color:#9ca3af; }
 </style>
@@ -132,7 +127,6 @@
   $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
   $fullStars = floor((float)($averageRating ?? 0));
 
-  // ===== Koordinat dari database (jika ada) =====
   $lat = (float) ($detail->latitude ?? 0);
   $lng = (float) ($detail->longitude ?? 0);
   $hasCoords = ($lat !== 0.0 || $lng !== 0.0);
@@ -147,7 +141,6 @@
 
 <div class="min-h-screen px-6 md:px-20 py-10 bg-neutral-900 text-white scroll-root">
   <div class="container mx-auto space-y-10 scroll-inner">
-    {{-- Breadcrumb --}}
     <nav class="text-xs text-gray-400 mb-4">
       <a href="{{ route('index') }}">Home</a> /
       <a href="{{ route('venues.index') }}">Venue</a> /
@@ -198,25 +191,19 @@
           </div>
           <hr class="border-gray-400">
 
-          {{-- ===== LOCATION: alamat di ATAS, lalu peta Leaflet ===== --}}
+          {{-- Location --}}
           <div>
             <h2 class="font-semibold mb-2">Location</h2>
-
-            {{-- Alamat di atas peta --}}
             <div class="text-sm muted mb-2 flex items-start gap-2">
               <i class="fas fa-map-marker-alt mt-0.5"></i>
               <span>{{ $detail->address ?? 'No address available' }}</span>
             </div>
-
-            {{-- Peta --}}
             <div id="mapDetail" class="leaflet-map"></div>
-
-            {{-- Info loading / error --}}
             <p id="mapInfo" class="text-xs muted mt-2"></p>
           </div>
         </div>
 
-        {{-- ================= REVIEWS ================= --}}
+        {{-- Reviews --}}
         <div id="reviewsStart" class="max-w-7xl mx-auto px-0 lg:px-0 pt-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <aside class="reviews-card">
@@ -231,7 +218,6 @@
                 <div class="rating-number">{{ $avgText }}</div>
                 <div class="rating-outof">out of 5</div>
               </div>
-
               <div class="mt-3">
                 @for ($i = 5; $i >= 1; $i--)
                   @php
@@ -279,11 +265,9 @@
             </section>
           </div>
         </div>
-        {{-- ================= END REVIEWS ================= --}}
-
       </div>
 
-      {{-- RIGHT: Booking + Terms + CREATE REVIEW --}}
+      {{-- RIGHT: Booking --}}
       <div class="space-y-6" id="rightCol">
         <div class="card booking-card">
           <p class="text-sm text-gray-300">start from</p>
@@ -295,6 +279,12 @@
           <form id="addToCartForm" action="{{ route('cart.add.venue') }}" method="POST" class="space-y-4">
             @csrf
             <input type="hidden" name="id" value="{{ $detail->id }}">
+
+            {{-- Hidden yang diisi otomatis sebelum submit --}}
+            <input type="hidden" name="start" id="startInput">
+            <input type="hidden" name="end" id="endInput">
+            <input type="hidden" name="price" id="priceInput">
+            <input type="hidden" name="table_number" id="tableNumberInput"><!-- penting untuk CartItem.table_number -->
 
             <div>
               <label class="text-sm text-gray-300">Date</label>
@@ -337,7 +327,7 @@
           <p>Disruptive behavior may result in removal without refund.</p>
         </div>
 
-        {{-- ==== BUAT REVIEW ==== --}}
+        {{-- CREATE REVIEW --}}
         <div id="createReviewCard" class="create-card text-sm text-gray-300">
           <h3 class="text-base font-semibold text-white">Buat Review</h3>
 
@@ -381,7 +371,6 @@
             <a href="{{ route('login') }}" class="inline-flex items-center mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2 rounded-md">Login Sekarang</a>
           @endauth
         </div>
-        {{-- ==== END BUAT REVIEW ==== --}}
       </div>
     </div>
   </div>
@@ -403,7 +392,6 @@
 @endsection
 
 @push('scripts')
-{{-- Leaflet JS --}}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
@@ -415,7 +403,6 @@
   const venueId      = @json($detail->id);
   const baseVenuesUrl= @json(url('/venues'));
 
-  // Data untuk map
   const hasCoordsDb  = @json($hasCoords);
   const latDb        = parseFloat(@json($lat));
   const lngDb        = parseFloat(@json($lng));
@@ -425,10 +412,8 @@
   function changeMainImage(src){ document.getElementById('mainImage').src = src; }
 
   document.addEventListener("DOMContentLoaded", function() {
-    // ====== INIT LEAFLET MAP ======
+    // MAP
     const mapInfoEl = document.getElementById('mapInfo');
-    let map;
-
     function initMap(lat, lng){
       const mapDetail = L.map('mapDetail', { zoomControl:true, scrollWheelZoom:true }).setView([lat, lng], 16);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -437,32 +422,21 @@
       L.marker([lat,lng]).addTo(mapDetail).bindPopup(venueName);
       return mapDetail;
     }
-
-    if (hasCoordsDb) {
-      map = initMap(latDb, lngDb);
-      mapInfoEl.textContent = '';
-    } else if (venueAddress) {
+    if (hasCoordsDb) { initMap(latDb, lngDb); mapInfoEl.textContent = ''; }
+    else if (venueAddress) {
       mapInfoEl.textContent = 'Mencari lokasi dari alamat…';
-      // Geocode gratis (OpenStreetMap Photon)
       fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(venueAddress)}&limit=1`)
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(json => {
           const f = (json && json.features && json.features[0]) ? json.features[0] : null;
           if (!f) throw new Error('Alamat tidak ditemukan');
           const [lng, lat] = f.geometry.coordinates;
-          map = initMap(lat, lng);
-          mapInfoEl.textContent = '';
+          initMap(lat, lng); mapInfoEl.textContent = '';
         })
-        .catch(() => {
-          mapInfoEl.textContent = 'Gagal memuat peta dari alamat. Menampilkan area default.';
-          map = initMap(-6.2, 106.816666); // Jakarta Pusat sebagai default
-        });
-    } else {
-      mapInfoEl.textContent = 'Alamat belum tersedia. Menampilkan area default.';
-      map = initMap(-6.2, 106.816666);
-    }
+        .catch(() => { mapInfoEl.textContent = 'Gagal memuat peta dari alamat. Menampilkan area default.'; initMap(-6.2, 106.816666); });
+    } else { mapInfoEl.textContent = 'Alamat belum tersedia. Menampilkan area default.'; initMap(-6.2, 106.816666); }
 
-    // ====== Booking & Schedule logic (punyamu) ======
+    // Booking & Schedule logic
     const datePicker   = document.getElementById('datePicker');
     const openDateBtn  = document.getElementById('openDateBtn');
     const addBtn       = document.getElementById('addToCartButton');
@@ -471,8 +445,13 @@
     const form         = document.getElementById("addToCartForm");
     const priceDisplay = document.getElementById("priceDisplay");
 
+    // Hidden inputs
+    const startInput      = document.getElementById('startInput');
+    const endInput        = document.getElementById('endInput');
+    const priceInput      = document.getElementById('priceInput');
+    const tableNumberInput= document.getElementById('tableNumberInput');
+
     let selectedSchedule = null;
-    let selectedTableNumber = null;
 
     function initializeDatePicker() {
       if (!datePicker) return;
@@ -487,42 +466,48 @@
     }
 
     if (openDateBtn && datePicker) {
-      openDateBtn.addEventListener('click', () => { datePicker.showPicker(); });
+      openDateBtn.addEventListener('click', () => {
+        if (datePicker.showPicker) datePicker.showPicker();
+        else {
+          // fallback agar tetap bisa pilih tanggal kalau browser tak support showPicker
+          datePicker.focus(); datePicker.click();
+        }
+      });
     }
 
     function createScheduleSlot(slot, price) {
       const lbl = document.createElement("label");
-      const isBooked = slot.is_booked || false;
-      lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
+      lbl.className = `slot`;
       lbl.innerHTML = `
-        <input type="radio" name="schedule" value="${slot.start}-${slot.end}"
-               class="hidden" required ${isBooked ? 'disabled' : ''}>
+        <input type="radio" name="schedule" value="${slot.start}-${slot.end}" class="hidden" required>
         ${slot.start} - ${slot.end}
       `;
-      if (!isBooked) {
-        const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
-          document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
-          lbl.classList.add('slot--active');
-          selectedSchedule = { start: slot.start, end: slot.end, price: price };
-          if (priceDisplay) {
-            const formattedPrice = new Intl.NumberFormat('id-ID',{
-              style:'currency', currency:'IDR', minimumFractionDigits:0, maximumFractionDigits:0
-            }).format(price);
-            priceDisplay.innerText = formattedPrice;
-          }
-          if (slot.tables) { renderTables(slot.tables); } else { tableList.innerHTML = ""; }
-        });
-      }
+      const radio = lbl.querySelector("input");
+      radio.addEventListener("change", () => {
+        document.querySelectorAll('#scheduleList .slot').forEach(s => s.classList.remove('slot--active'));
+        lbl.classList.add('slot--active');
+        selectedSchedule = { start: slot.start, end: slot.end, price: price };
+        if (priceDisplay) {
+          const formattedPrice = new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0 }).format(price);
+          priceDisplay.innerText = formattedPrice;
+        }
+        // reset pilihan meja saat ganti jam
+        tableList.innerHTML = "";
+        tableNumberInput.value = '';
+        renderTables(slot.tables || []);
+      });
       return lbl;
     }
 
     async function loadSchedules(selectedDate) {
       if (!selectedDate || !scheduleList) return;
       scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
-      if (tableList) tableList.innerHTML = "";
+      tableList.innerHTML = "";
       selectedSchedule = null;
-      selectedTableNumber = null;
+      startInput.value = '';
+      endInput.value   = '';
+      priceInput.value = '';
+      tableNumberInput.value = '';
 
       try {
         const response = await fetch(`${baseVenuesUrl}/${encodeURIComponent(venueId)}/price-schedules?date=${encodeURIComponent(selectedDate)}`);
@@ -535,10 +520,7 @@
           return;
         }
         schedules.forEach(sch => {
-          (sch.schedule || []).forEach(slot => {
-            const scheduleSlot = createScheduleSlot(slot, sch.price);
-            scheduleList.appendChild(scheduleSlot);
-          });
+          (sch.schedule || []).forEach(slot => scheduleList.appendChild(createScheduleSlot(slot, sch.price)));
         });
       } catch (error) {
         console.error('Error loading schedules:', error);
@@ -546,20 +528,38 @@
       }
     }
 
-    if (datePicker) {
-      datePicker.addEventListener("change", function(){ loadSchedules(this.value); });
+    function renderTables(tables = []) {
+      tableList.innerHTML = "";
+      if (!tables || tables.length === 0) {
+        tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
+        return;
+      }
+      tables.forEach(tbl => {
+        const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
+        const lbl = document.createElement("label");
+        lbl.className = `slot ${disabledClass}`;
+        lbl.innerHTML = `
+          <input type="radio" name="table_id" value="${tbl.id}" class="hidden" ${tbl.is_booked ? 'disabled' : ''} required>
+          ${tbl.name || 'Table ' + tbl.id}
+        `;
+        const radio = lbl.querySelector("input");
+        radio.addEventListener("change", () => {
+          document.querySelectorAll('#tableList .slot').forEach(s => s.classList.remove('slot--active'));
+          lbl.classList.add('slot--active');
+          // isi table_number untuk backend
+          tableNumberInput.value = (tbl.name || ('Table ' + tbl.id));
+        });
+        tableList.appendChild(lbl);
+      });
     }
+
+    if (datePicker) datePicker.addEventListener("change", function(){ loadSchedules(this.value); });
 
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!isLoggedIn) {
-          Swal.fire({
-            title: 'Belum Login!',
-            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-            icon: 'warning',
-            confirmButtonText: 'Login Sekarang',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F', color: '#FFFFFF'
+          Swal.fire({ title:'Belum Login!', text:'Silakan login terlebih dahulu untuk menambahkan ke keranjang.', icon:'warning',
+            confirmButtonText:'Login Sekarang', confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF'
           }).then(() => { window.location.href = '/login'; });
           return;
         }
@@ -577,10 +577,17 @@
         if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
         if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
 
+        // isi hidden inputs
+        const parts = String(schedule.value).split('-');
+        startInput.value = (parts[0] || '').trim();
+        endInput.value   = (parts[1] || '').trim();
+        priceInput.value = selectedSchedule?.price ?? 0;
+
         form.requestSubmit();
       });
     }
 
+    // Stars input for review
     const stars = document.querySelectorAll('#ratingBox i');
     const ratingInput = document.getElementById('ratingInput');
     stars.forEach(st => {
@@ -591,30 +598,10 @@
       });
     });
 
+    // Init
     initializeDatePicker();
 
-    function renderTables(tables = []) {
-      tableList.innerHTML = "";
-      if (!tables || tables.length === 0) {
-        tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
-        return;
-      }
-      tables.forEach(tbl => {
-        const lbl = document.createElement("label");
-        const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
-        lbl.className = `slot ${disabledClass}`;
-        lbl.innerHTML = `
-          <input type="radio" name="table_id" value="${tbl.id}" class="hidden">
-          ${tbl.name || 'Table ' + tbl.id}
-        `;
-        const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
-          selectedTableNumber = tbl.name || ('Table ' + tbl.id);
-        });
-        tableList.appendChild(lbl);
-      });
-    }
-
+    // Align create review card
     function alignCreateReview() {
       const mq = window.matchMedia('(min-width: 768px)');
       const anchor = document.getElementById('reviewsAnchor');

@@ -171,7 +171,7 @@
                                 <div>
                                     <label for="content" class="block text-sm font-medium text-gray-300 mb-1">Konten <span class="text-red-500">*</span></label>
                                     <textarea name="content" id="content" rows="12" required
-                                        class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus	border-[#999]">{{ old('content', $guideline->content) }}</textarea>
+                                        class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]">{{ old('content', $guideline->content) }}</textarea>
                                     <p class="text-xs text-gray-400 mt-1">Kamu bisa menggunakan HTML untuk formatting.</p>
                                 </div>
                             </div>

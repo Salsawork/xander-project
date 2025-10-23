@@ -6,29 +6,20 @@
     /* ====== Anti overscroll / white bounce ====== */
     :root{ color-scheme: dark; --page-bg:#0a0a0a; }
     html, body{
-        height:100%;
-        min-height:100%;
-        background:var(--page-bg);
-        overscroll-behavior-y: none;   /* cegah rubber-band ke body */
-        overscroll-behavior-x: none;
-        touch-action: pan-y;
+        height:100%; min-height:100%; background:var(--page-bg);
+        overscroll-behavior-y: none; overscroll-behavior-x: none; touch-action: pan-y;
         -webkit-text-size-adjust:100%;
     }
-    /* Kanvas gelap tetap di belakang konten */
-    #antiBounceBg{
-        position: fixed;
-        left:0; right:0;
-        top:-120svh; bottom:-120svh;   /* svh stabil di mobile */
-        background:var(--page-bg);
-        z-index:-1;
-        pointer-events:none;
+    #antiBounceBg{ position: fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg); z-index:-1; pointer-events:none; }
+    .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+    .card{ background:#262626; border:1px solid #3b3b3b; border-radius:0.75rem; }
+    .form-label{ color:#9ca3af; font-size:0.75rem; margin-bottom:0.25rem; display:block; }
+    .form-input{
+        width:100%; border:1px solid #525252; background:#1f1f1f; color:#fff;
+        padding:0.55rem 0.75rem; border-radius:0.5rem; font-size:0.9rem; outline: none;
     }
-    /* Pastikan area scroll utama tidak meneruskan overscroll ke body */
-    .scroll-safe{
-        background-color:#171717;      /* senada dengan bg-neutral-900 */
-        overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
-    }
+    .form-input:focus{ border-color:#60a5fa; box-shadow:0 0 0 2px rgba(96,165,250,.25); }
 </style>
 @endpush
 
@@ -36,221 +27,219 @@
 <div id="antiBounceBg" aria-hidden="true"></div>
 
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
-    <div class="flex flex-1 min-h-0">
-        @include('partials.sidebar')
-        <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
-            @include('partials.topbar')
+  <div class="flex flex-1 min-h-0">
+    @include('partials.sidebar')
+    <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
+      @include('partials.topbar')
 
-            <div class="mt-20 sm:mt-0 px-4 sm:px-8">
-                <h1 class="text-2xl sm:text-3xl font-extrabold my-6 sm:my-8">
-                    Tambah Event Baru
-                </h1>
+      <div class="mt-20 sm:mt-0 px-4 sm:px-8">
+        <h1 class="text-2xl sm:text-3xl font-extrabold my-6 sm:my-8">Tambah Event Baru</h1>
 
-                <form method="POST" action="{{ route('admin.event.store') }}" enctype="multipart/form-data"
-                    class="bg-[#262626] rounded-lg p-6 sm:p-8 space-y-6" id="eventForm">
-                    @csrf
+        @if ($errors->any())
+          <div class="mb-4 rounded-lg border border-red-700 bg-red-900/30 px-4 py-3 text-sm">
+            <ul class="list-disc pl-5">
+              @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="name">Nama Event</label>
-                            <input name="name" value="{{ old('name') }}" id="name" type="text"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Masukkan nama event">
-                            @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
+        <form method="POST" action="{{ route('admin.event.store') }}" enctype="multipart/form-data" class="card p-6 sm:p-8 space-y-6" id="eventForm">
+          @csrf
 
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="location">Lokasi</label>
-                            <input name="location" value="{{ old('location') }}" id="location" type="text"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Masukkan lokasi event">
-                            @error('location') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            {{-- Price --}}
-                            <label class="block text-xs text-gray-400 mb-1" for="price_ticket">Biaya (Rp)</label>
-                            <input name="price_ticket" value="{{ old('price') }}" id="price_ticket" type="number" step="0.01"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                            @error('price_ticket') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        {{-- Stock --}}
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="stock">Stok</label>
-                            <input name="stock" value="{{ old('stock') }}" id="stock" type="number"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                            @error('stock') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="start_date">Tanggal Mulai</label>
-                            <input name="start_date" value="{{ old('start_date') }}" id="start_date" type="date"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                            @error('start_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="end_date">Tanggal Selesai</label>
-                            <input name="end_date" value="{{ old('end_date') }}" id="end_date" type="date"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                            @error('end_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="game_types">Jenis Permainan</label>
-                            <input name="game_types" value="{{ old('game_types') }}" id="game_types" type="text"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Contoh: 9 Ball, 10 Ball">
-                            @error('game_types') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="status">Status</label>
-                            <select name="status" id="status"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="">Pilih status</option>
-                                <option value="Upcoming" {{ old('status') == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
-                                <option value="Ongoing" {{ old('status') == 'Ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                <option value="Ended" {{ old('status') == 'Ended' ? 'selected' : '' }}>Ended</option>
-                            </select>
-                            @error('status') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1" for="description">Deskripsi</label>
-                        <textarea name="description" id="description" rows="4"
-                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Tulis deskripsi event">{{ old('description') }}</textarea>
-                        @error('description') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="total_prize_money">Total Hadiah (Rp)</label>
-                            <input name="total_prize_money" value="{{ old('total_prize_money') }}" id="total_prize_money"
-                                type="text"
-                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                inputmode="numeric" autocomplete="off">
-                            @error('total_prize_money') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="champion_prize">Juara 1 (Rp)</label>
-                            <input name="champion_prize" value="{{ old('champion_prize') }}" id="champion_prize" type="text"
-                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                inputmode="numeric" autocomplete="off">
-                            @error('champion_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="runner_up_prize">Juara 2 (Rp)</label>
-                            <input name="runner_up_prize" value="{{ old('runner_up_prize') }}" id="runner_up_prize"
-                                type="text"
-                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                inputmode="numeric" autocomplete="off">
-                            @error('runner_up_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="third_place_prize">Juara 3 (Rp)</label>
-                            <input name="third_place_prize" value="{{ old('third_place_prize') }}" id="third_place_prize"
-                                type="text"
-                                class="rupiah w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                inputmode="numeric" autocomplete="off">
-                            @error('third_place_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="match_style">Format Pertandingan</label>
-                            <input name="match_style" value="{{ old('match_style') }}" id="match_style" type="text"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Contoh: Single Elimination">
-                            @error('match_style') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1" for="finals_format">Format Final</label>
-                            <input name="finals_format" value="{{ old('finals_format') }}" id="finals_format" type="text"
-                                class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Contoh: Best of 5">
-                            @error('finals_format') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1" for="divisions">Divisi (opsional)</label>
-                        <input name="divisions" value="{{ old('divisions') }}" id="divisions" type="text"
-                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Contoh: Open, Master, Junior">
-                        @error('divisions') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1" for="social_media_handle">Akun Sosial Media</label>
-                        <input name="social_media_handle" value="{{ old('social_media_handle') }}" id="social_media_handle" type="text"
-                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Contoh: @official_event">
-                        @error('social_media_handle') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1" for="image_url">Gambar Event</label>
-                        <input name="image_url" id="image_url" type="file"
-                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            accept="image/*">
-                        @error('image_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
-                        <a href="{{ route('admin.event.index') }}"
-                            class="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition text-sm">
-                            Batal
-                        </a>
-                        <button type="submit"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm">
-                            Simpan
-                        </button>
-                    </div>
-                </form>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label class="form-label" for="name">Nama Event</label>
+              <input name="name" value="{{ old('name') }}" id="name" type="text" class="form-input" placeholder="Masukkan nama event">
+              @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
-        </main>
-    </div>
+
+            <div>
+              <label class="form-label" for="location">Lokasi</label>
+              <input name="location" value="{{ old('location') }}" id="location" type="text" class="form-input" placeholder="Masukkan lokasi event">
+              @error('location') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Biaya (Rupiah) pakai pair: *_view + hidden name="price_ticket" --}}
+            <div>
+              <label class="form-label" for="price_ticket_view">Biaya (Rp)</label>
+              <input id="price_ticket_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 150.000"
+                     value="{{ old('price_ticket') ? number_format((int)preg_replace('/\D/','', old('price_ticket')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="price_ticket" name="price_ticket" value="{{ (int)preg_replace('/\D/','', old('price_ticket', '')) }}">
+              @error('price_ticket') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Stok --}}
+            <div>
+              <label class="form-label" for="stock">Stok</label>
+              <input name="stock" value="{{ old('stock') }}" id="stock" type="number" class="form-input" placeholder="0">
+              @error('stock') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+              <label class="form-label" for="start_date">Tanggal Mulai</label>
+              <input name="start_date" value="{{ old('start_date') }}" id="start_date" type="date" class="form-input">
+              @error('start_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+              <label class="form-label" for="end_date">Tanggal Selesai</label>
+              <input name="end_date" value="{{ old('end_date') }}" id="end_date" type="date" class="form-input">
+              @error('end_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+              <label class="form-label" for="game_types">Jenis Permainan</label>
+              <input name="game_types" value="{{ old('game_types') }}" id="game_types" type="text" class="form-input" placeholder="Contoh: 9 Ball, 10 Ball">
+              @error('game_types') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+              <label class="form-label" for="status">Status</label>
+              <select name="status" id="status" class="form-input">
+                <option value="">Pilih status</option>
+                <option value="Upcoming" {{ old('status') == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
+                <option value="Ongoing"  {{ old('status') == 'Ongoing'  ? 'selected' : '' }}>Ongoing</option>
+                <option value="Ended"    {{ old('status') == 'Ended'    ? 'selected' : '' }}>Ended</option>
+              </select>
+              @error('status') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label" for="description">Deskripsi</label>
+            <textarea name="description" id="description" rows="4"
+                      class="form-input whitespace-pre-wrap break-words resize-none"
+                      placeholder="Tulis deskripsi event">{{ old('description') }}</textarea>
+            @error('description') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            {{-- Di halaman show gunakan {!! nl2br(e($event->description)) !!} agar line break tampil. --}}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {{-- Total hadiah & breakdown - pair rupiah seragam --}}
+            <div>
+              <label class="form-label" for="total_prize_money_view">Total Hadiah (Rp)</label>
+              <input id="total_prize_money_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 50.000.000"
+                     value="{{ old('total_prize_money') ? number_format((int)preg_replace('/\D/','', old('total_prize_money')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="total_prize_money" name="total_prize_money" value="{{ (int)preg_replace('/\D/','', old('total_prize_money', '')) }}">
+              @error('total_prize_money') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
+              <label class="form-label" for="champion_prize_view">Juara 1 (Rp)</label>
+              <input id="champion_prize_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 25.000.000"
+                     value="{{ old('champion_prize') ? number_format((int)preg_replace('/\D/','', old('champion_prize')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="champion_prize" name="champion_prize" value="{{ (int)preg_replace('/\D/','', old('champion_prize', '')) }}">
+              @error('champion_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
+              <label class="form-label" for="runner_up_prize_view">Juara 2 (Rp)</label>
+              <input id="runner_up_prize_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 15.000.000"
+                     value="{{ old('runner_up_prize') ? number_format((int)preg_replace('/\D/','', old('runner_up_prize')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="runner_up_prize" name="runner_up_prize" value="{{ (int)preg_replace('/\D/','', old('runner_up_prize', '')) }}">
+              @error('runner_up_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
+              <label class="form-label" for="third_place_prize_view">Juara 3 (Rp)</label>
+              <input id="third_place_prize_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 10.000.000"
+                     value="{{ old('third_place_prize') ? number_format((int)preg_replace('/\D/','', old('third_place_prize')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="third_place_prize" name="third_place_prize" value="{{ (int)preg_replace('/\D/','', old('third_place_prize', '')) }}">
+              @error('third_place_prize') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label class="form-label" for="match_style">Format Pertandingan</label>
+              <input name="match_style" value="{{ old('match_style') }}" id="match_style" type="text" class="form-input" placeholder="Contoh: Single Elimination">
+              @error('match_style') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
+              <label class="form-label" for="finals_format">Format Final</label>
+              <input name="finals_format" value="{{ old('finals_format') }}" id="finals_format" type="text" class="form-input" placeholder="Contoh: Best of 5">
+              @error('finals_format') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label" for="divisions">Divisi (opsional)</label>
+            <input name="divisions" value="{{ old('divisions') }}" id="divisions" type="text" class="form-input" placeholder="Contoh: Open, Master, Junior">
+            @error('divisions') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+          </div>
+
+          <div>
+            <label class="form-label" for="social_media_handle">Akun Sosial Media</label>
+            <input name="social_media_handle" value="{{ old('social_media_handle') }}" id="social_media_handle" type="text" class="form-input" placeholder="Contoh: @official_event">
+            @error('social_media_handle') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+          </div>
+
+          <div>
+            <label class="form-label" for="image_url">Gambar Event</label>
+            <input name="image_url" id="image_url" type="file" accept="image/*" class="form-input">
+            @error('image_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+            <a href="{{ route('admin.event.index') }}" class="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition text-sm">Batal</a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    // ===== Helper: format angka ke format rupiah (puluhan ribu dgn titik) =====
-    const nfID = new Intl.NumberFormat('id-ID');
-    function onlyDigits(value){
-        return (value || '').toString().replace(/[^\d]/g,'');
-    }
-    function formatRupiahInput(el){
-        const raw = onlyDigits(el.value);
-        el.value = raw ? nfID.format(parseInt(raw,10)) : '';
-    }
+  // ===== Helper: format angka ke format rupiah (tanpa simbol) =====
+  const nfID = new Intl.NumberFormat('id-ID');
+  const onlyDigits = (v) => (v || '').toString().replace(/[^\d]/g,'');
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const rupiahFields = [
-            'total_prize_money',
-            'champion_prize',
-            'runner_up_prize',
-            'third_place_prize'
-        ].map(id => document.getElementById(id)).filter(Boolean);
+  // Pasangkan field tampilan vs hidden yang dikirim
+  function bindRupiahPair(viewId, hiddenId){
+      const viewEl   = document.getElementById(viewId);
+      const hiddenEl = document.getElementById(hiddenId);
+      if(!viewEl || !hiddenEl) return;
 
-        // Inisialisasi format saat load (jika ada old value)
-        rupiahFields.forEach(el => {
-            if(el.value) formatRupiahInput(el);
-            el.addEventListener('input', () => formatRupiahInput(el));
-            el.addEventListener('blur', () => formatRupiahInput(el));
-        });
+      // Sync tampilan dari hidden (kalau ada)
+      const initRaw = onlyDigits(hiddenEl.value);
+      viewEl.value  = initRaw ? nfID.format(parseInt(initRaw,10)) : '';
 
-        // Bersihkan format sebelum submit agar backend menerima angka murni
-        const form = document.getElementById('eventForm');
-        form.addEventListener('submit', () => {
-            rupiahFields.forEach(el => {
-                el.value = onlyDigits(el.value);
-            });
-        });
-    });
+      // Ketik → update hidden & tampilkan format
+      viewEl.addEventListener('input', () => {
+          const raw = onlyDigits(viewEl.value);
+          hiddenEl.value = raw === '' ? '' : parseInt(raw,10);
+          viewEl.value   = raw ? nfID.format(parseInt(raw,10)) : '';
+      });
+
+      // Rapikan saat blur
+      viewEl.addEventListener('blur', () => {
+          const raw = onlyDigits(viewEl.value);
+          viewEl.value = raw ? nfID.format(parseInt(raw,10)) : '';
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+      // Bind semua field rupiah
+      bindRupiahPair('price_ticket_view',      'price_ticket');
+      bindRupiahPair('total_prize_money_view', 'total_prize_money');
+      bindRupiahPair('champion_prize_view',    'champion_prize');
+      bindRupiahPair('runner_up_prize_view',   'runner_up_prize');
+      bindRupiahPair('third_place_prize_view', 'third_place_prize');
+
+      // Pastikan hidden tetap digit sebelum submit
+      const form = document.getElementById('eventForm');
+      form.addEventListener('submit', () => {
+          ['price_ticket','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
+              .forEach(id => {
+                  const el = document.getElementById(id);
+                  if (el) {
+                      const raw = onlyDigits(el.value);
+                      el.value = raw === '' ? '' : parseInt(raw, 10);
+                  }
+              });
+      });
+  });
 </script>
 @endpush
