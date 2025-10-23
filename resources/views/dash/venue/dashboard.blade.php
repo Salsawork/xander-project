@@ -7,9 +7,8 @@
   :root { color-scheme: dark; }
 
   /* Pastikan SEMUA root benar-benar gelap */
-  html, body { 
+  html, body {
     height: 100%;
-    background: #0a0a0a;
     /* Matikan overscroll glow/bounce */
     overscroll-behavior-y: none;
     overscroll-behavior-x: none;
@@ -23,24 +22,18 @@
   #antiBounceBg{
     position: fixed;
     inset: -20svh 0 -20svh 0;         /* tambah area atas & bawah */
-    background: #0a0a0a;
     pointer-events: none;
     z-index: -1;
   }
 
-  /* Semua kontainer utama juga gelap */
-  #app, main, .min-h-screen { background: #0a0a0a; }
-
   /* Pembungkus halaman: cegah bleed horizontal & jaga gelap */
   .page-wrap{
-    background: #0a0a0a;
     overflow-x: clip;                  /* cegah white gap horizontal saat momentum scroll */
   }
 
   /* Scroll area utama (main) tetap gelap & tidak men-“tembus” ke body */
   main{
     overscroll-behavior-y: contain;    /* tahan propagate bounce ke body */
-    background: #0a0a0a;
   }
 
   /* Kartu & panel mengikuti tema gelapmu */

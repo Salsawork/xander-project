@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -328,6 +329,120 @@ class ProductController extends Controller
             'categories',
             'brands',
             'conditions',
+            'cartProducts',
+            'cartVenues',
+            'cartSparrings'
+        ));
+    }
+
+    /**
+     * DETAIL PRODUK (public): /products/{id}/{slug?}
+     * Memperbaiki error 500 karena sebelumnya method ini belum ada.
+     */
+    public function detail(Request $request, int $id, ?string $slug = null)
+    {
+        // Ambil produk atau 404
+        $detail = Product::findOrFail($id);
+
+        // Canonical slug (SEO-friendly URL)
+        $expectedSlug = Str::slug($detail->name ?? 'product');
+        if ($slug !== $expectedSlug) {
+            return redirect()->route('products.detail', ['id' => $id, 'slug' => $expectedSlug], 301);
+        }
+
+        // Hitung diskon & final price
+        $detailDiscountPercent = $this->normalizeDiscountPercent($detail->discount ?? 0);
+        $detailHasDiscount     = $detailDiscountPercent > 0;
+        $detailFinalPrice      = $this->finalPrice((float) ($detail->pricing ?? 0), $detailDiscountPercent);
+
+        // Related products: satu kategori yang sama, exclude diri sendiri
+        $relatedQuery = Product::query()->where('id', '!=', $detail->id);
+        if (!empty($detail->category_id)) {
+            $relatedQuery->where('category_id', $detail->category_id);
+        }
+        $relatedProducts = $relatedQuery
+            ->orderBy('created_at', 'desc')
+            ->limit(12)
+            ->get();
+
+        // Map harga terkait (diskon/final price) agar view tidak perlu menghitung lagi
+        $relatedPriceMap = [];
+        foreach ($relatedProducts as $p) {
+            $pct = $this->normalizeDiscountPercent($p->discount ?? 0);
+            $relatedPriceMap[$p->id] = [
+                'has_discount'     => $pct > 0,
+                'discount_percent' => $pct,
+                'final_price'      => $this->finalPrice((float) ($p->pricing ?? 0), $pct),
+            ];
+        }
+
+        // Cart sidebar badge
+        $cartProducts  = collect();
+        $cartVenues    = collect();
+        $cartSparrings = collect();
+
+        if (auth()->check()) {
+            $userId = auth()->id();
+
+            $cartProducts = CartItem::with('product')
+                ->where('user_id', $userId)
+                ->where('item_type', 'product')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'    => $item->id,
+                    'product_id' => $item->product?->id,
+                    'name'       => $item->product?->name,
+                    'brand'      => $item->product?->brand,
+                    'category'   => $item->product?->category?->name ?? '-',
+                    'price'      => $item->product?->pricing,
+                    'quantity'   => $item->quantity,
+                    'total'      => $item->quantity * ($item->product?->pricing ?? 0),
+                    'discount'   => $item->product?->discount ?? 0,
+                    'images'     => $item->product?->images[0] ?? null,
+                ]);
+
+            $cartVenues = CartItem::with('venue')
+                ->where('user_id', $userId)
+                ->where('item_type', 'venue')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'  => $item->id,
+                    'venue_id' => $item->venue?->id,
+                    'name'     => $item->venue?->name,
+                    'address'  => $item->venue?->address ?? '-',
+                    'date'     => $item->date,
+                    'start'    => $item->start,
+                    'end'      => $item->end,
+                    'table'    => $item->table_number,
+                    'price'    => $item->price,
+                    'duration' => $item->start && $item->end
+                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                        : null,
+                ]);
+
+            $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
+                ->where('user_id', $userId)
+                ->where('item_type', 'sparring')
+                ->get()
+                ->map(fn($item) => [
+                    'cart_id'       => $item->id,
+                    'schedule_id'   => $item->sparringSchedule?->id,
+                    'athlete_name'  => $item->sparringSchedule?->athlete?->name ?? 'Unknown Athlete',
+                    'athlete_image' => $item->sparringSchedule?->athlete?->athleteDetail?->image ?? null,
+                    'date'          => $item->date,
+                    'start'         => $item->start,
+                    'end'           => $item->end,
+                    'price'         => $item->price,
+                ]);
+        }
+
+        return view('public.product.detail', compact(
+            'detail',
+            'detailHasDiscount',
+            'detailDiscountPercent',
+            'detailFinalPrice',
+            'relatedProducts',
+            'relatedPriceMap',
             'cartProducts',
             'cartVenues',
             'cartSparrings'
