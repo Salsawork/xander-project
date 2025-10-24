@@ -462,9 +462,15 @@ class ProductController extends Controller
         return (int) round($final, 0);
     }
 
+    /**
+     * Upload images ke:
+     *  - CMS: public/images/products
+     *  - FE : ../demo-xanders/images/products  (relative dari base_path)
+     * dan hanya menyimpan nama file (filename) ke DB.
+     */
     private function uploadImages(array $files): array
     {
-        $cmsPath = public_path('demo-xanders/images/products');
+        $cmsPath = public_path('images/products');
         $fePath  = base_path('../demo-xanders/images/products');
 
         if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
@@ -490,12 +496,15 @@ class ProductController extends Controller
         return $filenames;
     }
 
+    /**
+     * Hapus images dari CMS (public/images/products) dan FE (../demo-xanders/images/products)
+     */
     private function deleteImages(array $filenames): void
     {
         foreach ($filenames as $filename) {
             if (!$filename) continue;
 
-            $cms = public_path('demo-xanders/images/products/' . $filename);
+            $cms = public_path('images/products/' . $filename);
             $fe  = base_path('../demo-xanders/images/products/' . $filename);
 
             if (File::exists($cms)) @File::delete($cms);

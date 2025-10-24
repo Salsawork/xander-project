@@ -155,35 +155,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Inventory -->
-                    <div>
-                        <h3 class="text-lg font-bold border-b border-gray-600 pb-2 mb-4">
-                            Inventory
-                        </h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1" for="stock">
-                                    Quantity
-                                </label>
-                                <input name="stock" id="stock" type="number" placeholder="0" value="{{ old('stock') }}"
-                                    class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                                @error('stock')
-                                  <p class="text-xs text-red-400 mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1" for="sku">
-                                    SKU (Optional)
-                                </label>
-                                <input name="sku" id="sku" type="text" placeholder="Enter SKU number" value="{{ old('sku') }}"
-                                    class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                                @error('sku')
-                                  <p class="text-xs text-red-400 mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
                 </section>
 
                 <!-- Right Panel -->
@@ -194,6 +165,11 @@
                         <div class="flex flex-wrap gap-4">
                             <input type="file" name="images[]" id="imageUpload" class="w-full border border-gray-600 bg-[#262626] px-3 py-2 text-sm rounded-md" accept="image/*" multiple>
                             <p class="text-xs text-gray-500">Format: JPG, JPEG, PNG, WEBP, GIF. Maks: 4MB/berkas.</p>
+                            {{-- PENTING:
+                               - Name harus "images[]" dan multiple agar ProductController@store
+                                 memproses & menyimpan ke:
+                                 public/images/products (CMS) dan
+                                 ../demo-xanders/images/products (FE) --}}
                         </div>
                     </div>
 
@@ -299,7 +275,7 @@
       const raw = digits(el.value);
       el.dataset.raw = raw;
       el.value = fmt(raw);
-      el.setSelectionRange(el.value.length, el.value.length); // caret ke akhir
+      try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
     });
 
     el.addEventListener('blur', () => {
