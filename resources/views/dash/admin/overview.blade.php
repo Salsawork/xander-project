@@ -12,10 +12,12 @@
             --accent-secondary: #8b5cf6;
             --accent-success: #10b981;
             --accent-warning: #f59e0b;
+
+            /* Topbar selalu di atas */
+            --topbar-z: 70;
         }
 
-        html,
-        body {
+        html, body {
             height: 100%;
             min-height: 100%;
             background: var(--page-bg);
@@ -36,15 +38,28 @@
             pointer-events: none;
         }
 
-        #app,
-        main {
-            background: var(--page-bg);
-        }
+        #app, main { background: var(--page-bg); }
 
         .main-scroll {
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             background: #0a0a0a;
+        }
+
+        /* === Pastikan TOP BAR selalu di atas card yang ter-transform === */
+        /* Topbar partial kamu pakai <header class="... fixed top-0 ..."> */
+        header.fixed,
+        header[class*="fixed"] {
+            z-index: var(--topbar-z) !important;
+        }
+
+        /* Semua card/chart ada di bawah topbar (z-index lebih rendah) */
+        .panel,
+        .transaction-item,
+        .chart-container,
+        #revenueChart {
+            position: relative;
+            z-index: 0;
         }
 
         .panel {
@@ -58,13 +73,12 @@
         .panel::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             height: 3px;
             background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
             opacity: 0;
             transition: opacity 0.3s ease;
+            z-index: 0; /* garis aksen juga di bawah topbar */
         }
 
         .panel:hover {
@@ -73,29 +87,19 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
 
-        .panel:hover::before {
-            opacity: 1;
-        }
+        .panel:hover::before { opacity: 1; }
 
-        .stat-card {
-            position: relative;
-            overflow: hidden;
-        }
-
+        .stat-card { position: relative; overflow: hidden; }
         .stat-icon {
             position: absolute;
-            right: 20px;
-            top: 50%;
+            right: 20px; top: 50%;
             transform: translateY(-50%);
             font-size: 3rem;
             opacity: 0.1;
             transition: all 0.3s ease;
+            pointer-events: none;
         }
-
-        .stat-card:hover .stat-icon {
-            opacity: 0.2;
-            transform: translateY(-50%) scale(1.1);
-        }
+        .stat-card:hover .stat-icon { opacity: 0.2; transform: translateY(-50%) scale(1.1); }
 
         .stat-value {
             background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
@@ -111,18 +115,14 @@
             border-radius: 12px;
         }
 
-        #revenueChart {
-            min-height: 360px;
-        }
+        #revenueChart { min-height: 360px; }
 
         .transaction-item {
-            padding: 16px;
-            border-radius: 10px;
+            padding: 16px; border-radius: 10px;
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.3s ease;
         }
-
         .transaction-item:hover {
             background: rgba(255, 255, 255, 0.04);
             border-color: rgba(255, 255, 255, 0.1);
@@ -130,48 +130,17 @@
         }
 
         .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
         }
+        .status-pending   { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .status-processing{ background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .status-paid      { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-failed    { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .status-refunded  { background: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.2); }
 
-        .status-pending {
-            background: rgba(245, 158, 11, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-
-        .status-processing {
-            background: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-
-        .status-paid {
-            background: rgba(16, 185, 129, 0.1);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .status-failed {
-            background: rgba(239, 68, 68, 0.1);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .status-refunded {
-            background: rgba(156, 163, 175, 0.1);
-            color: #9ca3af;
-            border: 1px solid rgba(156, 163, 175, 0.2);
-        }
-
-        .page-title {
+        .page-title{
             background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -181,58 +150,27 @@
             letter-spacing: -0.5px;
         }
 
-        .section-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #e5e7eb;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .section-title{
+            font-size: 1.125rem; font-weight: 700; color: #e5e7eb;
+            display: flex; align-items: center; gap: 10px;
         }
-
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
+        .section-title::before{
+            content: ''; width: 4px; height: 20px;
             background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
             border-radius: 2px;
         }
 
-        .divider {
+        .divider{
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
             margin: 16px 0;
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-fade-in {
-            animation: fadeInUp 0.6s ease-out forwards;
-        }
-
-        .animate-delay-1 {
-            animation-delay: 0.1s;
-            opacity: 0;
-        }
-
-        .animate-delay-2 {
-            animation-delay: 0.2s;
-            opacity: 0;
-        }
-
-        .animate-delay-3 {
-            animation-delay: 0.3s;
-            opacity: 0;
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+        .animate-fade-in { animation: fadeInUp .6s ease-out forwards; }
+        .animate-delay-1 { animation-delay: .1s; opacity: 0; }
+        .animate-delay-2 { animation-delay: .2s; opacity: 0; }
+        .animate-delay-3 { animation-delay: .3s; opacity: 0; }
     </style>
 
     <div id="antiBounceBg" aria-hidden="true"></div>
@@ -249,28 +187,22 @@
                 {{-- === Statistik Utama === --}}
                 <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 px-8">
                     <div class="panel stat-card rounded-xl p-6 shadow-lg animate-fade-in animate-delay-1">
-                        <div class="stat-icon">
-                            <i class="fas fa-eye"></i>
-                        </div>
+                        <div class="stat-icon"><i class="fas fa-eye"></i></div>
                         <h2 class="font-semibold text-xs uppercase tracking-wide text-gray-400 mb-2">Page Visits</h2>
                         <div class="stat-value text-4xl font-extrabold leading-none mb-2">{{ number_format($visits) }}</div>
                         <div class="flex items-center gap-2 text-xs text-green-400">
-                            <i class="fas fa-arrow-up"></i>
-                            <span>Live tracking</span>
+                            <i class="fas fa-arrow-up"></i><span>Live tracking</span>
                         </div>
                     </div>
 
                     <div class="panel stat-card rounded-xl p-6 shadow-lg animate-fade-in animate-delay-2">
-                        <div class="stat-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
+                        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                         <h2 class="font-semibold text-xs uppercase tracking-wide text-gray-400 mb-2">Monthly Earnings</h2>
                         <div class="stat-value text-4xl font-extrabold leading-none mb-2">
                             Rp {{ number_format($monthlyEarnings, 0, ',', '.') }}
                         </div>
                         <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <i class="far fa-calendar"></i>
-                            <span>Last 30 days</span>
+                            <i class="far fa-calendar"></i><span>Last 30 days</span>
                         </div>
                     </div>
                 </section>
@@ -280,11 +212,7 @@
                     <div class="panel lg:col-span-2 rounded-xl p-6 shadow-lg">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="section-title">Sales Report</h3>
-                            <div class="flex gap-2">
-                                {{-- <button class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs transition-colors">
-                                    <i class="fas fa-download mr-1"></i> Export
-                                </button> --}}
-                            </div>
+                            <div class="flex gap-2"><!-- actions optional --></div>
                         </div>
                         <div class="divider"></div>
                         <div class="chart-container">
@@ -328,30 +256,15 @@
                                                 Rp {{ number_format($order->total, 0, ',', '.') }}
                                             </div>
                                             @if ($order->payment_status == 'pending')
-                                                <span class="status-badge status-pending">
-                                                    <i class="fas fa-clock"></i>
-                                                    Pending
-                                                </span>
+                                                <span class="status-badge status-pending"><i class="fas fa-clock"></i> Pending</span>
                                             @elseif ($order->payment_status == 'processing')
-                                                <span class="status-badge status-processing">
-                                                    <i class="fas fa-spinner fa-pulse"></i>
-                                                    Processing
-                                                </span>
+                                                <span class="status-badge status-processing"><i class="fas fa-spinner fa-pulse"></i> Processing</span>
                                             @elseif ($order->payment_status == 'paid')
-                                                <span class="status-badge status-paid">
-                                                    <i class="fas fa-check-circle"></i>
-                                                    Paid
-                                                </span>
+                                                <span class="status-badge status-paid"><i class="fas fa-check-circle"></i> Paid</span>
                                             @elseif ($order->payment_status == 'failed')
-                                                <span class="status-badge status-failed">
-                                                    <i class="fas fa-times-circle"></i>
-                                                    Failed
-                                                </span>
+                                                <span class="status-badge status-failed"><i class="fas fa-times-circle"></i> Failed</span>
                                             @elseif ($order->payment_status == 'refunded')
-                                                <span class="status-badge status-refunded">
-                                                    <i class="fas fa-undo"></i>
-                                                    Refunded
-                                                </span>
+                                                <span class="status-badge status-refunded"><i class="fas fa-undo"></i> Refunded</span>
                                             @endif
                                         </div>
                                     </div>
@@ -376,8 +289,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('revenueChart').getContext('2d');
-            
-            // Create gradient
+
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
             gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)');
             gradient.addColorStop(1, 'rgba(139, 92, 246, 0.3)');
@@ -405,10 +317,7 @@
                             position: 'top',
                             labels: {
                                 color: '#e5e7eb',
-                                font: {
-                                    size: 13,
-                                    weight: '600'
-                                },
+                                font: { size: 13, weight: '600' },
                                 padding: 20,
                                 usePointStyle: true,
                                 pointStyle: 'circle'
@@ -423,9 +332,7 @@
                             padding: 12,
                             displayColors: true,
                             callbacks: {
-                                label: function(context) {
-                                    return 'Rp ' + context.parsed.y.toLocaleString('id-ID');
-                                }
+                                label: (context) => 'Rp ' + context.parsed.y.toLocaleString('id-ID')
                             }
                         }
                     },
@@ -435,35 +342,18 @@
                             ticks: {
                                 color: '#9ca3af',
                                 font: { size: 12 },
-                                callback: function(value) {
-                                    return 'Rp ' + (value / 1000000).toFixed(1) + 'M';
-                                }
+                                callback: (value) => 'Rp ' + (value / 1000000).toFixed(1) + 'M'
                             },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)',
-                                drawBorder: false
-                            },
-                            border: {
-                                display: false
-                            }
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                            border: { display: false }
                         },
                         x: {
-                            ticks: {
-                                color: '#9ca3af',
-                                font: { size: 12 }
-                            },
-                            grid: {
-                                display: false
-                            },
-                            border: {
-                                display: false
-                            }
+                            ticks: { color: '#9ca3af', font: { size: 12 } },
+                            grid: { display: false },
+                            border: { display: false }
                         }
                     },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
+                    interaction: { intersect: false, mode: 'index' }
                 }
             });
         });

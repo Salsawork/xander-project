@@ -9,10 +9,11 @@
 
     <div class="relative" x-data="{ open: false }">
         <button aria-label="User menu"
-            class="flex items-center text-gray-300 hover:text-white focus:outline-none transition duration-200"
-            @click="open = !open">
-            <i class="fas fa-user-circle fa-lg"></i>
-        </button>
+        class="flex items-center text-gray-300 hover:text-white focus:outline-none transition duration-200 mr-2 sm:mr-4"
+        @click="open = !open">
+  <i class="fas fa-user-circle fa-lg"></i>
+</button>
+
 
         <div x-show="open"
             @click.away="open = false"

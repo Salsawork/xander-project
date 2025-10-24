@@ -1,5 +1,6 @@
 @extends('app')
 @section('title', 'Venues - Xander Billiard')
+
 @php
     $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
@@ -98,6 +99,12 @@
     sort($cities, SORT_NATURAL | SORT_FLAG_CASE);
 
     $selectedCity = request('city');
+
+    // ===== Format awal nilai price_min & price_max (jika dikirim angka mentah) =====
+    $reqPriceMinRaw = preg_replace('/\D+/', '', (string) request('price_min', ''));
+    $reqPriceMaxRaw = preg_replace('/\D+/', '', (string) request('price_max', ''));
+    $reqPriceMinFmt = $reqPriceMinRaw !== '' ? number_format((int) $reqPriceMinRaw, 0, ',', '.') : '';
+    $reqPriceMaxFmt = $reqPriceMaxRaw !== '' ? number_format((int) $reqPriceMaxRaw, 0, ',', '.') : '';
 @endphp
 
 @push('styles')
@@ -157,11 +164,11 @@
         background-repeat: no-repeat;
     "
 >
+    <!-- Hero -->
     <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
         <p class="text-sm text-gray-400 mt-1"><span onclick="window.location='{{ route('index') }}'">Home</span> / Venue</p>
         <h2 class="text-4xl font-bold uppercase text-white">FIND YOUR FAVORITE VENUE HERE</h2>
     </div>
-
     <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden" style="background-image: url('/images/bg/product_breadcrumb.png');">
         <p class="text-xs sm:text-sm text-gray-400 mt-1">
             <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Venue
@@ -169,6 +176,7 @@
         <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold uppercase text-white mt-2">FIND YOUR FAVORITE VENUE HERE</h2>
     </div>
 
+    <!-- Mobile Filter Button -->
     <div class="lg-hidden px-4 sm:px-6 mb-4">
         <button id="mobileFilterBtn" class="w-full bg-transparent rounded border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400">
             <i class="fas fa-filter"></i>
@@ -176,7 +184,9 @@
         </button>
     </div>
 
+    <!-- Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 sm:py-8 lg:py-12" id="list">
+        <!-- Filter (Tanggal DIHILANGKAN) -->
         <aside id="filterVenue" class="mobile-filter-sidebar">
             <div class="px-4 space-y-6 text-white text-sm">
                 <div class="flex items-center justify-between mb-4 lg-hidden">
@@ -184,12 +194,18 @@
                     <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
                 </div>
 
-                <form method="GET" action="{{ route('venues.index') }}">
+                <form id="filterForm" method="GET" action="{{ route('venues.index') }}">
                     <input type="hidden" name="pp" value="{{ request('pp', 4) }}">
 
-                    {{-- Search --}}
+                    {{-- Search (MENYARING daftar CITY di bawah secara client-side; hasil baru terapkan saat klik "Filter") --}}
                     <div>
-                        <input type="text" name="search" placeholder="Search" value="{{ request('search') }}"
+                        <input
+                            id="searchInput"
+                            type="text"
+                            name="search"
+                            placeholder="Search"
+                            value="{{ request('search') }}"
+                            autocomplete="off"
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
 
@@ -199,21 +215,22 @@
                             <span>City</span>
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
-                        <div id="cityFilter" class="toggleContent flex flex-wrap gap-2 mb-4">
+                        <div id="cityFilter" class="toggleContent flex flex-wrap gap-2 mb-2">
                             @php $isAll = empty($selectedCity); @endphp
-                            <label class="city-pill {{ $isAll ? 'selected' : '' }}" data-city-pill>
+                            <label class="city-pill {{ $isAll ? 'selected' : '' }}" data-city-pill data-all="1">
                                 <input type="radio" name="city" value="" {{ $isAll ? 'checked' : '' }}>
                                 All Cities
                             </label>
 
                             @foreach ($cities as $city)
                                 @php $id = 'city_' . md5($city); $isSelected = $selectedCity === $city; @endphp
-                                <label for="{{ $id }}" class="city-pill {{ $isSelected ? 'selected' : '' }}" data-city-pill>
+                                <label for="{{ $id }}" class="city-pill {{ $isSelected ? 'selected' : '' }}" data-city-pill data-city="{{ $city }}">
                                     <input id="{{ $id }}" type="radio" name="city" value="{{ $city }}" {{ $isSelected ? 'checked' : '' }}>
                                     {{ $city }}
                                 </label>
                             @endforeach
                         </div>
+                        <div id="cityEmptyMsg" class="hidden text-xs text-gray-400">No cities match your search.</div>
                     </div>
 
                     {{-- Price Range --}}
@@ -223,10 +240,14 @@
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
                         <div class="toggleContent w-full flex items-center gap-2">
-                            <input type="text" id="price_min" name="price_min" placeholder="Min" value="{{ request('price_min') }}"
-                                   class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
-                            <input type="text" id="price_max" name="price_max" placeholder="Max" value="{{ request('price_max') }}"
-                                   class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
+                            <input type="text" id="price_min" name="price_min" placeholder="Min"
+                                   value="{{ $reqPriceMinFmt }}"
+                                   inputmode="numeric" pattern="[0-9\.]*"
+                                   class="money-input w-1/2 rounded border border-gray-400 px-2 py-1 bg-transparent focus:outline-none focus:ring focus:ring-blue-500" />
+                            <input type="text" id="price_max" name="price_max" placeholder="Max"
+                                   value="{{ $reqPriceMaxFmt }}"
+                                   inputmode="numeric" pattern="[0-9\.]*"
+                                   class="money-input w-1/2 rounded border border-gray-400 px-2 py-1 bg-transparent focus:outline-none focus:ring focus:ring-blue-500" />
                         </div>
                     </div>
 
@@ -240,6 +261,7 @@
         </aside>
         <div id="mobileFilterOverlay" class="mobile-filter-overlay lg-hidden"></div>
 
+        <!-- List -->
         <section class="lg:col-span-4 flex flex-col gap-6">
             @forelse ($venues as $venue)
                 <div class="group">
@@ -278,7 +300,6 @@
                             <div class="mt-12">
                                 <div class="flex items-baseline gap-1 text-sm">
                                     <span class="text-gray-400">start from</span>
-                                    {{-- Hilangkan titik setelah "Rp" --}}
                                     <span class="text-lg sm:text-xl font-bold">Rp {{ number_format($venue->price ?? 0, 0, ',', '.') }}</span>
                                     <span class="text-gray-400">/ session</span>
                                 </div>
@@ -290,6 +311,7 @@
                 <div class="text-center py-12 text-gray-400">No venues found.</div>
             @endforelse
 
+            {{-- Pagination --}}
             @php
                 $current = method_exists($venues, 'currentPage') ? $venues->currentPage() : 1;
                 $last    = method_exists($venues, 'lastPage')    ? $venues->lastPage()    : 1;
@@ -334,6 +356,7 @@
 
     @include('public.cart')
 </div>
+
 @if (Auth::check() && Auth::user()->roles === 'user')
 <button
     aria-label="Shopping cart with {{ $cartCount }} items"
@@ -349,6 +372,7 @@
 </button>
 @endif
 
+{{-- Enforce pp=4 --}}
 <script>
     (function ensurePP(){
         const url = new URL(window.location.href);
@@ -363,9 +387,9 @@
 </script>
 
 <script>
+    // Toggle sections & mobile filter
     document.addEventListener("DOMContentLoaded", () => {
-        const toggles = document.querySelectorAll(".toggleBtn");
-        toggles.forEach((btn) => {
+        document.querySelectorAll(".toggleBtn").forEach((btn) => {
             const content = btn.parentElement.nextElementSibling;
             btn.addEventListener("click", () => {
                 if (content.classList.contains("max-h-0")) { content.classList.remove("max-h-0"); btn.textContent = "–"; }
@@ -373,10 +397,10 @@
             });
         });
 
-        const mobileFilterBtn = document.getElementById("mobileFilterBtn");
-        const filterVenue = document.getElementById("filterVenue");
+        const mobileFilterBtn     = document.getElementById("mobileFilterBtn");
+        const filterVenue         = document.getElementById("filterVenue");
         const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
-        const closeMobileFilter = document.getElementById("closeMobileFilter");
+        const closeMobileFilter   = document.getElementById("closeMobileFilter");
 
         function openMobileFilter() {
             filterVenue.classList.add("open");
@@ -392,51 +416,94 @@
         mobileFilterBtn?.addEventListener("click", openMobileFilter);
         closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
         mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
-
-        // City pill active state
-        const cityWrap = document.getElementById('cityFilter');
-        if (cityWrap) {
-            const pills = cityWrap.querySelectorAll('[data-city-pill]');
-            pills.forEach(pill => {
-                const input = pill.querySelector('input[type="radio"]');
-                if (!input) return;
-
-                if (input.checked) pill.classList.add('selected');
-
-                pill.addEventListener('click', () => {
-                    input.checked = true;
-                    pills.forEach(p => p.classList.remove('selected'));
-                    pill.classList.add('selected');
-                });
-            });
-        }
     });
 </script>
 
 <script>
-    function formatNumberInput(input) {
-        let value = input.value.replace(/\D/g, "");
-        if (!value) { input.value = ""; return; }
-        input.value = new Intl.NumberFormat("id-ID").format(value);
+    // ====== FORMAT INPUT UANG (IDR) UNTUK PRICE RANGE ======
+    function unformatIDR(str) { return (str || '').replace(/[^\d]/g, ''); }
+    function formatIDR(str) {
+        const digits = unformatIDR(str);
+        if (!digits) return '';
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
-    function unformatNumberInput(input) { return input.value.replace(/\./g, ""); }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        const minInput = document.getElementById("price_min");
-        const maxInput = document.getElementById("price_max");
+    function attachMoneyFormatter() {
+        const inputs = document.querySelectorAll('.money-input');
+        inputs.forEach((inp) => {
+            inp.value = formatIDR(inp.value);
+            inp.addEventListener('input', () => { inp.value = formatIDR(inp.value); });
+            inp.addEventListener('blur',  () => { inp.value = formatIDR(inp.value); });
+        });
 
-        if (minInput && minInput.value) minInput.value = new Intl.NumberFormat("id-ID").format(minInput.value);
-        if (maxInput && maxInput.value) maxInput.value = new Intl.NumberFormat("id-ID").format(maxInput.value);
-
-        minInput?.addEventListener("input", () => formatNumberInput(minInput));
-        maxInput?.addEventListener("input", () => formatNumberInput(maxInput));
-
-        if (minInput && minInput.form) {
-            minInput.form.addEventListener("submit", () => {
-                minInput.value = unformatNumberInput(minInput);
-                if (maxInput) maxInput.value = unformatNumberInput(maxInput);
+        const form = document.getElementById('filterForm');
+        if (form) {
+            form.addEventListener('submit', () => {
+                inputs.forEach((inp) => { inp.value = unformatIDR(inp.value); });
             });
         }
+    }
+    document.addEventListener('DOMContentLoaded', attachMoneyFormatter);
+</script>
+
+<script>
+    // ====== FILTER CITY PILLS BERDASARKAN TEKS PADA INPUT SEARCH (client-side only) ======
+    function filterCityPills() {
+        const input   = document.getElementById('searchInput');
+        const wrap    = document.getElementById('cityFilter');
+        const emptyEl = document.getElementById('cityEmptyMsg');
+        if (!input || !wrap) return;
+
+        const term = (input.value || '').toLowerCase().trim();
+
+        const pills = wrap.querySelectorAll('[data-city-pill]');
+        let visibleCount = 0;
+
+        pills.forEach(pill => {
+            const isAll = pill.hasAttribute('data-all');
+            if (isAll) { // "All Cities" selalu terlihat
+                pill.style.display = '';
+                return;
+            }
+            const city = (pill.getAttribute('data-city') || pill.textContent || '').toLowerCase();
+            const match = term === '' ? true : city.includes(term);
+            pill.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        if (emptyEl) {
+            if (term !== '' && visibleCount === 0) emptyEl.classList.remove('hidden');
+            else emptyEl.classList.add('hidden');
+        }
+    }
+
+    // City pill visual selected-state (tidak submit otomatis)
+    function activateCityPillsSelection() {
+        const wrap = document.getElementById('cityFilter');
+        if (!wrap) return;
+        const pills = wrap.querySelectorAll('[data-city-pill]');
+        pills.forEach(pill => {
+            const input = pill.querySelector('input[type="radio"]');
+            if (!input) return;
+
+            if (input.checked) pill.classList.add('selected');
+
+            pill.addEventListener('click', () => {
+                input.checked = true;
+                pills.forEach(p => p.classList.remove('selected'));
+                pill.classList.add('selected');
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const si = document.getElementById('searchInput');
+        if (si) {
+            si.addEventListener('input', filterCityPills);
+            // jalankan 1x saat load agar sinkron dengan nilai awal dari server
+            filterCityPills();
+        }
+        activateCityPillsSelection();
     });
 </script>
 
