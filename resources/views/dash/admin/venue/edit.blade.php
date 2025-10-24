@@ -31,7 +31,6 @@
   }
 
   .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-
   header.fixed, header[class*="fixed"]{ z-index: var(--topbar-z) !important; }
   .has-fixed-topbar{ padding-top: var(--topbar-h); }
 
@@ -49,7 +48,7 @@
   }
   .geocode-input:focus{ box-shadow:0 0 0 2px #3b82f6; border-color:#3b82f6; }
   .suggest-box{
-    position:absolute; z-index:30; /* < var(--topbar-z) */
+    position:absolute; z-index:30;
     left:0; right:0; top:100%; margin-top:6px;
     background:#1c1c1c; border:1px solid rgba(255,255,255,.15); border-radius:10px; overflow:hidden;
     max-height:220px; overflow-y:auto;
@@ -66,7 +65,6 @@
     <div class="flex flex-1 min-h-0">
       @include('partials.sidebar')
 
-      {{-- tambahkan has-fixed-topbar agar semua konten berada di belakang topbar saat scroll --}}
       <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe has-fixed-topbar">
         @include('partials.topbar')
 
@@ -129,17 +127,18 @@
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Upload Gambar (Opsional)</label>
-                      <input type="file" name="images[]" multiple
+                      <input type="file" name="images[]" multiple accept="image/*"
                         class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                      <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, WEBP, GIF. Maks: 4MB/berkas</p>
+                      <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, WEBP, AVIF, GIF. Maks: 4MB/berkas</p>
 
                       @php
                         $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
+                        // Tampilkan dari FE CDN: https://demo-xanders.ptbmn.id/images/venue/{filename}
                         $normalizeImg = function($img){
                           $raw = trim((string)$img);
                           if (preg_match('/^https?:\/\//i', $raw)) return $raw;
                           $filename = basename($raw);
-                          return asset('demo-xanders/images/venue/' . $filename);
+                          return 'https://demo-xanders.ptbmn.id/images/venue/' . $filename;
                         };
                       @endphp
 
@@ -159,7 +158,7 @@
                       @endif
                     </div>
 
-                    {{-- ADDRESS + MAP (Leaflet) --}}
+                    {{-- ADDRESS + MAP --}}
                     <div class="space-y-3">
                       <label class="block text-xs text-gray-400">Lokasi Venue</label>
 
@@ -173,7 +172,6 @@
                         name="address" id="address" rows="3">{{ $venue->address }}</textarea>
                       @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                      {{-- Jika DB Anda belum punya kolom lat/lng, field ini tetap digunakan di FE saja --}}
                       <input type="hidden" name="latitude" id="latitude" value="{{ $venue->latitude ?? '' }}">
                       <input type="hidden" name="longitude" id="longitude" value="{{ $venue->longitude ?? '' }}">
 
@@ -194,14 +192,14 @@
                       <div class="flex gap-3">
                         <div class="flex-1">
                           <input name="operating_hour"
-                            value="{{ old('operating_hour', $venue->operating_hour ? $venue->operating_hour->format('H:i') : '') }}"
+                            value="{{ old('operating_hour', $venue->operating_hour) }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="operating_hour" type="time" />
                           @error('operating_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div class="flex-1">
                           <input name="closing_hour"
-                            value="{{ old('closing_hour', $venue->closing_hour ? $venue->closing_hour->format('H:i') : '') }}"
+                            value="{{ old('closing_hour', $venue->closing_hour) }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="closing_hour" type="time" />
                           @error('closing_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
@@ -243,22 +241,13 @@
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
 <script>
-/**
- * EDIT PAGE — Peta tidak balik ke default:
- * - Jika lat/lng ada => pakai itu.
- * - Jika tidak ada lat/lng => geocode alamat tersimpan sekali (Nominatim/Photon) lalu center.
- * - Live search (Photon + fallback Nominatim) tetap ada dan auto-center ke hasil pertama saat mengetik.
- * - Reverse geocode tiap kali marker pindah agar textarea alamat selalu lengkap.
- */
 (function(){
   const DFLT = { lat: -6.175392, lng: 106.827153 }; // Monas fallback
 
-  // Data dari server
   const latFromDb = parseFloat(@json($venue->latitude ?? ''));
   const lngFromDb = parseFloat(@json($venue->longitude ?? ''));
   const addrFromDb = @json($venue->address ?? '');
 
-  // Elemen DOM
   const map = L.map('mapEdit', { zoomControl: true, scrollWheelZoom: true }).setView([DFLT.lat, DFLT.lng], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
 
@@ -268,7 +257,6 @@
   const searchBox = document.getElementById('searchBox');
   const suggestBox = document.getElementById('suggestions');
 
-  // Marker awal
   let marker = L.marker([DFLT.lat, DFLT.lng], { draggable:true }).addTo(map);
 
   function setHidden(lat, lng){ latEl.value = (+lat).toFixed(7); lngEl.value = (+lng).toFixed(7); }
@@ -286,13 +274,10 @@
     reverseToAddress(lat, lng);
   }
 
-  // -- Inisialisasi posisi: pakai lat/lng kalau ada; kalau tidak geocode alamat
   (function initPosition(){
     if (!isNaN(latFromDb) && !isNaN(lngFromDb)) {
-      // Ada lat/lng tersimpan
       centerTo(latFromDb, lngFromDb, addrFromDb || null, 16);
     } else if (addrFromDb && addrFromDb.trim().length > 0) {
-      // Tidak ada lat/lng => geocode alamat TERSIMPAN lalu center (sekali)
       const q = encodeURIComponent(addrFromDb);
       fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=id&q=${q}`)
         .then(r=>r.json())
@@ -301,18 +286,15 @@
             const lat = parseFloat(list[0].lat), lng = parseFloat(list[0].lon);
             centerTo(lat, lng, list[0].display_name || null, 16);
           } else {
-            // fallback: tetap Monas
             centerTo(DFLT.lat, DFLT.lng, null, 13);
           }
         })
         .catch(()=>centerTo(DFLT.lat, DFLT.lng, null, 13));
     } else {
-      // Tidak ada alamat juga => fallback
       centerTo(DFLT.lat, DFLT.lng, null, 13);
     }
   })();
 
-  // Drag / klik peta
   marker.on('dragend', () => {
     const { lat, lng } = marker.getLatLng();
     setHidden(lat, lng);
@@ -320,7 +302,6 @@
   });
   map.on('click', (e)=> centerTo(e.latlng.lat, e.latlng.lng));
 
-  // ===== Live Search (Photon utama, Nominatim fallback) =====
   function labelFromPhoton(f){
     const p = f.properties || {};
     return [p.name, p.street, (p.city || p.district || p.county || p.state), p.country].filter(Boolean).join(', ');
@@ -374,11 +355,12 @@
   };
 
   const debounced = debounce(q=>{
+    q = (q || '').trim();
     if(!q || q.length < 2){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
     runSearch(q);
   }, 400);
 
-  searchBox.addEventListener('input', e => debounced((e.target.value||'').trim()));
+  searchBox.addEventListener('input', e => debounced(e.target.value));
   searchBox.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); const q=(searchBox.value||'').trim(); if(q) runSearch(q); }
   });

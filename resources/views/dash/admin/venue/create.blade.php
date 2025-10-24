@@ -12,8 +12,6 @@
   :root{
     color-scheme: dark;
     --page-bg:#0a0a0a;
-
-    /* tinggi + z-index topbar (header fixed) */
     --topbar-h: 64px;
     --topbar-z: 90;
   }
@@ -29,14 +27,9 @@
   }
 
   .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-
-  /* Pastikan topbar (header fixed) selalu di atas */
   header.fixed, header[class*="fixed"]{ z-index: var(--topbar-z) !important; }
-
-  /* Konten tidak nabrak topbar */
   .has-fixed-topbar{ padding-top: var(--topbar-h); }
 
-  /* ==== MAP & komponen terkait jangan menutupi topbar ==== */
   .leaflet-map{
     height:300px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a;
     position: relative; z-index:0;
@@ -57,9 +50,6 @@
   }
   .suggest-item{ padding:.55rem .7rem; font-size:13px; color:#e5e7eb; cursor:pointer; }
   .suggest-item:hover{ background:#2a2a2a; }
-
-  /* kecilkan z-index dropdown agar tetap di bawah topbar */
-  .suggest-box{ z-index: 30; } /* < var(--topbar-z) */
 </style>
 @endpush
 
@@ -70,7 +60,6 @@
     <div class="flex flex-1 min-h-0">
       @include('partials.sidebar')
 
-      {{-- gunakan has-fixed-topbar agar semua konten berada di belakang topbar saat scroll --}}
       <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe has-fixed-topbar">
         @include('partials.topbar')
 
@@ -82,7 +71,6 @@
             </a>
           </div>
 
-          {{-- Grid 2 kolom (seperti halaman Edit) --}}
           <form method="POST" action="{{ route('venue.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             @csrf
 
@@ -121,7 +109,7 @@
               </div>
             </div>
 
-            {{-- Kolom Kanan: Informasi Venue (bagian gambar tetap create) --}}
+            {{-- Kolom Kanan: Informasi Venue --}}
             <div class="space-y-6">
               <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                 <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
@@ -137,7 +125,7 @@
                     @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
 
-                  {{-- === Gambar Venue (MAKS 3) — TETAP === --}}
+                  {{-- Gambar (maks 3) --}}
                   <div>
                     <label class="block text-xs text-gray-400 mb-1" for="images">Gambar Venue (maks. 3)</label>
                     <input name="images[]" id="images" type="file" multiple accept="image/*" class="hidden">
@@ -150,7 +138,7 @@
                     @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
 
-                  {{-- Lokasi + Map (Auto-center saat mengetik) --}}
+                  {{-- Lokasi + Map --}}
                   <div class="space-y-3">
                     <label class="block text-xs text-gray-400">Lokasi Venue</label>
 
@@ -234,13 +222,6 @@
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
 <script>
-/**
- * Geocoding yang auto-center saat user MENGETIK.
- * - Utama: Photon (Komoot) + bias ke posisi saat ini
- * - Fallback: Nominatim (OSM)
- * - Auto-center ke hasil pertama, update hidden lat/lng + textarea alamat
- * - Dropdown suggestion tetap bisa diklik manual
- */
 (function() {
   const DFLT = { lat: -6.175392, lng: 106.827153 }; // Monas
   const map = L.map('mapCreate', { zoomControl: true, scrollWheelZoom: true }).setView([DFLT.lat, DFLT.lng], 13);
@@ -270,9 +251,7 @@
   function reverseToAddress(lat, lng){
     fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`)
       .then(r => r.json())
-      .then(j => {
-        if (j && j.display_name && addrEl) addrEl.value = j.display_name;
-      })
+      .then(j => { if (j && j.display_name && addrEl) addrEl.value = j.display_name; })
       .catch(()=>{});
   }
 
@@ -281,11 +260,9 @@
     map.setView([lat, lng], zoom);
     updateLatLngFields(lat, lng);
     if (label) addrEl.value = label;
-    // tetap reverse agar alamat lengkap
     reverseToAddress(lat, lng);
   }
 
-  // Buat label dari Photon feature
   function labelFromPhoton(f){
     const p = f.properties || {};
     const name = p.name || '';
@@ -294,21 +271,10 @@
     const country = p.country || '';
     return [name, street, city, country].filter(Boolean).join(', ');
   }
+  function labelFromNominatim(obj){ return obj?.display_name || ''; }
 
-  // Buat label dari Nominatim result
-  function labelFromNominatim(obj){
-    if (!obj) return '';
-    const name = obj.display_name || '';
-    return name;
-  }
-
-  // Render suggestion list (Photon-style objek)
   function renderSuggestionsFromPhoton(features){
-    if (!features || !features.length){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
+    if (!features || !features.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML = ''; return; }
     suggestBox.innerHTML = features.slice(0, 8).map(f => {
       const label = labelFromPhoton(f);
       const c = f.geometry.coordinates; // [lng, lat]
@@ -316,134 +282,77 @@
     }).join('');
     suggestBox.classList.remove('hidden');
   }
-
-  // Render suggestion list (Nominatim-style array)
   function renderSuggestionsFromNominatim(list){
-    if (!list || !list.length){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
+    if (!list || !list.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML = ''; return; }
     suggestBox.innerHTML = list.slice(0, 8).map(it => {
       const label = labelFromNominatim(it);
       return `<div class="suggest-item" data-lat="${it.lat}" data-lng="${it.lon}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
     }).join('');
     suggestBox.classList.remove('hidden');
   }
-
-  // Auto-center ke hasil pertama (Photon/Nominatim)
   function autoCenterFromPhoton(features){
     if (!features || !features.length) return false;
     const first = features[0];
     const [lng, lat] = first.geometry.coordinates;
     const label = labelFromPhoton(first) || (searchBox.value || '').trim();
-    centerTo(lat, lng, label, 16);
-    return true;
+    centerTo(lat, lng, label, 16); return true;
   }
   function autoCenterFromNominatim(list){
     if (!list || !list.length) return false;
     const first = list[0];
     const lat = parseFloat(first.lat), lng = parseFloat(first.lon);
     const label = labelFromNominatim(first) || (searchBox.value || '').trim();
-    centerTo(lat, lng, label, 16);
-    return true;
+    centerTo(lat, lng, label, 16); return true;
   }
 
-  // Drag & click map
   marker.on('dragend', () => {
     const { lat, lng } = marker.getLatLng();
-    updateLatLngFields(lat, lng);
-    reverseToAddress(lat, lng);
+    updateLatLngFields(lat, lng); reverseToAddress(lat, lng);
   });
-  map.on('click', (e) => {
-    const { lat, lng } = e.latlng;
-    centerTo(lat, lng, null, 16);
-  });
+  map.on('click', (e) => centerTo(e.latlng.lat, e.latlng.lng, null, 16));
 
-  // ======= Pencarian otomatis saat KETIK =======
-  let tmr;
-  let currentController = null;
+  let tmr; let currentController = null;
   const MIN_CHARS = 2;
+  function abortLast(){ if (currentController){ try{ currentController.abort(); }catch(e){} currentController = null; } }
 
-  function abortLast(){
-    if (currentController){
-      try{ currentController.abort(); }catch(e){}
-      currentController = null;
-    }
-  }
-
-  // Cari via Photon, fallback ke Nominatim
   function queryAndCenter(q){
     abortLast();
     currentController = new AbortController();
     const signal = currentController.signal;
-
-    // Bias ke posisi marker saat ini agar hasil lebih relevan
     const bias = marker.getLatLng ? marker.getLatLng() : {lat: DFLT.lat, lng: DFLT.lng};
 
-    // 1) Photon
-    const photonUrl =
-      `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id&lat=${bias.lat}&lon=${bias.lng}&limit=8`;
+    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id&lat=${bias.lat}&lon=${bias.lng}&limit=8`;
     fetch(photonUrl, { signal })
       .then(r => r.json())
       .then(j => {
         const feats = (j && j.features) ? j.features : [];
-        if (feats.length){
-          renderSuggestionsFromPhoton(feats);
-          autoCenterFromPhoton(feats);
-        } else {
-          // 2) Fallback: Nominatim
+        if (feats.length){ renderSuggestionsFromPhoton(feats); autoCenterFromPhoton(feats); }
+        else {
           const nomUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=id&q=${encodeURIComponent(q)}`;
           return fetch(nomUrl, { signal })
             .then(rr => rr.json())
-            .then(list => {
-              renderSuggestionsFromNominatim(list || []);
-              autoCenterFromNominatim(list || []);
-            });
+            .then(list => { renderSuggestionsFromNominatim(list || []); autoCenterFromNominatim(list || []); });
         }
       })
-      .catch(()=>{/* dilewati saat abort / error */})
+      .catch(()=>{})
       .finally(()=>{ currentController = null; });
   }
 
   const runLiveSearch = (q) => {
-    if (q.length < MIN_CHARS){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
-    queryAndCenter(q);
+    if ((q || '').trim().length < MIN_CHARS){ suggestBox.classList.add('hidden'); suggestBox.innerHTML = ''; return; }
+    queryAndCenter((q || '').trim());
   };
 
-  const debounce = (fn, ms) => {
-    return (...args) => {
-      clearTimeout(tmr);
-      tmr = setTimeout(() => fn(...args), ms);
-    };
-  };
-
+  const debounce = (fn, ms) => { return (...args) => { clearTimeout(tmr); tmr = setTimeout(() => fn(...args), ms); }; };
   const debouncedSearch = debounce(runLiveSearch, 400);
 
-  searchBox.addEventListener('input', (e) => {
-    const q = (e.target.value || '').trim();
-    debouncedSearch(q);
-  });
-
-  // Enter = cari langsung
+  searchBox.addEventListener('input', (e) => debouncedSearch(e.target.value || ''));
   searchBox.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter'){
-      e.preventDefault();
-      const q = (searchBox.value || '').trim();
-      if (!q) return;
-      runLiveSearch(q);
-    }
+    if (e.key === 'Enter'){ e.preventDefault(); runLiveSearch(searchBox.value || ''); }
   });
 
-  // Klik suggestion
   document.addEventListener('click', (e) => {
-    if (!suggestBox.contains(e.target) && e.target !== searchBox) {
-      suggestBox.classList.add('hidden');
-    }
+    if (!suggestBox.contains(e.target) && e.target !== searchBox) { suggestBox.classList.add('hidden'); }
     const item = e.target.closest('.suggest-item');
     if (item){
       const lat = parseFloat(item.dataset.lat);
@@ -454,7 +363,6 @@
     }
   });
 
-  // Set nilai awal hidden fields
   const start = marker.getLatLng();
   updateLatLngFields(start.lat, start.lng);
   if (!hasInit) reverseToAddress(start.lat, start.lng);
@@ -462,14 +370,14 @@
 </script>
 
 <script>
-  // === Preview upload (maks 3) — TETAP seperti create ===
+  // Preview upload (maks 3)
   const fileInput = document.getElementById('images');
   const previewContainer = document.getElementById('imagePreview');
   let selectedFiles = [];
 
   fileInput.addEventListener('change', function(e) {
     const newFiles = Array.from(e.target.files).map(file => {
-      const uniqueName = Date.now() + '-' + file.name; // nama unik
+      const uniqueName = Date.now() + '-' + file.name;
       return new File([file], uniqueName, { type: file.type });
     });
     selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
