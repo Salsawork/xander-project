@@ -10,9 +10,17 @@ use App\Models\Categories;
 
 class CategoryProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Categories::all();
+        $query = Categories::query();
+
+        if ($request->has('search') && $request->search != '') {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // kamu bisa ganti ke paginate kalau mau
+        $categories = $query->orderBy('created_at', 'desc')->get();
+
         return view('dash.admin.category.index', compact('categories'));
     }
 

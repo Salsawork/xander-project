@@ -118,19 +118,15 @@ class EventController extends Controller
      */
     public function show($event, $name = null)
     {
-        // Pastikan status up to date
         if (method_exists(Event::class, 'refreshStatuses')) {
             Event::refreshStatuses();
         }
-
+    
         $event = Event::findOrFail($event);
-
-        // Load bank untuk dropdown modal Buy Ticket
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
-
-        // Ticket default agar order_events.ticket_id terisi
+    
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
-
+    
         if (!$ticket) {
             $ticket = EventTicket::create([
                 'event_id'    => $event->id,
@@ -139,10 +135,22 @@ class EventController extends Controller
                 'stock'       => (int) ($event->stock ?? 0),
                 'description' => 'Default ticket for ' . $event->name,
             ]);
+        } else {
+            // 🧩 Sinkron otomatis jika data event berubah
+            if (
+                (float)$ticket->price !== (float)$event->price_ticket ||
+                (int)$ticket->stock !== (int)$event->stock
+            ) {
+                $ticket->update([
+                    'price' => (float)$event->price_ticket,
+                    'stock' => (int)$event->stock,
+                ]);
+            }
         }
-
+    
         return view('public.event.detail', compact('event', 'banks', 'ticket'));
     }
+    
 
     /**
      * Kompat lama: /event/{name} -> redirect ke /event/{id}/{slug}
