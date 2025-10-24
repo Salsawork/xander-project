@@ -9,15 +9,39 @@
   crossorigin=""
 />
 <style>
-  :root{ color-scheme: dark; --page-bg:#0a0a0a; }
-  html, body{
-    height:100%; min-height:100%; background:var(--page-bg);
-    overscroll-behavior: none; touch-action: pan-y; -webkit-text-size-adjust:100%;
+  :root{
+    color-scheme: dark;
+    --page-bg:#0a0a0a;
+    --topbar-h: 64px;
+    --topbar-z: 90;
   }
-  #antiBounceBg{ position: fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg); z-index:-1; pointer-events:none; }
+
+  html, body{
+    height:100%;
+    min-height:100%;
+    background:var(--page-bg);
+    overscroll-behavior: none;
+    touch-action: pan-y;
+    -webkit-text-size-adjust:100%;
+  }
+
+  #antiBounceBg{
+    position: fixed; left:0; right:0; top:-120svh; bottom:-120svh;
+    background:var(--page-bg); z-index:-1; pointer-events:none;
+  }
+
   .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 
-  .leaflet-map{ height:300px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a; }
+  header.fixed, header[class*="fixed"]{ z-index: var(--topbar-z) !important; }
+  .has-fixed-topbar{ padding-top: var(--topbar-h); }
+
+  .leaflet-map{
+    height:300px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a;
+    position: relative; z-index:0;
+  }
+  .leaflet-container{ z-index:0 !important; }
+  .leaflet-pane, .leaflet-top, .leaflet-bottom{ z-index:0 !important; }
+
   .geocode-wrap{ position:relative; }
   .geocode-input{
     width:100%; padding:.65rem .9rem; border-radius:10px; background:#222; color:#fff;
@@ -25,7 +49,8 @@
   }
   .geocode-input:focus{ box-shadow:0 0 0 2px #3b82f6; border-color:#3b82f6; }
   .suggest-box{
-    position:absolute; z-index:30; left:0; right:0; top:100%; margin-top:6px;
+    position:absolute; z-index:30; /* < var(--topbar-z) */
+    left:0; right:0; top:100%; margin-top:6px;
     background:#1c1c1c; border:1px solid rgba(255,255,255,.15); border-radius:10px; overflow:hidden;
     max-height:220px; overflow-y:auto;
   }
@@ -40,10 +65,12 @@
   <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
       @include('partials.sidebar')
-      <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
+
+      {{-- tambahkan has-fixed-topbar agar semua konten berada di belakang topbar saat scroll --}}
+      <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe has-fixed-topbar">
         @include('partials.topbar')
 
-        <div class="mt-20 sm:mt-28 px-4 sm:px-8">
+        <div class="px-4 sm:px-8">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <h1 class="text-2xl sm:text-3xl font-extrabold">Edit Venue: {{ $venue->name }}</h1>
             <a href="{{ route('venue.index') }}" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
@@ -86,7 +113,7 @@
               </div>
 
               <!-- Kolom Kanan -->
-              <div class="space-y-6>
+              <div class="space-y-6">
                 <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                   <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                     <i class="fas fa-store mr-2 text-green-400"></i> Informasi Venue
@@ -100,9 +127,10 @@
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                   <div>
+                    <div>
                       <label class="block text-xs text-gray-400 mb-1">Upload Gambar (Opsional)</label>
-                      <input type="file" name="images[]" multiple class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input type="file" name="images[]" multiple
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, WEBP, GIF. Maks: 4MB/berkas</p>
 
                       @php
@@ -111,7 +139,7 @@
                           $raw = trim((string)$img);
                           if (preg_match('/^https?:\/\//i', $raw)) return $raw;
                           $filename = basename($raw);
-                          return asset('images/venues/' . $filename);
+                          return asset('demo-xanders/images/venue/' . $filename);
                         };
                       @endphp
 
@@ -122,13 +150,15 @@
                           @foreach($existingImages as $img)
                             @php $src = $normalizeImg($img); @endphp
                             <div class="relative w-20 h-20">
-                              <img src="{{ $src }}" alt="venue image" class="w-full h-full object-cover rounded-md" onerror="this.src='https://placehold.co/400x400?text=No+Img'"/>
+                              <img src="{{ $src }}" alt="venue image" class="w-full h-full object-cover rounded-md"
+                                   onerror="this.src='https://placehold.co/400x400?text=No+Img'"/>
                             </div>
                           @endforeach
                         </div>
                       </div>
                       @endif
                     </div>
+
                     {{-- ADDRESS + MAP (Leaflet) --}}
                     <div class="space-y-3">
                       <label class="block text-xs text-gray-400">Lokasi Venue</label>
@@ -143,11 +173,12 @@
                         name="address" id="address" rows="3">{{ $venue->address }}</textarea>
                       @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                      <input type="hidden" name="latitude" id="latitude" value="{{ $venue->latitude }}">
-                      <input type="hidden" name="longitude" id="longitude" value="{{ $venue->longitude }}">
+                      {{-- Jika DB Anda belum punya kolom lat/lng, field ini tetap digunakan di FE saja --}}
+                      <input type="hidden" name="latitude" id="latitude" value="{{ $venue->latitude ?? '' }}">
+                      <input type="hidden" name="longitude" id="longitude" value="{{ $venue->longitude ?? '' }}">
 
                       <div id="mapEdit" class="leaflet-map"></div>
-                      <p class="text-xs text-gray-400">Tip: klik peta untuk menetapkan pin, atau tarik pin untuk pindah. Alamat akan diisi otomatis.</p>
+                      <p class="text-xs text-gray-400">Ketik alamat (contoh: “Jalan Gambir” atau “RW 02, Gambir, Jakarta”). Peta akan otomatis mengarah.</p>
                     </div>
 
                     <div>
@@ -159,30 +190,24 @@
                     </div>
 
                     <div>
-                      <label class="block text-xs text-gray-400 mb-1">
-                          Jam Operasional
-                      </label>
+                      <label class="block text-xs text-gray-400 mb-1">Jam Operasional</label>
                       <div class="flex gap-3">
-                          <div class="flex-1">
-                              <input name="operating_hour"
-                                  value="{{ old('operating_hour', $venue->operating_hour->format('H:i')) }}"
-                                  class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  id="operating_hour" type="time" />
-                              @error('operating_hour')
-                              <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                              @enderror
-                          </div>
-                          <div class="flex-1">
-                              <input name="closing_hour"
-                                  value="{{ old('closing_hour', $venue->closing_hour->format('H:i')) }}"
-                                  class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  id="closing_hour" type="time" />
-                              @error('closing_hour')
-                              <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                              @enderror
-                          </div>
+                        <div class="flex-1">
+                          <input name="operating_hour"
+                            value="{{ old('operating_hour', $venue->operating_hour ? $venue->operating_hour->format('H:i') : '') }}"
+                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            id="operating_hour" type="time" />
+                          @error('operating_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="flex-1">
+                          <input name="closing_hour"
+                            value="{{ old('closing_hour', $venue->closing_hour ? $venue->closing_hour->format('H:i') : '') }}"
+                            class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            id="closing_hour" type="time" />
+                          @error('closing_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
                       </div>
-                  </div>
+                    </div>
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="description">Deskripsi</label>
@@ -218,14 +243,23 @@
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
 <script>
+/**
+ * EDIT PAGE — Peta tidak balik ke default:
+ * - Jika lat/lng ada => pakai itu.
+ * - Jika tidak ada lat/lng => geocode alamat tersimpan sekali (Nominatim/Photon) lalu center.
+ * - Live search (Photon + fallback Nominatim) tetap ada dan auto-center ke hasil pertama saat mengetik.
+ * - Reverse geocode tiap kali marker pindah agar textarea alamat selalu lengkap.
+ */
 (function(){
-  const init = {
-    lat: parseFloat(@json($venue->latitude ?? -6.175392)),
-    lng: parseFloat(@json($venue->longitude ?? 106.827153))
-  };
-  if (isNaN(init.lat) || isNaN(init.lng)) { init.lat = -6.175392; init.lng = 106.827153; }
+  const DFLT = { lat: -6.175392, lng: 106.827153 }; // Monas fallback
 
-  const map = L.map('mapEdit', { zoomControl: true, scrollWheelZoom: true }).setView([init.lat, init.lng], 15);
+  // Data dari server
+  const latFromDb = parseFloat(@json($venue->latitude ?? ''));
+  const lngFromDb = parseFloat(@json($venue->longitude ?? ''));
+  const addrFromDb = @json($venue->address ?? '');
+
+  // Elemen DOM
+  const map = L.map('mapEdit', { zoomControl: true, scrollWheelZoom: true }).setView([DFLT.lat, DFLT.lng], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
 
   const latEl = document.getElementById('latitude');
@@ -234,55 +268,130 @@
   const searchBox = document.getElementById('searchBox');
   const suggestBox = document.getElementById('suggestions');
 
-  let marker = L.marker([init.lat, init.lng], { draggable:true }).addTo(map);
+  // Marker awal
+  let marker = L.marker([DFLT.lat, DFLT.lng], { draggable:true }).addTo(map);
 
-  function updatePosition(lat, lng, doReverse = true){
-    latEl.value = lat.toFixed(7);
-    lngEl.value = lng.toFixed(7);
-    if (doReverse) {
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
-        .then(r => r.json())
-        .then(j => { if (j && j.display_name && addrEl) addrEl.value = j.display_name; })
-        .catch(()=>{});
-    }
+  function setHidden(lat, lng){ latEl.value = (+lat).toFixed(7); lngEl.value = (+lng).toFixed(7); }
+  function reverseToAddress(lat, lng){
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`)
+      .then(r => r.json())
+      .then(j => { if (j && j.display_name) addrEl.value = j.display_name; })
+      .catch(()=>{});
+  }
+  function centerTo(lat, lng, label = null, zoom = 16){
+    marker.setLatLng([lat, lng]);
+    map.setView([lat, lng], zoom);
+    setHidden(lat, lng);
+    if (label) addrEl.value = label;
+    reverseToAddress(lat, lng);
   }
 
+  // -- Inisialisasi posisi: pakai lat/lng kalau ada; kalau tidak geocode alamat
+  (function initPosition(){
+    if (!isNaN(latFromDb) && !isNaN(lngFromDb)) {
+      // Ada lat/lng tersimpan
+      centerTo(latFromDb, lngFromDb, addrFromDb || null, 16);
+    } else if (addrFromDb && addrFromDb.trim().length > 0) {
+      // Tidak ada lat/lng => geocode alamat TERSIMPAN lalu center (sekali)
+      const q = encodeURIComponent(addrFromDb);
+      fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=id&q=${q}`)
+        .then(r=>r.json())
+        .then(list=>{
+          if (Array.isArray(list) && list.length){
+            const lat = parseFloat(list[0].lat), lng = parseFloat(list[0].lon);
+            centerTo(lat, lng, list[0].display_name || null, 16);
+          } else {
+            // fallback: tetap Monas
+            centerTo(DFLT.lat, DFLT.lng, null, 13);
+          }
+        })
+        .catch(()=>centerTo(DFLT.lat, DFLT.lng, null, 13));
+    } else {
+      // Tidak ada alamat juga => fallback
+      centerTo(DFLT.lat, DFLT.lng, null, 13);
+    }
+  })();
+
+  // Drag / klik peta
   marker.on('dragend', () => {
     const { lat, lng } = marker.getLatLng();
-    updatePosition(lat, lng, true);
+    setHidden(lat, lng);
+    reverseToAddress(lat, lng);
   });
+  map.on('click', (e)=> centerTo(e.latlng.lat, e.latlng.lng));
 
-  map.on('click', (e)=>{
-    const { lat, lng } = e.latlng;
-    marker.setLatLng([lat,lng]);
-    updatePosition(lat,lng,true);
-  });
+  // ===== Live Search (Photon utama, Nominatim fallback) =====
+  function labelFromPhoton(f){
+    const p = f.properties || {};
+    return [p.name, p.street, (p.city || p.district || p.county || p.state), p.country].filter(Boolean).join(', ');
+  }
+  function renderPhoton(features){
+    if(!features || !features.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
+    suggestBox.innerHTML = features.slice(0,8).map(f=>{
+      const label = labelFromPhoton(f);
+      const [lng, lat] = f.geometry.coordinates;
+      return `<div class="suggest-item" data-lat="${lat}" data-lng="${lng}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
+    }).join('');
+    suggestBox.classList.remove('hidden');
+  }
+  function renderNominatim(list){
+    if(!list || !list.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
+    suggestBox.innerHTML = list.slice(0,8).map(it=>{
+      const label = it.display_name || '';
+      return `<div class="suggest-item" data-lat="${it.lat}" data-lng="${it.lon}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
+    }).join('');
+    suggestBox.classList.remove('hidden');
+  }
+  function autoCenterPhoton(features){
+    if(!features || !features.length) return false;
+    const [lng, lat] = features[0].geometry.coordinates;
+    centerTo(lat, lng, labelFromPhoton(features[0]));
+    return true;
+  }
+  function autoCenterNominatim(list){
+    if(!list || !list.length) return false;
+    centerTo(parseFloat(list[0].lat), parseFloat(list[0].lon), list[0].display_name || '');
+    return true;
+  }
 
-  let t; function debounce(fn, ms){ return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-  const runSearch = debounce(()=>{
-    const q = (searchBox.value||'').trim();
-    if (!q){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id`)
+  let tmr, ctrl = null;
+  const debounce = (fn, ms) => (...a)=>{ clearTimeout(tmr); tmr=setTimeout(()=>fn(...a), ms); };
+  function abortLast(){ if(ctrl){ try{ctrl.abort();}catch(e){} ctrl=null; } }
+
+  const runSearch = (q)=>{
+    abortLast(); ctrl = new AbortController(); const signal = ctrl.signal;
+    const bias = marker.getLatLng();
+
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id&lat=${bias.lat}&lon=${bias.lng}&limit=8`, {signal})
       .then(r=>r.json()).then(j=>{
-        const feats = j.features||[];
-        if (!feats.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
-        suggestBox.innerHTML = feats.slice(0,8).map(f=>{
-          const name=f.properties.name||'';
-          const city=f.properties.city||f.properties.county||f.properties.state||'';
-          const country=f.properties.country||'';
-          const label=[name,city,country].filter(Boolean).join(', ');
-          const c=f.geometry.coordinates; // [lng, lat]
-          return `<div class="suggest-item" data-lat="${c[1]}" data-lng="${c[0]}">${label}</div>`;
-        }).join('');
-        suggestBox.classList.remove('hidden');
-      }).catch(()=>{ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; });
-  }, 350);
-  searchBox.addEventListener('input', runSearch);
-  document.addEventListener('click', (e)=>{ if (!suggestBox.contains(e.target) && e.target!==searchBox) suggestBox.classList.add('hidden'); });
-  suggestBox.addEventListener('click', (e)=>{
-    const it = e.target.closest('.suggest-item'); if (!it) return;
-    const lat = parseFloat(it.dataset.lat), lng=parseFloat(it.dataset.lng);
-    marker.setLatLng([lat,lng]); map.setView([lat,lng], 16); updatePosition(lat,lng,true); suggestBox.classList.add('hidden');
+        const feats = j && j.features ? j.features : [];
+        if (feats.length){ renderPhoton(feats); autoCenterPhoton(feats); }
+        else {
+          return fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=id&q=${encodeURIComponent(q)}`, {signal})
+            .then(rr=>rr.json()).then(list=>{ renderNominatim(list||[]); autoCenterNominatim(list||[]); });
+        }
+      }).catch(()=>{}).finally(()=>{ ctrl=null; });
+  };
+
+  const debounced = debounce(q=>{
+    if(!q || q.length < 2){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
+    runSearch(q);
+  }, 400);
+
+  searchBox.addEventListener('input', e => debounced((e.target.value||'').trim()));
+  searchBox.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const q=(searchBox.value||'').trim(); if(q) runSearch(q); }
+  });
+
+  document.addEventListener('click', (e)=>{
+    if (!suggestBox.contains(e.target) && e.target!==searchBox) suggestBox.classList.add('hidden');
+    const it = e.target.closest('.suggest-item');
+    if (it){
+      const lat = parseFloat(it.dataset.lat), lng = parseFloat(it.dataset.lng);
+      const label = it.dataset.label || '';
+      centerTo(lat, lng, label);
+      suggestBox.classList.add('hidden');
+    }
   });
 })();
 </script>
