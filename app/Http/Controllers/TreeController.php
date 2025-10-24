@@ -149,23 +149,24 @@ class TreeController extends Controller
                 }
             }
 
-            \Log::info('Fights saved successfully', [
-                'championship_id' => $championship->id,
-                'total_groups' => $groups->count(),
-                'total_fighters_processed' => $numFighter
-            ]);
+            // Check if this is Double Elimination
+            $settings = $championship->getSettings();
+            $isDoubleElimination = ($settings->treeType == 0);
 
-            // AUTO-FILL next rounds based on winners
-            $this->autoFillNextRounds($championship);
+            if ($isDoubleElimination) {
+                // AUTO-FILL DOUBLE ELIMINATION: Winners to next round, Losers to lower bracket
+                $this->autoFillDoubleElimination($championship);
+            } else {
+                // AUTO-FILL SINGLE ELIMINATION: Winners to next round only
+                $this->autoFillNextRounds($championship);
+            }
 
-            // Sync ke brackets dengan COMPLETE STRUCTURE
+            // Sync ke brackets
             $tournament = $championship->tournament;
             if ($tournament && $tournament->event_id) {
                 $event = Event::find($tournament->event_id);
                 if ($event) {
-                    // Gunakan generateCompleteStructure BUKAN syncAllRoundsToBracket
                     $this->generateCompleteStructure($event, $championship);
-                    // Propagate winners ke slot TBD berikutnya
                     $this->propagateWinnersInBracket($event, $championship);
                 }
             }
@@ -181,6 +182,238 @@ class TreeController extends Controller
             return back()->withErrors('Error updating tree: ' . $e->getMessage());
         }
     }
+
+    private function autoFillDoubleElimination($championship)
+    {
+        $allGroups = $championship->fightersGroups()
+            ->with('fights')
+            ->orderBy('round')
+            ->orderBy('order')
+            ->get();
+
+        $maxRound = $allGroups->max('round');
+        $round1Count = $championship->groupsByRound(1)->count();
+
+        // Calculate bracket structure
+        $numRounds = intval(log($round1Count * 2, 2));
+        $upperRounds = $numRounds + 1; // Round 2 to upperRounds
+        $lowerBracketStart = $upperRounds + 1;
+        $grandFinalRound = $maxRound;
+        $lowerBracketEnd = $grandFinalRound - 1;
+
+        \Log::info('Auto-fill Double Elimination Structure', [
+            'total_rounds' => $maxRound,
+            'upper_rounds' => "2-{$upperRounds}",
+            'lower_bracket_rounds' => "{$lowerBracketStart}-{$lowerBracketEnd}",
+            'grand_final' => $grandFinalRound
+        ]);
+
+        // ============================================
+        // STEP 1: Process Upper Bracket (Rounds 2 to upperRounds)
+        // ============================================
+        for ($round = 2; $round <= $upperRounds; $round++) {
+            $currentRoundGroups = $allGroups->where('round', $round)->values();
+
+            foreach ($currentRoundGroups as $groupIndex => $group) {
+                $fight = $group->fights->first();
+                if (!$fight || !$fight->winner_id) continue;
+
+                $winnerId = $fight->winner_id;
+                $loserId = ($fight->c1 == $winnerId) ? $fight->c2 : $fight->c1;
+
+                // WINNER: Advances to next upper round
+                if ($round < $upperRounds) {
+                    $nextPosition = (int) ceil(($groupIndex + 1) / 2);
+                    $nextRoundGroup = $allGroups->where('round', $round + 1)
+                        ->where('order', $nextPosition)
+                        ->first();
+
+                    if ($nextRoundGroup) {
+                        $nextFight = $nextRoundGroup->fights->first();
+                        if ($nextFight) {
+                            $isFirstInMatch = ($groupIndex % 2 == 0);
+                            if ($isFirstInMatch) {
+                                $nextFight->c1 = $winnerId;
+                            } else {
+                                $nextFight->c2 = $winnerId;
+                            }
+                            $nextFight->save();
+                        }
+                    }
+                } else {
+                    // Upper bracket final winner goes to Grand Final as c1
+                    $grandFinalGroup = $allGroups->where('round', $grandFinalRound)->first();
+                    if ($grandFinalGroup) {
+                        $grandFinalFight = $grandFinalGroup->fights->first();
+                        if ($grandFinalFight) {
+                            $grandFinalFight->c1 = $winnerId;
+                            $grandFinalFight->save();
+                        }
+                    }
+                }
+
+                // LOSER: Drops to Lower Bracket
+                if ($loserId && $loserId != 'BYE' && $loserId != 'TBD' && $loserId != '') {
+                    $this->dropLoserToLowerBracket($loserId, $round, $upperRounds, $allGroups, $lowerBracketStart);
+                }
+            }
+        }
+
+        // ============================================
+        // STEP 2: Process Lower Bracket
+        // ============================================
+        for ($round = $lowerBracketStart; $round <= $lowerBracketEnd; $round++) {
+            $currentRoundGroups = $allGroups->where('round', $round)->values();
+
+            foreach ($currentRoundGroups as $groupIndex => $group) {
+                $fight = $group->fights->first();
+                if (!$fight || !$fight->winner_id) continue;
+
+                $winnerId = $fight->winner_id;
+
+                // WINNER: Advances to next lower round
+                if ($round < $lowerBracketEnd) {
+                    $nextPosition = (int) ceil(($groupIndex + 1) / 2);
+                    $nextRoundGroup = $allGroups->where('round', $round + 1)
+                        ->where('order', $nextPosition)
+                        ->first();
+
+                    if ($nextRoundGroup) {
+                        $nextFight = $nextRoundGroup->fights->first();
+                        if ($nextFight) {
+                            $isFirstInMatch = ($groupIndex % 2 == 0);
+                            if ($isFirstInMatch) {
+                                $nextFight->c1 = $winnerId;
+                            } else {
+                                $nextFight->c2 = $winnerId;
+                            }
+                            $nextFight->save();
+                        }
+                    }
+                } else {
+                    // Lower bracket final winner goes to Grand Final as c2
+                    $grandFinalGroup = $allGroups->where('round', $grandFinalRound)->first();
+                    if ($grandFinalGroup) {
+                        $grandFinalFight = $grandFinalGroup->fights->first();
+                        if ($grandFinalFight) {
+                            $grandFinalFight->c2 = $winnerId;
+                            $grandFinalFight->save();
+                        }
+                    }
+                }
+
+                // LOSER: Eliminated from tournament (no second chance)
+            }
+        }
+    }
+
+    private function moveLoserToLowerBracket($loserId, $upperRound, $allGroups, $lowerBracketStart)
+    {
+        // Calculate target lower bracket round
+        // Round 1 losers -> LB Round 1 (lowerBracketStart)
+        // Round 2 losers -> LB Round 3 (lowerBracketStart + 2)
+        // Round 3 losers -> LB Round 5 (lowerBracketStart + 4)
+
+        $lowerTargetRound = $lowerBracketStart + (($upperRound - 1) * 2);
+
+        \Log::info('Moving loser to lower bracket', [
+            'loser' => $loserId,
+            'from_upper_round' => $upperRound,
+            'to_lower_round' => $lowerTargetRound
+        ]);
+
+        // Find empty slot in target lower bracket round
+        $lowerBracketGroups = $allGroups->where('round', $lowerTargetRound);
+
+        foreach ($lowerBracketGroups as $group) {
+            $fight = $group->fights->first();
+
+            if (!$fight) {
+                continue;
+            }
+
+            // Try to fill c1 first
+            if (!$fight->c1 || $fight->c1 == 'BYE' || $fight->c1 == 'TBD' || $fight->c1 == '') {
+                $fight->c1 = $loserId;
+                $fight->save();
+                \Log::info('Loser placed in lower bracket c1', [
+                    'loser' => $loserId,
+                    'round' => $lowerTargetRound,
+                    'group' => $group->order
+                ]);
+                return;
+            }
+
+            // Then try c2
+            if (!$fight->c2 || $fight->c2 == 'BYE' || $fight->c2 == 'TBD' || $fight->c2 == '') {
+                $fight->c2 = $loserId;
+                $fight->save();
+                \Log::info('Loser placed in lower bracket c2', [
+                    'loser' => $loserId,
+                    'round' => $lowerTargetRound,
+                    'group' => $group->order
+                ]);
+                return;
+            }
+        }
+
+        \Log::warning('Could not place loser in lower bracket - no empty slots', [
+            'loser' => $loserId,
+            'target_round' => $lowerTargetRound
+        ]);
+    }
+
+    private function dropLoserToLowerBracket($loserId, $upperRound, $upperRounds, $allGroups, $lowerBracketStart)
+    {
+        // Calculate target lower bracket round
+        // Upper Round 2 -> Lower Round 1 (lowerBracketStart)
+        // Upper Round 3 -> Lower Round 3 (lowerBracketStart + 2)
+        // Upper Round 4 -> Lower Round 5 (lowerBracketStart + 4)
+        // Pattern: LB_Round = LB_Start + ((UpperRound - 2) * 2)
+
+        $lowerTargetRound = $lowerBracketStart + (($upperRound - 2) * 2);
+
+        \Log::info('Dropping loser to lower bracket', [
+            'loser_id' => $loserId,
+            'from_upper_round' => $upperRound,
+            'to_lower_round' => $lowerTargetRound
+        ]);
+
+        // Find empty slot in target lower bracket round
+        $lowerBracketGroups = $allGroups->where('round', $lowerTargetRound)->sortBy('order');
+
+        foreach ($lowerBracketGroups as $group) {
+            $fight = $group->fights->first();
+            if (!$fight) continue;
+
+            // Try to fill c1 first (if empty or placeholder)
+            if ($this->isEmptySlot($fight->c1)) {
+                $fight->c1 = $loserId;
+                $fight->save();
+                \Log::info("Loser placed in LB Round {$lowerTargetRound}, Match {$group->order}, Position c1");
+                return;
+            }
+
+            // Then try c2
+            if ($this->isEmptySlot($fight->c2)) {
+                $fight->c2 = $loserId;
+                $fight->save();
+                \Log::info("Loser placed in LB Round {$lowerTargetRound}, Match {$group->order}, Position c2");
+                return;
+            }
+        }
+
+        \Log::warning('Could not place loser - no empty slots', [
+            'loser_id' => $loserId,
+            'target_round' => $lowerTargetRound
+        ]);
+    }
+
+    private function isEmptySlot($value)
+    {
+        return !$value || $value == '' || $value == 'BYE' || $value == 'TBD';
+    }
+
 
     /**
      * AUTO-FILL fighters ke round berikutnya
@@ -246,26 +479,13 @@ class TreeController extends Controller
             return;
         }
 
-        // Hitung total rounds dari jumlah pemain di round 1
         $round1Groups = $allGroups->where('round', 1);
         $totalPlayers = $round1Groups->count() * 2;
         $maxRound = (int) ceil(log($totalPlayers, 2));
 
-        \Log::info('Generate Complete Bracket Structure', [
-            'total_players' => $totalPlayers,
-            'max_rounds' => $maxRound,
-            'event_id' => $event->id
-        ]);
-
-        // Generate SEMUA rounds
         for ($round = 1; $round <= $maxRound; $round++) {
             $matchesInRound = (int) ($totalPlayers / pow(2, $round));
             $position = 1;
-
-            \Log::info('Creating round structure', [
-                'round' => $round,
-                'matches' => $matchesInRound
-            ]);
 
             for ($matchNum = 1; $matchNum <= $matchesInRound; $matchNum++) {
                 $group = $allGroups->where('round', $round)
@@ -277,18 +497,15 @@ class TreeController extends Controller
                 $isWinner1 = false;
                 $isWinner2 = false;
 
-                // Jika ada data group, ambil dari sana
                 if ($group && $group->fights->isNotEmpty()) {
                     $fight = $group->fights->first();
 
-                    // Fighter 1
                     if ($fight->c1) {
                         $fighter1 = $this->getFighterById($fight->c1, $championship);
                         $player1Name = $fighter1 ? $this->getPlayerName($fighter1) : 'TBD';
                         $isWinner1 = ($fight->winner_id == $fight->c1);
                     }
 
-                    // Fighter 2
                     if ($fight->c2) {
                         $fighter2 = $this->getFighterById($fight->c2, $championship);
                         $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
@@ -296,7 +513,6 @@ class TreeController extends Controller
                     }
                 }
 
-                // Buat bracket untuk player 1
                 Bracket::create([
                     'event_id' => $event->id,
                     'round' => $round,
@@ -308,7 +524,6 @@ class TreeController extends Controller
 
                 $position++;
 
-                // Buat bracket untuk player 2
                 Bracket::create([
                     'event_id' => $event->id,
                     'round' => $round,
@@ -321,14 +536,7 @@ class TreeController extends Controller
                 $position++;
             }
         }
-
-        $totalBrackets = Bracket::where('event_id', $event->id)->count();
-        \Log::info('Complete Bracket Structure Generated', [
-            'event_id' => $event->id,
-            'total_brackets' => $totalBrackets
-        ]);
     }
-
     /**
      * Propagate winners ketika update
      * Ini untuk fill TBD dengan nama pemenang dari round sebelumnya
@@ -337,7 +545,6 @@ class TreeController extends Controller
     {
         $maxRound = Bracket::where('event_id', $event->id)->max('round');
 
-        // Loop setiap round (kecuali final)
         for ($round = 1; $round < $maxRound; $round++) {
             $winners = Bracket::where('event_id', $event->id)
                 ->where('round', $round)
@@ -349,7 +556,7 @@ class TreeController extends Controller
                 if ($winner->next_match_position) {
                     $isFirstPosition = ($winner->position % 2 == 1);
                     $nextRound = $round + 1;
-                    
+
                     $nextMatches = Bracket::where('event_id', $event->id)
                         ->where('round', $nextRound)
                         ->where('next_match_position', '=', $winner->next_match_position)
@@ -363,12 +570,6 @@ class TreeController extends Controller
                         if ($targetBracket && $targetBracket->player_name === 'TBD') {
                             $targetBracket->update([
                                 'player_name' => $winner->player_name
-                            ]);
-
-                            \Log::info('Winner propagated to next round', [
-                                'from_round' => $round,
-                                'to_round' => $nextRound,
-                                'player' => $winner->player_name
                             ]);
                         }
                     }
