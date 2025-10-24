@@ -8,6 +8,7 @@ use App\Models\Bracket;
 use App\Models\Bank;
 use App\Models\OrderEvent;
 use App\Models\EventTicket;
+use App\Models\EventRegistration;
 use Illuminate\Support\Str;
 
 use Xoco70\LaravelTournaments\Models\Tournament;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+
 
 class EventController extends Controller
 {
@@ -194,63 +196,42 @@ class EventController extends Controller
      * Route: POST /event/{event}/register (name: events.register) [auth]
      * Field dari modal: username (alias name), email, phone
      */
-    public function register(Request $request, $event)
-    {
-        // Lock row event untuk konsistensi status
-        $event = Event::lockForUpdate()->findOrFail($event);
-
-        // Pastikan status up to date
-        if (method_exists(Event::class, 'refreshStatuses')) {
-            Event::refreshStatuses();
-        }
-
-        // Map "username" -> "name"
-        if (!$request->filled('name') && $request->filled('username')) {
-            $request->merge(['name' => $request->input('username')]);
-        }
-
-        $user = Auth::user();
-
-        // Validasi
-        $validated = $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'phone' => 'required|string|max:15',
-            '_from' => 'nullable|string'
-        ]);
-
-        // Hanya boleh daftar sampai H-1 sebelum start_date
-        $startDate = $event->start_date instanceof Carbon
-            ? $event->start_date->copy()->startOfDay()
-            : Carbon::parse($event->start_date)->startOfDay();
-
-        if (!now()->lt($startDate)) {
-            return back()
-                ->withInput()
-                ->with('error', 'Pendaftaran sudah ditutup (sudah memasuki hari mulai event).');
-        }
-
-        try {
-            // Update profil user + set roles => 'player'
-            $user->name  = $validated['name'];
-            $user->email = $validated['email'];
-            $user->phone = $validated['phone'];
-            $user->roles = 'player';
-            $user->save();
-        } catch (\Throwable $e) {
-            Log::error('Failed to update user from event register modal', [
-                'user_id'  => $user->id,
-                'event_id' => $event->id,
-                'error'    => $e->getMessage(),
-            ]);
-
-            return back()
-                ->withInput()
-                ->with('error', 'Terjadi kesalahan saat menyimpan data. Coba lagi.');
-        }
-
-        return back()->with('success', 'Data kamu berhasil diperbarui. Role kamu sekarang "player". Pendaftaran diterima!');
-    }
+   // EventRegistrationController.php
+   public function register(Request $request, $eventId)
+   {
+       $event = Event::findOrFail($eventId);
+       $user = auth()->user();
+   
+       // Cek slot pemain masih tersedia
+       if ($event->player_slots <= 0) {
+           return back()->with('error', 'Slot pemain sudah penuh.');
+       }
+   
+       // Cek apakah user sudah daftar sebelumnya
+       $existing = EventRegistration::where('event_id', $eventId)
+           ->where('user_id', $user->id)
+           ->first();
+   
+       if ($existing) {
+           return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
+       }
+   
+       // Ubah role user menjadi player (jika belum)
+       if ($user->roles !== 'player') {
+           $user->update(['roles' => 'player']);
+       }
+   
+       // Buat pendaftaran pemain
+       EventRegistration::create([
+           'event_id' => $event->id,
+           'user_id' => $user->id,
+           'slot' => 1,
+           'price' => $event->price_ticket_player,
+           'status' => 'pending',
+       ]);
+   
+       return back()->with('success', 'Pendaftaran pemain berhasil dikirim, menunggu verifikasi admin.');
+   }
 
     /**
      * Buy Ticket (POST)

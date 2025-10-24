@@ -338,12 +338,16 @@
     <div id="registrationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="text-2xl font-bold text-white">Event Registration</h2>
+                <h2 class="text-2xl font-bold text-white">Event Registration (Player)</h2>
                 <span class="close" onclick="closeModal('#registrationModal')">&times;</span>
             </div>
             <form id="registrationForm" action="{{ route('events.register', $event->id) }}" method="POST">
                 @csrf
                 <input type="hidden" name="_from" value="event-registration">
+
+                {{-- harga khusus player --}}
+                <input type="hidden" name="price" value="{{ $event->price_ticket_player ?? 0 }}">
+
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label" for="username">Username <span class="text-red-500">*</span></label>
@@ -352,7 +356,6 @@
                             id="username"
                             name="username"
                             class="form-input"
-                            placeholder="Enter your username"
                             value="{{ old('username', auth()->user()->name ?? '') }}"
                             required>
                     </div>
@@ -364,7 +367,6 @@
                             id="email"
                             name="email"
                             class="form-input"
-                            placeholder="your.email@example.com"
                             value="{{ old('email', auth()->user()->email ?? '') }}"
                             required>
                     </div>
@@ -376,10 +378,18 @@
                             id="phone"
                             name="phone"
                             class="form-input"
-                            placeholder="+62 812 3456 7890"
                             value="{{ old('phone', auth()->user()->phone ?? '') }}"
                             required>
-                        <p class="hint mt-2">Maksimal 15 karakter sesuai format data.</p>
+                    </div>
+
+                    {{-- Tampilkan harga khusus player --}}
+                    <div class="form-group mt-4">
+                        <label class="form-label">Player Ticket Price</label>
+                        <input
+                            type="text"
+                            class="form-input bg-gray-800 text-white cursor-not-allowed"
+                            value="Rp {{ number_format($event->price_ticket_player ?? 0, 0, ',', '.') }}"
+                            readonly>
                     </div>
 
                     <p class="text-sm text-gray-400 mt-4">
@@ -396,6 +406,7 @@
     </div>
     @endif
     @endauth
+
 
     {{-- ========== MODAL: Buy Ticket ========== --}}
     @auth
