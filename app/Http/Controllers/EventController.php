@@ -217,7 +217,7 @@ class EventController extends Controller
        }
    
        // Ubah role user menjadi player (jika belum)
-       if ($user->roles !== 'player') {
+       if ($user->roles == 'user') {
            $user->update(['roles' => 'player']);
        }
    

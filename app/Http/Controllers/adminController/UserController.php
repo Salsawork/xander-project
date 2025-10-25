@@ -4,6 +4,7 @@ namespace App\Http\Controllers\adminController;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Event;
 use App\Models\Bracket;
 use Illuminate\Http\Request;
 use App\Exports\PlayersExport;
@@ -52,6 +53,9 @@ class UserController extends Controller
         if (!$eventId) {
             return back()->with('error', 'Event ID tidak ditemukan.');
         }
+
+        $event = Event::findOrFail($eventId);
+        $event->update(['player_slots' => $event->player_slots - 1]);
 
         Bracket::create([
             'event_id' => $eventId,
