@@ -99,7 +99,7 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="product"
                                value="product:{{ $cart['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
                         <img alt="{{ $cart['name'] }}" class="cart-img" src="{{ $imageUrl }}" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $cart['name'] }}</p>
@@ -171,7 +171,7 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
                                value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
                         <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
@@ -212,7 +212,7 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="sparring"
                                value="sparring:{{ $sparring['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
                         <img alt="{{ $sparring['athlete_name'] }}" class="cart-img" src="{{ $athleteImageUrl }}" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $sparring['athlete_name'] }} (Sparring)</p>
