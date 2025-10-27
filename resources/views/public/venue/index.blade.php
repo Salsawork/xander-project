@@ -5,33 +5,48 @@
     $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     /**
-     * URL gambar venue (FE -> CMS -> placeholder) TANPA route baru.
-     * FE diakses via path publik: /fe-venue/{filename} (symlink ke ../demo-xanders/images/venue).
+     * FE base untuk SEMUA gambar venue.
+     * Catatan: kita TIDAK akan memakai images/products/* atau placeholder CMS.
      */
-    $imgUrl = function ($filename) {
-        $filename = $filename ? trim($filename) : '';
-        if ($filename === '') {
-            return asset('images/placeholder/venue.png');
+    $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
+
+    /**
+     * Bangun kandidat URL gambar venue:
+     * - Utama: FE base + basename(filename/url dari DB)
+     * - Fallback FE-only: placeholder.webp → placeholder.png
+     * - Last resort: placehold.co (agar tidak 404)
+     *
+     * Tidak ada satupun kandidat yang mengarah ke images/products/*.
+     */
+    $venueImgCandidates = function ($filenameOrUrl) use ($feBaseVenue) {
+        $c = [];
+
+        // 1) Ambil basename dari apapun yang datang dari DB (nama file / full URL)
+        $raw = is_string($filenameOrUrl) ? trim($filenameOrUrl) : '';
+        if ($raw !== '') {
+            // Jika user simpan "https://.../images/products/xxx.png" di DB,
+            // kita hanya ambil basename "xxx.png" lalu arahkan ke FE /images/venue/xxx.png
+            $name = basename(parse_url($raw, PHP_URL_PATH) ?? $raw);
+            if ($name && $name !== '/' && $name !== '.') {
+                $c[] = $feBaseVenue . $name;
+            }
         }
 
-        // 1) Cek file di FE (abs path)
-        $feAbs = base_path('../demo-xanders/images/venue/' . $filename);
-        // 2) Cek apakah symlink/dir publik fe-venue tersedia
-        $fePublicDir = public_path('fe-venue');
+        // 2) Fallback FE-only (tetap di folder /images/venue/)
+        $c[] = $feBaseVenue . 'placeholder.webp';
+        $c[] = $feBaseVenue . 'placeholder.png';
 
-        if (\Illuminate\Support\Facades\File::exists($feAbs) && is_dir($fePublicDir)) {
-            // FE tersedia & bisa diakses publik tanpa route
-            return asset('fe-venue/' . $filename);
+        // 3) Last resort (agar tidak 404 kalau placeholder tidak tersedia)
+        $c[] = 'https://placehold.co/800x600?text=No+Image';
+
+        // Unik & bersih
+        $uniq = [];
+        foreach ($c as $x) {
+            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) {
+                $uniq[] = $x;
+            }
         }
-
-        // 3) Fallback ke CMS
-        $cmsAbs = public_path('images/venue/' . $filename);
-        if (\Illuminate\Support\Facades\File::exists($cmsAbs)) {
-            return asset('images/venue/' . $filename);
-        }
-
-        // 4) Fallback placeholder
-        return asset('images/placeholder/venue.png');
+        return $uniq;
     };
 
     /**
@@ -186,7 +201,7 @@
 
     <!-- Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 sm:py-8 lg:py-12" id="list">
-        <!-- Filter (Tanggal DIHILANGKAN) -->
+        <!-- Filter -->
         <aside id="filterVenue" class="mobile-filter-sidebar">
             <div class="px-4 space-y-6 text-white text-sm">
                 <div class="flex items-center justify-between mb-4 lg-hidden">
@@ -197,7 +212,7 @@
                 <form id="filterForm" method="GET" action="{{ route('venues.index') }}">
                     <input type="hidden" name="pp" value="{{ request('pp', 4) }}">
 
-                    {{-- Search (MENYARING daftar CITY di bawah secara client-side; hasil baru terapkan saat klik "Filter") --}}
+                    {{-- Search (MENYARING daftar CITY secara client-side; submit saat klik "Filter") --}}
                     <div>
                         <input
                             id="searchInput"
@@ -209,7 +224,7 @@
                             class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
 
-                    {{-- CITY FILTER (hanya nama kota) --}}
+                    {{-- CITY FILTER --}}
                     <div class="border-t border-gray-500 pt-4">
                         <div class="flex items-center justify-between mb-2 font-semibold">
                             <span>City</span>
@@ -240,6 +255,12 @@
                             <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
                         </div>
                         <div class="toggleContent w-full flex items-center gap-2">
+                            @php
+                                $reqPriceMinRaw = preg_replace('/\D+/', '', (string) request('price_min', ''));
+                                $reqPriceMaxRaw = preg_replace('/\D+/', '', (string) request('price_max', ''));
+                                $reqPriceMinFmt = $reqPriceMinRaw !== '' ? number_format((int) $reqPriceMinRaw, 0, ',', '.') : '';
+                                $reqPriceMaxFmt = $reqPriceMaxRaw !== '' ? number_format((int) $reqPriceMaxRaw, 0, ',', '.') : '';
+                            @endphp
                             <input type="text" id="price_min" name="price_min" placeholder="Min"
                                    value="{{ $reqPriceMinFmt }}"
                                    inputmode="numeric" pattern="[0-9\.]*"
@@ -264,18 +285,31 @@
         <!-- List -->
         <section class="lg:col-span-4 flex flex-col gap-6">
             @forelse ($venues as $venue)
+                @php
+                    // Ambil dari $venue->images[0] jika ada, else pakai $venue->image
+                    $rawFirst = null;
+                    if (!empty($venue->images)) {
+                        $arr = is_array($venue->images) ? $venue->images : (is_string($venue->images) ? json_decode($venue->images, true) : []);
+                        if (is_array($arr) && !empty($arr)) $rawFirst = $arr[0];
+                    }
+                    if (!$rawFirst) $rawFirst = $venue->image ?? '';
+
+                    $candidates = $venueImgCandidates($rawFirst);
+                    $primarySrc = $candidates[0] ?? ($feBaseVenue . 'placeholder.png');
+                @endphp
+
                 <div class="group">
                     <a href="{{ route('venues.detail', ['venue' => $venue->id, 'slug' => $venue->name]) }}"
                        class="block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
 
-                        {{-- IMAGE: FE -> CMS -> placeholder (tanpa route) --}}
+                        {{-- IMAGE: FE /images/venue/* with JS fallback berantai --}}
                         <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 overflow-hidden">
                             <img
-                                src="{{ $imgUrl($venue->image ?? '') }}"
+                                class="w-full h-full object-cover block js-venue-img"
+                                src="{{ $primarySrc }}"
+                                data-src-candidates='@json($candidates)'
                                 alt="{{ $venue->name }}"
-                                class="w-full h-full object-cover block"
                                 loading="lazy"
-                                onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';"
                             >
                         </div>
 
@@ -301,7 +335,7 @@
                                 <div class="flex items-baseline gap-1 text-sm">
                                     <span class="text-gray-400">start from</span>
                                     <span class="text-lg sm:text-xl font-bold">Rp {{ number_format($venue->price ?? 0, 0, ',', '.') }}</span>
-                                    <span class="text-gray-400">/ session</span>
+                                    <span class="text-gray-400">/ hour</span>
                                 </div>
                             </div>
                         </div>
@@ -504,6 +538,23 @@
             filterCityPills();
         }
         activateCityPillsSelection();
+
+        // ====== JS fallback untuk gambar venue (FE-only) ======
+        document.querySelectorAll('.js-venue-img').forEach((img) => {
+            try {
+                const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+                let i = 0;
+                const tryNext = () => {
+                    i++;
+                    if (i < list.length) {
+                        if (img.src !== list[i]) img.src = list[i];
+                    }
+                };
+                img.addEventListener('error', tryNext, { passive: true });
+            } catch (e) {
+                // ignore
+            }
+        });
     });
 </script>
 

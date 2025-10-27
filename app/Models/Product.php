@@ -27,8 +27,7 @@ class Product extends Model
     ];
 
     protected $casts = [
-        // pakai 'array' agar selalu dapat array PHP
-        'images'   => 'array',
+        'images'   => 'array',      // selalu jadi array PHP
         'pricing'  => 'decimal:0',
         'discount' => 'decimal:2',
     ];
@@ -44,9 +43,14 @@ class Product extends Model
         'discount'  => 0,
     ];
 
+    protected $appends = [
+        'first_image_url',
+        'image_urls',
+    ];
+
     public function category()
     {
-        // withDefault mencegah null error di Blade (name → "-")
+        // withDefault mencegah null error di Blade
         return $this->belongsTo(Categories::class, 'category_id')->withDefault([
             'name' => '-',
         ]);
@@ -60,22 +64,82 @@ class Product extends Model
     }
 
     /**
-     * URL gambar pertama yang valid untuk tampilan.
+     * Normalisasi single path/URL jadi URL absolut ke folder public/images/products
+     * - Jika sudah http(s) → kembalikan apa adanya
+     * - Jika string relatif/filename → jadikan asset('images/products/<filename>')
+     */
+    protected function normalizeImagePath(?string $path): ?string
+    {
+        if (!$path || !is_string($path)) return null;
+        $path = trim($path);
+        if ($path === '') return null;
+
+        // Sudah URL absolut
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        // Ambil filename-nya saja (antisipasi path lain)
+        $filename = basename($path);
+        if ($filename === '' || $filename === '/' || $filename === '.') {
+            return null;
+        }
+
+        // Jadikan URL absolut dari aplikasi (CMS)
+        return asset('images/products/' . $filename);
+    }
+
+    /**
+     * Array URL gambar absolut (sudah dinormalisasi)
+     */
+    public function getImageUrlsAttribute(): array
+    {
+        $out = [];
+        $list = $this->images;
+
+        // Antisipasi bila images di DB tersimpan sebagai JSON string
+        if (is_string($list)) {
+            $decoded = json_decode($list, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $list = $decoded;
+            } else {
+                $list = [$list];
+            }
+        }
+
+        if (!is_array($list)) $list = [];
+
+        foreach ($list as $item) {
+            $url = $this->normalizeImagePath(is_string($item) ? $item : '');
+            if ($url && !in_array($url, $out, true)) {
+                $out[] = $url;
+            }
+        }
+
+        // Jika kosong, coba dari accessor first image lama (fallback)
+        if (empty($out)) {
+            $fallback = $this->getFirstImageUrlAttribute();
+            if ($fallback && stripos($fallback, 'placehold.co') === false) {
+                $out[] = $fallback;
+            }
+        }
+
+        // Jika tetap kosong → masukkan placeholder
+        if (empty($out)) {
+            $out[] = 'https://placehold.co/800x800?text=No+Image';
+        }
+
+        return array_values($out);
+    }
+
+    /**
+     * URL gambar pertama (absolut). Fallback ke placeholder jika kosong.
      */
     public function getFirstImageUrlAttribute(): string
     {
-        $img = is_array($this->images) && !empty($this->images) ? ($this->images[0] ?? null) : null;
-        if (!$img) {
-            return 'https://placehold.co/600x400';
-        }
-
-        if (preg_match('/^https?:\/\//i', $img)) {
-            return $img; // sudah full URL
-        }
-
-        $filename = basename($img);
-        // Selaraskan dengan tempat upload di controller (public/demo-xanders/images/products)
-        return asset('demo-xanders/images/products/' . $filename);
+        // Ambil elemen pertama dari image_urls
+        $arr = $this->getImageUrlsAttribute();
+        return $arr[0] ?? 'https://placehold.co/800x800?text=No+Image';
     }
 
     public function getHasStockAttribute(): bool
