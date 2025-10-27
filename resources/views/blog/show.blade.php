@@ -148,7 +148,7 @@
                 @if(!empty($event->registration_url))
                   <a href="{{ $event->registration_url }}" target="_blank" rel="noopener"
                      class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                    Register Now
+                    Register Player
                   </a>
                 @endif
                 @if(!empty($event->ticket_url))

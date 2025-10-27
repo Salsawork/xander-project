@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\OrderEvent;
+use App\Models\EventRegistration;
 use App\Exports\EventExport;
+
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -324,19 +326,51 @@ class EventController extends Controller
     }
     
 
-    public function verify($id)
+    public function verify(Request $request, $id)
     {
-        $order = OrderEvent::findOrFail($id);
-
-        if ($order->status !== 'paid') {
-            return back()->with('error', 'Hanya pesanan berstatus "paid" yang bisa diverifikasi.');
+        $user = User::findOrFail($id);
+    
+        if ($user->roles !== 'player') {
+            return back()->with('error', 'User bukan player.');
         }
-
-        $order->status = 'verified';
-        $order->save();
-
-        return back()->with('success', 'Pesanan berhasil diverifikasi.');
+    
+        $eventId = $request->input('event_id');
+        $event = Event::findOrFail($eventId);
+    
+        // Ambil data pendaftaran
+        $registration = EventRegistration::where('user_id', $user->id)
+            ->where('event_id', $eventId)
+            ->first();
+    
+        if (!$registration) {
+            return back()->with('error', 'Data pendaftaran tidak ditemukan.');
+        }
+    
+        // Pastikan masih ada slot
+        if ($event->player_slots <= 0) {
+            return back()->with('error', 'Slot pemain sudah habis.');
+        }
+    
+        // ✅ Kurangi langsung 1 di database, tanpa simpan ulang model lama
+        Event::where('id', $eventId)->decrement('player_slots', $registration->slot ?? 1);
+    
+        // Update status player dan registrasi
+        $user->update(['status_player' => 1]);
+        $registration->update(['status' => 'approved']);
+    
+        // Tambah ke bracket
+        Bracket::create([
+            'event_id' => $eventId,
+            'player_name' => $user->name,
+            'round' => 1,
+            'position' => null,
+            'next_match_position' => null,
+            'is_winner' => false,
+        ]);
+    
+        return back()->with('success', 'Player berhasil diverifikasi dan slot event berkurang.');
     }
+    
 
     public function reject($id)
     {

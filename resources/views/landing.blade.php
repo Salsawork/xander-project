@@ -206,7 +206,7 @@
         </div>
     </section>
 
-    <!-- Top Picks (Mobile acak setiap reload) -->
+    <!-- Top Picks -->
 <section class="relative bg-cover bg-center bg-no-repeat vh-section px-6 md:px-20 py-12 md:py-16 bg-neutral-900"
          style="background-image: url('/images/bg/background_1.png')">
   <div class="relative z-10 text-white h-full flex flex-col">
@@ -215,6 +215,9 @@
     </div>
 
     <div class="flex flex-wrap gap-3 mb-8">
+      <!-- NEW: All (reset ke halaman ini untuk menampilkan produk awal) -->
+      <a href="{{ url()->current() }}"><button class="chip-btn">All</button></a>
+
       <a href="{{ route('level', ['level' => 'professional']) }}"><button class="chip-btn">Professional Grade</button></a>
       <a href="{{ route('level', ['level' => 'beginner']) }}"><button class="chip-btn">Beginner-Friendly</button></a>
       <a href="{{ route('level', ['level' => 'under50']) }}"><button class="chip-btn">Under $50</button></a>
@@ -238,6 +241,20 @@
 
       // Desktop/Tablet tetap pakai urutan asli
       $itemsDesktop = $rawItems;
+
+      // ====== BASE URL produk CDN + helper generator ======
+      $PRODUCT_CDN = 'https://demo-xanders.ptbmn.id/images/products/';
+      $productImg = function ($images) use ($PRODUCT_CDN) {
+          // $images bisa array JSON/string array atau null
+          $arr = is_array($images) ? $images : ($images ? json_decode($images, true) : []);
+          $first = $arr[0] ?? null;
+          $file  = $first ? basename((string)$first) : null;
+          if (!$file || $file === '/' || $file === '.') {
+              return $PRODUCT_CDN . 'placeholder.png';
+          }
+          return $PRODUCT_CDN . $file;
+      };
+      $defaultCdnImg = $PRODUCT_CDN . 'placeholder.png';
     @endphp
 
     <!-- MOBILE (acak setiap reload) -->
@@ -245,14 +262,7 @@
       <div class="grid grid-cols-2 gap-4 px-2">
         @forelse ($itemsMobile as $product)
           @php
-            $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
-            $firstImage = !empty($images) ? $images[0] : null;
-            $idx = ($loop->index % 5) + 1;
-            $defaultImg = asset("images/products/{$idx}.png");
-            if ($firstImage) {
-              $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-              $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-            } else { $src = $defaultImg; }
+            $src = $productImg($product->images);
             $hasDisc = !empty($product->discount) && $product->discount > 0;
             $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
             $final = $hasDisc
@@ -265,7 +275,7 @@
             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
               <div class="relative w-full aspect-[3/4] tp-imgwrap">
                 <img src="{{ $src }}" alt="{{ $product->name }}"
-                     onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+                     onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
                 <span class="shine"></span>
                 @if ($hasDisc)
                   <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full">
@@ -301,14 +311,7 @@
     <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
       @forelse ($itemsDesktop as $product)
         @php
-          $images = $product->images ? (is_array($product->images) ? $product->images : json_decode($product->images, true)) : [];
-          $firstImage = !empty($images) ? $images[0] : null;
-          $idx = ($loop->index % 5) + 1;
-          $defaultImg = asset("images/products/{$idx}.png");
-          if ($firstImage) {
-            $clean = str_replace('http://127.0.0.1:8000', '', $firstImage);
-            $src = preg_match('/^https?:\\/\\//i', $clean) ? $clean : asset(ltrim($clean, '/'));
-          } else { $src = $defaultImg; }
+          $src = $productImg($product->images);
           $hasDisc = !empty($product->discount) && $product->discount > 0;
           $discPct = $hasDisc ? ($product->discount <= 1 ? $product->discount * 100 : $product->discount) : 0;
           $final = $hasDisc
@@ -321,7 +324,7 @@
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
             <div class="relative aspect-[3/4] w-full tp-imgwrap">
               <img src="{{ $src }}" alt="{{ $product->name }}"
-                   onerror="this.onerror=null;this.src='{{ $defaultImg }}'">
+                   onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
               <span class="shine"></span>
               @if ($hasDisc)
                 <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full">
@@ -450,9 +453,16 @@
         use App\Models\Event;
         use Carbon\Carbon;
 
-        $imgUrl = function ($path) {
-            if (!$path) return asset('images/placeholder/event-hero.png');
-            return Str::startsWith($path, ['http://', 'https://', '/']) ? $path : asset($path);
+        // BASE CDN untuk event images
+        $EVENT_CDN = 'https://demo-xanders.ptbmn.id/images/events/';
+
+        // Helper membangun URL gambar event dari CDN:
+        $eventImg = function ($path) use ($EVENT_CDN) {
+            $filename = basename((string)$path);
+            if (!$filename || $filename === '/' || $filename === '.' ) {
+                return $EVENT_CDN . 'placeholder.png';
+            }
+            return $EVENT_CDN . $filename;
         };
 
         // === ACAK DI SETIAP RELOAD: pakai inRandomOrder() ===
@@ -496,8 +506,9 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- FEATURED CARD -->
             <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
-                <img src="{{ $imgUrl($featured->image_url) }}" alt="{{ $featured->name }}"
-                     class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500" />
+                <img src="{{ $eventImg($featured->image_url) }}" alt="{{ $featured->name }}"
+                     class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500"
+                     onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-hero.png') }}'"/>
                 <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
 
                 <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
@@ -533,8 +544,9 @@
                 <div class="flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-neutral-800/50">
                     @forelse ($side as $e)
                         <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition group flex-shrink-0">
-                            <img src="{{ $imgUrl($e->image_url) }}" alt="{{ $e->name }}"
-                                 class="w-24 md:w-28 h-24 md:h-28 object-cover rounded-md bg-neutral-700 flex-shrink-0" />
+                            <img src="{{ $eventImg($e->image_url) }}" alt="{{ $e->name }}"
+                                 class="w-24 md:w-28 h-24 md:h-28 object-cover rounded-md bg-neutral-700 flex-shrink-0"
+                                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-thumb.png') }}'"/>
                             <div class="flex flex-col justify-start flex-1 min-w-0">
                                 <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline line-clamp-2">{{ $e->name }}</h4>
                                 <div class="mt-1 flex flex-wrap gap-1.5 text-[10px] md:text-xs text-gray-300">

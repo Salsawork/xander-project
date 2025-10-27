@@ -8,6 +8,7 @@ use App\Models\Bracket;
 use App\Models\Bank;
 use App\Models\OrderEvent;
 use App\Models\EventTicket;
+use App\Models\EventRegistration;
 use Illuminate\Support\Str;
 
 use Xoco70\LaravelTournaments\Models\Tournament;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+
 
 class EventController extends Controller
 {
@@ -125,31 +127,34 @@ class EventController extends Controller
         $event = Event::findOrFail($event);
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
     
+        // Ambil tiket default (jika tidak ada, buat)
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
-    
         if (!$ticket) {
             $ticket = EventTicket::create([
-                'event_id'    => $event->id,
-                'name'        => 'General Admission',
-                'price'       => (float) ($event->price_ticket ?? 0),
-                'stock'       => (int) ($event->stock ?? 0),
+                'event_id' => $event->id,
+                'name' => 'General Admission',
+                'price' => (float) ($event->price_ticket ?? 0),
+                'stock' => (int) ($event->stock ?? 0),
                 'description' => 'Default ticket for ' . $event->name,
             ]);
         } else {
-            // 🧩 Sinkron otomatis jika data event berubah
+            // Sinkron otomatis jika harga/stok berubah di events
             if (
-                (float)$ticket->price !== (float)$event->price_ticket ||
-                (int)$ticket->stock !== (int)$event->stock
+                (float) $ticket->price !== (float) $event->price_ticket ||
+                (int) $ticket->stock !== (int) $event->stock
             ) {
                 $ticket->update([
-                    'price' => (float)$event->price_ticket,
-                    'stock' => (int)$event->stock,
+                    'price' => (float) $event->price_ticket,
+                    'stock' => (int) $event->stock,
                 ]);
             }
         }
     
+        // Tidak perlu lagi ambil dari EventRegistration untuk slot pemain
+    
         return view('public.event.detail', compact('event', 'banks', 'ticket'));
     }
+    
     
 
     /**
@@ -194,64 +199,79 @@ class EventController extends Controller
      * Route: POST /event/{event}/register (name: events.register) [auth]
      * Field dari modal: username (alias name), email, phone
      */
-    public function register(Request $request, $event)
+    public function register(Request $request, $eventId)
     {
-        // Lock row event untuk konsistensi status
-        $event = Event::lockForUpdate()->findOrFail($event);
-
-        // Pastikan status up to date
-        if (method_exists(Event::class, 'refreshStatuses')) {
-            Event::refreshStatuses();
-        }
-
-        // Map "username" -> "name"
-        if (!$request->filled('name') && $request->filled('username')) {
-            $request->merge(['name' => $request->input('username')]);
-        }
-
-        $user = Auth::user();
-
-        // Validasi
+        $event = Event::lockForUpdate()->findOrFail($eventId);
+        $user  = auth()->user();
+    
+        // Validasi input
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'phone' => 'required|string|max:15',
-            '_from' => 'nullable|string'
+            'bank_id'       => 'required|integer|exists:mst_bank,id_bank',
+            'bukti_payment' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
-
-        // Hanya boleh daftar sampai H-1 sebelum start_date
-        $startDate = $event->start_date instanceof Carbon
-            ? $event->start_date->copy()->startOfDay()
-            : Carbon::parse($event->start_date)->startOfDay();
-
-        if (!now()->lt($startDate)) {
-            return back()
-                ->withInput()
-                ->with('error', 'Pendaftaran sudah ditutup (sudah memasuki hari mulai event).');
+    
+        // Cek slot pemain
+        if ($event->player_slots <= 0) {
+            return back()->with('error', 'Slot pemain sudah penuh.');
         }
-
+    
+        // Cek duplikat pendaftaran
+        if (EventRegistration::where('event_id', $eventId)->where('user_id', $user->id)->exists()) {
+            return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
+        }
+    
         try {
-            // Update profil user + set roles => 'player'
-            $user->name  = $validated['name'];
-            $user->email = $validated['email'];
-            $user->phone = $validated['phone'];
-            $user->roles = 'player';
-            $user->save();
-        } catch (\Throwable $e) {
-            Log::error('Failed to update user from event register modal', [
-                'user_id'  => $user->id,
-                'event_id' => $event->id,
-                'error'    => $e->getMessage(),
+            DB::beginTransaction();
+    
+            // Upload bukti pembayaran
+            $file    = $request->file('bukti_payment');
+            $ext     = $file->getClientOriginalExtension();
+            $fname   = 'reg_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
+    
+            $targetDir = base_path('../demo-xanders/images/payments/registrations');
+            if (!file_exists($targetDir)) {
+                mkdir($targetDir, 0755, true);
+            }
+    
+            $file->move($targetDir, $fname);
+    
+            // Generate nomor unik pendaftaran
+            $registrationNumber = 'REG-' . strtoupper(Str::random(6));
+    
+            // Hitung total
+            $totalPayment = $event->price_ticket_player ?? 0;
+    
+            // Simpan ke database
+            $registration = EventRegistration::create([
+                'event_id'            => $event->id,
+                'user_id'             => $user->id,
+                'bank_id'             => $validated['bank_id'],
+                'bukti_payment'       => $fname,
+                'registration_number' => $registrationNumber,
+                'slot'                => 1,
+                'price'               => $event->price_ticket_player,
+                'total_payment'       => $totalPayment,
+                'status'              => 'pending',
             ]);
-
-            return back()
-                ->withInput()
-                ->with('error', 'Terjadi kesalahan saat menyimpan data. Coba lagi.');
+    
+            // Ubah role user ke player
+            if ($user->roles === 'user') {
+                $user->update(['roles' => 'player']);
+            }
+    
+            DB::commit();
+    
+            return back()->with('success', 'Pendaftaran pemain berhasil dikirim. Nomor registrasi: ' . $registrationNumber);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Event register failed', [
+                'user_id' => $user->id,
+                'event_id'=> $event->id,
+                'error'   => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Terjadi kesalahan saat pendaftaran.');
         }
-
-        return back()->with('success', 'Data kamu berhasil diperbarui. Role kamu sekarang "player". Pendaftaran diterima!');
     }
-
     /**
      * Buy Ticket (POST)
      * - Diizinkan sebelum start_date (Upcoming) dan selama Ongoing

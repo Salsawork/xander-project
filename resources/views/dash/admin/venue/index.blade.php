@@ -54,7 +54,7 @@
                         </div>
                     @endif
 
-                    <!-- Bagian Search + Tambah + Export -->
+                    <!-- Search + Tambah + Export -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                             <input
@@ -67,16 +67,18 @@
                         </div>
 
                         <div class="flex gap-3">
-                            <!-- Tombol Export Excel -->
-                            <a href="{{ route('venue.export', ['search' => request('search')]) }}"
-                                class="flex items-center justify-center gap-2 border border-green-500 text-green-400 rounded px-3 py-2 text-xs sm:text-sm hover:bg-green-500 hover:text-white transition whitespace-nowrap">
-                                <i class="fas fa-file-excel"></i>
-                                Export Excel
-                            </a>
+                            <!-- Export (gunakan route admin yang benar: dashboard/venue/export) -->
+                            @if (Route::has('venue.export'))
+                                <a href="{{ route('venue.export', ['search' => request('search')]) }}"
+                                   class="flex items-center justify-center gap-2 border border-green-500 text-green-400 rounded px-3 py-2 text-xs sm:text-sm hover:bg-green-500 hover:text-white transition whitespace-nowrap">
+                                    <i class="fas fa-file-excel"></i>
+                                    Export Excel
+                                </a>
+                            @endif
 
-                            <!-- Tombol Tambah Venue -->
+                            <!-- Tambah Venue -->
                             <a href="{{ route('venue.create') }}"
-                                class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
+                               class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
                                 <i class="fas fa-plus"></i>
                                 Tambah Venue
                             </a>
@@ -98,21 +100,36 @@
                             </thead>
                             <tbody class="divide-y divide-gray-700">
                                 @foreach ($venues as $venue)
+                                    @php
+                                        try {
+                                            $open  = $venue->operating_hour ? \Carbon\Carbon::parse($venue->operating_hour)->format('H:i') : null;
+                                        } catch (\Exception $e) {
+                                            $open = $venue->operating_hour;
+                                        }
+                                        try {
+                                            $close = $venue->closing_hour ? \Carbon\Carbon::parse($venue->closing_hour)->format('H:i') : null;
+                                        } catch (\Exception $e) {
+                                            $close = $venue->closing_hour;
+                                        }
+                                        $hours = ($open && $close) ? ($open . ' - ' . $close) : 'Belum diisi';
+                                    @endphp
                                     <tr>
                                         <td class="px-4 py-3">
                                             <div>
                                                 <a href="{{ route('venue.edit', $venue->id) }}"
-                                                    class="hover:text-blue-400 font-medium">{{ $venue->name }}</a>
-                                                <p class="text-xs text-gray-500">{{ $venue->user->name }} ({{ $venue->user->email }})</p>
+                                                   class="hover:text-blue-400 font-medium">{{ $venue->name }}</a>
+                                                <p class="text-xs text-gray-500">
+                                                    {{ optional($venue->user)->name }} ({{ optional($venue->user)->email }})
+                                                </p>
                                             </div>
                                         </td>
                                         <td class="px-4 py-3">{{ $venue->address ?? 'Belum diisi' }}</td>
                                         <td class="px-4 py-3">{{ $venue->phone ?? 'Belum diisi' }}</td>
-                                        <td class="px-4 py-3">{{ $venue->operating_hour->format('H:i') ?? 'Belum diisi' }} - {{ $venue->closing_hour->format('H:i') ?? 'Belum diisi' }}</td>
+                                        <td class="px-4 py-3">{{ $hours }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
                                                 <span class="text-yellow-400 mr-1"><i class="fas fa-star"></i></span>
-                                                {{ number_format($venue->rating, 1) }}
+                                                {{ number_format((float)($venue->rating ?? 0), 1) }}
                                             </div>
                                         </td>
                                         <td class="px-4 py-3">
@@ -120,12 +137,11 @@
                                                 <a href="{{ route('venue.orders', $venue->id) }}" aria-label="Lihat Pesanan" class="hover:text-gray-200">
                                                     <i class="fas fa-receipt"></i>
                                                 </a>
-                                                
                                                 <a href="{{ route('venue.edit', $venue->id) }}" aria-label="Edit {{ $venue->name }}" class="hover:text-gray-200">
                                                     <i class="fas fa-pen"></i>
                                                 </a>
                                                 <button aria-label="Delete {{ $venue->name }}" class="hover:text-gray-200"
-                                                    onclick="deleteVenue({{ $venue->id }})">
+                                                        onclick="deleteVenue({{ $venue->id }})">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -147,11 +163,24 @@
                     <!-- Mobile Card View -->
                     <div class="sm:hidden space-y-4">
                         @foreach ($venues as $venue)
+                            @php
+                                try {
+                                    $open  = $venue->operating_hour ? \Carbon\Carbon::parse($venue->operating_hour)->format('H:i') : null;
+                                } catch (\Exception $e) {
+                                    $open = $venue->operating_hour;
+                                }
+                                try {
+                                    $close = $venue->closing_hour ? \Carbon\Carbon::parse($venue->closing_hour)->format('H:i') : null;
+                                } catch (\Exception $e) {
+                                    $close = $venue->closing_hour;
+                                }
+                                $hours = ($open && $close) ? ($open . ' - ' . $close) : 'Belum diisi';
+                            @endphp
                             <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                                 <div class="mb-3 pb-3 border-b border-gray-700">
                                     <h3 class="font-semibold text-base mb-1">{{ $venue->name }}</h3>
-                                    <p class="text-xs text-gray-500">{{ $venue->user->name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $venue->user->email }}</p>
+                                    <p class="text-xs text-gray-500">{{ optional($venue->user)->name }}</p>
+                                    <p class="text-xs text-gray-500">{{ optional($venue->user)->email }}</p>
                                 </div>
 
                                 <div class="space-y-2 text-sm mb-4">
@@ -165,7 +194,7 @@
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-400">Jam Operasional:</span>
-                                        <span class="text-xs">{{ $venue->operating_hours ?? 'Belum diisi' }}</span>
+                                        <span class="text-xs">{{ $hours }}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-gray-400">Rating:</span>
@@ -173,7 +202,7 @@
                                             <span class="text-yellow-400 mr-1">
                                                 <i class="fas fa-star text-xs"></i>
                                             </span>
-                                            <span class="text-xs">{{ number_format($venue->rating, 1) }}</span>
+                                            <span class="text-xs">{{ number_format((float)($venue->rating ?? 0), 1) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -182,8 +211,8 @@
                                     <a href="{{ route('venue.orders', $venue->id) }}" aria-label="Lihat Pesanan" class="hover:text-gray-200 flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-receipt"></i>
                                     </a>
-                                    
-                                    <a href="{{ route('venue.edit', $venue->id) }}" 
+
+                                    <a href="{{ route('venue.edit', $venue->id) }}"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                         <i class="fas fa-pen text-xs"></i> Edit
                                     </a>

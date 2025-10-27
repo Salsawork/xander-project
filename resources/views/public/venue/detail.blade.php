@@ -2,12 +2,6 @@
 @section('title', 'Venues Page - Xander Billiard')
 
 @push('styles')
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
-/>
 <style>
   :root{ color-scheme: dark; --page-bg:#0a0a0a; }
   :root, html, body{ background:var(--page-bg); }
@@ -77,10 +71,12 @@
     .rating-outof{ flex:1 1 100%; order:3; margin-left:0; margin-top:2px; text-align:left; font-size:12px; }
   }
   @media (max-width:380px){ .rating-stars i{font-size:18px} .rating-number{font-size:24px} }
-  @media (min-width:768px){ #createReviewCard{ margin-left:-8px; } }
 
-  .leaflet-map{ height:260px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a; }
   .muted{ color:#9ca3af; }
+
+  .iframe-wrap{ position: relative; width:100%; border:1px solid #3a3a3a; border-radius:12px; overflow:hidden; background:#111; }
+  .iframe-wrap::before{content:"";display:block;padding-top:56.25%;}
+  .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
 </style>
 @endpush
 
@@ -124,12 +120,39 @@
   $thumbs = array_slice($resolvedImages, 1, 2);
   while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
 
-  $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
-  $fullStars = floor((float)($averageRating ?? 0));
+  $averageRating = $averageRating ?? 0;
+  $avgText   = number_format((float)($averageRating), 1, ',', '.');
+  $fullStars = floor((float)($averageRating));
 
-  $lat = (float) ($detail->latitude ?? 0);
-  $lng = (float) ($detail->longitude ?? 0);
-  $hasCoords = ($lat !== 0.0 || $lng !== 0.0);
+  // ====== Location: ambil dari address & map_embed venue ======
+  $displayAddressRaw = trim((string)($detail->address ?? ''));
+  $displayAddress = $displayAddressRaw !== '' ? $displayAddressRaw : 'Alamat belum tersedia';
+
+  $mapRaw = trim((string)($detail->map_embed ?? ''));
+  $extractSrc = function(string $input) : string {
+      if ($input === '') return '';
+      if (stripos($input, '<iframe') !== false) {
+          if (preg_match('~src\s*=\s*"(.*?)"~i', $input, $m)) return trim($m[1]);
+          if (preg_match("~src\s*=\s*'(.*?)'~i", $input, $m)) return trim($m[1]);
+      }
+      return $input;
+  };
+  $src = $extractSrc($mapRaw);
+  if ($src === '' || !preg_match('~^https?://~i', $src)) {
+      // fallback bangun embed dari name + address
+      $query = trim(($detail->name ?? '') . ' ' . $displayAddressRaw);
+      $src = 'https://www.google.com/maps?hl=id&q=' . rawurlencode($query) . '&ie=UTF8&output=embed';
+  }
+  $mapsSrc = $src;
+
+  // ===== Facilities dari DB (array) =====
+  $facilities = [];
+  if (is_array($detail->facilities)) {
+      $facilities = $detail->facilities;
+  } elseif (is_string($detail->facilities) && $detail->facilities !== '') {
+      $facilities = json_decode($detail->facilities, true) ?? [];
+  }
+  $facilities = array_values(array_filter(array_map(fn($x) => trim((string)$x), $facilities)));
 @endphp
 
 @section('content')
@@ -177,30 +200,45 @@
         <div class="space-y-6">
           <div>
             <h1 class="text-2xl font-extrabold">{{ $detail->name }}</h1>
-            <p class="text-gray-300">{{ $detail->address ?? 'Jakarta Pusat' }}</p>
+            <p class="text-gray-300">{{ $displayAddress }}</p>
           </div>
           <hr class="border-gray-400">
           <div>
             <h2 class="font-semibold mb-2">Facilities</h2>
-            <ul class="grid grid-cols-3 gap-2 text-sm text-gray-300">
-              <li>• Food & Drinks</li>
-              <li>• Smoking Area</li>
-              <li>• VIP Lounge</li>
-              <li>• Equipment Rental</li>
-            </ul>
+
+            @if (!empty($facilities))
+              <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-300">
+                @foreach ($facilities as $f)
+                  <li>• {{ $f }}</li>
+                @endforeach
+              </ul>
+            @else
+              <p class="text-gray-400 text-sm">Belum ada data fasilitas.</p>
+            @endif
           </div>
           <hr class="border-gray-400">
 
-          {{-- Location --}}
+          {{-- ======= Location (ambil dari address / map_embed) ======= --}}
           <div>
             <h2 class="font-semibold mb-2">Location</h2>
+
             <div class="text-sm muted mb-2 flex items-start gap-2">
               <i class="fas fa-map-marker-alt mt-0.5"></i>
-              <span>{{ $detail->address ?? 'No address available' }}</span>
+              <span>{{ $displayAddress }}</span>
             </div>
-            <div id="mapDetail" class="leaflet-map"></div>
-            <p id="mapInfo" class="text-xs muted mt-2"></p>
+
+            <div class="mt-3">
+              <div class="iframe-wrap">
+                <iframe
+                  src="{{ $mapsSrc }}"
+                  loading="lazy"
+                  allowfullscreen
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+              </div>
+            </div>
           </div>
+          {{-- ======= /Location ======= --}}
         </div>
 
         {{-- Reviews --}}
@@ -284,7 +322,7 @@
             <input type="hidden" name="start" id="startInput">
             <input type="hidden" name="end" id="endInput">
             <input type="hidden" name="price" id="priceInput">
-            <input type="hidden" name="table_number" id="tableNumberInput"><!-- penting untuk CartItem.table_number -->
+            <input type="hidden" name="table_number" id="tableNumberInput">
 
             <div>
               <label class="text-sm text-gray-300">Date</label>
@@ -377,8 +415,7 @@
 
   {{-- Floating Cart --}}
   @if (Auth::check() && Auth::user()->roles === 'user')
-    <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
-            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+    <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()" class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
       <i class="fas fa-shopping-cart text-white text-3xl"></i>
       @if ($cartCount > 0)
         <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
@@ -392,52 +429,18 @@
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+  function changeMainImage(src){ document.getElementById('mainImage').src = src; }
+
   const isLoggedIn   = @json(auth()->check());
   const userRole     = @json(Auth::check() ? Auth::user()->roles : null);
   const venueId      = @json($detail->id);
   const baseVenuesUrl= @json(url('/venues'));
 
-  const hasCoordsDb  = @json($hasCoords);
-  const latDb        = parseFloat(@json($lat));
-  const lngDb        = parseFloat(@json($lng));
-  const venueName    = {!! json_encode($detail->name) !!};
-  const venueAddress = {!! json_encode($detail->address ?? '') !!};
-
-  function changeMainImage(src){ document.getElementById('mainImage').src = src; }
-
   document.addEventListener("DOMContentLoaded", function() {
-    // MAP
-    const mapInfoEl = document.getElementById('mapInfo');
-    function initMap(lat, lng){
-      const mapDetail = L.map('mapDetail', { zoomControl:true, scrollWheelZoom:true }).setView([lat, lng], 16);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '&copy; OpenStreetMap'
-      }).addTo(mapDetail);
-      L.marker([lat,lng]).addTo(mapDetail).bindPopup(venueName);
-      return mapDetail;
-    }
-    if (hasCoordsDb) { initMap(latDb, lngDb); mapInfoEl.textContent = ''; }
-    else if (venueAddress) {
-      mapInfoEl.textContent = 'Mencari lokasi dari alamat…';
-      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(venueAddress)}&limit=1`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(json => {
-          const f = (json && json.features && json.features[0]) ? json.features[0] : null;
-          if (!f) throw new Error('Alamat tidak ditemukan');
-          const [lng, lat] = f.geometry.coordinates;
-          initMap(lat, lng); mapInfoEl.textContent = '';
-        })
-        .catch(() => { mapInfoEl.textContent = 'Gagal memuat peta dari alamat. Menampilkan area default.'; initMap(-6.2, 106.816666); });
-    } else { mapInfoEl.textContent = 'Alamat belum tersedia. Menampilkan area default.'; initMap(-6.2, 106.816666); }
-
     // Booking & Schedule logic
-     const datePicker = document.getElementById('datePicker');
+    const datePicker = document.getElementById('datePicker');
     const openDateBtn = document.getElementById('openDateBtn');
     const addBtn = document.getElementById('addToCartButton');
     const scheduleList = document.getElementById("scheduleList");
@@ -448,48 +451,38 @@
     let selectedSchedule = null;
     let selectedTableNumber = null;
 
-    // Initialize date picker with today's date
     function initializeDatePicker() {
       if (!datePicker) return;
-
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
-      
       datePicker.min = todayStr;
       datePicker.value = todayStr;
-      
-      // Load schedules for today
       loadSchedules(todayStr);
     }
 
-    // Open native date picker when clicking calendar icon
     if (openDateBtn && datePicker) {
       openDateBtn.addEventListener('click', () => {
         datePicker.showPicker();
       });
     }
 
-    // Function to create schedule slot element
     function createScheduleSlot(slot, price) {
       const lbl = document.createElement("label");
       const isBooked = slot.is_booked || false;
-      
       lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
       lbl.innerHTML = `
         <input type="radio" name="schedule" value="${slot.start}-${slot.end}" 
                class="hidden" required ${isBooked ? 'disabled' : ''}>
         ${slot.start} - ${slot.end}
       `;
-
       if (!isBooked) {
         const radio = lbl.querySelector("input");
         radio.addEventListener("change", () => {
           document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
           lbl.classList.add('slot--active');
-          
           selectedSchedule = { start: slot.start, end: slot.end, price: price };
           if (priceDisplay) {
             const formattedPrice = new Intl.NumberFormat('id-ID', {
@@ -500,22 +493,14 @@
             }).format(price);
             priceDisplay.innerText = formattedPrice;
           }
-          
-          if (slot.tables) {
-            renderTables(slot.tables);
-          } else {
-            tableList.innerHTML = "";
-          }
+          if (slot.tables) { renderTables(slot.tables); } else { tableList.innerHTML = ""; }
         });
       }
-
       return lbl;
     }
 
-    // Function to load schedules
     async function loadSchedules(selectedDate) {
       if (!selectedDate || !scheduleList) return;
-      
       scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
       if (tableList) tableList.innerHTML = "";
       selectedSchedule = null;
@@ -524,16 +509,13 @@
       try {
         const response = await fetch(`${baseVenuesUrl}/${encodeURIComponent(venueId)}/price-schedules?date=${encodeURIComponent(selectedDate)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        
         const data = await response.json();
         scheduleList.innerHTML = "";
-        
         const schedules = data.schedules || [];
         if (schedules.length === 0) {
           scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available for this date.</p>`;
           return;
         }
-
         schedules.forEach(sch => {
           (sch.schedule || []).forEach(slot => {
             const scheduleSlot = createScheduleSlot(slot, sch.price);
@@ -546,14 +528,34 @@
       }
     }
 
-    // Add change event listener to date picker
+    function renderTables(tables = []) {
+      tableList.innerHTML = "";
+      if (!tables || tables.length === 0) {
+        tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
+        return;
+      }
+      tables.forEach(tbl => {
+        const lbl = document.createElement("label");
+        const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
+        lbl.className = `slot ${disabledClass}`;
+        lbl.innerHTML = `
+          <input type="radio" name="table_id" value="${tbl.id}" class="hidden">
+          ${tbl.name || 'Table ' + tbl.id}
+        `;
+        const radio = lbl.querySelector("input");
+        radio.addEventListener("change", () => {
+          selectedTableNumber = tbl.name || ('Table ' + tbl.id);
+        });
+        tableList.appendChild(lbl);
+      });
+    }
+
     if (datePicker) {
       datePicker.addEventListener("change", function() {
         loadSchedules(this.value);
       });
     }
 
-    // Button add-to-cart: check login and role
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!isLoggedIn) {
@@ -581,50 +583,32 @@
           return;
         }
 
-        // Validate form before submission
-        const date = datePicker?.value;
         const schedule = document.querySelector('input[name="schedule"]:checked');
         const table = document.querySelector('input[name="table_id"]:checked');
 
-        if (!date) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih tanggal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
+        if (!datePicker?.value) {
+          Swal.fire({ title: 'Oops!', text: 'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
           return;
         }
-
         if (!schedule) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih jadwal terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
+          Swal.fire({ title: 'Oops!', text: 'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
           return;
         }
-
         if (!table) {
-          Swal.fire({
-            title: 'Oops!',
-            text: 'Silakan pilih meja terlebih dahulu.',
-            icon: 'warning',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
+          Swal.fire({ title: 'Oops!', text: 'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
           return;
         }
 
-        // Submit form if all validations pass
-        form.requestSubmit();
+        document.getElementById('priceInput').value = (selectedSchedule?.price ?? 0);
+        document.getElementById('tableNumberInput').value = (selectedTableNumber ?? '');
+
+        document.getElementById('startInput').value = selectedSchedule.start;
+        document.getElementById('endInput').value   = selectedSchedule.end;
+
+        document.getElementById('addToCartForm').requestSubmit();
       });
     }
 
-    /* Rating stars input */
     const stars = document.querySelectorAll('#ratingBox i');
     const ratingInput = document.getElementById('ratingInput');
     stars.forEach(st => {
@@ -635,87 +619,18 @@
       });
     });
 
-    // Initialize the page
-    initializeDatePicker();
-
-    function renderTables(tables = []) {
-      tableList.innerHTML = "";
-      if (!tables || tables.length === 0) {
-        tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
-        return;
-      }
-      tables.forEach(tbl => {
-        const lbl = document.createElement("label");
-        const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
-        lbl.className = `slot ${disabledClass}`;
-        lbl.innerHTML = `
-          <input type="radio" name="table_id" value="${tbl.id}" class="hidden">
-          ${tbl.name || 'Table ' + tbl.id}
-        `;
-        const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
-          selectedTableNumber = tbl.name || ('Table ' + tbl.id);
-        });
-        tableList.appendChild(lbl);
-      });
-    }
-
-    // Submit handler
-    if (form) {
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        if (!isLoggedIn) {
-          Swal.fire({ title: 'Belum Login!', text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.', icon:'warning' })
-            .then(() => { window.location.href = '/login'; });
-          return;
-        }
-
-        const date    = datePicker ? datePicker.value : null;
-        const schedule= document.querySelector('input[name="schedule"]:checked');
-        const table   = document.querySelector('input[name="table_id"]:checked');
-
-        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning' }); return; }
-        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning' }); return; }
-        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning' }); return; }
-
-        const fd = new FormData(this);
-        fd.append('schedule[start]', selectedSchedule.start);
-        fd.append('schedule[end]',   selectedSchedule.end);
-        fd.append('price',           selectedSchedule.price);
-        fd.append('table',           selectedTableNumber);
-
-        Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
-
-        fetch(this.action, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          },
-          body: fd
-        })
-        .then(res => {
-          // try to parse json even if not ok so backend message can be shown
-          return res.json().then(json => ({ ok: res.ok, json }));
-        })
-        .then(({ ok, json }) => {
-          Swal.close();
-          if (ok && json.success) {
-            Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
-              .then(() => location.reload());
-          } else {
-            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          Swal.close();
-          Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
-        });
-      });
-    }
+    // Init
+    (function initDate() {
+      if (!document.getElementById('datePicker')) return;
+      const t = new Date();
+      const yyyy = t.getFullYear();
+      const mm = String(t.getMonth() + 1).padStart(2, '0');
+      const dd = String(t.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const dp = document.getElementById('datePicker');
+      dp.min = todayStr; dp.value = todayStr;
+      loadSchedules(todayStr);
+    })();
 
     // Align create review card
     function alignCreateReview() {
@@ -734,7 +649,6 @@
     window.addEventListener('load', alignCreateReview);
     setTimeout(alignCreateReview, 250);
     alignCreateReview();
-
   });
 </script>
 @endpush

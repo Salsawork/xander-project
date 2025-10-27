@@ -2,18 +2,10 @@
 @section('title', 'Admin Dashboard - Tambah Venue')
 
 @push('styles')
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
-/>
 <style>
   :root{
     color-scheme: dark;
     --page-bg:#0a0a0a;
-
-    /* tinggi + z-index topbar (header fixed) */
     --topbar-h: 64px;
     --topbar-z: 90;
   }
@@ -29,37 +21,22 @@
   }
 
   .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-
-  /* Pastikan topbar (header fixed) selalu di atas */
   header.fixed, header[class*="fixed"]{ z-index: var(--topbar-z) !important; }
-
-  /* Konten tidak nabrak topbar */
   .has-fixed-topbar{ padding-top: var(--topbar-h); }
 
-  /* ==== MAP & komponen terkait jangan menutupi topbar ==== */
-  .leaflet-map{
-    height:300px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a;
-    position: relative; z-index:0;
-  }
-  .leaflet-container{ z-index:0 !important; }
-  .leaflet-pane, .leaflet-top, .leaflet-bottom{ z-index:0 !important; }
-
-  .geocode-wrap{ position:relative; }
   .geocode-input{
     width:100%; padding:.65rem .9rem; border-radius:10px; background:#222; color:#fff;
     border:1.5px solid rgba(255,255,255,.2); outline:none; font-size:13px;
   }
   .geocode-input:focus{ box-shadow:0 0 0 2px #3b82f6; border-color:#3b82f6; }
-  .suggest-box{
-    position:absolute; z-index:30; left:0; right:0; top:100%; margin-top:6px;
-    background:#1c1c1c; border:1px solid rgba(255,255,255,.15); border-radius:10px; overflow:hidden;
-    max-height:220px; overflow-y:auto;
-  }
-  .suggest-item{ padding:.55rem .7rem; font-size:13px; color:#e5e7eb; cursor:pointer; }
-  .suggest-item:hover{ background:#2a2a2a; }
 
-  /* kecilkan z-index dropdown agar tetap di bawah topbar */
-  .suggest-box{ z-index: 30; } /* < var(--topbar-z) */
+  .iframe-wrap{ position: relative; width:100%; border:1px solid #3a3a3a; border-radius:12px; overflow:hidden; background:#111; }
+  .iframe-wrap::before{content:"";display:block;padding-top:56.25%;} /* 16:9 */
+  .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+  /* Chips Facilities */
+  .chip{ display:inline-flex; align-items:center; gap:.5rem; background:#2a2a2a; border:1px solid #3f3f3f; padding:.25rem .6rem; border-radius:9999px; font-size:.8rem; }
+  .chip button{ background:transparent; border:0; color:#fca5a5; cursor:pointer; font-weight:700; }
 </style>
 @endpush
 
@@ -70,7 +47,6 @@
     <div class="flex flex-1 min-h-0">
       @include('partials.sidebar')
 
-      {{-- gunakan has-fixed-topbar agar semua konten berada di belakang topbar saat scroll --}}
       <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe has-fixed-topbar">
         @include('partials.topbar')
 
@@ -82,12 +58,12 @@
             </a>
           </div>
 
-          {{-- Grid 2 kolom (seperti halaman Edit) --}}
-          <form method="POST" action="{{ route('venue.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+          <form method="POST" action="{{ route('venue.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8" id="venueCreateForm">
             @csrf
 
-            {{-- Kolom Kiri: Informasi Akun --}}
+            {{-- Kolom Kiri --}}
             <div class="space-y-6">
+              {{-- Informasi Akun --}}
               <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                 <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                   <i class="fas fa-user-circle mr-2 text-blue-400"></i> Informasi Akun
@@ -119,9 +95,38 @@
                   </div>
                 </div>
               </div>
+
+              {{-- Facilities (card baru) --}}
+              <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
+                <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
+                  <i class="fas fa-list-check mr-2 text-emerald-400"></i> Facilities
+                </h2>
+
+                <div class="space-y-2">
+                  <label class="block text-xs text-gray-400 mb-1">Tambah Fasilitas</label>
+                  <div class="flex gap-2">
+                    <input id="facilityInput" type="text"
+                      class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Contoh: VIP Lounge" />
+                    <button type="button" id="addFacilityBtn"
+                      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-md text-sm">Tambah</button>
+                  </div>
+                  <p class="text-xs text-gray-400">Tekan <strong>Enter</strong> untuk menambah. Maks 50 item, masing-masing 100 karakter.</p>
+
+                  <div id="facilitiesChips" class="mt-3 flex flex-wrap gap-2">
+                    {{-- chips muncul di sini --}}
+                  </div>
+
+                  {{-- Hidden inputs untuk facilities[] --}}
+                  <div id="facilitiesHidden"></div>
+
+                  @error('facilities') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                  @error('facilities.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+              </div>
             </div>
 
-            {{-- Kolom Kanan: Informasi Venue (bagian gambar tetap create) --}}
+            {{-- Kolom Kanan --}}
             <div class="space-y-6">
               <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                 <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
@@ -137,7 +142,7 @@
                     @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
 
-                  {{-- === Gambar Venue (MAKS 3) — TETAP === --}}
+                  {{-- Gambar (maks 3) --}}
                   <div>
                     <label class="block text-xs text-gray-400 mb-1" for="images">Gambar Venue (maks. 3)</label>
                     <input name="images[]" id="images" type="file" multiple accept="image/*" class="hidden">
@@ -150,25 +155,26 @@
                     @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
 
-                  {{-- Lokasi + Map (Auto-center saat mengetik) --}}
+                  {{-- Alamat (auto-isi dari embed) --}}
                   <div class="space-y-3">
-                    <label class="block text-xs text-gray-400">Lokasi Venue</label>
-
-                    <div class="geocode-wrap">
-                      <input id="searchBox" type="text" class="geocode-input" placeholder="Cari alamat / tempat (gratis, OSM)">
-                      <div id="suggestions" class="suggest-box hidden"></div>
-                    </div>
-
+                    <label class="block text-xs text-gray-400">Alamat Venue</label>
                     <textarea name="address" id="address" rows="3"
                       class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="Alamat venue (terisi otomatis)">{{ old('address') }}</textarea>
+                      placeholder="Alamat venue (akan terisi otomatis dari embed jika tersedia)">{{ old('address') }}</textarea>
                     @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                  </div>
 
-                    <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
-                    <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
+                  {{-- Google Maps Embed (iframe / URL) --}}
+                  <div class="space-y-2">
+                    <label class="block text-xs text-gray-400" for="map_embed">Google Maps Embed (paste iframe atau URL)</label>
+                    <textarea name="map_embed" id="map_embed" rows="3" placeholder='Tempel: <iframe src="https://www.google.com/maps/embed?..."></iframe> atau langsung URL "https://www.google.com/maps/place/..."'
+                      class="geocode-input">{{ old('map_embed') }}</textarea>
+                    @error('map_embed') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                    <div id="mapCreate" class="leaflet-map"></div>
-                    <p class="text-xs text-gray-400">Ketik alamat (contoh: “Jalan Gambir” atau “RW 02, Gambir, Jakarta”). Peta akan otomatis mengarah.</p>
+                    <div id="mapPreview" class="iframe-wrap mt-2" style="display:none;">
+                      <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen=""></iframe>
+                    </div>
+                    <p class="text-xs text-gray-400">Alamat akan terisi otomatis jika link valid (q=..., /place/..., atau embed pb=...).</p>
                   </div>
 
                   <div>
@@ -229,254 +235,25 @@
 @endsection
 
 @push('scripts')
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
 <script>
-/**
- * Geocoding yang auto-center saat user MENGETIK.
- * - Utama: Photon (Komoot) + bias ke posisi saat ini
- * - Fallback: Nominatim (OSM)
- * - Auto-center ke hasil pertama, update hidden lat/lng + textarea alamat
- * - Dropdown suggestion tetap bisa diklik manual
- */
-(function() {
-  const DFLT = { lat: -6.175392, lng: 106.827153 }; // Monas
-  const map = L.map('mapCreate', { zoomControl: true, scrollWheelZoom: true }).setView([DFLT.lat, DFLT.lng], 13);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
-
-  const latEl = document.getElementById('latitude');
-  const lngEl = document.getElementById('longitude');
-  const addrEl = document.getElementById('address');
-  const searchBox = document.getElementById('searchBox');
-  const suggestBox = document.getElementById('suggestions');
-
-  const initLat = parseFloat(latEl.value || '');
-  const initLng = parseFloat(lngEl.value || '');
-  const hasInit = !isNaN(initLat) && !isNaN(initLng);
-
-  let marker = L.marker(hasInit ? [initLat, initLng] : [DFLT.lat, DFLT.lng], { draggable: true }).addTo(map);
-  if (hasInit) map.setView([initLat, initLng], 15);
-
-  function updateLatLngFields(lat, lng){
-    latEl.value = lat.toFixed(7);
-    lngEl.value = lng.toFixed(7);
-  }
-
-  function reverseToAddress(lat, lng){
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`)
-      .then(r => r.json())
-      .then(j => {
-        if (j && j.display_name && addrEl) addrEl.value = j.display_name;
-      })
-      .catch(()=>{});
-  }
-
-  function centerTo(lat, lng, label = null, zoom = 16){
-    marker.setLatLng([lat, lng]);
-    map.setView([lat, lng], zoom);
-    updateLatLngFields(lat, lng);
-    if (label) addrEl.value = label;
-    // tetap reverse agar alamat lengkap
-    reverseToAddress(lat, lng);
-  }
-
-  // Buat label dari Photon feature
-  function labelFromPhoton(f){
-    const p = f.properties || {};
-    const name = p.name || '';
-    const street = p.street || '';
-    const city = p.city || p.district || p.county || p.state || '';
-    const country = p.country || '';
-    return [name, street, city, country].filter(Boolean).join(', ');
-  }
-
-  // Buat label dari Nominatim result
-  function labelFromNominatim(obj){
-    if (!obj) return '';
-    const name = obj.display_name || '';
-    return name;
-  }
-
-  // Render suggestion list (Photon-style objek)
-  function renderSuggestionsFromPhoton(features){
-    if (!features || !features.length){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
-    suggestBox.innerHTML = features.slice(0, 8).map(f => {
-      const label = labelFromPhoton(f);
-      const c = f.geometry.coordinates; // [lng, lat]
-      return `<div class="suggest-item" data-lat="${c[1]}" data-lng="${c[0]}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
-    }).join('');
-    suggestBox.classList.remove('hidden');
-  }
-
-  // Render suggestion list (Nominatim-style array)
-  function renderSuggestionsFromNominatim(list){
-    if (!list || !list.length){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
-    suggestBox.innerHTML = list.slice(0, 8).map(it => {
-      const label = labelFromNominatim(it);
-      return `<div class="suggest-item" data-lat="${it.lat}" data-lng="${it.lon}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
-    }).join('');
-    suggestBox.classList.remove('hidden');
-  }
-
-  // Auto-center ke hasil pertama (Photon/Nominatim)
-  function autoCenterFromPhoton(features){
-    if (!features || !features.length) return false;
-    const first = features[0];
-    const [lng, lat] = first.geometry.coordinates;
-    const label = labelFromPhoton(first) || (searchBox.value || '').trim();
-    centerTo(lat, lng, label, 16);
-    return true;
-  }
-  function autoCenterFromNominatim(list){
-    if (!list || !list.length) return false;
-    const first = list[0];
-    const lat = parseFloat(first.lat), lng = parseFloat(first.lon);
-    const label = labelFromNominatim(first) || (searchBox.value || '').trim();
-    centerTo(lat, lng, label, 16);
-    return true;
-  }
-
-  // Drag & click map
-  marker.on('dragend', () => {
-    const { lat, lng } = marker.getLatLng();
-    updateLatLngFields(lat, lng);
-    reverseToAddress(lat, lng);
-  });
-  map.on('click', (e) => {
-    const { lat, lng } = e.latlng;
-    centerTo(lat, lng, null, 16);
-  });
-
-  // ======= Pencarian otomatis saat KETIK =======
-  let tmr;
-  let currentController = null;
-  const MIN_CHARS = 2;
-
-  function abortLast(){
-    if (currentController){
-      try{ currentController.abort(); }catch(e){}
-      currentController = null;
-    }
-  }
-
-  // Cari via Photon, fallback ke Nominatim
-  function queryAndCenter(q){
-    abortLast();
-    currentController = new AbortController();
-    const signal = currentController.signal;
-
-    // Bias ke posisi marker saat ini agar hasil lebih relevan
-    const bias = marker.getLatLng ? marker.getLatLng() : {lat: DFLT.lat, lng: DFLT.lng};
-
-    // 1) Photon
-    const photonUrl =
-      `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id&lat=${bias.lat}&lon=${bias.lng}&limit=8`;
-    fetch(photonUrl, { signal })
-      .then(r => r.json())
-      .then(j => {
-        const feats = (j && j.features) ? j.features : [];
-        if (feats.length){
-          renderSuggestionsFromPhoton(feats);
-          autoCenterFromPhoton(feats);
-        } else {
-          // 2) Fallback: Nominatim
-          const nomUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=id&q=${encodeURIComponent(q)}`;
-          return fetch(nomUrl, { signal })
-            .then(rr => rr.json())
-            .then(list => {
-              renderSuggestionsFromNominatim(list || []);
-              autoCenterFromNominatim(list || []);
-            });
-        }
-      })
-      .catch(()=>{/* dilewati saat abort / error */})
-      .finally(()=>{ currentController = null; });
-  }
-
-  const runLiveSearch = (q) => {
-    if (q.length < MIN_CHARS){
-      suggestBox.classList.add('hidden');
-      suggestBox.innerHTML = '';
-      return;
-    }
-    queryAndCenter(q);
-  };
-
-  const debounce = (fn, ms) => {
-    return (...args) => {
-      clearTimeout(tmr);
-      tmr = setTimeout(() => fn(...args), ms);
-    };
-  };
-
-  const debouncedSearch = debounce(runLiveSearch, 400);
-
-  searchBox.addEventListener('input', (e) => {
-    const q = (e.target.value || '').trim();
-    debouncedSearch(q);
-  });
-
-  // Enter = cari langsung
-  searchBox.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter'){
-      e.preventDefault();
-      const q = (searchBox.value || '').trim();
-      if (!q) return;
-      runLiveSearch(q);
-    }
-  });
-
-  // Klik suggestion
-  document.addEventListener('click', (e) => {
-    if (!suggestBox.contains(e.target) && e.target !== searchBox) {
-      suggestBox.classList.add('hidden');
-    }
-    const item = e.target.closest('.suggest-item');
-    if (item){
-      const lat = parseFloat(item.dataset.lat);
-      const lng = parseFloat(item.dataset.lng);
-      const label = item.dataset.label || '';
-      centerTo(lat, lng, label, 16);
-      suggestBox.classList.add('hidden');
-    }
-  });
-
-  // Set nilai awal hidden fields
-  const start = marker.getLatLng();
-  updateLatLngFields(start.lat, start.lng);
-  if (!hasInit) reverseToAddress(start.lat, start.lng);
-})();
-</script>
-
-<script>
-  // === Preview upload (maks 3) — TETAP seperti create ===
+  // ======= Preview upload (maks 3) =======
   const fileInput = document.getElementById('images');
   const previewContainer = document.getElementById('imagePreview');
   let selectedFiles = [];
 
-  fileInput.addEventListener('change', function(e) {
-    const newFiles = Array.from(e.target.files).map(file => {
-      const uniqueName = Date.now() + '-' + file.name; // nama unik
-      return new File([file], uniqueName, { type: file.type });
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const newFiles = Array.from(e.target.files).map(file => {
+        const uniqueName = Date.now() + '-' + file.name;
+        return new File([file], uniqueName, { type: file.type });
+      });
+      selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
+      updatePreview(); updateFileInput();
     });
-    selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
-    updatePreview(); updateFileInput();
-  });
+  }
 
   function updatePreview() {
+    if (!previewContainer) return;
     previewContainer.innerHTML = '';
     selectedFiles.forEach((file, index) => {
       if (!file.type.startsWith('image/')) return;
@@ -515,7 +292,164 @@
   function updateFileInput() {
     const dataTransfer = new DataTransfer();
     selectedFiles.forEach(file => dataTransfer.items.add(file));
-    fileInput.files = dataTransfer.files;
+    if (fileInput) fileInput.files = dataTransfer.files;
   }
+
+  // ======= Preview Google Maps Embed + Auto Address (pb-aware) =======
+  const embedEl      = document.getElementById('map_embed');
+  const previewWrap  = document.getElementById('mapPreview');
+  const previewIframe= document.getElementById('mapPreviewIframe');
+  const addressEl    = document.getElementById('address');
+
+  function extractSrc(val){
+    if (!val) return null;
+    val = val.trim();
+    if (val.toLowerCase().startsWith('<iframe')) {
+      const m = val.match(/src\s*=\s*"(.*?)"/i) || val.match(/src\s*=\s*'(.*?)'/i);
+      return m ? m[1] : null;
+    }
+    return val;
+  }
+
+  // Sama seperti di halaman edit: dukung ?q=, /maps/place/, dan embed pb=!2s...
+  function parseAddressFromSrc(src){
+    if (!src) return '';
+    try{
+      const u = new URL(src);
+      // 1) ?q=
+      const q = u.searchParams.get('q');
+      if (q) return decodeURIComponent(q.replace(/\+/g,' '));
+
+      // 2) /maps/place/<nama>
+      const mPlace = u.pathname.match(/\/maps\/place\/([^/]+)/i);
+      if (mPlace && mPlace[1]) return decodeURIComponent(mPlace[1].replace(/\+/g,' '));
+
+      // 3) embed pb param: ambil !2s token
+      const pb = u.searchParams.get('pb');
+      if (pb) {
+        let pbDec = decodeURIComponent(pb);
+        try { pbDec = decodeURIComponent(pbDec); } catch(e){}
+        const matches = [...pbDec.matchAll(/!2s([^!]+)/g)].map(x=>x[1]);
+        const cleaned = matches.map(t=>{
+          try{ t = decodeURIComponent(t); }catch(e){}
+          t = t.replace(/\+/g,' ').replace(/\\u0026/gi,'&').trim();
+          return t;
+        }).filter(t => t.length >= 5 && /[A-Za-z]/.test(t) && !/^[a-z]{2}(-[A-Z]{2})?$/.test(t) && !/^(Google|Maps|Street View)$/i.test(t));
+        if (cleaned.length){
+          cleaned.sort((a,b)=>b.length-a.length);
+          return cleaned[0];
+        }
+      }
+    }catch(e){}
+    // 4) fallback: title pada iframe full
+    if (src.toLowerCase().startsWith('<iframe')) {
+      const t = src.match(/title\s*=\s*"(.*?)"/i);
+      if (t && t[1] && t[1].toLowerCase() !== 'google maps') return t[1];
+    }
+    return '';
+  }
+
+  function renderPreview(){
+    const src = extractSrc(embedEl.value);
+    if (src && /^https?:\/\//i.test(src)) {
+      previewIframe.src = src;
+      previewWrap.style.display = '';
+    } else {
+      previewIframe.removeAttribute('src');
+      previewWrap.style.display = 'none';
+    }
+
+    const parsed = parseAddressFromSrc(src);
+    if (parsed) {
+      // Disamakan dgn edit: langsung set alamat saat parsed tersedia
+      addressEl.value = parsed;
+    }
+  }
+
+  if (embedEl) {
+    embedEl.addEventListener('input', renderPreview);
+    // Render awal untuk meng-handle old('map_embed')
+    renderPreview();
+  }
+
+  // ======= Facilities (chips) =======
+  const facInput  = document.getElementById('facilityInput');
+  const facAddBtn = document.getElementById('addFacilityBtn');
+  const facChips  = document.getElementById('facilitiesChips');
+  const facHidden = document.getElementById('facilitiesHidden');
+  const form      = document.getElementById('venueCreateForm');
+
+  let facilities = [];
+
+  // Preload dari old('facilities') jika ada
+  @php
+    $oldFacilities = old('facilities', []);
+    if (!is_array($oldFacilities) && is_string($oldFacilities)) {
+        $oldFacilities = preg_split('/[\r\n,]+/', $oldFacilities);
+    }
+    $oldFacilities = array_values(array_filter(array_map(function($s){
+        return trim((string)$s);
+    }, (array)$oldFacilities)));
+  @endphp
+  facilities = @json($oldFacilities);
+
+  function renderFacilities(){
+    facChips.innerHTML = '';
+    facHidden.innerHTML = '';
+
+    facilities.forEach((text, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = `<span>${text}</span> <button type="button" aria-label="hapus">&times;</button>`;
+      chip.querySelector('button').addEventListener('click', () => {
+        facilities.splice(idx, 1);
+        renderFacilities();
+      });
+      facChips.appendChild(chip);
+
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'facilities[]';
+      hidden.value = text;
+      facHidden.appendChild(hidden);
+    });
+  }
+
+  function addFacilityFromInput(){
+    const v = (facInput.value || '').trim();
+    if (!v) return;
+    if (v.length > 100) {
+      alert('Maksimal 100 karakter per item.');
+      return;
+    }
+    if (facilities.length >= 50) {
+      alert('Maksimal 50 fasilitas.');
+      return;
+    }
+    if (!facilities.includes(v)) {
+      facilities.push(v);
+      renderFacilities();
+    }
+    facInput.value = '';
+    facInput.focus();
+  }
+
+  if (facAddBtn) facAddBtn.addEventListener('click', addFacilityFromInput);
+  if (facInput) facInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addFacilityFromInput();
+    }
+  });
+
+  if (form) {
+    form.addEventListener('submit', () => {
+      // pastikan hidden inputs up-to-date
+      renderFacilities();
+    });
+  }
+
+  // Render awal
+  renderFacilities();
 </script>
 @endpush

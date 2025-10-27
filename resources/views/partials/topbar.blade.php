@@ -36,6 +36,7 @@
                     'venue'   => route('venue.dashboard'),
                     'athlete' => route('athlete.dashboard'),
                     'user'    => route('profile.edit'),
+                    'player'  => route('profile.edit'),
                 };
             @endphp
             

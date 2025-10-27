@@ -41,6 +41,42 @@
                       </div>
                   @endif
 
+                  @php
+                    /**
+                     * NORMALISASI URL GAMBAR PRODUK
+                     *
+                     * Target akhir SELALU:
+                     *   https://domain.tld/images/products/<filename>
+                     *
+                     * Kasus yang dibersihkan:
+                     *   1) https://domain.tld/images/demo-xanders/products/<filename>
+                     *   2) https://domain.tld/demo-xanders/images/products/<filename>
+                     *   3) Varian "demo-xander" (tanpa "s")
+                     *   4) URL relatif dengan pola yang sama
+                     */
+                    $normalizeProductImage = function ($url) {
+                        if (!$url) return null;
+
+                        // Ambil PATH dari URL absolute, atau pakai string jika sudah relatif
+                        $path = parse_url($url, PHP_URL_PATH) ?: $url;
+
+                        // Pastikan diawali slash
+                        $path = '/'.ltrim($path, '/');
+
+                        // Ganti "/images/demo-xanders/products/" atau "/images/demo-xander/products/" -> "/images/products/"
+                        $path = preg_replace('#/images/(demo-xanders?|demo-xander)/products/#', '/images/products/', $path);
+
+                        // Ganti "/demo-xanders/images/products/" atau "/demo-xander/images/products/" -> "/images/products/"
+                        $path = preg_replace('#/demo-xanders?/images/products/#', '/images/products/', $path);
+
+                        // Rapikan double slash
+                        $path = preg_replace('#/+#', '/', $path);
+
+                        // Kembalikan absolute URL berbasis app URL (scheme+host dari app)
+                        return url($path);
+                    };
+                  @endphp
+
                   <!-- Filter & Search -->
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                       <input
@@ -92,8 +128,13 @@
                                       <td class="px-4 py-3">
                                           <div class="flex items-center gap-4">
                                               <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                                  @php $imagePath = $product->first_image_url ?? 'https://placehold.co/600x400'; @endphp
-                                                  <img class="w-10 h-10 object-cover rounded" src="{{ $imagePath }}" alt="{{ $product->name }}" onerror="this.src='https://placehold.co/600x400'"/>
+                                                  @php
+                                                      $imagePath = $normalizeProductImage($product->first_image_url) ?? 'https://placehold.co/600x400';
+                                                  @endphp
+                                                  <img class="w-10 h-10 object-cover rounded"
+                                                       src="{{ $imagePath }}"
+                                                       alt="{{ $product->name }}"
+                                                       onerror="this.src='https://placehold.co/600x400'"/>
                                               </div>
                                               <div>
                                                   <a href="{{ route('products.edit', $product->id) }}" class="hover:text-blue-400 font-medium">{{ $product->name }}</a>
@@ -134,8 +175,13 @@
                           <div class="bg-[#2c2c2c] border border-gray-700 rounded-lg p-4">
                               <div class="flex items-start gap-3 mb-3">
                                   <div class="w-16 h-16 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                      @php $imagePath = $product->first_image_url ?? 'https://placehold.co/600x400'; @endphp
-                                      <img class="w-full h-full object-cover rounded" src="{{ $imagePath }}" alt="{{ $product->name }}" onerror="this.src='https://placehold.co/600x400'"/>
+                                      @php
+                                          $imagePath = $normalizeProductImage($product->first_image_url) ?? 'https://placehold.co/600x400';
+                                      @endphp
+                                      <img class="w-full h-full object-cover rounded"
+                                           src="{{ $imagePath }}"
+                                           alt="{{ $product->name }}"
+                                           onerror="this.src='https://placehold.co/600x400'"/>
                                   </div>
                                   <div class="flex-1 min-w-0">
                                       <h2 class="font-semibold text-sm mb-1">{{ $product->name }}</h2>

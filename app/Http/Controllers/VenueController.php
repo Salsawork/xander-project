@@ -8,12 +8,12 @@ use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\PriceSchedule;
 use App\Models\Table;
-use App\Models\Review;                 // <— TAMBAH
+use App\Models\Review;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;            // upload helper
-use Illuminate\Support\Facades\File;   // file helper
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\File;
 
 class VenueController extends Controller
 {
@@ -24,7 +24,6 @@ class VenueController extends Controller
             ->map(fn($id) => (int) $id)
             ->toArray();
 
-        // Ambil range harga (dibersihkan dari titik)
         $priceMin = $request->filled('price_min')
             ? (int) preg_replace('/\D/', '', $request->price_min)
             : null;
@@ -32,7 +31,6 @@ class VenueController extends Controller
             ? (int) preg_replace('/\D/', '', $request->price_max)
             : null;
 
-        // Subquery "start from" price terendah venue (active schedules)
         $minPriceSub = "(SELECT price FROM price_schedules 
                          WHERE price_schedules.venue_id = venues.id 
                            AND is_active = 1 
@@ -41,14 +39,12 @@ class VenueController extends Controller
 
         $venues = Venue::query()
             ->addSelect([
-                // tampilkan harga terendah sebagai kolom price
                 'price' => PriceSchedule::select('price')
                     ->whereColumn('venue_id', 'venues.id')
                     ->where('is_active', true)
                     ->orderBy('price', 'asc')
                     ->limit(1)
             ])
-            // Search
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->where('name', 'like', "%{$request->search}%")
@@ -56,20 +52,16 @@ class VenueController extends Controller
                         ->orWhere('description', 'like', "%{$request->search}%");
                 });
             })
-            // Filter City (dari nama kota yang dipilih)
             ->when($request->filled('city'), function ($q) use ($request) {
                 $city = $request->city;
-                // cukup LIKE ke address karena value city sudah termasuk "Kota/Kabupaten/Jakarta ..."
                 $q->where('address', 'like', "%{$city}%");
             })
-            // Filter Price Range berdasarkan subquery min price
             ->when($priceMin !== null, function ($q) use ($priceMin, $minPriceSub) {
                 $q->whereRaw("$minPriceSub >= ?", [$priceMin]);
             })
             ->when($priceMax !== null, function ($q) use ($priceMax, $minPriceSub) {
                 $q->whereRaw("$minPriceSub <= ?", [$priceMax]);
             })
-            // Urutan favorit (jika ada)
             ->when(!empty($favorites), function ($q) use ($favorites) {
                 $ids = implode(',', $favorites);
                 $q->orderByRaw("FIELD(id, $ids) DESC");
@@ -84,7 +76,6 @@ class VenueController extends Controller
         if (auth()->check()) {
             $userId = auth()->id();
 
-            // === PRODUCTS ===
             $cartProducts = CartItem::with('product')
                 ->where('user_id', $userId)
                 ->where('item_type', 'product')
@@ -104,7 +95,6 @@ class VenueController extends Controller
                     ];
                 });
 
-            // === VENUES ===
             $cartVenues = CartItem::with('venue')
                 ->where('user_id', $userId)
                 ->where('item_type', 'venue')
@@ -124,7 +114,6 @@ class VenueController extends Controller
                         : null,
                 ]);
 
-            // === SPARRING ===
             $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
                 ->where('user_id', $userId)
                 ->where('item_type', 'sparring')
@@ -141,13 +130,12 @@ class VenueController extends Controller
                 ]);
         }
 
-        // dipakai di Blade untuk derive daftar kota
         $addresses = Venue::select('address')->distinct()->pluck('address');
 
         return view('public.venue.index', compact('venues', 'cartProducts', 'cartVenues', 'cartSparrings', 'addresses'));
     }
 
-    // API schedules: /venues/{venueId}/price-schedules?date=YYYY-MM-DD
+    // API schedules
     public function priceSchedules(Request $request, $venueId)
     {
         try {
@@ -193,7 +181,7 @@ class VenueController extends Controller
                         $start = $time->format('H:i');
                         $end = $time->copy()->addHour()->format('H:i');
 
-                        $tablesWithStatus = $tables->map(function ($table) use ($bookings, $requestedDate, $start, $end, $tablesApplicable) {
+                        $tablesWithStatus = $tables->map(function ($table) use ($bookings, $start, $end, $tablesApplicable) {
                             $isInApplicableList = empty($tablesApplicable) || in_array($table->table_number ?? $table->id, $tablesApplicable);
 
                             $isBooked = $bookings->contains(function ($b) use ($table, $start, $end) {
@@ -248,7 +236,7 @@ class VenueController extends Controller
         }
     }
 
-    // DETAIL PAGE: /venues/{id}/{slug?}
+    // DETAIL PAGE
     public function showDetail(Request $request, $venueId, $slug = null)
     {
         $detail = Venue::findOrFail($venueId);
@@ -288,7 +276,6 @@ class VenueController extends Controller
 
         $userHasBooking = false;
         if (auth()->check()) {
-            // Minimal rule: user pernah booking venue ini (boleh status apapun)
             $userHasBooking = Booking::where('user_id', auth()->id())
                 ->where('venue_id', $detail->id)
                 ->exists();
@@ -360,7 +347,6 @@ class VenueController extends Controller
             'cartProducts',
             'cartVenues',
             'cartSparrings',
-            // Reviews data
             'reviews',
             'averageRating',
             'counts',
@@ -371,78 +357,19 @@ class VenueController extends Controller
         ));
     }
 
-    /**
-     * Store review untuk venue
-     */
-    public function storeReview(Request $request, $venueId)
-    {
-        $request->validate([
-            'rating'  => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:3000',
-        ]);
-
-        if (!auth()->check()) {
-            return back()->with('error', 'Silakan login terlebih dahulu.');
-        }
-
-        $venue = Venue::findOrFail($venueId);
-        $user  = auth()->user();
-
-        // Pastikan user pernah booking venue ini
-        $booking = Booking::where('user_id', $user->id)
-            ->where('venue_id', $venue->id)
-            ->orderByDesc('booking_date')
-            ->first();
-
-        if (!$booking) {
-            return back()->with('error', 'Kamu belum memiliki booking di venue ini.');
-        }
-
-        // (Opsional) Batasi 1 review per user per venue
-        $already = Review::where('user_id', $user->id)
-            ->where('venue_id', $venue->id)
-            ->exists();
-
-        if ($already) {
-            return back()->with('error', 'Kamu sudah memberikan review untuk venue ini.');
-        }
-
-        // Simpan review
-        Review::create([
-            'booking_id' => $booking->id,
-            'user_id'    => $user->id,
-            'venue_id'   => (int) $venue->id,
-            'rating'     => (int) $request->integer('rating'),
-            'comment'    => $request->string('comment')->toString(),
-        ]);
-
-        return back()->with('success', 'Terima kasih! Review kamu sudah tersimpan.');
-    }
-
-    /**
-     * ================= Upload Helper (CMS + FE) =================
-     * - CMS : public/images/venue
-     * - FE  : ../demo-xanders/images/venue
-     */
     private function uploadVenueFile(\Illuminate\Http\UploadedFile $file): string
     {
-        // Nama file aman
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName     = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
         $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
 
-        // Path CMS & FE
         $cmsPath = public_path('images/venue');
         $fePath  = base_path('../demo-xanders/images/venue');
 
-        // Buat folder jika belum ada
         if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
         if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
 
-        // Simpan ke CMS
         $file->move($cmsPath, $filename);
-
-        // Copy ke FE
         @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
 
         return $filename;
@@ -459,10 +386,6 @@ class VenueController extends Controller
         if (File::exists($fePath))  @unlink($fePath);
     }
 
-    /**
-     * ======= Endpoint Update Gambar Venue =======
-     * Form bisa kirim field 'gambar' atau 'image'
-     */
     public function updateImage(Request $request, $id)
     {
         $request->validate([
@@ -484,3 +407,4 @@ class VenueController extends Controller
         return back()->with('success', 'Gambar venue berhasil diperbarui.');
     }
 }
+ 
