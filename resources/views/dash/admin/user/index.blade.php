@@ -34,25 +34,20 @@
                 @include('partials.topbar')
 
                 <div class="mt-20 sm:mt-28 px-4 sm:px-8">
-                    <!-- Header hanya judul -->
                     <div class="mb-4">
                         <h1 class="text-2xl sm:text-3xl font-extrabold">Data Player</h1>
                     </div>
 
                     {{-- Flash messages --}}
                     @if (session('success'))
-                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
-                            {{ session('success') }}
-                        </div>
+                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">{{ session('success') }}</div>
                     @endif
 
                     @if (session('error'))
-                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
-                            {{ session('error') }}
-                        </div>
+                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">{{ session('error') }}</div>
                     @endif
 
-                    {{-- Search bar + Export sejajar --}}
+                    {{-- Search & Export --}}
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
                         <div class="w-full sm:w-auto">
                             <input
@@ -82,40 +77,65 @@
                                 <tr>
                                     <th class="px-4 py-3">Nama</th>
                                     <th class="px-4 py-3">Email</th>
+                                    <th class="px-4 py-3">Event</th>
+                                    <th class="px-4 py-3">Total Pembayaran</th>
+                                    <th class="px-4 py-3">Bukti Pembayaran</th>
                                     <th class="px-4 py-3">Status Player</th>
                                     <th class="px-4 py-3">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-700">
                                 @forelse ($players as $player)
-                                    <tr>
-                                        <td class="px-4 py-3">{{ $player->name }}</td>
-                                        <td class="px-4 py-3">{{ $player->email }}</td>
-                                        <td class="px-4 py-3">
-                                            @if ($player->status_player == 1)
-                                                <span class="text-green-400 font-semibold">Terverifikasi</span>
-                                            @else
-                                                <span class="text-yellow-400">Menunggu Verifikasi</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            @if ($player->status_player == 0)
-                                                <form action="{{ route('admin.users.verify', $player->id) }}" method="POST" class="inline">
-                                                    @csrf
-                                                    <input type="hidden" name="event_id" value="{{ $event_id ?? 1 }}">
-                                                    <button type="submit"
-                                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
-                                                        Verify
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <span class="text-gray-400">✔</span>
-                                            @endif
-                                        </td>
-                                    </tr>
+                                    @forelse ($player->eventRegistrations as $reg)
+                                        <tr>
+                                            <td class="px-4 py-3">{{ $player->name }}</td>
+                                            <td class="px-4 py-3">{{ $player->email }}</td>
+                                            <td class="px-4 py-3">
+                                                @if ($player->eventRegistrations->isNotEmpty())
+                                                    {{ $player->eventRegistrations->first()->event->name ?? '-' }}
+                                                @else
+                                                    <span class="text-gray-400">-</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3">Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}</td>
+                                            <td class="px-4 py-3">
+                                                @if ($reg->bukti_payment)
+                                                    <a href="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" target="_blank">
+                                                        <img src="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" alt="bukti" width="60" class="rounded-md border border-gray-600">
+                                                    </a>
+                                                @else
+                                                    <span class="text-gray-400 italic">Tidak ada</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                @if ($player->status_player == 1)
+                                                    <span class="text-green-400 font-semibold">Terverifikasi</span>
+                                                @else
+                                                    <span class="text-yellow-400">Menunggu Verifikasi</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                @if ($player->status_player == 0)
+                                                    <form action="{{ route('admin.users.verify', $player->id) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        <input type="hidden" name="event_id" value="{{ $reg->event_id }}">
+                                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
+                                                            Verify
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-gray-400">✔</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-gray-500 py-4">Tidak ada data pendaftaran.</td>
+                                        </tr>
+                                    @endforelse
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="px-4 py-6 text-center text-gray-400">
+                                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">
                                             Belum ada player yang terdaftar.
                                         </td>
                                     </tr>
@@ -127,33 +147,46 @@
                     <!-- Mobile Card View -->
                     <div class="sm:hidden space-y-4">
                         @forelse ($players as $player)
-                            <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
-                                <div class="mb-3 pb-3 border-b border-gray-700">
-                                    <h3 class="font-semibold text-base mb-2">{{ $player->name }}</h3>
-                                    <p class="text-xs text-gray-400">{{ $player->email }}</p>
-                                    <p class="text-xs mt-2">
-                                        Status:
-                                        @if ($player->status_player == 1)
-                                            <span class="text-green-400 font-semibold">Terverifikasi</span>
-                                        @else
-                                            <span class="text-yellow-400">Menunggu Verifikasi</span>
-                                        @endif
-                                    </p>
-                                </div>
+                            @foreach ($player->eventRegistrations as $reg)
+                                <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
+                                    <div class="mb-3 pb-3 border-b border-gray-700">
+                                        <h3 class="font-semibold text-base mb-2">{{ $player->name }}</h3>
+                                        <p class="text-xs text-gray-400">{{ $player->email }}</p>
+                                        <p class="text-xs mt-2">
+                                            Total: Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}
+                                        </p>
+                                        <p class="text-xs mt-2">
+                                            Bukti:
+                                            @if ($reg->bukti_payment)
+                                                <a href="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" target="_blank" class="text-blue-400 underline">Lihat</a>
+                                            @else
+                                                <span class="text-gray-400 italic">Tidak ada</span>
+                                            @endif
+                                        </p>
+                                        <p class="text-xs mt-2">
+                                            Status:
+                                            @if ($player->status_player == 1)
+                                                <span class="text-green-400 font-semibold">Terverifikasi</span>
+                                            @else
+                                                <span class="text-yellow-400">Menunggu Verifikasi</span>
+                                            @endif
+                                        </p>
+                                    </div>
 
-                                @if ($player->status_player == 0)
-                                    <form action="{{ route('admin.users.verify', $player->id) }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="event_id" value="{{ $event_id ?? 1 }}">
-                                        <button type="submit"
-                                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition">
-                                            Verify
-                                        </button>
-                                    </form>
-                                @else
-                                    <div class="text-gray-400 text-center">✔ Terverifikasi</div>
-                                @endif
-                            </div>
+                                    @if ($player->status_player == 0)
+                                        <form action="{{ route('admin.users.verify', $player->id) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="event_id" value="{{ $reg->event_id }}">
+                                            <button type="submit"
+                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition">
+                                                Verify
+                                            </button>
+                                        </form>
+                                    @else
+                                        <div class="text-gray-400 text-center">✔ Terverifikasi</div>
+                                    @endif
+                                </div>
+                            @endforeach
                         @empty
                             <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
                                 <p class="text-gray-400">Belum ada player yang terdaftar.</p>
@@ -165,4 +198,3 @@
         </div>
     </div>
 @endsection
-

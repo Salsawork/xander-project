@@ -205,9 +205,10 @@
 
         // Harga & stok dari ticket default jika dikirim controller
         $ticketPrice = isset($ticket) ? (float) ($ticket->price ?? 0) : (float) ($event->price_ticket ?? 0);
+        $ticketPricePlayer = isset($registration) ? (float) ($registration->price ?? 0) : (float) ($event->price_ticket_player ?? 0);
         $stockLeft = isset($ticket) ? (int) ($ticket->stock ?? 0) : (int) ($event->stock ?? 0);
+        $slotPlayerLeft = (int) ($event->player_slots ?? 0);
 
-        // Aturan tombol:
         // Register: hanya sebelum hari start_date (sampai H-1)
         $showRegister = $now->lt($startDate);
 
@@ -350,6 +351,14 @@
                                             <p class="font-medium mb-1">Stock Left</p>
                                             <p class="text-gray-300">{{ $stockLeft }}</p>
                                         </div>
+                                        <div>
+                                            <p class="font-medium mb-1">Ticket Price Player</p>
+                                            <p class="text-gray-300">Rp {{ number_format($ticketPricePlayer, 0, ',', '.') }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium mb-1">Slot Player Left</p>
+                                            <p class="text-gray-300">{{ $slotPlayerLeft }}</p>
+                                        </div>
                                     </div>
 
                                     @php
@@ -364,12 +373,12 @@
                                                 @guest
                                                     <a href="{{ route('login') }}"
                                                         class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                                        Register Now
+                                                        Register Player
                                                     </a>
                                                 @else
                                                     <button type="button" onclick="openModal('#registrationModal')"
                                                         class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                                        Register Now
+                                                        Register Player
                                                     </button>
                                                 @endguest
                                             @endif
@@ -497,7 +506,7 @@
                         <h2 class="text-2xl font-bold text-white">Event Registration (Player)</h2>
                         <span class="close" onclick="closeModal('#registrationModal')">&times;</span>
                     </div>
-                    <form id="registrationForm" action="{{ route('events.register', $event->id) }}" method="POST">
+                    <form id="registrationForm" action="{{ route('events.register', $event->id) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="_from" value="event-registration">
 
@@ -532,11 +541,25 @@
                                     value="Rp {{ number_format($event->price_ticket_player ?? 0, 0, ',', '.') }}" readonly>
                             </div>
 
-                            <p class="text-sm text-gray-400 mt-4">
-                                <span class="text-red-500">*</span> Required fields
-                            </p>
-                        </div>
+                            <div class="form-group">
+                                <label class="form-label" for="bank_id">Bank <span class="text-red-500">*</span></label>
+                                <select id="bank_id" name="bank_id" class="form-select" required>
+                                    <option value="">Pilih bank</option>
+                                    @foreach ($banks as $b)
+                                        <option value="{{ $b->id_bank }}">{{ $b->nama_bank }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
+                            <div class="form-group">
+                                <label class="form-label" for="bukti_payment">Bukti Pembayaran <span
+                                        class="text-red-500">*</span></label>
+                                <input type="file" id="bukti_payment" name="bukti_payment" accept="image/*"
+                                    class="form-input" required>
+                                <p class="hint mt-2">Format: JPG/PNG/WEBP, maks 2MB.</p>
+                            </div>
+                        </div>
+                        
                         <div class="modal-footer">
                             <button type="button" class="btn-secondary"
                                 onclick="closeModal('#registrationModal')">Cancel</button>

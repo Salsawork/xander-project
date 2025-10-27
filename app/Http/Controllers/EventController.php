@@ -127,31 +127,34 @@ class EventController extends Controller
         $event = Event::findOrFail($event);
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
     
+        // Ambil tiket default (jika tidak ada, buat)
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
-    
         if (!$ticket) {
             $ticket = EventTicket::create([
-                'event_id'    => $event->id,
-                'name'        => 'General Admission',
-                'price'       => (float) ($event->price_ticket ?? 0),
-                'stock'       => (int) ($event->stock ?? 0),
+                'event_id' => $event->id,
+                'name' => 'General Admission',
+                'price' => (float) ($event->price_ticket ?? 0),
+                'stock' => (int) ($event->stock ?? 0),
                 'description' => 'Default ticket for ' . $event->name,
             ]);
         } else {
-            // 🧩 Sinkron otomatis jika data event berubah
+            // Sinkron otomatis jika harga/stok berubah di events
             if (
-                (float)$ticket->price !== (float)$event->price_ticket ||
-                (int)$ticket->stock !== (int)$event->stock
+                (float) $ticket->price !== (float) $event->price_ticket ||
+                (int) $ticket->stock !== (int) $event->stock
             ) {
                 $ticket->update([
-                    'price' => (float)$event->price_ticket,
-                    'stock' => (int)$event->stock,
+                    'price' => (float) $event->price_ticket,
+                    'stock' => (int) $event->stock,
                 ]);
             }
         }
     
+        // Tidak perlu lagi ambil dari EventRegistration untuk slot pemain
+    
         return view('public.event.detail', compact('event', 'banks', 'ticket'));
     }
+    
     
 
     /**
@@ -196,43 +199,79 @@ class EventController extends Controller
      * Route: POST /event/{event}/register (name: events.register) [auth]
      * Field dari modal: username (alias name), email, phone
      */
-   // EventRegistrationController.php
-   public function register(Request $request, $eventId)
-   {
-       $event = Event::findOrFail($eventId);
-       $user = auth()->user();
-   
-       // Cek slot pemain masih tersedia
-       if ($event->player_slots <= 0) {
-           return back()->with('error', 'Slot pemain sudah penuh.');
-       }
-   
-       // Cek apakah user sudah daftar sebelumnya
-       $existing = EventRegistration::where('event_id', $eventId)
-           ->where('user_id', $user->id)
-           ->first();
-   
-       if ($existing) {
-           return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
-       }
-   
-       // Ubah role user menjadi player (jika belum)
-       if ($user->roles == 'user') {
-           $user->update(['roles' => 'player']);
-       }
-   
-       // Buat pendaftaran pemain
-       EventRegistration::create([
-           'event_id' => $event->id,
-           'user_id' => $user->id,
-           'slot' => 1,
-           'price' => $event->price_ticket_player,
-           'status' => 'pending',
-       ]);
-   
-       return back()->with('success', 'Pendaftaran pemain berhasil dikirim, menunggu verifikasi admin.');
-   }
-
+    public function register(Request $request, $eventId)
+    {
+        $event = Event::lockForUpdate()->findOrFail($eventId);
+        $user  = auth()->user();
+    
+        // Validasi input
+        $validated = $request->validate([
+            'bank_id'       => 'required|integer|exists:mst_bank,id_bank',
+            'bukti_payment' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+    
+        // Cek slot pemain
+        if ($event->player_slots <= 0) {
+            return back()->with('error', 'Slot pemain sudah penuh.');
+        }
+    
+        // Cek duplikat pendaftaran
+        if (EventRegistration::where('event_id', $eventId)->where('user_id', $user->id)->exists()) {
+            return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
+        }
+    
+        try {
+            DB::beginTransaction();
+    
+            // Upload bukti pembayaran
+            $file    = $request->file('bukti_payment');
+            $ext     = $file->getClientOriginalExtension();
+            $fname   = 'reg_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
+    
+            $targetDir = base_path('../demo-xanders/images/payments/registrations');
+            if (!file_exists($targetDir)) {
+                mkdir($targetDir, 0755, true);
+            }
+    
+            $file->move($targetDir, $fname);
+    
+            // Generate nomor unik pendaftaran
+            $registrationNumber = 'REG-' . strtoupper(Str::random(6));
+    
+            // Hitung total
+            $totalPayment = $event->price_ticket_player ?? 0;
+    
+            // Simpan ke database
+            $registration = EventRegistration::create([
+                'event_id'            => $event->id,
+                'user_id'             => $user->id,
+                'bank_id'             => $validated['bank_id'],
+                'bukti_payment'       => $fname,
+                'registration_number' => $registrationNumber,
+                'slot'                => 1,
+                'price'               => $event->price_ticket_player,
+                'total_payment'       => $totalPayment,
+                'status'              => 'pending',
+            ]);
+    
+            // Ubah role user ke player
+            if ($user->roles === 'user') {
+                $user->update(['roles' => 'player']);
+            }
+    
+            DB::commit();
+    
+            return back()->with('success', 'Pendaftaran pemain berhasil dikirim. Nomor registrasi: ' . $registrationNumber);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Event register failed', [
+                'user_id' => $user->id,
+                'event_id'=> $event->id,
+                'error'   => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Terjadi kesalahan saat pendaftaran.');
+        }
+    }
     /**
      * Buy Ticket (POST)
      * - Diizinkan sebelum start_date (Upcoming) dan selama Ongoing

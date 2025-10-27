@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class EventRegistration extends Model
 {
     protected $fillable = [
-        'event_id', 'user_id', 'ticket_id', 'slot', 'price', 'status',
+        'event_id', 'user_id', 'bank_id', 'registration_number', 'bukti_payment', 'slot', 'price', 'total_payment', 'status',
     ];
 
     public function event() {
-        return $this->belongsTo(Event::class);
+        return $this->belongsTo(Event::class, 'event_id');
     }
 
     public function ticket() {
