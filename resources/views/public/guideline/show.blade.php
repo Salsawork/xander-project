@@ -117,7 +117,7 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
+    overflow: hidden.
   }
 
   /* Desktop adjustments */
@@ -135,6 +135,22 @@
 @php
     use Illuminate\Support\Str;
     use Illuminate\Support\Facades\Storage;
+
+    /* ====== Hapus kata-kata terlarang dari output ====== */
+    $removeWords = ['billiards','basics','beginner','cue','balls'];
+    $pattern = '/\b(' . implode('|', array_map(fn($w)=>preg_quote($w,'/'), $removeWords)) . ')\b/iu';
+
+    // Untuk teks biasa (rapikan spasi setelah dihapus)
+    $stripWordsPlain = function ($text) use ($pattern) {
+        $text = preg_replace($pattern, '', (string)$text);
+        $text = preg_replace('/\s{2,}/', ' ', $text);
+        $text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
+        return trim($text ?? '');
+    };
+    // Untuk HTML: hanya hapus kata, tanpa normalisasi spasi agar aman untuk atribut/tag
+    $stripWordsHtml = function ($html) use ($pattern) {
+        return preg_replace($pattern, '', (string)$html);
+    };
 
     $pubDate = optional($guideline->published_at)->format('d F Y');
 
@@ -154,7 +170,18 @@
     // ==== Content fallback: jika user tidak pakai HTML, tetap hormati newline ====
     $contentRaw = (string) ($guideline->content ?? '');
     $looksHtml = Str::contains(Str::lower($contentRaw), ['<p','<br','<h','<ul','<ol','<div','<section','<table','</']);
-    $contentSafe = $looksHtml ? $contentRaw : nl2br(e($contentRaw));
+    // Terapkan filter kata terlarang
+    if ($looksHtml) {
+        $contentFiltered = $stripWordsHtml($contentRaw);
+        $contentSafe = $contentFiltered; // sudah HTML
+    } else {
+        $contentFiltered = $stripWordsPlain($contentRaw);
+        $contentSafe = nl2br(e($contentFiltered));
+    }
+
+    // Title & description yang sudah difilter
+    $titleSan = $stripWordsPlain($guideline->title ?? '');
+    $descSan  = $stripWordsPlain($guideline->description ?? '');
 @endphp
 
 <div class="bg-neutral-900 text-white min-h-screen">
@@ -166,7 +193,7 @@
                 <span>/</span>
                 <a href="{{ route('guideline.index') }}" class="hover:text-white">Guideline</a>
                 <span>/</span>
-                <span class="text-white line-clamp-1">{{ $guideline->title }}</span>
+                <span class="text-white line-clamp-1">{{ $titleSan }}</span>
             </div>
         </div>
     </nav>
@@ -175,7 +202,7 @@
     <header class="px-4 sm:px-6 lg:px-24 pt-4">
         <div class="container-narrow">
             <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
-                {{ $guideline->title }}
+                {{ $titleSan }}
             </h1>
             @if($pubDate)
                 <p class="text-sm sm:text-base text-gray-400">{{ $pubDate }}</p>
@@ -187,7 +214,7 @@
     <section class="px-4 sm:px-6 lg:px-24 mt-5 mb-6">
         <div class="container-narrow">
             @if ($imagePath)
-                <img src="{{ $imagePath }}" alt="{{ $guideline->title }}"
+                <img src="{{ $imagePath }}" alt="{{ $titleSan }}"
                      class="img-hero shadow-soft"
                      style="max-height: 520px;">
             @else
@@ -211,10 +238,10 @@
                 <!-- Main -->
                 <article class="lg:col-span-2">
                     <div class="article-content">
-                        {{-- Short description: HORMATI NEWLINE --}}
+                        {{-- Short description: HORMATI NEWLINE (setelah filter) --}}
                         @if(!empty($guideline->description))
                             <div class="text-[0.98rem] sm:text-base text-gray-300 mb-4 whitespace-pre-line break-words">
-                                {!! nl2br(e($guideline->description)) !!}
+                                {!! nl2br(e($descSan)) !!}
                             </div>
                         @endif
 
@@ -242,18 +269,7 @@
                             </div>
                         @endif
 
-                        {{-- Tags --}}
-                        @if (!empty($guideline->tags))
-                            <div class="mt-8">
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach (explode(',', $guideline->tags) as $tag)
-                                        <span class="bg-gray-800/80 text-xs sm:text-sm px-3 py-1 rounded-full ring-1 ring-white/10">
-                                            {{ trim($tag) }}
-                                        </span>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
+                        {{-- === TAGS DIHAPUS SESUAI PERMINTAAN === --}}
 
                         {{-- Author --}}
                         <div class="mt-10 pt-6 border-t border-white/10">
@@ -301,19 +317,20 @@
                                 }
                             }
                             $rDate = optional($related->published_at)->format('d F Y');
+                            $relatedTitleSan = $stripWordsPlain($related->title ?? '');
                         @endphp
 
                         <div class="flex gap-4">
                           <div class="rec-thumb w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
                             @if ($rImage)
-                              <img src="{{ $rImage }}" alt="{{ $related->title }}" class="w-full h-full object-cover">
+                              <img src="{{ $rImage }}" alt="{{ $relatedTitleSan }}" class="w-full h-full object-cover">
                             @endif
                           </div>
 
                           <div class="min-w-0">
                             <a href="{{ route('guideline.show', ['slug' => $related->slug]) }}"
                                class="font-medium text-white/90 hover:text-gray-200 transition line-clamp-2">
-                              {{ $related->title }}
+                              {{ $relatedTitleSan }}
                             </a>
                             @if($rDate)
                               <p class="text-[12px] text-gray-400 mt-1">{{ $rDate }}</p>
