@@ -16,6 +16,10 @@
   .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
   .chip{ display:inline-flex; align-items:center; gap:.5rem; background:#2a2a2a; border:1px solid #3f3f3f; padding:.25rem .6rem; border-radius:9999px; font-size:.8rem; }
   .chip button{ background:transparent; border:0; color:#fca5a5; cursor:pointer; font-weight:700; }
+
+  .img-tile{ position:relative; width:80px; height:80px; }
+  .img-tile img{ width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
+  .badge-replace{ display:inline-block; background:#2563eb; color:#fff; font-size:11px; padding:2px 6px; border-radius:999px; }
 </style>
 @endpush
 
@@ -37,7 +41,7 @@
             </a>
           </div>
 
-          {{-- ====== TAMPILAN ERROR VALIDASI ====== --}}
+          {{-- ERROR VALIDASI --}}
           @if ($errors->any())
             <div class="mb-4 rounded-md bg-red-600/20 text-red-200 border border-red-600/40 px-4 py-3 text-sm">
               <strong class="block mb-1">Periksa kembali isian:</strong>
@@ -48,10 +52,9 @@
               </ul>
             </div>
           @endif
-          {{-- ===================================== --}}
 
           @php
-            // Robust formatter untuk input type="time" → selalu "HH:MM"
+            // Formatter HH:MM
             $toHi = function($val) {
               if (!$val) return '';
               if (is_object($val) && method_exists($val, 'format')) { return $val->format('H:i'); }
@@ -68,9 +71,8 @@
             @csrf @method('PUT')
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-              <!-- Kolom Kiri -->
+              {{-- KIRI --}}
               <div class="space-y-6">
-                <!-- Informasi Akun -->
                 <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                   <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                     <i class="fas fa-user-circle mr-2 text-blue-400"></i> Informasi Akun
@@ -137,7 +139,7 @@
                 </div>
               </div>
 
-              <!-- Kolom Kanan -->
+              {{-- KANAN --}}
               <div class="space-y-6">
                 <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                   <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
@@ -152,39 +154,93 @@
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
+                    {{-- ===== Gambar: pilih file → GANTI semua gambar lama (maks 3) ===== --}}
+                    @php
+                      $maxImages = 3;
+
+                      // ==== NORMALIZER ROBUST ====
+                      $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                      $placeholder = asset('images/placeholder/venue.png');
+                      $normalizeImg = function($img) use ($feBase, $placeholder) {
+                          $raw = is_string($img) ? trim($img) : '';
+                          if ($raw === '') return $placeholder;
+
+                          // 1) Full URL
+                          if (preg_match('~^https?://~i', $raw)) return $raw;
+
+                          // 2) Sudah mengarah ke /storage (public disk)
+                          if (stripos($raw, 'storage/') === 0) {
+                              return asset($raw);
+                          }
+
+                          // 3) Path relatif yang biasa disimpan di DB (public disk)
+                          //    contoh: "venue/abc.jpg", "uploads/venue/abc.jpg"
+                          if (preg_match('~^(venue/|uploads/venue/)~i', $raw)) {
+                              return asset('storage/'.$raw);
+                          }
+
+                          // 4) Asset publik di folder /public/images/venue/...
+                          if (preg_match('~^(images/venue/|images/venues/|img/venue/)~i', $raw)) {
+                              return asset($raw);
+                          }
+
+                          // 5) Hanya nama file → arahkan ke FE CDN bawaan
+                          $name = basename($raw);
+                          if ($name && $name !== '/' && $name !== '.') {
+                              return $feBase.$name;
+                          }
+
+                          return $placeholder;
+                      };
+
+                      $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
+                      $existingImages = array_values(array_filter(array_map(fn($v)=> (string)$v, $existingImages)));
+                      $existingImages = array_slice($existingImages, 0, $maxImages);
+                    @endphp
+
                     <div>
-                      <label class="block text-xs text-gray-400 mb-1">Upload Gambar (Opsional)</label>
-                      <input type="file" name="images[]" multiple accept="image/*"
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                      <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, WEBP, AVIF, GIF. Maks: 4MB/berkas</p>
+                      <label class="block text-xs text-gray-400 mb-1">Upload Gambar (maks {{ $maxImages }})</label>
+                      <input
+                        id="imagesInput"
+                        type="file"
+                        name="images[]"
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        accept="image/*"
+                        multiple
+                        data-max-total="{{ $maxImages }}"
+                      />
+                      <input type="hidden" name="replace_images" id="replaceImagesFlag" value="0">
+                      <p id="imagesHelp" class="text-xs mt-1 text-gray-500">
+                        Memilih file akan <span class="badge-replace">MENGGANTI</span> semua gambar lama saat disimpan (maks {{ $maxImages }} gambar).
+                        Jika tidak memilih file, gambar lama dipertahankan.
+                      </p>
 
-                      @php
-                        $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
-                        $normalizeImg = function($img){
-                          $raw = trim((string)$img);
-                          if (preg_match('/^https?:\/\//i', $raw)) return $raw;
-                          $filename = basename($raw);
-                          return 'https://demo-xanders.ptbmn.id/images/venue/' . $filename;
-                        };
-                      @endphp
+                      {{-- Preview gambar baru (belum upload) --}}
+                      <div id="newPreview" class="flex flex-wrap gap-2 mt-3"></div>
 
-                      @if(!empty($existingImages))
-                      <div class="mt-4">
-                        <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
-                        <div class="flex flex-wrap gap-2">
-                          @foreach($existingImages as $img)
-                            @php $src = $normalizeImg($img); @endphp
-                            <div class="relative w-20 h-20">
-                              <img src="{{ $src }}" alt="venue image" class="w-full h-full object-cover rounded-md"
-                                   onerror="this.src='https://placehold.co/400x400?text=No+Img'"/>
-                            </div>
-                          @endforeach
+                      {{-- Gambar lama (informasi) --}}
+                      @if(count($existingImages))
+                        <div class="mt-4">
+                          <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
+                          <div class="flex flex-wrap gap-2" id="oldImagesWrap">
+                            @foreach($existingImages as $img)
+                              @php $src = $normalizeImg($img); @endphp
+                              <div class="img-tile">
+                                <img src="{{ $src }}" alt="venue image"
+                                     onerror="this.onerror=null;this.src='{{ $placeholder }}'">
+                              </div>
+                            @endforeach
+                          </div>
+                          <p class="text-xs text-gray-500 mt-2" id="oldInfo">Akan <u>tetap digunakan</u> jika tidak memilih file baru.</p>
                         </div>
-                      </div>
                       @endif
-                    </div>
 
-                    {{-- ADDRESS: tampilan saja + hidden untuk submit --}}
+                      @error('images') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                      @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    {{-- ===== END Gambar ===== --}}
+
+                    {{-- Alamat --}}
                     <div class="space-y-2">
                       <label class="block text-xs text-gray-400">Alamat Venue</label>
                       <div id="addressDisplay" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-gray-200 min-h-[90px] whitespace-pre-line select-text cursor-default pointer-events-none">
@@ -207,7 +263,7 @@
                       <p class="text-xs text-gray-400">Preview & alamat akan terisi otomatis dari link di atas.</p>
                     </div>
 
-                    {{-- ===== PHONE (BARU DITAMBAHKAN) ===== --}}
+                    {{-- Phone --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="phone">Nomor Telepon</label>
                       <input name="phone" id="phone" type="text"
@@ -216,7 +272,6 @@
                         class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
-                    {{-- ===================================== --}}
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Jam Operasional</label>
@@ -236,7 +291,7 @@
                           @error('closing_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                       </div>
-                      <p class="text-xs text-gray-500 mt-1">Nilai di atas diambil langsung dari data yang tersimpan (mendukung format HH:MM dan HH:MM:SS).</p>
+                      <p class="text-xs text-gray-500 mt-1">Mendukung format HH:MM dan HH:MM:SS.</p>
                     </div>
 
                     <div>
@@ -277,7 +332,7 @@
     Swal.fire({ icon:'error', title:'Error!', text:'{{ session('error') }}', showConfirmButton:true, background:'#222', color:'#fff' });
   @endif
 
-  // ====== Map preview + auto address (pb-aware) ======
+  // ====== Map preview + auto address ======
   const embedEl = document.getElementById('map_embed');
   const previewWrap = document.getElementById('mapPreview');
   const previewIframe = document.getElementById('mapPreviewIframe');
@@ -293,7 +348,6 @@
     }
     return val;
   }
-
   function parseAddressFromSrc(src){
     if (!src) return '';
     try{
@@ -302,50 +356,32 @@
       if (q) return decodeURIComponent(q.replace(/\+/g,' '));
       const mPlace = u.pathname.match(/\/maps\/place\/([^/]+)/i);
       if (mPlace && mPlace[1]) return decodeURIComponent(mPlace[1].replace(/\+/g,' '));
-
       const pb = u.searchParams.get('pb');
       if (pb) {
-        let pbDec = decodeURIComponent(pb);
-        try { pbDec = decodeURIComponent(pbDec); } catch(e){}
+        let pbDec = decodeURIComponent(pb); try { pbDec = decodeURIComponent(pbDec); } catch(e){}
         const matches = [...pbDec.matchAll(/!2s([^!]+)/g)].map(x=>x[1]);
         const cleaned = matches.map(t=>{
           try{ t = decodeURIComponent(t); }catch(e){}
           t = t.replace(/\+/g,' ').replace(/\\u0026/gi,'&').trim();
           return t;
         }).filter(t => t.length >= 5 && /[A-Za-z]/.test(t) && !/^[a-z]{2}(-[A-Z]{2})?$/.test(t) && !/^(Google|Maps|Street View)$/i.test(t));
-        if (cleaned.length){
-          cleaned.sort((a,b)=>b.length-a.length);
-          return cleaned[0];
-        }
+        if (cleaned.length){ cleaned.sort((a,b)=>b.length-a.length); return cleaned[0]; }
       }
     }catch(e){}
-    if (src.toLowerCase().startsWith('<iframe')) {
+    if (src && src.toLowerCase().startsWith('<iframe')) {
       const t = src.match(/title\s*=\s*"(.*?)"/i);
       if (t && t[1] && t[1].toLowerCase() !== 'google maps') return t[1];
     }
     return '';
   }
-
   function renderPreview(){
     const src = extractSrc(embedEl.value);
-    if (src && /^https?:\/\//i.test(src)) {
-      previewIframe.src = src;
-      previewWrap.style.display = '';
-    } else {
-      previewIframe.removeAttribute('src');
-      previewWrap.style.display = 'none';
-    }
+    if (src && /^https?:\/\//i.test(src)) { previewIframe.src = src; previewWrap.style.display = ''; }
+    else { previewIframe.removeAttribute('src'); previewWrap.style.display = 'none'; }
     const parsed = parseAddressFromSrc(src);
-    if (parsed) {
-      addressHidden.value = parsed;
-      addressDisplay.textContent = parsed;
-    }
+    if (parsed) { addressHidden.value = parsed; addressDisplay.textContent = parsed; }
   }
-
-  if (embedEl) {
-    embedEl.addEventListener('input', renderPreview);
-    renderPreview();
-  }
+  if (embedEl) { embedEl.addEventListener('input', renderPreview); renderPreview(); }
 
   // ====== Facilities (chips) ======
   const facInput   = document.getElementById('facilityInputEdit');
@@ -355,10 +391,8 @@
   const form       = document.getElementById('editVenueForm');
 
   let facilities = @json($facOld);
-
   function renderFacilities(){
-    facChips.innerHTML = '';
-    facHidden.innerHTML = '';
+    facChips.innerHTML = ''; facHidden.innerHTML = '';
     facilities.forEach((text, idx) => {
       const chip = document.createElement('span');
       chip.className = 'chip';
@@ -371,7 +405,6 @@
       facHidden.appendChild(hidden);
     });
   }
-
   function addFacilityFromInput(){
     const v = (facInput.value || '').trim();
     if (!v) return;
@@ -380,10 +413,56 @@
     if (!facilities.includes(v)) { facilities.push(v); renderFacilities(); }
     facInput.value = ''; facInput.focus();
   }
-
   if (facAddBtn) facAddBtn.addEventListener('click', addFacilityFromInput);
   if (facInput) facInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addFacilityFromInput(); } });
   if (form) { form.addEventListener('submit', () => renderFacilities()); }
   renderFacilities();
+
+  // ====== File baru = GANTI semua gambar lama (maks 3) + preview ======
+  (function(){
+    const input  = document.getElementById('imagesInput');
+    const help   = document.getElementById('imagesHelp');
+    const previewWrap = document.getElementById('newPreview');
+    const flag   = document.getElementById('replaceImagesFlag');
+    const oldWrap= document.getElementById('oldImagesWrap');
+    const oldInfo= document.getElementById('oldInfo');
+
+    if(!input) return;
+    const maxTotal = parseInt(input.dataset.maxTotal || '3', 10);
+
+    function renderPreviews(files){
+      previewWrap.innerHTML = '';
+      files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const fig = document.createElement('div');
+        fig.className = 'img-tile';
+        fig.innerHTML = `<img src="${url}" alt="preview">`;
+        previewWrap.appendChild(fig);
+      });
+    }
+
+    input.addEventListener('change', () => {
+      const files = Array.from(input.files || []);
+      if(files.length > maxTotal){
+        const dt = new DataTransfer();
+        files.slice(0, maxTotal).forEach(f => dt.items.add(f));
+        input.files = dt.files;
+      }
+      const picked = Array.from(input.files || []);
+      if (picked.length > 0) {
+        flag.value = '1';
+        help.className = 'text-xs mt-1 text-yellow-300';
+        help.innerHTML = `Mode <b>GANTI</b> aktif. Semua gambar lama akan diganti dengan ${picked.length} gambar baru (maks ${maxTotal}).`;
+        if (oldInfo) oldInfo.textContent = 'Akan DIGANTI saat disimpan.';
+      } else {
+        flag.value = '0';
+        help.className = 'text-xs mt-1 text-gray-500';
+        help.textContent = `Memilih file akan MENGGANTI semua gambar lama saat disimpan (maks ${maxTotal} gambar). Jika tidak memilih file, gambar lama dipertahankan.`;
+        if (oldInfo) oldInfo.textContent = 'Akan tetap digunakan jika tidak memilih file baru.';
+      }
+      renderPreviews(picked);
+      if (oldWrap) oldWrap.style.opacity = picked.length ? '.35' : '1';
+    });
+  })();
 </script>
 @endpush

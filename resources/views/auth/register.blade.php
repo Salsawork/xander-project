@@ -43,35 +43,74 @@
                     Already have account?
                     <a href="{{ route('login') }}" class="text-blue-400 hover:underline">Login</a>
                 </p>
+
                 <form method="POST" action="{{ route('register') }}">
                     @csrf
-                    <input type="text" placeholder="Full Name" name="name"
-                        class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+                    {{-- Full Name --}}
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Full Name"
+                        value="{{ old('name') }}"
+                        class="mb-2 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     @error('name')
-                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                        <p class="text-red-500 text-sm mb-3">{{ $message }}</p>
                     @enderror
-                    <input type="text" placeholder="Phone number or Email " name="email"
-                        class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+                    {{-- Phone (opsional) --}}
+                    <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Phone Number (optional)"
+                        value="{{ old('phone') }}"
+                        class="mb-2 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    @error('phone')
+                        <p class="text-red-500 text-sm mb-3">{{ $message }}</p>
+                    @enderror
+
+                    {{-- Email --}}
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value="{{ old('email') }}"
+                        class="mb-2 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     @error('email')
-                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                        <p class="text-red-500 text-sm mb-3">{{ $message }}</p>
                     @enderror
-                    <input type="password" placeholder="Password" name="password"
-                        class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+                    {{-- Password --}}
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        class="mb-2 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     @error('password')
-                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                        <p class="text-red-500 text-sm mb-3">{{ $message }}</p>
                     @enderror
-                    <input type="password" placeholder="Confirm Password" name="password_confirmation"
+
+                    {{-- Confirm Password --}}
+                    <input
+                        type="password"
+                        name="password_confirmation"
+                        placeholder="Confirm Password"
                         class="mb-4 w-full rounded-md border border-gray-500 bg-transparent px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     @error('password_confirmation')
-                        <p class="text-red-500 text-sm mb-4">{{ $message }}</p>
+                        <p class="text-red-500 text-sm mb-3">{{ $message }}</p>
                     @enderror
+
                     <button type="submit"
                         class="mb-4 w-full rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
                         Sign Up
                     </button>
+
                     <div class="mb-4 border-t border-gray-600"></div>
+
                     <button type="button"
-                        class="w-full rounded-md border border-blue-500 px-4 py-2 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors">Google</button>
+                        class="w-full rounded-md border border-blue-500 px-4 py-2 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors">
+                        Google
+                    </button>
                 </form>
             </div>
         </div>

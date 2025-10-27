@@ -99,8 +99,9 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="product"
                                value="product:{{ $cart['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
-                        <img alt="{{ $cart['name'] }}" class="cart-img" src="{{ $imageUrl }}" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
+                        <img alt="{{ $cart['name'] }}" class="cart-img" src="{{ $imageUrl }}"
+                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/product.png') }}';" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $cart['name'] }}</p>
                             <input type="hidden" id="price-{{ $cart['cart_id'] }}" value="{{ $cart['price'] }}">
@@ -129,10 +130,15 @@
                     @endif
                 @endforelse
 
-                {{-- Venue --}}
+                {{-- Venue (gambar dikirim dari controller/detail -> 'image', lalu dibangun ke FE base) --}}
                 @forelse ($cartVenues ?? [] as $venue)
                     @php
+                        $feVenueBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+
+                        // Prioritas: pakai $venue['image'] yang sudah dikirim controller/form.
                         $rawVenue = $venue['image'] ?? null;
+
+                        // Jika masih kosong, fallback ambil dari model (aman untuk item lama)
                         if (!$rawVenue && !empty($venue['venue_id'])) {
                             $__v = \App\Models\Venue::find($venue['venue_id']);
                             if ($__v) {
@@ -146,33 +152,30 @@
                                 if (!$rawVenue && !empty($__v->image)) { $rawVenue = $__v->image; }
                             }
                         }
-                        $filenameVenue = $rawVenue ? basename(str_replace('\\','/',$rawVenue)) : null;
 
-                        $venueImageUrl = asset('images/venue/default.png');
-                        if ($filenameVenue) {
-                            $feAbs  = base_path('../demo-xanders/images/venue/' . $filenameVenue);
-                            $feLink = public_path('fe-venue');
-                            if (\Illuminate\Support\Facades\File::exists($feAbs) && is_dir($feLink)) {
-                                $venueImageUrl = asset('fe-venue/' . $filenameVenue);
+                        // Normalisasi -> ambil filename
+                        $filenameVenue = null;
+                        if (!empty($rawVenue)) {
+                            if (filter_var($rawVenue, FILTER_VALIDATE_URL)) {
+                                $path = parse_url($rawVenue, PHP_URL_PATH);
+                                $filenameVenue = basename($path);
                             } else {
-                                $cmsAbs = public_path('images/venue/' . $filenameVenue);
-                                if (\Illuminate\Support\Facades\File::exists($cmsAbs)) {
-                                    $venueImageUrl = asset('images/venue/' . $filenameVenue);
-                                } else {
-                                    $storAbs = public_path('storage/uploads/' . $filenameVenue);
-                                    if (\Illuminate\Support\Facades\File::exists($storAbs)) {
-                                        $venueImageUrl = asset('storage/uploads/' . $filenameVenue);
-                                    }
-                                }
+                                $filenameVenue = basename(str_replace('\\','/',$rawVenue));
                             }
                         }
+
+                        // FE URL final (fallback ke placeholder lokal agar tidak 404)
+                        $venueImageUrl = $filenameVenue
+                            ? ($feVenueBase . $filenameVenue)
+                            : asset('images/placeholder/venue.png');
                     @endphp
 
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
                                value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
-                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
+                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}"
+                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
                             <p class="text-white text-xs mt-1 cart-meta">
@@ -212,8 +215,9 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="sparring"
                                value="sparring:{{ $sparring['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
-                        <img alt="{{ $sparring['athlete_name'] }}" class="cart-img" src="{{ $athleteImageUrl }}" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
+                        <img alt="{{ $sparring['athlete_name'] }}" class="cart-img" src="{{ $athleteImageUrl }}"
+                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/athlete.png') }}';" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $sparring['athlete_name'] }} (Sparring)</p>
                             <p class="text-white text-xs mt-1 cart-meta">

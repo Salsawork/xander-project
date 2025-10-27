@@ -6,29 +6,28 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
+
 class LoginController extends Controller
 {
-   
-
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|unique:users',
-            'password' => 'required|min:6|confirmed',
+            'name'                  => ['required', 'string', 'max:255'],
+            'phone'                 => ['nullable', 'string', 'min:6', 'max:20', 'unique:users,phone'],
+            'email'                 => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'              => ['required', 'min:6', 'confirmed'],
         ]);
 
         $otp = rand(100000, 999999); // OTP 6 digit
 
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $request->phone ?? null,
-            'password' => Hash::make($validated['password']),
-            'status' => 0,
-            'otp_code' => $otp,
+            'name'      => $validated['name'],
+            'email'     => $validated['email'],
+            'phone'     => $validated['phone'] ?? null,
+            'password'  => Hash::make($validated['password']),
+            'status'    => 0,
+            'otp_code'  => $otp,
         ]);
 
         // Kirim email OTP
@@ -37,25 +36,24 @@ class LoginController extends Controller
                     ->subject('Email Verification Code');
         });
 
-        return redirect()->route('verification.form', ['email' => $user->email])
-                        ->with('success', 'Verification code sent to your email.');
+        return redirect()
+            ->route('verification.form', ['email' => $user->email])
+            ->with('success', 'Verification code sent to your email.');
     }
 
-     /**
-     * Process the signup request.
-     */
-    
+    /** Tampilkan form verifikasi OTP */
     public function showVerificationForm(Request $request)
     {
-        $email = $request->query('email') ?? $request->query('email'); // aman
+        $email = $request->query('email');
         return view('auth.verify', compact('email'));
     }
-    
+
+    /** Proses verifikasi OTP */
     public function verifyOtp(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'otp_code' => 'required|numeric',
+            'email'    => ['required', 'email'],
+            'otp_code' => ['required', 'numeric'],
         ]);
 
         $user = User::where('email', $request->email)
@@ -67,16 +65,14 @@ class LoginController extends Controller
         }
 
         $user->update([
-            'status' => 1,
+            'status'   => 1,
             'otp_code' => null, // reset setelah berhasil
         ]);
 
         return redirect()->route('login')->with('success', 'Email verified! You can now login.');
     }
 
-    /**
-     * Process the login request.
-     */
+    /** Proses login (email atau phone) */
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -107,9 +103,8 @@ class LoginController extends Controller
             'login' => 'The provided credentials do not match our records.',
         ]);
     }
-    /**
-     * Process the logout request.
-     */
+
+    /** Logout */
     public function logout(Request $request)
     {
         Auth::logout();
@@ -118,10 +113,10 @@ class LoginController extends Controller
         return redirect()->route('login');
     }
 
+    /** Update profil sederhana */
     public function updateProfile(Request $request)
     {
         auth()->user()->update($request->only('name', 'email'));
         return back()->with('success', 'Profile updated successfully');
     }
-
 }

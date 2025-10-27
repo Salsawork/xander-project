@@ -73,37 +73,34 @@
   @media (max-width:380px){ .rating-stars i{font-size:18px} .rating-number{font-size:24px} }
 
   .muted{ color:#9ca3af; }
-
   .iframe-wrap{ position: relative; width:100%; border:1px solid #3a3a3a; border-radius:12px; overflow:hidden; background:#111; }
   .iframe-wrap::before{content:"";display:block;padding-top:56.25%;}
   .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+  .img-clickable{ cursor: pointer; }
 </style>
 @endpush
 
 @php
-  use Illuminate\Support\Facades\File;
+  $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
 
-  $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
-
-  $venueImgUrl = function (?string $pathLike) {
-      $pathLike = $pathLike ? trim($pathLike) : '';
-      if ($pathLike === '') return asset('images/placeholder/venue.png');
-      if (preg_match('~^https?://~i', $pathLike) || str_starts_with($pathLike, '/')) return $pathLike;
-
-      $filename = basename($pathLike);
-
-      $feAbs  = base_path('../demo-xanders/images/venue/' . $filename);
-      $feLink = public_path('fe-venue');
-      if (File::exists($feAbs) && is_dir($feLink)) return asset('fe-venue/' . $filename);
-
-      $cmsAbs = public_path('images/venue/' . $filename);
-      if (File::exists($cmsAbs)) return asset('images/venue/' . $filename);
-
-      $storAbs = public_path('storage/uploads/' . $filename);
-      if (File::exists($storAbs)) return asset('storage/uploads/' . $filename);
-
+  $normalizeToFeVenue = function ($s) use ($feBaseVenue) {
+      $s = is_string($s) ? trim($s) : '';
+      if ($s === '') return asset('images/placeholder/venue.png');
+      if (preg_match('#^https?://#i', $s)) {
+          $parts = parse_url($s);
+          $path  = $parts['path'] ?? '';
+          $name  = basename($path);
+          return $name ? $feBaseVenue . $name : asset('images/placeholder/venue.png');
+      }
+      $name = basename($s);
+      if ($name !== '' && $name !== '/' && $name !== '.') {
+          return $feBaseVenue . $name;
+      }
       return asset('images/placeholder/venue.png');
   };
+
+  $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
   $rawImages = [];
   if (!empty($detail->images)) {
@@ -113,7 +110,11 @@
   }
   if (empty($rawImages) && !empty($detail->image)) $rawImages = [$detail->image];
 
-  $resolvedImages = collect($rawImages)->filter()->map(fn($x) => $venueImgUrl($x))->values()->all();
+  $resolvedImages = [];
+  foreach ($rawImages as $ri) {
+      $url = $normalizeToFeVenue($ri);
+      if ($url && !in_array($url, $resolvedImages, true)) $resolvedImages[] = $url;
+  }
   if (!$resolvedImages) $resolvedImages = [asset('images/placeholder/venue.png')];
 
   $mainImage = $resolvedImages[0];
@@ -124,7 +125,6 @@
   $avgText   = number_format((float)($averageRating), 1, ',', '.');
   $fullStars = floor((float)($averageRating));
 
-  // ====== Location: ambil dari address & map_embed venue ======
   $displayAddressRaw = trim((string)($detail->address ?? ''));
   $displayAddress = $displayAddressRaw !== '' ? $displayAddressRaw : 'Alamat belum tersedia';
 
@@ -139,13 +139,11 @@
   };
   $src = $extractSrc($mapRaw);
   if ($src === '' || !preg_match('~^https?://~i', $src)) {
-      // fallback bangun embed dari name + address
       $query = trim(($detail->name ?? '') . ' ' . $displayAddressRaw);
       $src = 'https://www.google.com/maps?hl=id&q=' . rawurlencode($query) . '&ie=UTF8&output=embed';
   }
   $mapsSrc = $src;
 
-  // ===== Facilities dari DB (array) =====
   $facilities = [];
   if (is_array($detail->facilities)) {
       $facilities = $detail->facilities;
@@ -153,6 +151,13 @@
       $facilities = json_decode($detail->facilities, true) ?? [];
   }
   $facilities = array_values(array_filter(array_map(fn($x) => trim((string)$x), $facilities)));
+
+  // filename utama untuk dikirim ke cart (biar cart gampang bentuk FE URL)
+  $mainFilename = (function($u){
+      $path = parse_url($u, PHP_URL_PATH);
+      $bn = basename($path ?: (string)$u);
+      return ($bn && $bn !== '/' && $bn !== '.') ? $bn : null;
+  })($mainImage);
 @endphp
 
 @section('content')
@@ -181,16 +186,19 @@
             <img id="mainImage"
                  src="{{ $mainImage }}"
                  alt="{{ $detail->name }}"
-                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
+                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover img-clickable"
+                 onclick="onMainClick()"
                  onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
           </div>
-          <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-4" id="thumbsWrap">
             @foreach ($thumbs as $t)
-              <img src="{{ $t }}"
+              <img id="thumb{{ $loop->index }}"
+                   data-index="{{ $loop->index + 1 }}"
+                   src="{{ $t }}"
                    alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
                    class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
                    loading="lazy"
-                   onclick="changeMainImage('{{ $t }}')"
+                   onclick="onThumbClick(event)"
                    onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
             @endforeach
           </div>
@@ -218,7 +226,7 @@
           </div>
           <hr class="border-gray-400">
 
-          {{-- ======= Location (ambil dari address / map_embed) ======= --}}
+          {{-- Location --}}
           <div>
             <h2 class="font-semibold mb-2">Location</h2>
 
@@ -238,7 +246,7 @@
               </div>
             </div>
           </div>
-          {{-- ======= /Location ======= --}}
+          {{-- /Location --}}
         </div>
 
         {{-- Reviews --}}
@@ -318,11 +326,14 @@
             @csrf
             <input type="hidden" name="id" value="{{ $detail->id }}">
 
-            {{-- Hidden yang diisi otomatis sebelum submit --}}
+            {{-- Hidden diisi otomatis --}}
             <input type="hidden" name="start" id="startInput">
             <input type="hidden" name="end" id="endInput">
             <input type="hidden" name="price" id="priceInput">
             <input type="hidden" name="table_number" id="tableNumberInput">
+
+            {{-- KIRIMKAN FILENAME GAMBAR UTAMA KE BACKEND (untuk disimpan/ditempel ke cart) --}}
+            <input type="hidden" name="image" id="imageInput" value="{{ $mainFilename ?? '' }}">
 
             <div>
               <label class="text-sm text-gray-300">Date</label>
@@ -346,7 +357,7 @@
 
             <div>
               <label class="text-sm text-gray-300">Promo code (Optional)</label>
-              <input type="text" name="code_promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
+              <input type="text" name="code_promo" id="codePromoInput" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
             </div>
 
             <button type="button"
@@ -418,9 +429,11 @@
     <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()" class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
       <i class="fas fa-shopping-cart text-white text-3xl"></i>
       @if ($cartCount > 0)
-        <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+        <span id="cartCountBadge" class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
           {{ $cartCount }}
         </span>
+      @else
+        <span id="cartCountBadge" class="hidden"></span>
       @endif
     </button>
   @endif
@@ -431,50 +444,61 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  function changeMainImage(src){ document.getElementById('mainImage').src = src; }
+  /* ========== GALLERY (rotate) ========== */
+  const images = @json($resolvedImages);
+  const placeholder = @json(asset('images/placeholder/venue.png'));
+  function $(sel){ return document.querySelector(sel); }
+  const mainEl = $('#mainImage'); const thumb0 = $('#thumb0'); const thumb1 = $('#thumb1'); const thumbsWrap = $('#thumbsWrap');
+  let currentIndex = 0;
+  function getNextIndices(){
+    if (images.length <= 1) return [];
+    if (images.length === 2) return [(currentIndex + 1) % 2];
+    return [(currentIndex + 1) % images.length, (currentIndex + 2) % images.length];
+  }
+  function renderGallery(){
+    if (!mainEl) return;
+    mainEl.src = images[currentIndex] || placeholder;
+    if (!thumb0 || !thumb1) return;
+    const idxs = getNextIndices();
+    if (images.length <= 1){ if (thumbsWrap) thumbsWrap.style.display = 'none'; return; } else { if (thumbsWrap) thumbsWrap.style.display = ''; }
+    if (idxs[0] !== undefined){ thumb0.src = images[idxs[0]] || placeholder; thumb0.dataset.index = String(idxs[0]); thumb0.style.pointerEvents = ''; thumb0.style.opacity = ''; }
+    else { thumb0.src = placeholder; delete thumb0.dataset.index; thumb0.style.pointerEvents = 'none'; thumb0.style.opacity = '.6'; }
+    if (idxs[1] !== undefined){ thumb1.src = images[idxs[1]] || placeholder; thumb1.dataset.index = String(idxs[1]); thumb1.style.pointerEvents = ''; thumb1.style.opacity = ''; }
+    else { thumb1.src = placeholder; delete thumb1.dataset.index; thumb1.style.pointerEvents = 'none'; thumb1.style.opacity = '.6'; }
+  }
+  function onMainClick(){ if (images.length <= 1) return; currentIndex = (currentIndex + 1) % images.length; renderGallery(); }
+  function onThumbClick(e){ const t = e.currentTarget; const idx = parseInt(t?.dataset?.index, 10); if (Number.isNaN(idx)) return; currentIndex = idx; renderGallery(); }
+  window.onMainClick = onMainClick; window.onThumbClick = onThumbClick;
+  document.addEventListener('DOMContentLoaded', renderGallery);
+</script>
 
+<script>
+  /* ========== BOOKING + ADD TO CART (AJAX) ========== */
   const isLoggedIn   = @json(auth()->check());
   const userRole     = @json(Auth::check() ? Auth::user()->roles : null);
   const venueId      = @json($detail->id);
   const baseVenuesUrl= @json(url('/venues'));
 
   document.addEventListener("DOMContentLoaded", function() {
-    // Booking & Schedule logic
-    const datePicker = document.getElementById('datePicker');
-    const openDateBtn = document.getElementById('openDateBtn');
-    const addBtn = document.getElementById('addToCartButton');
+    const datePicker   = document.getElementById('datePicker');
+    const openDateBtn  = document.getElementById('openDateBtn');
+    const addBtn       = document.getElementById('addToCartButton');
     const scheduleList = document.getElementById("scheduleList");
     const tableList    = document.getElementById("tableList");
-    const form         = document.getElementById("addToCartForm");
     const priceDisplay = document.getElementById("priceDisplay");
+    const form         = document.getElementById("addToCartForm");
 
     let selectedSchedule = null;
     let selectedTableNumber = null;
 
-    function initializeDatePicker() {
-      if (!datePicker) return;
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
-      datePicker.min = todayStr;
-      datePicker.value = todayStr;
-      loadSchedules(todayStr);
-    }
-
-    if (openDateBtn && datePicker) {
-      openDateBtn.addEventListener('click', () => {
-        datePicker.showPicker();
-      });
-    }
+    if (openDateBtn && datePicker) openDateBtn.addEventListener('click', () => { datePicker.showPicker(); });
 
     function createScheduleSlot(slot, price) {
       const lbl = document.createElement("label");
-      const isBooked = slot.is_booked || false;
+      const isBooked = !!slot.is_booked;
       lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
       lbl.innerHTML = `
-        <input type="radio" name="schedule" value="${slot.start}-${slot.end}" 
+        <input type="radio" name="schedule" value="${slot.start}-${slot.end}"
                class="hidden" required ${isBooked ? 'disabled' : ''}>
         ${slot.start} - ${slot.end}
       `;
@@ -483,17 +507,11 @@
         radio.addEventListener("change", () => {
           document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
           lbl.classList.add('slot--active');
-          selectedSchedule = { start: slot.start, end: slot.end, price: price };
+          selectedSchedule = { start: slot.start, end: slot.end, price: price, tables: slot.tables || [] };
           if (priceDisplay) {
-            const formattedPrice = new Intl.NumberFormat('id-ID', {
-              style: 'currency',
-              currency: 'IDR',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0
-            }).format(price);
-            priceDisplay.innerText = formattedPrice;
+            priceDisplay.innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
           }
-          if (slot.tables) { renderTables(slot.tables); } else { tableList.innerHTML = ""; }
+          renderTables(slot.tables || []);
         });
       }
       return lbl;
@@ -502,7 +520,7 @@
     async function loadSchedules(selectedDate) {
       if (!selectedDate || !scheduleList) return;
       scheduleList.innerHTML = `<p class="text-gray-400 text-sm">Loading schedules...</p>`;
-      if (tableList) tableList.innerHTML = "";
+      tableList.innerHTML = "";
       selectedSchedule = null;
       selectedTableNumber = null;
 
@@ -539,8 +557,8 @@
         const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
         lbl.className = `slot ${disabledClass}`;
         lbl.innerHTML = `
-          <input type="radio" name="table_id" value="${tbl.id}" class="hidden">
-          ${tbl.name || 'Table ' + tbl.id}
+          <input type="radio" name="table_id" value="${tbl.id}" class="hidden" ${tbl.is_booked ? 'disabled' : ''}>
+          ${tbl.name || ("Table " + tbl.id)}
         `;
         const radio = lbl.querySelector("input");
         radio.addEventListener("change", () => {
@@ -551,86 +569,111 @@
     }
 
     if (datePicker) {
-      datePicker.addEventListener("change", function() {
-        loadSchedules(this.value);
-      });
+      datePicker.addEventListener("change", function() { loadSchedules(this.value); });
     }
 
+    // INIT date = today + load schedules
+    (function initDate() {
+      if (!datePicker) return;
+      const t = new Date();
+      const yyyy = t.getFullYear(); const mm = String(t.getMonth() + 1).padStart(2, '0'); const dd = String(t.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      datePicker.min = todayStr; datePicker.value = todayStr;
+      loadSchedules(todayStr);
+    })();
+
+    // ADD TO CART button -> validate then submit the form (AJAX handled below)
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!isLoggedIn) {
-          Swal.fire({
-            title: 'Belum Login!',
-            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-            icon: 'warning',
-            confirmButtonText: 'Login Sekarang',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          }).then(() => { window.location.href = '/login'; });
+          Swal.fire({ title:'Belum Login!', text:'Silakan login terlebih dahulu untuk menambahkan ke keranjang.', icon:'warning', confirmButtonText:'Login Sekarang', confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF' }).then(() => { window.location.href = '/login'; });
           return;
         }
-
         if (userRole !== 'user') {
-          Swal.fire({
-            title: 'Akses Ditolak!',
-            text: 'Hanya user yang bisa menambahkan ke keranjang.',
-            icon: 'error',
-            confirmButtonColor: '#3085d6',
-            background: '#1E1E1F',
-            color: '#FFFFFF'
-          });
+          Swal.fire({ title:'Akses Ditolak!', text:'Hanya user yang bisa menambahkan ke keranjang.', icon:'error', confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF' });
           return;
         }
 
         const schedule = document.querySelector('input[name="schedule"]:checked');
-        const table = document.querySelector('input[name="table_id"]:checked');
+        const table    = document.querySelector('input[name="table_id"]:checked');
 
-        if (!datePicker?.value) {
-          Swal.fire({ title: 'Oops!', text: 'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
-          return;
+        if (!datePicker?.value) { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!schedule || !selectedSchedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!table) { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+
+        // keep hidden inputs in sync (optional)
+        document.getElementById('startInput').value       = selectedSchedule.start;
+        document.getElementById('endInput').value         = selectedSchedule.end;
+        document.getElementById('priceInput').value       = selectedSchedule.price ?? 0;
+        document.getElementById('tableNumberInput').value = selectedTableNumber ?? '';
+
+        // (opsional) update imageInput kalau user ganti foto utama via gallery
+        const main = document.getElementById('mainImage')?.getAttribute('src') || '';
+        try {
+          const url = new URL(main, window.location.origin);
+          const parts = url.pathname.split('/');
+          const fname = parts[parts.length - 1] || '';
+          if (fname) document.getElementById('imageInput').value = fname;
+        } catch (e) {
+          // abaikan jika gagal parse URL
         }
-        if (!schedule) {
-          Swal.fire({ title: 'Oops!', text: 'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
-          return;
-        }
-        if (!table) {
-          Swal.fire({ title: 'Oops!', text: 'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' });
-          return;
-        }
 
-        document.getElementById('priceInput').value = (selectedSchedule?.price ?? 0);
-        document.getElementById('tableNumberInput').value = (selectedTableNumber ?? '');
-
-        document.getElementById('startInput').value = selectedSchedule.start;
-        document.getElementById('endInput').value   = selectedSchedule.end;
-
-        document.getElementById('addToCartForm').requestSubmit();
+        form.requestSubmit();
       });
     }
 
-    const stars = document.querySelectorAll('#ratingBox i');
-    const ratingInput = document.getElementById('ratingInput');
-    stars.forEach(st => {
-      st.addEventListener('click', () => {
-        const v = parseInt(st.dataset.value, 10);
-        ratingInput.value = v;
-        stars.forEach(s2 => s2.classList.toggle('active', parseInt(s2.dataset.value,10) <= v));
-      });
-    });
+    // Intercept form submit dan POST via FormData
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
 
-    // Init
-    (function initDate() {
-      if (!document.getElementById('datePicker')) return;
-      const t = new Date();
-      const yyyy = t.getFullYear();
-      const mm = String(t.getMonth() + 1).padStart(2, '0');
-      const dd = String(t.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
-      const dp = document.getElementById('datePicker');
-      dp.min = todayStr; dp.value = todayStr;
-      loadSchedules(todayStr);
-    })();
+        const date     = datePicker ? datePicker.value : null;
+        const schedule = document.querySelector('input[name="schedule"]:checked');
+        const table    = document.querySelector('input[name="table_id"]:checked');
+
+        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning' }); return; }
+        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning' }); return; }
+        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning' }); return; }
+
+        const fd = new FormData(this);
+        fd.append('schedule[start]', selectedSchedule.start);
+        fd.append('schedule[end]',   selectedSchedule.end);
+        fd.append('price',           selectedSchedule.price);
+        fd.append('table',           selectedTableNumber);
+
+        Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+
+        fetch(this.action, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          },
+          body: fd
+        })
+        .then(res => res.json().then(json => ({ ok: res.ok, json })))
+        .then(({ ok, json }) => {
+          Swal.close();
+          if (ok && json.success) {
+            const badge = document.getElementById('cartCountBadge');
+            if (badge && json.cart_count) {
+              badge.textContent = json.cart_count;
+              badge.classList.remove('hidden');
+            }
+            Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
+              .then(() => location.reload());
+          } else {
+            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          Swal.close();
+          Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
+        });
+      });
+    }
 
     // Align create review card
     function alignCreateReview() {
