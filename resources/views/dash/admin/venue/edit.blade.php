@@ -2,59 +2,20 @@
 @section('title', 'Admin Dashboard - Edit Venue')
 
 @push('styles')
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
-/>
 <style>
-  :root{
-    color-scheme: dark;
-    --page-bg:#0a0a0a;
-    --topbar-h: 64px;
-    --topbar-z: 90;
-  }
-
-  html, body{
-    height:100%;
-    min-height:100%;
-    background:var(--page-bg);
-    overscroll-behavior: none;
-    touch-action: pan-y;
-    -webkit-text-size-adjust:100%;
-  }
-
-  #antiBounceBg{
-    position: fixed; left:0; right:0; top:-120svh; bottom:-120svh;
-    background:var(--page-bg); z-index:-1; pointer-events:none;
-  }
-
-  .scroll-safe{ background-color:#171717; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  :root{ color-scheme: dark; --page-bg:#0a0a0a; --topbar-h:64px; --topbar-z:90; }
+  html, body{ height:100%; min-height:100%; background:var(--page-bg); overscroll-behavior:none; touch-action:pan-y; -webkit-text-size-adjust:100%; }
+  #antiBounceBg{ position:fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg); z-index:-1; pointer-events:none; }
+  .scroll-safe{ background-color:#171717; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
   header.fixed, header[class*="fixed"]{ z-index: var(--topbar-z) !important; }
   .has-fixed-topbar{ padding-top: var(--topbar-h); }
-
-  .leaflet-map{
-    height:300px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a;
-    position: relative; z-index:0;
-  }
-  .leaflet-container{ z-index:0 !important; }
-  .leaflet-pane, .leaflet-top, .leaflet-bottom{ z-index:0 !important; }
-
-  .geocode-wrap{ position:relative; }
-  .geocode-input{
-    width:100%; padding:.65rem .9rem; border-radius:10px; background:#222; color:#fff;
-    border:1.5px solid rgba(255,255,255,.2); outline:none; font-size:13px;
-  }
+  .geocode-input{ width:100%; padding:.65rem .9rem; border-radius:10px; background:#222; color:#fff; border:1.5px solid rgba(255,255,255,.2); outline:none; font-size:13px; }
   .geocode-input:focus{ box-shadow:0 0 0 2px #3b82f6; border-color:#3b82f6; }
-  .suggest-box{
-    position:absolute; z-index:30;
-    left:0; right:0; top:100%; margin-top:6px;
-    background:#1c1c1c; border:1px solid rgba(255,255,255,.15); border-radius:10px; overflow:hidden;
-    max-height:220px; overflow-y:auto;
-  }
-  .suggest-item{ padding:.55rem .7rem; font-size:13px; color:#e5e7eb; cursor:pointer; }
-  .suggest-item:hover{ background:#2a2a2a; }
+  .iframe-wrap{ position:relative; width:100%; border:1px solid #3a3a3a; border-radius:12px; overflow:hidden; background:#111; }
+  .iframe-wrap::before{content:"";display:block;padding-top:56.25%;}
+  .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .chip{ display:inline-flex; align-items:center; gap:.5rem; background:#2a2a2a; border:1px solid #3f3f3f; padding:.25rem .6rem; border-radius:9999px; font-size:.8rem; }
+  .chip button{ background:transparent; border:0; color:#fca5a5; cursor:pointer; font-weight:700; }
 </style>
 @endpush
 
@@ -76,12 +37,40 @@
             </a>
           </div>
 
+          {{-- ====== TAMPILAN ERROR VALIDASI ====== --}}
+          @if ($errors->any())
+            <div class="mb-4 rounded-md bg-red-600/20 text-red-200 border border-red-600/40 px-4 py-3 text-sm">
+              <strong class="block mb-1">Periksa kembali isian:</strong>
+              <ul class="list-disc list-inside">
+                @foreach ($errors->all() as $err)
+                  <li>{{ $err }}</li>
+                @endforeach
+              </ul>
+            </div>
+          @endif
+          {{-- ===================================== --}}
+
+          @php
+            // Robust formatter untuk input type="time" → selalu "HH:MM"
+            $toHi = function($val) {
+              if (!$val) return '';
+              if (is_object($val) && method_exists($val, 'format')) { return $val->format('H:i'); }
+              $s = (string) $val;
+              if (preg_match('/^\d{2}:\d{2}/', $s, $m)) return $m[0];
+              $ts = strtotime($s);
+              return $ts ? date('H:i', $ts) : '';
+            };
+            $openValue  = old('operating_hour', $toHi($venue->operating_hour));
+            $closeValue = old('closing_hour',  $toHi($venue->closing_hour));
+          @endphp
+
           <form id="editVenueForm" action="{{ route('venue.update', $venue->id) }}" method="POST" enctype="multipart/form-data">
             @csrf @method('PUT')
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               <!-- Kolom Kiri -->
               <div class="space-y-6">
+                <!-- Informasi Akun -->
                 <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
                   <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
                     <i class="fas fa-user-circle mr-2 text-blue-400"></i> Informasi Akun
@@ -91,13 +80,13 @@
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="name">Nama Pengelola</label>
                       <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="name" id="name" type="text" value="{{ $venue->user->name }}" />
+                        name="name" id="name" type="text" value="{{ old('name', $venue->user->name) }}" />
                       @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="email">Email</label>
                       <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="email" id="email" type="email" value="{{ $venue->user->email }}" />
+                        name="email" id="email" type="email" value="{{ old('email', $venue->user->email) }}" />
                       @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
@@ -106,6 +95,44 @@
                         name="password" id="password" type="password" placeholder="Kosongkan jika tidak ingin mengubah" />
                       @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
+                  </div>
+                </div>
+
+                {{-- Facilities --}}
+                @php
+                  $facFromDb = [];
+                  if (is_array($venue->facilities)) $facFromDb = $venue->facilities;
+                  elseif (is_string($venue->facilities) && $venue->facilities !== '') {
+                    $json = json_decode($venue->facilities, true);
+                    $facFromDb = is_array($json) ? $json : preg_split('/[\r\n,]+/', $venue->facilities);
+                  }
+                  $facFromDb = array_values(array_filter(array_map(fn($s)=>trim((string)$s), $facFromDb)));
+                  $facOld = old('facilities', $facFromDb);
+                  if (!is_array($facOld) && is_string($facOld)) $facOld = preg_split('/[\r\n,]+/', $facOld);
+                  $facOld = array_values(array_filter(array_map(fn($s)=>trim((string)$s),(array)$facOld)));
+                @endphp
+
+                <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-4">
+                  <h2 class="text-base sm:text-lg font-bold border-b border-gray-600 pb-2 flex items-center">
+                    <i class="fas fa-list-check mr-2 text-emerald-400"></i> Facilities
+                  </h2>
+
+                  <div class="space-y-2">
+                    <label class="block text-xs text-gray-400 mb-1">Tambah Fasilitas</label>
+                    <div class="flex gap-2">
+                      <input id="facilityInputEdit" type="text"
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="Contoh: VIP Lounge" />
+                      <button type="button" id="addFacilityBtnEdit"
+                        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-md text-sm">Tambah</button>
+                    </div>
+                    <p class="text-xs text-gray-400">Tekan <strong>Enter</strong> untuk menambah. Maks 50 item, masing-masing 100 karakter.</p>
+
+                    <div id="facilitiesChipsEdit" class="mt-3 flex flex-wrap gap-2"></div>
+                    <div id="facilitiesHiddenEdit"></div>
+
+                    @error('facilities') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('facilities.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                 </div>
               </div>
@@ -121,7 +148,7 @@
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="venue_name">Nama Venue</label>
                       <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="venue_name" id="venue_name" type="text" value="{{ $venue->name }}" />
+                        name="venue_name" id="venue_name" type="text" value="{{ old('venue_name', $venue->name) }}" />
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
@@ -133,7 +160,6 @@
 
                       @php
                         $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
-                        // Tampilkan dari FE CDN: https://demo-xanders.ptbmn.id/images/venue/{filename}
                         $normalizeImg = function($img){
                           $raw = trim((string)$img);
                           if (preg_match('/^https?:\/\//i', $raw)) return $raw;
@@ -158,60 +184,65 @@
                       @endif
                     </div>
 
-                    {{-- ADDRESS + MAP --}}
-                    <div class="space-y-3">
-                      <label class="block text-xs text-gray-400">Lokasi Venue</label>
-
-                      <div class="geocode-wrap">
-                        <input id="searchBox" type="text" class="geocode-input" placeholder="Cari alamat / tempat (gratis, OSM)">
-                        <div id="suggestions" class="suggest-box hidden"></div>
+                    {{-- ADDRESS: tampilan saja + hidden untuk submit --}}
+                    <div class="space-y-2">
+                      <label class="block text-xs text-gray-400">Alamat Venue</label>
+                      <div id="addressDisplay" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-gray-200 min-h-[90px] whitespace-pre-line select-text cursor-default pointer-events-none">
+                        {{ $venue->address }}
                       </div>
-
-                      <textarea
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="address" id="address" rows="3">{{ $venue->address }}</textarea>
+                      <input type="hidden" name="address" id="addressHidden" value="{{ $venue->address }}">
                       @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-
-                      <input type="hidden" name="latitude" id="latitude" value="{{ $venue->latitude ?? '' }}">
-                      <input type="hidden" name="longitude" id="longitude" value="{{ $venue->longitude ?? '' }}">
-
-                      <div id="mapEdit" class="leaflet-map"></div>
-                      <p class="text-xs text-gray-400">Ketik alamat (contoh: “Jalan Gambir” atau “RW 02, Gambir, Jakarta”). Peta akan otomatis mengarah.</p>
                     </div>
 
+                    {{-- Google Maps Embed --}}
+                    <div class="space-y-2">
+                      <label class="block text-xs text-gray-400" for="map_embed">Google Maps Embed (iframe/URL)</label>
+                      <textarea name="map_embed" id="map_embed" rows="3" class="geocode-input"
+                        placeholder='Tempel: <iframe src="https://www.google.com/maps/embed?..."></iframe> atau URL "https://www.google.com/maps/place/...".'>{{ old('map_embed', $venue->map_embed) }}</textarea>
+                      @error('map_embed') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+
+                      <div id="mapPreview" class="iframe-wrap mt-2" style="display:none;">
+                        <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen=""></iframe>
+                      </div>
+                      <p class="text-xs text-gray-400">Preview & alamat akan terisi otomatis dari link di atas.</p>
+                    </div>
+
+                    {{-- ===== PHONE (BARU DITAMBAHKAN) ===== --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="phone">Nomor Telepon</label>
-                      <input
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="phone" id="phone" type="text" value="{{ $venue->phone }}" />
+                      <input name="phone" id="phone" type="text"
+                        value="{{ old('phone', $venue->phone) }}"
+                        placeholder="Masukkan nomor telepon"
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
+                    {{-- ===================================== --}}
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Jam Operasional</label>
                       <div class="flex gap-3">
                         <div class="flex-1">
                           <input name="operating_hour"
-                            value="{{ old('operating_hour', $venue->operating_hour) }}"
+                            value="{{ $openValue }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="operating_hour" type="time" />
                           @error('operating_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div class="flex-1">
                           <input name="closing_hour"
-                            value="{{ old('closing_hour', $venue->closing_hour) }}"
+                            value="{{ $closeValue }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="closing_hour" type="time" />
                           @error('closing_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                       </div>
+                      <p class="text-xs text-gray-500 mt-1">Nilai di atas diambil langsung dari data yang tersimpan (mendukung format HH:MM dan HH:MM:SS).</p>
                     </div>
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="description">Deskripsi</label>
-                      <textarea
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="description" id="description" rows="4">{{ $venue->description }}</textarea>
+                      <textarea class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        name="description" id="description" rows="4">{{ old('description', $venue->description) }}</textarea>
                       @error('description') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                   </div>
@@ -237,154 +268,122 @@
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
-<script>
-(function(){
-  const DFLT = { lat: -6.175392, lng: 106.827153 }; // Monas fallback
-
-  const latFromDb = parseFloat(@json($venue->latitude ?? ''));
-  const lngFromDb = parseFloat(@json($venue->longitude ?? ''));
-  const addrFromDb = @json($venue->address ?? '');
-
-  const map = L.map('mapEdit', { zoomControl: true, scrollWheelZoom: true }).setView([DFLT.lat, DFLT.lng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
-
-  const latEl = document.getElementById('latitude');
-  const lngEl = document.getElementById('longitude');
-  const addrEl = document.getElementById('address');
-  const searchBox = document.getElementById('searchBox');
-  const suggestBox = document.getElementById('suggestions');
-
-  let marker = L.marker([DFLT.lat, DFLT.lng], { draggable:true }).addTo(map);
-
-  function setHidden(lat, lng){ latEl.value = (+lat).toFixed(7); lngEl.value = (+lng).toFixed(7); }
-  function reverseToAddress(lat, lng){
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`)
-      .then(r => r.json())
-      .then(j => { if (j && j.display_name) addrEl.value = j.display_name; })
-      .catch(()=>{});
-  }
-  function centerTo(lat, lng, label = null, zoom = 16){
-    marker.setLatLng([lat, lng]);
-    map.setView([lat, lng], zoom);
-    setHidden(lat, lng);
-    if (label) addrEl.value = label;
-    reverseToAddress(lat, lng);
-  }
-
-  (function initPosition(){
-    if (!isNaN(latFromDb) && !isNaN(lngFromDb)) {
-      centerTo(latFromDb, lngFromDb, addrFromDb || null, 16);
-    } else if (addrFromDb && addrFromDb.trim().length > 0) {
-      const q = encodeURIComponent(addrFromDb);
-      fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=id&q=${q}`)
-        .then(r=>r.json())
-        .then(list=>{
-          if (Array.isArray(list) && list.length){
-            const lat = parseFloat(list[0].lat), lng = parseFloat(list[0].lon);
-            centerTo(lat, lng, list[0].display_name || null, 16);
-          } else {
-            centerTo(DFLT.lat, DFLT.lng, null, 13);
-          }
-        })
-        .catch(()=>centerTo(DFLT.lat, DFLT.lng, null, 13));
-    } else {
-      centerTo(DFLT.lat, DFLT.lng, null, 13);
-    }
-  })();
-
-  marker.on('dragend', () => {
-    const { lat, lng } = marker.getLatLng();
-    setHidden(lat, lng);
-    reverseToAddress(lat, lng);
-  });
-  map.on('click', (e)=> centerTo(e.latlng.lat, e.latlng.lng));
-
-  function labelFromPhoton(f){
-    const p = f.properties || {};
-    return [p.name, p.street, (p.city || p.district || p.county || p.state), p.country].filter(Boolean).join(', ');
-  }
-  function renderPhoton(features){
-    if(!features || !features.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
-    suggestBox.innerHTML = features.slice(0,8).map(f=>{
-      const label = labelFromPhoton(f);
-      const [lng, lat] = f.geometry.coordinates;
-      return `<div class="suggest-item" data-lat="${lat}" data-lng="${lng}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
-    }).join('');
-    suggestBox.classList.remove('hidden');
-  }
-  function renderNominatim(list){
-    if(!list || !list.length){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
-    suggestBox.innerHTML = list.slice(0,8).map(it=>{
-      const label = it.display_name || '';
-      return `<div class="suggest-item" data-lat="${it.lat}" data-lng="${it.lon}" data-label="${(label||'').replace(/"/g,'&quot;')}">${label}</div>`;
-    }).join('');
-    suggestBox.classList.remove('hidden');
-  }
-  function autoCenterPhoton(features){
-    if(!features || !features.length) return false;
-    const [lng, lat] = features[0].geometry.coordinates;
-    centerTo(lat, lng, labelFromPhoton(features[0]));
-    return true;
-  }
-  function autoCenterNominatim(list){
-    if(!list || !list.length) return false;
-    centerTo(parseFloat(list[0].lat), parseFloat(list[0].lon), list[0].display_name || '');
-    return true;
-  }
-
-  let tmr, ctrl = null;
-  const debounce = (fn, ms) => (...a)=>{ clearTimeout(tmr); tmr=setTimeout(()=>fn(...a), ms); };
-  function abortLast(){ if(ctrl){ try{ctrl.abort();}catch(e){} ctrl=null; } }
-
-  const runSearch = (q)=>{
-    abortLast(); ctrl = new AbortController(); const signal = ctrl.signal;
-    const bias = marker.getLatLng();
-
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=id&lat=${bias.lat}&lon=${bias.lng}&limit=8`, {signal})
-      .then(r=>r.json()).then(j=>{
-        const feats = j && j.features ? j.features : [];
-        if (feats.length){ renderPhoton(feats); autoCenterPhoton(feats); }
-        else {
-          return fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=id&q=${encodeURIComponent(q)}`, {signal})
-            .then(rr=>rr.json()).then(list=>{ renderNominatim(list||[]); autoCenterNominatim(list||[]); });
-        }
-      }).catch(()=>{}).finally(()=>{ ctrl=null; });
-  };
-
-  const debounced = debounce(q=>{
-    q = (q || '').trim();
-    if(!q || q.length < 2){ suggestBox.classList.add('hidden'); suggestBox.innerHTML=''; return; }
-    runSearch(q);
-  }, 400);
-
-  searchBox.addEventListener('input', e => debounced(e.target.value));
-  searchBox.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){ e.preventDefault(); const q=(searchBox.value||'').trim(); if(q) runSearch(q); }
-  });
-
-  document.addEventListener('click', (e)=>{
-    if (!suggestBox.contains(e.target) && e.target!==searchBox) suggestBox.classList.add('hidden');
-    const it = e.target.closest('.suggest-item');
-    if (it){
-      const lat = parseFloat(it.dataset.lat), lng = parseFloat(it.dataset.lng);
-      const label = it.dataset.label || '';
-      centerTo(lat, lng, label);
-      suggestBox.classList.add('hidden');
-    }
-  });
-})();
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   @if(session('success'))
-  Swal.fire({ icon:'success', title:'Berhasil!', text:'{{ session('success') }}', showConfirmButton:false, timer:3000, background:'#222', color:'#fff' });
+    Swal.fire({ icon:'success', title:'Berhasil!', text:'{{ session('success') }}', showConfirmButton:false, timer:3000, background:'#222', color:'#fff' });
   @endif
   @if(session('error'))
-  Swal.fire({ icon:'error', title:'Error!', text:'{{ session('error') }}', showConfirmButton:true, background:'#222', color:'#fff' });
+    Swal.fire({ icon:'error', title:'Error!', text:'{{ session('error') }}', showConfirmButton:true, background:'#222', color:'#fff' });
   @endif
+
+  // ====== Map preview + auto address (pb-aware) ======
+  const embedEl = document.getElementById('map_embed');
+  const previewWrap = document.getElementById('mapPreview');
+  const previewIframe = document.getElementById('mapPreviewIframe');
+  const addressDisplay = document.getElementById('addressDisplay');
+  const addressHidden  = document.getElementById('addressHidden');
+
+  function extractSrc(val){
+    if (!val) return null;
+    val = val.trim();
+    if (val.toLowerCase().startsWith('<iframe')) {
+      const m = val.match(/src\s*=\s*"(.*?)"/i) || val.match(/src\s*=\s*'(.*?)'/i);
+      return m ? m[1] : null;
+    }
+    return val;
+  }
+
+  function parseAddressFromSrc(src){
+    if (!src) return '';
+    try{
+      const u = new URL(src);
+      const q = u.searchParams.get('q');
+      if (q) return decodeURIComponent(q.replace(/\+/g,' '));
+      const mPlace = u.pathname.match(/\/maps\/place\/([^/]+)/i);
+      if (mPlace && mPlace[1]) return decodeURIComponent(mPlace[1].replace(/\+/g,' '));
+
+      const pb = u.searchParams.get('pb');
+      if (pb) {
+        let pbDec = decodeURIComponent(pb);
+        try { pbDec = decodeURIComponent(pbDec); } catch(e){}
+        const matches = [...pbDec.matchAll(/!2s([^!]+)/g)].map(x=>x[1]);
+        const cleaned = matches.map(t=>{
+          try{ t = decodeURIComponent(t); }catch(e){}
+          t = t.replace(/\+/g,' ').replace(/\\u0026/gi,'&').trim();
+          return t;
+        }).filter(t => t.length >= 5 && /[A-Za-z]/.test(t) && !/^[a-z]{2}(-[A-Z]{2})?$/.test(t) && !/^(Google|Maps|Street View)$/i.test(t));
+        if (cleaned.length){
+          cleaned.sort((a,b)=>b.length-a.length);
+          return cleaned[0];
+        }
+      }
+    }catch(e){}
+    if (src.toLowerCase().startsWith('<iframe')) {
+      const t = src.match(/title\s*=\s*"(.*?)"/i);
+      if (t && t[1] && t[1].toLowerCase() !== 'google maps') return t[1];
+    }
+    return '';
+  }
+
+  function renderPreview(){
+    const src = extractSrc(embedEl.value);
+    if (src && /^https?:\/\//i.test(src)) {
+      previewIframe.src = src;
+      previewWrap.style.display = '';
+    } else {
+      previewIframe.removeAttribute('src');
+      previewWrap.style.display = 'none';
+    }
+    const parsed = parseAddressFromSrc(src);
+    if (parsed) {
+      addressHidden.value = parsed;
+      addressDisplay.textContent = parsed;
+    }
+  }
+
+  if (embedEl) {
+    embedEl.addEventListener('input', renderPreview);
+    renderPreview();
+  }
+
+  // ====== Facilities (chips) ======
+  const facInput   = document.getElementById('facilityInputEdit');
+  const facAddBtn  = document.getElementById('addFacilityBtnEdit');
+  const facChips   = document.getElementById('facilitiesChipsEdit');
+  const facHidden  = document.getElementById('facilitiesHiddenEdit');
+  const form       = document.getElementById('editVenueForm');
+
+  let facilities = @json($facOld);
+
+  function renderFacilities(){
+    facChips.innerHTML = '';
+    facHidden.innerHTML = '';
+    facilities.forEach((text, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = `<span>${text}</span> <button type="button" aria-label="hapus">&times;</button>`;
+      chip.querySelector('button').addEventListener('click', () => { facilities.splice(idx, 1); renderFacilities(); });
+      facChips.appendChild(chip);
+
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden'; hidden.name = 'facilities[]'; hidden.value = text;
+      facHidden.appendChild(hidden);
+    });
+  }
+
+  function addFacilityFromInput(){
+    const v = (facInput.value || '').trim();
+    if (!v) return;
+    if (v.length > 100) return alert('Maksimal 100 karakter per item.');
+    if (facilities.length >= 50) return alert('Maksimal 50 fasilitas.');
+    if (!facilities.includes(v)) { facilities.push(v); renderFacilities(); }
+    facInput.value = ''; facInput.focus();
+  }
+
+  if (facAddBtn) facAddBtn.addEventListener('click', addFacilityFromInput);
+  if (facInput) facInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addFacilityFromInput(); } });
+  if (form) { form.addEventListener('submit', () => renderFacilities()); }
+  renderFacilities();
 </script>
 @endpush
