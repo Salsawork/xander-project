@@ -2,12 +2,6 @@
 @section('title', 'Venues Page - Xander Billiard')
 
 @push('styles')
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
-/>
 <style>
   :root{ color-scheme: dark; --page-bg:#0a0a0a; }
   :root, html, body{ background:var(--page-bg); }
@@ -77,38 +71,36 @@
     .rating-outof{ flex:1 1 100%; order:3; margin-left:0; margin-top:2px; text-align:left; font-size:12px; }
   }
   @media (max-width:380px){ .rating-stars i{font-size:18px} .rating-number{font-size:24px} }
-  @media (min-width:768px){ #createReviewCard{ margin-left:-8px; } }
 
-  .leaflet-map{ height:260px; border-radius:12px; overflow:hidden; border:1px solid #3a3a3a; }
   .muted{ color:#9ca3af; }
+  .iframe-wrap{ position: relative; width:100%; border:1px solid #3a3a3a; border-radius:12px; overflow:hidden; background:#111; }
+  .iframe-wrap::before{content:"";display:block;padding-top:56.25%;}
+  .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+  .img-clickable{ cursor: pointer; }
 </style>
 @endpush
 
 @php
-  use Illuminate\Support\Facades\File;
+  $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
 
-  $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
-
-  // Resolusi gambar: FE link -> CMS -> storage -> placeholder
-  $venueImgUrl = function (?string $pathLike) {
-      $pathLike = $pathLike ? trim($pathLike) : '';
-      if ($pathLike === '') return asset('images/placeholder/venue.png');
-      if (preg_match('~^https?://~i', $pathLike) || str_starts_with($pathLike, '/')) return $pathLike;
-
-      $filename = basename($pathLike);
-
-      $feAbs  = base_path('../demo-xanders/images/venue/' . $filename);
-      $feLink = public_path('fe-venue');
-      if (File::exists($feAbs) && is_dir($feLink)) return asset('fe-venue/' . $filename);
-
-      $cmsAbs = public_path('images/venue/' . $filename);
-      if (File::exists($cmsAbs)) return asset('images/venue/' . $filename);
-
-      $storAbs = public_path('storage/uploads/' . $filename);
-      if (File::exists($storAbs)) return asset('storage/uploads/' . $filename);
-
+  $normalizeToFeVenue = function ($s) use ($feBaseVenue) {
+      $s = is_string($s) ? trim($s) : '';
+      if ($s === '') return asset('images/placeholder/venue.png');
+      if (preg_match('#^https?://#i', $s)) {
+          $parts = parse_url($s);
+          $path  = $parts['path'] ?? '';
+          $name  = basename($path);
+          return $name ? $feBaseVenue . $name : asset('images/placeholder/venue.png');
+      }
+      $name = basename($s);
+      if ($name !== '' && $name !== '/' && $name !== '.') {
+          return $feBaseVenue . $name;
+      }
       return asset('images/placeholder/venue.png');
   };
+
+  $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
   $rawImages = [];
   if (!empty($detail->images)) {
@@ -118,25 +110,54 @@
   }
   if (empty($rawImages) && !empty($detail->image)) $rawImages = [$detail->image];
 
-  $resolvedImages = collect($rawImages)->filter()->map(fn($x) => $venueImgUrl($x))->values()->all();
+  $resolvedImages = [];
+  foreach ($rawImages as $ri) {
+      $url = $normalizeToFeVenue($ri);
+      if ($url && !in_array($url, $resolvedImages, true)) $resolvedImages[] = $url;
+  }
   if (!$resolvedImages) $resolvedImages = [asset('images/placeholder/venue.png')];
 
   $mainImage = $resolvedImages[0];
   $thumbs = array_slice($resolvedImages, 1, 2);
   while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
 
-  $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
-  $fullStars = floor((float)($averageRating ?? 0));
+  $averageRating = $averageRating ?? 0;
+  $avgText   = number_format((float)($averageRating), 1, ',', '.');
+  $fullStars = floor((float)($averageRating));
 
-  $lat = (float) ($detail->latitude ?? 0);
-  $lng = (float) ($detail->longitude ?? 0);
-  $hasCoords = ($lat !== 0.0 || $lng !== 0.0);
+  $displayAddressRaw = trim((string)($detail->address ?? ''));
+  $displayAddress = $displayAddressRaw !== '' ? $displayAddressRaw : 'Alamat belum tersedia';
 
-  // Facilities dari DB bila ada
+  $mapRaw = trim((string)($detail->map_embed ?? ''));
+  $extractSrc = function(string $input) : string {
+      if ($input === '') return '';
+      if (stripos($input, '<iframe') !== false) {
+          if (preg_match('~src\s*=\s*"(.*?)"~i', $input, $m)) return trim($m[1]);
+          if (preg_match("~src\s*=\s*'(.*?)'~i", $input, $m)) return trim($m[1]);
+      }
+      return $input;
+  };
+  $src = $extractSrc($mapRaw);
+  if ($src === '' || !preg_match('~^https?://~i', $src)) {
+      $query = trim(($detail->name ?? '') . ' ' . $displayAddressRaw);
+      $src = 'https://www.google.com/maps?hl=id&q=' . rawurlencode($query) . '&ie=UTF8&output=embed';
+  }
+  $mapsSrc = $src;
+
   $facilities = [];
-  if (is_array($detail->facilities))        $facilities = $detail->facilities;
-  elseif (is_string($detail->facilities))   $facilities = json_decode($detail->facilities, true) ?? [];
-  $facilities = array_values(array_filter(array_map(fn($x)=>trim((string)$x), $facilities)));
+  if (is_array($detail->facilities)) {
+      $facilities = $detail->facilities;
+  } elseif (is_string($detail->facilities) && $detail->facilities !== '') {
+      $facilities = json_decode($detail->facilities, true) ?? [];
+  }
+  $facilities = array_values(array_filter(array_map(fn($x) => trim((string)$x), $facilities)));
+
+  // filename utama untuk dikirim ke cart (biar cart gampang bentuk FE URL)
+  $mainFilename = (function($u){
+      $path = parse_url($u, PHP_URL_PATH);
+      $bn = basename($path ?: (string)$u);
+      return ($bn && $bn !== '/' && $bn !== '.') ? $bn : null;
+  })($mainImage);
 @endphp
 
 @section('content')
@@ -165,16 +186,19 @@
             <img id="mainImage"
                  src="{{ $mainImage }}"
                  alt="{{ $detail->name }}"
-                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover"
+                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover img-clickable"
+                 onclick="onMainClick()"
                  onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
           </div>
-          <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-4" id="thumbsWrap">
             @foreach ($thumbs as $t)
-              <img src="{{ $t }}"
+              <img id="thumb{{ $loop->index }}"
+                   data-index="{{ $loop->index + 1 }}"
+                   src="{{ $t }}"
                    alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
                    class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
                    loading="lazy"
-                   onclick="changeMainImage('{{ $t }}')"
+                   onclick="onThumbClick(event)"
                    onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
             @endforeach
           </div>
@@ -184,14 +208,17 @@
         <div class="space-y-6">
           <div>
             <h1 class="text-2xl font-extrabold">{{ $detail->name }}</h1>
-            <p class="text-gray-300">{{ $detail->address ?? 'Alamat belum tersedia' }}</p>
+            <p class="text-gray-300">{{ $displayAddress }}</p>
           </div>
           <hr class="border-gray-400">
           <div>
             <h2 class="font-semibold mb-2">Facilities</h2>
-            @if($facilities)
+
+            @if (!empty($facilities))
               <ul class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-300">
-                @foreach($facilities as $f) <li>• {{ $f }}</li> @endforeach
+                @foreach ($facilities as $f)
+                  <li>• {{ $f }}</li>
+                @endforeach
               </ul>
             @else
               <p class="text-gray-400 text-sm">Belum ada data fasilitas.</p>
@@ -202,13 +229,24 @@
           {{-- Location --}}
           <div>
             <h2 class="font-semibold mb-2">Location</h2>
+
             <div class="text-sm muted mb-2 flex items-start gap-2">
               <i class="fas fa-map-marker-alt mt-0.5"></i>
-              <span>{{ $detail->address ?? 'No address available' }}</span>
+              <span>{{ $displayAddress }}</span>
             </div>
-            <div id="mapDetail" class="leaflet-map"></div>
-            <p id="mapInfo" class="text-xs muted mt-2"></p>
+
+            <div class="mt-3">
+              <div class="iframe-wrap">
+                <iframe
+                  src="{{ $mapsSrc }}"
+                  loading="lazy"
+                  allowfullscreen
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+              </div>
+            </div>
           </div>
+          {{-- /Location --}}
         </div>
 
         {{-- Reviews --}}
@@ -288,11 +326,14 @@
             @csrf
             <input type="hidden" name="id" value="{{ $detail->id }}">
 
-            {{-- Hidden diisi otomatis sebelum submit --}}
+            {{-- Hidden diisi otomatis --}}
             <input type="hidden" name="start" id="startInput">
             <input type="hidden" name="end" id="endInput">
             <input type="hidden" name="price" id="priceInput">
             <input type="hidden" name="table_number" id="tableNumberInput">
+
+            {{-- KIRIMKAN FILENAME GAMBAR UTAMA KE BACKEND (untuk disimpan/ditempel ke cart) --}}
+            <input type="hidden" name="image" id="imageInput" value="{{ $mainFilename ?? '' }}">
 
             <div>
               <label class="text-sm text-gray-300">Date</label>
@@ -385,8 +426,7 @@
 
   {{-- Floating Cart --}}
   @if (Auth::check() && Auth::user()->roles === 'user')
-    <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()"
-            class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+    <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart()" class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
       <i class="fas fa-shopping-cart text-white text-3xl"></i>
       @if ($cartCount > 0)
         <span id="cartCountBadge" class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
@@ -397,78 +437,56 @@
       @endif
     </button>
   @endif
-
   @include('public.cart')
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  const isLoggedIn    = @json(auth()->check());
-  const userRole      = @json(Auth::check() ? Auth::user()->roles : null);
-  const venueId       = @json($detail->id);
-  const baseVenuesUrl = @json(url('/venues'));
-  const addVenueUrl   = @json(route('cart.add.venue'));
-  const csrfToken     = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-  const hasCoordsDb   = @json($hasCoords);
-  const latDb         = parseFloat(@json($lat));
-  const lngDb         = parseFloat(@json($lng));
-  const venueName     = {!! json_encode($detail->name) !!};
-  const venueAddress  = {!! json_encode($detail->address ?? '') !!};
-
-  function changeMainImage(src){ document.getElementById('mainImage').src = src; }
-
-  function updateCartBadge(n){
-    const badge = document.getElementById('cartCountBadge');
-    if (!badge) return;
-    const num = Number(n||0);
-    if (num > 0){
-      badge.textContent = num;
-      badge.classList.remove('hidden');
-      badge.classList.add('flex');
-    } else {
-      badge.classList.add('hidden');
-    }
+  /* ========== GALLERY (rotate) ========== */
+  const images = @json($resolvedImages);
+  const placeholder = @json(asset('images/placeholder/venue.png'));
+  function $(sel){ return document.querySelector(sel); }
+  const mainEl = $('#mainImage'); const thumb0 = $('#thumb0'); const thumb1 = $('#thumb1'); const thumbsWrap = $('#thumbsWrap');
+  let currentIndex = 0;
+  function getNextIndices(){
+    if (images.length <= 1) return [];
+    if (images.length === 2) return [(currentIndex + 1) % 2];
+    return [(currentIndex + 1) % images.length, (currentIndex + 2) % images.length];
   }
+  function renderGallery(){
+    if (!mainEl) return;
+    mainEl.src = images[currentIndex] || placeholder;
+    if (!thumb0 || !thumb1) return;
+    const idxs = getNextIndices();
+    if (images.length <= 1){ if (thumbsWrap) thumbsWrap.style.display = 'none'; return; } else { if (thumbsWrap) thumbsWrap.style.display = ''; }
+    if (idxs[0] !== undefined){ thumb0.src = images[idxs[0]] || placeholder; thumb0.dataset.index = String(idxs[0]); thumb0.style.pointerEvents = ''; thumb0.style.opacity = ''; }
+    else { thumb0.src = placeholder; delete thumb0.dataset.index; thumb0.style.pointerEvents = 'none'; thumb0.style.opacity = '.6'; }
+    if (idxs[1] !== undefined){ thumb1.src = images[idxs[1]] || placeholder; thumb1.dataset.index = String(idxs[1]); thumb1.style.pointerEvents = ''; thumb1.style.opacity = ''; }
+    else { thumb1.src = placeholder; delete thumb1.dataset.index; thumb1.style.pointerEvents = 'none'; thumb1.style.opacity = '.6'; }
+  }
+  function onMainClick(){ if (images.length <= 1) return; currentIndex = (currentIndex + 1) % images.length; renderGallery(); }
+  function onThumbClick(e){ const t = e.currentTarget; const idx = parseInt(t?.dataset?.index, 10); if (Number.isNaN(idx)) return; currentIndex = idx; renderGallery(); }
+  window.onMainClick = onMainClick; window.onThumbClick = onThumbClick;
+  document.addEventListener('DOMContentLoaded', renderGallery);
+</script>
+
+<script>
+  /* ========== BOOKING + ADD TO CART (AJAX) ========== */
+  const isLoggedIn   = @json(auth()->check());
+  const userRole     = @json(Auth::check() ? Auth::user()->roles : null);
+  const venueId      = @json($detail->id);
+  const baseVenuesUrl= @json(url('/venues'));
 
   document.addEventListener("DOMContentLoaded", function() {
-    /* ====== MAP (Leaflet + Photon) ====== */
-    const mapInfoEl = document.getElementById('mapInfo');
-    function initMap(lat, lng){
-      const m = L.map('mapDetail', { zoomControl:true, scrollWheelZoom:true }).setView([lat, lng], 16);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom:19, attribution:'&copy; OpenStreetMap'
-      }).addTo(m);
-      L.marker([lat,lng]).addTo(m).bindPopup(venueName);
-      return m;
-    }
-    if (hasCoordsDb) { initMap(latDb, lngDb); mapInfoEl.textContent = ''; }
-    else if (venueAddress) {
-      mapInfoEl.textContent = 'Mencari lokasi dari alamat…';
-      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(venueAddress)}&limit=1`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(json => {
-          const f = (json && json.features && json.features[0]) ? json.features[0] : null;
-          if (!f) throw new Error('Alamat tidak ditemukan');
-          const [lng, lat] = f.geometry.coordinates;
-          initMap(lat, lng); mapInfoEl.textContent = '';
-        })
-        .catch(() => { mapInfoEl.textContent = 'Gagal memuat peta dari alamat. Menampilkan area default.'; initMap(-6.2, 106.816666); });
-    } else { mapInfoEl.textContent = 'Alamat belum tersedia. Menampilkan area default.'; initMap(-6.2, 106.816666); }
-
-    /* ====== BOOKING & CART ====== */
     const datePicker   = document.getElementById('datePicker');
     const openDateBtn  = document.getElementById('openDateBtn');
     const addBtn       = document.getElementById('addToCartButton');
     const scheduleList = document.getElementById("scheduleList");
     const tableList    = document.getElementById("tableList");
-    const form         = document.getElementById("addToCartForm");
     const priceDisplay = document.getElementById("priceDisplay");
+    const form         = document.getElementById("addToCartForm");
 
     let selectedSchedule = null;
     let selectedTableNumber = null;
@@ -517,7 +535,10 @@
           return;
         }
         schedules.forEach(sch => {
-          (sch.schedule || []).forEach(slot => scheduleList.appendChild(createScheduleSlot(slot, sch.price)));
+          (sch.schedule || []).forEach(slot => {
+            const scheduleSlot = createScheduleSlot(slot, sch.price);
+            scheduleList.appendChild(scheduleSlot);
+          });
         });
       } catch (error) {
         console.error('Error loading schedules:', error);
@@ -549,26 +570,19 @@
 
     if (datePicker) {
       datePicker.addEventListener("change", function() { loadSchedules(this.value); });
-      // init to today
+    }
+
+    // INIT date = today + load schedules
+    (function initDate() {
+      if (!datePicker) return;
       const t = new Date();
       const yyyy = t.getFullYear(); const mm = String(t.getMonth() + 1).padStart(2, '0'); const dd = String(t.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
       datePicker.min = todayStr; datePicker.value = todayStr;
       loadSchedules(todayStr);
-    }
+    })();
 
-    // Visual stars input
-    const stars = document.querySelectorAll('#ratingBox i');
-    const ratingInput = document.getElementById('ratingInput');
-    stars.forEach(st => {
-      st.addEventListener('click', () => {
-        const v = parseInt(st.dataset.value, 10);
-        ratingInput.value = v;
-        stars.forEach(s2 => s2.classList.toggle('active', parseInt(s2.dataset.value,10) <= v));
-      });
-    });
-
-    // Button (pre-validate then submit)
+    // ADD TO CART button -> validate then submit the form (AJAX handled below)
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!isLoggedIn) {
@@ -580,76 +594,83 @@
           return;
         }
 
-        const date = datePicker?.value;
         const schedule = document.querySelector('input[name="schedule"]:checked');
-        const table = document.querySelector('input[name="table_id"]:checked');
+        const table    = document.querySelector('input[name="table_id"]:checked');
 
-        if (!date)    { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!datePicker?.value) { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
         if (!schedule || !selectedSchedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
-        if (!table)   { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!table) { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
 
-        // Isi hidden untuk fallback submit (kalau AJAX gagal)
-        document.getElementById('priceInput').value       = (selectedSchedule?.price ?? 0);
-        document.getElementById('tableNumberInput').value = (selectedTableNumber ?? '');
+        // keep hidden inputs in sync (optional)
         document.getElementById('startInput').value       = selectedSchedule.start;
         document.getElementById('endInput').value         = selectedSchedule.end;
+        document.getElementById('priceInput').value       = selectedSchedule.price ?? 0;
+        document.getElementById('tableNumberInput').value = selectedTableNumber ?? '';
+
+        // (opsional) update imageInput kalau user ganti foto utama via gallery
+        const main = document.getElementById('mainImage')?.getAttribute('src') || '';
+        try {
+          const url = new URL(main, window.location.origin);
+          const parts = url.pathname.split('/');
+          const fname = parts[parts.length - 1] || '';
+          if (fname) document.getElementById('imageInput').value = fname;
+        } catch (e) {
+          // abaikan jika gagal parse URL
+        }
 
         form.requestSubmit();
       });
     }
 
-    // Hijack form submit -> AJAX post seperti product detail
+    // Intercept form submit dan POST via FormData
     if (form) {
-      form.addEventListener('submit', function(e){
+      form.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        const date    = datePicker?.value;
-        const table   = document.querySelector('input[name="table_id"]:checked');
+        const date     = datePicker ? datePicker.value : null;
+        const schedule = document.querySelector('input[name="schedule"]:checked');
+        const table    = document.querySelector('input[name="table_id"]:checked');
 
-        if (!isLoggedIn) { Swal.fire({ title:'Belum Login!', text:'Silakan login terlebih dahulu.', icon:'warning' }).then(()=>location.href='/login'); return; }
-        if (!date || !selectedSchedule || !table) { Swal.fire({ title:'Oops!', text:'Lengkapi tanggal, jadwal, dan meja.', icon:'warning' }); return; }
+        if (!date)     { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning' }); return; }
+        if (!schedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning' }); return; }
+        if (!table)    { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning' }); return; }
 
-        // Build payload (dukung 2 skema: hidden-fields & field langsung)
-        const fd = new FormData(form);
-        fd.set('start', selectedSchedule.start);
-        fd.set('end',   selectedSchedule.end);
-        fd.set('price', selectedSchedule.price ?? 0);
-        fd.set('table_number', selectedTableNumber ?? '');
-        fd.set('table_id', String(parseInt(table.value, 10)));
-        // optional extra kompatibilitas:
-        fd.set('schedule[start]', selectedSchedule.start);
-        fd.set('schedule[end]',   selectedSchedule.end);
-        fd.set('table',           selectedTableNumber ?? '');
+        const fd = new FormData(this);
+        fd.append('schedule[start]', selectedSchedule.start);
+        fd.append('schedule[end]',   selectedSchedule.end);
+        fd.append('price',           selectedSchedule.price);
+        fd.append('table',           selectedTableNumber);
 
-        Swal.fire({ title:'Memproses…', allowOutsideClick:false, didOpen:()=>Swal.showLoading(), background:'#1E1E1F', color:'#FFFFFF' });
+        Swal.fire({ title:'Mohon tunggu...', text:'Sedang memproses permintaan Anda.', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
 
-        fetch(addVenueUrl, {
+        fetch(this.action, {
           method: 'POST',
-          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken },
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          },
           body: fd
         })
-        .then(async (res) => {
-          let json = null;
-          try { json = await res.json(); } catch(_) {}
-          return { ok: res.ok, json };
-        })
+        .then(res => res.json().then(json => ({ ok: res.ok, json })))
         .then(({ ok, json }) => {
           Swal.close();
-          const success = !!(json && (json.success || json.ok));
-          if (ok && success) {
-            updateCartBadge(json.cart_count ?? null);
-            Swal.fire({ icon:'success', title:'Berhasil!', text: json.message || 'Ditambahkan ke cart.', showConfirmButton:false, timer:1300, background:'#1E1E1F', color:'#FFFFFF' });
-            setTimeout(() => { if (typeof showCart === 'function') showCart(); }, 200);
+          if (ok && json.success) {
+            const badge = document.getElementById('cartCountBadge');
+            if (badge && json.cart_count) {
+              badge.textContent = json.cart_count;
+              badge.classList.remove('hidden');
+            }
+            Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
+              .then(() => location.reload());
           } else {
-            const msg = (json && (json.message || json.error)) || 'Terjadi kesalahan, coba lagi.';
-            Swal.fire({ icon:'error', title:'Gagal!', text: msg, background:'#1E1E1F', color:'#FFFFFF' });
+            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
           }
         })
         .catch((err) => {
           console.error(err);
           Swal.close();
-          // fallback kirim normal
-          form.submit();
+          Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
         });
       });
     }

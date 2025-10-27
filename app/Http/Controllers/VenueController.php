@@ -99,20 +99,43 @@ class VenueController extends Controller
                 ->where('user_id', $userId)
                 ->where('item_type', 'venue')
                 ->get()
-                ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
-                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
-                        : null,
-                ]);
+                ->map(function ($item) {
+                    // Ambil raw image dari model Venue (images[] atau image)
+                    $rawImage = null;
+                    $v = $item->venue;
+                    if ($v) {
+                        if (!empty($v->images)) {
+                            if (is_array($v->images)) {
+                                $rawImage = $v->images[0] ?? null;
+                            } elseif (is_string($v->images)) {
+                                $maybe = json_decode($v->images, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                                    $rawImage = $maybe[0] ?? null;
+                                }
+                            }
+                        }
+                        if (!$rawImage && !empty($v->image)) {
+                            $rawImage = $v->image;
+                        }
+                    }
+
+                    return [
+                        'cart_id'  => $item->id,
+                        'venue_id' => $item->venue?->id,
+                        'name'     => $item->venue?->name,
+                        'address'  => $item->venue?->address ?? '-',
+                        'date'     => $item->date,
+                        'start'    => $item->start,
+                        'end'      => $item->end,
+                        'table'    => $item->table_number,
+                        'price'    => $item->price,
+                        'duration' => $item->start && $item->end
+                            ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                            : null,
+                        // kirim raw image ke view cart (bisa filename / url / path, nanti dibersihkan di blade)
+                        'image'    => $rawImage,
+                    ];
+                });
 
             $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
                 ->where('user_id', $userId)
@@ -309,20 +332,43 @@ class VenueController extends Controller
                 ->where('user_id', $userId)
                 ->where('item_type', 'venue')
                 ->get()
-                ->map(fn($item) => [
-                    'cart_id'  => $item->id,
-                    'venue_id' => $item->venue?->id,
-                    'name'     => $item->venue?->name,
-                    'address'  => $item->venue?->address ?? '-',
-                    'date'     => $item->date,
-                    'start'    => $item->start,
-                    'end'      => $item->end,
-                    'table'    => $item->table_number,
-                    'price'    => $item->price,
-                    'duration' => $item->start && $item->end
-                        ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
-                        : null,
-                ]);
+                ->map(function ($item) {
+                    // Ambil raw image dari model Venue (images[] atau image)
+                    $rawImage = null;
+                    $v = $item->venue;
+                    if ($v) {
+                        if (!empty($v->images)) {
+                            if (is_array($v->images)) {
+                                $rawImage = $v->images[0] ?? null;
+                            } elseif (is_string($v->images)) {
+                                $maybe = json_decode($v->images, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                                    $rawImage = $maybe[0] ?? null;
+                                }
+                            }
+                        }
+                        if (!$rawImage && !empty($v->image)) {
+                            $rawImage = $v->image;
+                        }
+                    }
+
+                    return [
+                        'cart_id'  => $item->id,
+                        'venue_id' => $item->venue?->id,
+                        'name'     => $item->venue?->name,
+                        'address'  => $item->venue?->address ?? '-',
+                        'date'     => $item->date,
+                        'start'    => $item->start,
+                        'end'      => $item->end,
+                        'table'    => $item->table_number,
+                        'price'    => $item->price,
+                        'duration' => $item->start && $item->end
+                            ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
+                            : null,
+                        // kirim raw image ke view cart (bisa filename / url / path, nanti dibersihkan di blade)
+                        'image'    => $rawImage,
+                    ];
+                });
 
             $cartSparrings = CartItem::with(['sparringSchedule.athlete'])
                 ->where('user_id', $userId)
@@ -407,4 +453,3 @@ class VenueController extends Controller
         return back()->with('success', 'Gambar venue berhasil diperbarui.');
     }
 }
- 
