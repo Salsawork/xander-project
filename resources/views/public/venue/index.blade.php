@@ -156,16 +156,27 @@
     }
 
     /* City pill */
-    .city-pill {
-        display:inline-flex; align-items:center; gap:.4rem;
-        padding:.35rem .75rem; border-radius:9999px;
-        border:1px solid rgba(255,255,255,.32);
-        color:#9ca3af; cursor:pointer; user-select:none;
-        transition: background .15s ease, color .15s ease, border-color .15s ease;
-    }
+    .city-pill { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .75rem; border-radius:9999px; border:1px solid rgba(255,255,255,.32); color:#9ca3af; cursor:pointer; user-select:none; transition: background .15s ease, color .15s ease, border-color .15s ease; }
     .city-pill:hover { border-color:#60a5fa; color:#dbeafe; }
     .city-pill.selected { background:#1f2937; border-color:#3b82f6; color:#93c5fd; }
     .city-pill input { display:none; }
+
+    /* ===================== */
+    /*   IMAGE LOADING UI    */
+    /* ===================== */
+    .img-wrapper { position: relative; background: #171717; overflow: hidden; border-radius: .5rem; }
+    .img-wrapper > img { display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity .28s ease; }
+    .img-wrapper > img.is-loaded { opacity:1; }
+    .img-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+    .img-loading.is-hidden { display:none; }
+    .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .camera-icon { width:48px; height:48px; color: rgba(130,130,130,.4); }
+
+    @media (prefers-reduced-motion: reduce){
+        .img-wrapper > img { transition: none; }
+        .spinner { animation: none; }
+    }
 </style>
 @endpush
 
@@ -193,7 +204,7 @@
 
     <!-- Mobile Filter Button -->
     <div class="lg-hidden px-4 sm:px-6 mb-4">
-        <button id="mobileFilterBtn" class="w-full bg-transparent rounded border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400">
+        <button id="mobileFilterBtn" class="w-full bg-transparent rounded border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400/20">
             <i class="fas fa-filter"></i>
             Filter & Search
         </button>
@@ -302,14 +313,19 @@
                     <a href="{{ route('venues.detail', ['venue' => $venue->id, 'slug' => $venue->name]) }}"
                        class="block bg-neutral-800 rounded-xl overflow-hidden shadow-lg flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 cursor-pointer transition hover:bg-neutral-700">
 
-                        {{-- IMAGE: FE /images/venue/* with JS fallback berantai --}}
-                        <div class="w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 rounded-lg mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 overflow-hidden">
+                        {{-- IMAGE: FE /images/venue/* with loader overlay + fallback berantai --}}
+                        <div class="img-wrapper w-full sm:w-64 h-40 sm:h-36 bg-neutral-700 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0 overflow-hidden">
+                            <div class="img-loading" aria-hidden="true" role="progressbar" aria-label="Loading image">
+                                <div class="spinner" aria-hidden="true"></div>
+                            </div>
                             <img
                                 class="w-full h-full object-cover block js-venue-img"
                                 src="{{ $primarySrc }}"
                                 data-src-candidates='@json($candidates)'
+                                data-lazy-load
                                 alt="{{ $venue->name }}"
                                 loading="lazy"
+                                decoding="async"
                             >
                         </div>
 
@@ -539,27 +555,41 @@
         }
         activateCityPillsSelection();
 
-        // ====== JS fallback untuk gambar venue (FE-only) ======
-        document.querySelectorAll('.js-venue-img').forEach((img) => {
-            try {
-                const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
-                let i = 0;
-                const tryNext = () => {
-                    i++;
-                    if (i < list.length) {
-                        if (img.src !== list[i]) img.src = list[i];
+        // ====== Image loader + fallback chain (spinner + fade-in) ======
+        function initImageLoadingWithFallback(selector = '.img-wrapper img[data-lazy-load]'){
+            document.querySelectorAll(selector).forEach((img) => {
+                const wrapper = img.closest('.img-wrapper');
+                const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+
+                // List kandidat dari data attribute
+                let list = [];
+                try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(e) { list = []; }
+                if (!Array.isArray(list) || list.length === 0) { list = [img.getAttribute('src')].filter(Boolean); }
+
+                let idx = 0;
+                const showLoader = () => loader && loader.classList.remove('is-hidden');
+                const hideLoader = () => loader && loader.classList.add('is-hidden');
+                const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+
+                if (img.complete && img.naturalWidth > 0) { markLoaded(); }
+                else { showLoader(); }
+
+                img.addEventListener('load', () => { if (img.naturalWidth > 0) { markLoaded(); } }, { passive: true });
+                img.addEventListener('error', () => {
+                    if (idx < list.length - 1) {
+                        idx++;
+                        showLoader();
+                        const nextSrc = list[idx];
+                        if (nextSrc && img.src !== nextSrc) { img.src = nextSrc; }
+                    } else {
+                        // Sudah tidak ada kandidat lain: tetap hilangkan loader agar tidak muter terus
+                        markLoaded();
                     }
-                };
-                img.addEventListener('error', tryNext, { passive: true });
-            } catch (e) {
-                // ignore
-            }
-        });
+                }, { passive: true });
+            });
+        }
+
+        initImageLoadingWithFallback();
     });
 </script>
-
-<style>
-    .toggleContent { overflow: hidden; transition: max-height .3s ease; max-height: 1000px; }
-    .toggleContent.max-h-0 { max-height: 0; }
-</style>
 @endsection

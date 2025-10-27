@@ -102,6 +102,20 @@
         }
         .cat-pagination .swiper-pagination-bullet{ background:#e5e7eb; opacity:.7; }
         .cat-pagination .swiper-pagination-bullet-active{ background:#2563eb; opacity:1; }
+
+        /* ====== Progressive Image Loader untuk KARTU (bukan hero) ====== */
+        .img-frame{ position:relative; background:#111827; }
+        .img-el{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .25s ease; }
+        .img-frame.loaded .img-el{ opacity:1; }
+        .img-frame .spinner, .img-frame .ph{
+            position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+        }
+        .img-frame .ph{ display:none; color:#9ca3af; }
+        .img-frame.loaded .spinner{ display:none; }
+        .img-frame.error .spinner{ display:none; }
+        .img-frame.error .ph{ display:grid; }
+        .spinner svg{ animation:spin 1s linear infinite; opacity:.9; }
+        @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
     </style>
 
     {{-- Swiper CSS (muat jika belum ada) --}}
@@ -165,10 +179,16 @@
                                 $date = optional($g->published_at)->format('d F Y');
                             @endphp
                             <div class="swiper-slide">
-                                <div class="relative isolate w-full overflow-hidden bg-neutral-900 vh-section">
-                                    <img src="{{ $img }}" alt="{{ $title }}"
+                                {{-- Pakai inline background-image sebagai fallback agar banner tetap terlihat --}}
+                                <div class="relative isolate w-full overflow-hidden bg-neutral-900 vh-section"
+                                     style="background-image:url('{{ $img }}'); background-size:cover; background-position:78% center;">
+                                    {{-- IMG langsung dengan src (bukan progressive) agar tidak hilang --}}
+                                    <img src="{{ $img }}"
+                                         alt="{{ $title }}"
                                          class="hero-img absolute inset-0 h-full w-full object-cover object-[78%_center]"
-                                         loading="{{ $i === 0 ? 'eager' : 'lazy' }}" decoding="async" sizes="100vw" />
+                                         loading="{{ $i === 0 ? 'eager' : 'lazy' }}"
+                                         @if($i===0) fetchpriority="high" @endif
+                                         decoding="async" sizes="100vw" />
                                     <div class="absolute inset-0 pointer-events-none z-[1]">
                                         <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div>
                                     </div>
@@ -352,6 +372,7 @@
         window.PILL_CLASS= @json($pillClassMap);
         window.DISP_NAME = @json($displayNames);
         window.CAT_ORDER = ['BEGINNER', 'INTERMEDIATE', 'MASTER', 'GENERAL'];
+        window.PLACEHOLDER_IMG = @json(asset('images/guidelines/placeholder.jpg'));
     </script>
 
     {{-- Swiper JS (muat hanya jika belum ada) --}}
@@ -422,7 +443,7 @@
             const selSort = form.querySelector('#sort');
             const inpQ = form.querySelector('#q');
             const items = Array.isArray(window.G_ITEMS) ? window.G_ITEMS.slice() : [];
-            const order = Array.isArray(window.CAT_ORDER) ? window.CAT_ORDER : ['BEGINNER','INTERMEDIATE','MASTER','GENERAL'];
+            const PLACEHOLDER = window.PLACEHOLDER_IMG || '';
 
             function esc(s) {
                 return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -434,8 +455,27 @@
                 <a href="${esc(it.href)}"
                    class="group relative h-full rounded-2xl overflow-hidden bg-neutral-800 ring-1 ring-white/5 shadow-lg hover:shadow-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 flex flex-col"
                    aria-label="Open guideline: ${esc(it.title)}">
-                    <div class="relative h-48 md:h-56 bg-gray-700">
-                        <img src="${esc(it.image)}" alt="${esc(it.title)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+                    <div class="relative h-48 md:h-56 img-frame">
+                        <img
+                            class="absolute inset-0 w-full h-full object-cover img-el js-progressive"
+                            alt="${esc(it.title)}"
+                            src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+                            data-src="${esc(it.image)}"
+                            data-fallback="${esc(PLACEHOLDER)}"
+                            loading="lazy"
+                            decoding="async">
+                        <div class="spinner" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle class="opacity-25" cx="12" cy="12" r="10"></circle>
+                                <path d="M22 12a10 10 0 0 0-10-10" stroke-linecap="round"></path>
+                            </svg>
+                        </div>
+                        <div class="ph" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+                                <path d="M4 7h3l2-2h6l2 2h3a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2zm8 11a5 5 0 100-10 5 5 0 000 10z"/>
+                            </svg>
+                        </div>
+
                         ${it.isNew ? `<span class="badge-pill badge-blue top-4 left-4">New</span>` : ``}
                         <span class="badge-pill ${pillCls} top-4 right-4">${esc(disp)}</span>
                         <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
@@ -491,6 +531,10 @@
             }
 
             function applyFilters() {
+                const selCat = form.querySelector('#category');
+                const selSort = form.querySelector('#sort');
+                const inpQ = form.querySelector('#q');
+
                 const cat = selCat.value || 'ALL';
                 const q = (inpQ.value || '').trim().toLowerCase();
                 const sort = selSort.value || 'newest';
@@ -540,6 +584,9 @@
                 const resultCountMobile = document.getElementById('resultCountMobile');
                 if (resultCountMobile) resultCountMobile.textContent = countEl.textContent;
 
+                // Hook progressive loader setelah DOM update (untuk kartu)
+                if (window.setupProgressiveImages) window.setupProgressiveImages(document);
+
                 const params = new URLSearchParams();
                 if (cat && cat !== 'ALL') params.set('category', cat);
                 if (q) params.set('q', inpQ.value.trim());
@@ -551,10 +598,10 @@
             let t;
             function debounced(){ clearTimeout(t); t = setTimeout(applyFilters, 400); }
 
-            selCat.addEventListener('change', applyFilters);
-            selSort.addEventListener('change', applyFilters);
-            inpQ.addEventListener('input', debounced);
-            inpQ.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); applyFilters(); } });
+            form.querySelector('#category').addEventListener('change', applyFilters);
+            form.querySelector('#sort').addEventListener('change', applyFilters);
+            form.querySelector('#q').addEventListener('input', debounced);
+            form.querySelector('#q').addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); applyFilters(); } });
 
             window.addEventListener('resize', () => applyFilters());
 
@@ -565,14 +612,65 @@
                 function make(){
                     if (!window.Swiper) return setTimeout(make, 50);
                     new Swiper('.hero-swiper', {
-                        loop:true, speed:700, autoplay:{delay:5000, disableOnInteraction:false},
+                        loop:true,
+                        speed:700,
+                        autoplay:{delay:5000, disableOnInteraction:false},
                         pagination:{ el:'.hero-pagination', clickable:true },
                         navigation:{ nextEl:'.hero-next', prevEl:'.hero-prev' },
-                        keyboard:{ enabled:true }, a11y:{ enabled:true },
+                        keyboard:{ enabled:true },
+                        a11y:{ enabled:true },
                     });
                 }
                 make();
             })();
+        })();
+    </script>
+
+    {{-- ===================== Progressive image loader core (IO + fallback) — untuk KARTU ===================== --}}
+    <script>
+        (function(){
+            function setupProgressiveImages(root){
+                const scope = root || document;
+                const imgs = scope.querySelectorAll('img.js-progressive[data-src]');
+                if (!imgs.length) return;
+
+                const io = 'IntersectionObserver' in window
+                    ? new IntersectionObserver(onIntersect, { rootMargin: '200px 0px' })
+                    : null;
+
+                imgs.forEach(img=>{
+                    const frame = img.closest('.img-frame') || img.parentElement;
+                    if (!frame) return;
+                    if (io) io.observe(img); else loadNow(img, frame);
+                    img.addEventListener('error', ()=> handleError(img, frame));
+                    img.addEventListener('load',  ()=> handleLoad(img, frame));
+                });
+
+                function onIntersect(entries, obs){
+                    entries.forEach(entry=>{
+                        if (!entry.isIntersecting) return;
+                        const img = entry.target;
+                        const frame = img.closest('.img-frame') || img.parentElement;
+                        loadNow(img, frame);
+                        obs.unobserve(img);
+                    });
+                }
+                function loadNow(img, frame){
+                    const src = img.getAttribute('data-src');
+                    if (src && img.src !== src) img.src = src;
+                }
+                function handleLoad(img, frame){
+                    frame.classList.add('loaded');
+                    frame.classList.remove('error');
+                }
+                function handleError(img, frame){
+                    const fallback = img.getAttribute('data-fallback') || img.src || window.PLACEHOLDER_IMG || '';
+                    if (fallback && img.src !== fallback){ img.src = fallback; }
+                    else { frame.classList.add('error'); }
+                }
+            }
+            window.setupProgressiveImages = setupProgressiveImages;
+            document.addEventListener('DOMContentLoaded', ()=> setupProgressiveImages(document));
         })();
     </script>
 

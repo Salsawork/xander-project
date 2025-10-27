@@ -89,265 +89,65 @@
 
 @push('styles')
     <style>
-        :root {
-            color-scheme: dark;
-        }
+        :root { color-scheme: dark; }
+        html, body { height: 100%; background-color: #0a0a0a; overscroll-behavior-y: none; }
+        #app, main { background-color: #0a0a0a; }
+        body::before { content: ""; position: fixed; inset: 0; background: #0a0a0a; pointer-events: none; z-index: -1; }
+        body { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        img { color: transparent; }
 
-        html,
-        body {
-            height: 100%;
-            background-color: #0a0a0a;
-            overscroll-behavior-y: none;
-        }
+        /* ====== CARD & TEXT ====== */
+        .product-card { background: #2a2a2a; border-radius: 14px; overflow: hidden; transition: transform .25s ease, box-shadow .25s ease; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+        .product-info { padding: 0.9rem 1rem 1.1rem; }
+        .product-title { font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 .45rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .product-price { font-size: .9rem; color: #9ca3af; }
 
-        #app,
-        main {
-            background-color: #0a0a0a;
-        }
+        /* ====== RELATED LAYOUT ====== */
+        .related-section { margin-top: 1.25rem !important; }
+        @media (min-width:768px){ .related-section { margin-top: 1.5rem !important; } }
+        @media (min-width:1024px){ .related-section { margin-top: 2rem !important; } }
+        .rel-wrapper { position: relative; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .rel-track { -webkit-overflow-scrolling: touch; padding: 0 8px 2px 8px; scroll-behavior: auto; }
+        .rel-row-grid { display: flex; gap: 16px; }
+        @media (min-width:768px){ .rel-track.grid { overflow: visible; padding: 0; } .rel-row-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 20px; } }
+        @media (min-width:1024px){ .rel-row-grid { grid-template-columns: repeat(5, minmax(0,1fr)); gap: 24px; } }
+        .rel-track.carousel { overflow-x: auto; scroll-snap-type: x mandatory; }
+        .rel-track.carousel.scrolling { scroll-snap-type: none; scroll-behavior: auto; }
+        .rel-row-scroll { display: flex; gap: 16px; flex-wrap: nowrap; }
+        .rel-card { scroll-snap-align: start; }
+        @media (min-width:768px){ .rel-card.carousel-item { flex: 0 0 240px; max-width: 240px; } }
+        @media (min-width:1024px){ .rel-card.carousel-item { flex: 0 0 260px; max-width: 260px; } }
+        @media (max-width:767px){ .rel-row-scroll .rel-card { flex: 0 0 76vw; max-width: 76vw; } }
+        .rel-nav { display: none; position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 9999px; background: #1f2937; color: #e5e7eb; border: 1px solid rgba(255,255,255,.15); align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(0,0,0,.35); z-index: 5; cursor: pointer; transition: all .2s; }
+        .rel-nav:hover { background: #374151; transform: translateY(-50%) scale(1.1); }
+        .rel-nav:active { transform: translateY(-50%) scale(.95); }
+        .rel-nav.left { left: -10px; }
+        .rel-nav.right { right: -10px; }
+        @media (min-width:768px){ .rel-nav.carousel-only { display: flex; } }
+        .rel-fade { position: absolute; top: 0; bottom: 0; width: 60px; pointer-events: none; z-index: 4; opacity: 0; transition: opacity .3s; }
+        .rel-fade.left { left: 0; background: linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,0) 100%); }
+        .rel-fade.right { right: 0; background: linear-gradient(-90deg, #0a0a0a 0%, rgba(10,10,10,0) 100%); }
+        .rel-fade.show { opacity: 1; }
 
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: #0a0a0a;
-            pointer-events: none;
-            z-index: -1;
-        }
+        /* ====== IMAGE LOADING UI (spinner / camera) ====== */
+        .img-wrapper { position: relative; background: #1a1a1a; overflow: hidden; }
+        .img-wrapper > img { width: 100%; height: 100%; display: block; object-fit: cover; opacity: 0; transition: opacity .28s ease; }
+        .img-wrapper > img.is-loaded { opacity: 1; }
+        .img-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #1a1a1a; z-index: 1; }
+        .img-loading.is-hidden { display: none; }
+        .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,.2); border-top-color: #a3a3a3; border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .camera-icon { width: 42px; height: 42px; color: rgba(255,255,255,.4); }
+        @media (prefers-reduced-motion: reduce){ .img-wrapper > img { transition: none; } .spinner { animation: none; } }
 
-        body {
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
-        }
-
-        img {
-            color: transparent;
-        }
-
-        .product-card {
-            background: #2a2a2a;
-            border-radius: 14px;
-            overflow: hidden;
-            transition: transform .25s ease, box-shadow .25s ease;
-        }
-
-        .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 24px rgba(0, 0, 0, .45);
-        }
-
-        .product-image-wrapper {
-            width: 100%;
-            height: 280px;
-            background: #1a1a1a;
-        }
-
-        .product-image-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .product-info {
-            padding: 0.9rem 1rem 1.1rem;
-        }
-
-        .product-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #fff;
-            margin: 0 0 .45rem 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .product-price {
-            font-size: .9rem;
-            color: #9ca3af;
-        }
-
-        .related-section {
-            margin-top: 1.25rem !important;
-        }
-
-        @media (min-width:768px) {
-            .related-section {
-                margin-top: 1.5rem !important;
-            }
-        }
-
-        @media (min-width:1024px) {
-            .related-section {
-                margin-top: 2rem !important;
-            }
-        }
-
-        .rel-wrapper {
-            position: relative;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .rel-track {
-            -webkit-overflow-scrolling: touch;
-            padding: 0 8px 2px 8px;
-            scroll-behavior: auto;
-        }
-
-        .rel-row-grid {
-            display: flex;
-            gap: 16px;
-        }
-
-        @media (min-width:768px) {
-            .rel-track.grid {
-                overflow: visible;
-                padding: 0;
-            }
-
-            .rel-row-grid {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 20px;
-            }
-        }
-
-        @media (min-width:1024px) {
-            .rel-row-grid {
-                grid-template-columns: repeat(5, minmax(0, 1fr));
-                gap: 24px;
-            }
-        }
-
-        .rel-track.carousel {
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-        }
-
-        .rel-track.carousel.scrolling {
-            scroll-snap-type: none;
-            scroll-behavior: auto;
-        }
-
-        .rel-row-scroll {
-            display: flex;
-            gap: 16px;
-            flex-wrap: nowrap;
-        }
-
-        .rel-card {
-            scroll-snap-align: start;
-        }
-
-        @media (min-width:768px) {
-            .rel-card.carousel-item {
-                flex: 0 0 240px;
-                max-width: 240px;
-            }
-        }
-
-        @media (min-width:1024px) {
-            .rel-card.carousel-item {
-                flex: 0 0 260px;
-                max-width: 260px;
-            }
-        }
-
-        @media (max-width:767px) {
-            .rel-row-scroll .rel-card {
-                flex: 0 0 76vw;
-                max-width: 76vw;
-            }
-        }
-
-        .rel-nav {
-            display: none;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 42px;
-            height: 42px;
-            border-radius: 9999px;
-            background: #1f2937;
-            color: #e5e7eb;
-            border: 1px solid rgba(255, 255, 255, .15);
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, .35);
-            z-index: 5;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .rel-nav:hover {
-            background: #374151;
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .rel-nav:active {
-            transform: translateY(-50%) scale(0.95);
-        }
-
-        .rel-nav.left {
-            left: -10px;
-        }
-
-        .rel-nav.right {
-            right: -10px;
-        }
-
-        @media (min-width:768px) {
-            .rel-nav.carousel-only {
-                display: flex;
-            }
-        }
-
-        .rel-fade {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 60px;
-            pointer-events: none;
-            z-index: 4;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .rel-fade.left {
-            left: 0;
-            background: linear-gradient(90deg, #0a0a0a 0%, rgba(10, 10, 10, 0) 100%);
-        }
-
-        .rel-fade.right {
-            right: 0;
-            background: linear-gradient(-90deg, #0a0a0a 0%, rgba(10, 10, 10, 0) 100%);
-        }
-
-        .rel-fade.show {
-            opacity: 1;
-        }
-
-        @media (max-width:767px) {
-            .product-image-wrapper {
-                height: 250px;
-            }
-
-            .product-title {
-                font-size: .98rem;
-            }
-
-            .product-price {
-                font-size: .88rem;
-            }
-        }
+        /* Sizing helpers */
+        .main-img-box { width: 100%; max-width: 320px; height: 400px; border-radius: .5rem; }
+        @media (max-width:767px){ .main-img-box { height: 360px; } }
+        .thumb-box { width: 60px; height: 60px; border-radius: .5rem; }
+        @media (min-width:640px){ .thumb-box { width: 70px; height: 70px; } }
     </style>
 @endpush
 
@@ -361,18 +161,27 @@
                     <a href="{{ route('index') }}">Home</a> /
                     <a href="{{ route('products.landing') }}">Product</a> /
                     @if ($detailId)
-                        <a
-                            href="{{ route('products.detail', ['id' => $detailId, 'slug' => Str::slug($detailName)]) }}">{{ $detailName }}</a>
+                        <a href="{{ route('products.detail', ['id' => $detailId, 'slug' => Str::slug($detailName)]) }}">{{ $detailName }}</a>
                     @else
                         <span>{{ $detailName }}</span>
                     @endif
                 </nav>
 
-                <img id="mainImage" alt="{{ $detailName }}"
-                    class="rounded-md w-full max-w-[320px] object-cover bg-neutral-800" height="400" width="320"
-                    src="{{ $mainImagePath }}" loading="eager" decoding="async"
-                    onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image';" />
+                <!-- MAIN IMAGE with loading overlay + fallback chain -->
+                <div class="img-wrapper main-img-box bg-neutral-800">
+                    <div class="img-loading" aria-hidden="true" role="progressbar" aria-label="Loading image">
+                        <div class="spinner" aria-hidden="true"></div>
+                    </div>
+                    <img id="mainImage" alt="{{ $detailName }}"
+                         class="object-cover rounded-md"
+                         src="{{ $mainImagePath }}"
+                         data-lazy-load
+                         data-src-candidates='@json($images)'
+                         loading="eager" decoding="async"
+                         onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image';" />
+                </div>
 
+                <!-- THUMBNAILS -->
                 <div class="flex items-center justify-between w-full max-w-[320px]">
                     <button aria-label="Previous image" class="text-gray-400 hover:text-white focus:outline-none">
                         <i class="fas fa-chevron-left text-xs"></i>
@@ -380,11 +189,21 @@
 
                     <div class="flex gap-2">
                         @foreach ($images as $index => $thumbUrl)
-                            <img alt="{{ $detailName . ' #' . $index }}"
-                                class="rounded-md w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] object-cover cursor-pointer border-2 {{ $index == 0 ? 'border-blue-600' : 'border-gray-600' }} thumbnail-image bg-neutral-800"
-                                height="60" width="60" src="{{ $thumbUrl }}" loading="lazy" decoding="async"
-                                onerror="this.src='https://placehold.co/400x600?text=No+Image'"
-                                onclick="changeMainImage('{{ $thumbUrl }}', this)" />
+                            <div class="img-wrapper thumb-box bg-neutral-800 border-2 {{ $index == 0 ? 'border-blue-600' : 'border-gray-600' }}">
+                                <div class="img-loading">
+                                    <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                                <img alt="{{ $detailName . ' #' . $index }}"
+                                     class="object-cover cursor-pointer thumbnail-image"
+                                     src="{{ $thumbUrl }}"
+                                     data-lazy-load
+                                     loading="lazy" decoding="async"
+                                     onerror="this.onerror=null;this.src='https://placehold.co/400x600?text=No+Image'"
+                                     onclick="changeMainImage('{{ $thumbUrl }}', this)" />
+                            </div>
                         @endforeach
                     </div>
 
@@ -400,21 +219,12 @@
                 <div class="mt-2 mb-6">
                     @if ($detailHasDiscount)
                         <div class="inline-flex items-center gap-2">
-                            <span class="text-gray-400 text-sm line-through">
-                                Rp. {{ number_format($detailPrice, 0, ',', '.') }}
-                            </span>
-                            <span
-                                class="inline-flex items-center rounded-full bg-red-500 text-white text-[11px] font-bold px-2 py-0.5">
-                                -{{ number_format($detailDiscountPercent, 0) }}%
-                            </span>
+                            <span class="text-gray-400 text-sm line-through">Rp. {{ number_format($detailPrice, 0, ',', '.') }}</span>
+                            <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[11px] font-bold px-2 py-0.5">-{{ number_format($detailDiscountPercent, 0) }}%</span>
                         </div>
-                        <div class="text-white font-extrabold text-2xl leading-tight mt-1">
-                            Rp. {{ number_format($detailFinalPrice, 0, ',', '.') }},-
-                        </div>
+                        <div class="text-white font-extrabold text-2xl leading-tight mt-1">Rp. {{ number_format($detailFinalPrice, 0, ',', '.') }},-</div>
                     @else
-                        <p class="text-gray-300 text-xl md:text-2xl">
-                            Rp. {{ number_format($detailPrice, 0, ',', '.') }},-
-                        </p>
+                        <p class="text-gray-300 text-xl md:text-2xl">Rp. {{ number_format($detailPrice, 0, ',', '.') }},-</p>
                     @endif
                 </div>
 
@@ -425,23 +235,17 @@
                     {!! nl2br(e($detailDesc)) !!}
                 </div>
 
-                <form id="addToCartForm"
-                    action="{{ \Illuminate\Support\Facades\Route::has('cart.add.product') ? route('cart.add.product') : url('/cart/add/product') }}"
-                    method="POST">
+                <form id="addToCartForm" action="{{ \Illuminate\Support\Facades\Route::has('cart.add.product') ? route('cart.add.product') : url('/cart/add/product') }}" method="POST">
                     @csrf
                     <input type="hidden" name="id" value="{{ $detailId }}">
                     <div class="flex items-center gap-3 mt-4">
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepDown()"
-                                class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">-</button>
-                            <input type="number" name="quantity" value="1" min="1" readonly
-                                class="w-14 text-center rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm pl-4">
-                            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepUp()"
-                                class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">+</button>
+                            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepDown()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">-</button>
+                            <input type="number" name="quantity" value="1" min="1" readonly class="w-14 text-center rounded-md bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm pl-4">
+                            <button type="button" onclick="this.parentNode.querySelector('input[type=number]').stepUp()" class="w-7 h-7 rounded-full bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">+</button>
                         </div>
 
-                        <button type="button" id="addToCartButton"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition">
+                        <button type="button" id="addToCartButton" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-5 rounded-md transition">
                             <i class="fas fa-shopping-cart mr-2"></i>
                             Add to cart
                         </button>
@@ -452,8 +256,7 @@
 
                 <div class="flex items-center space-x-3 text-xs text-gray-400 max-w-xl">
                     <span>Share :</span>
-                    <a aria-label="WhatsApp" class="hover:text-white" href="https://wa.me/6281284679921" target="_blank"
-                        rel="noopener"><i class="fab fa-whatsapp"></i></a>
+                    <a aria-label="WhatsApp" class="hover:text-white" href="https://wa.me/6281284679921" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i></a>
                     <a aria-label="Twitter" class="hover:text-white" href="#"><i class="fab fa-twitter"></i></a>
                     <a aria-label="Facebook" class="hover:text-white" href="#"><i class="fab fa-facebook-f"></i></a>
                 </div>
@@ -462,29 +265,22 @@
             </section>
         </div>
 
-        <!-- Related Products (INFINITE LOOPING CAROUSEL) -->
+        <!-- Related Products (GRID/CAROUSEL) -->
         <section class="related-section mb-20">
             <div class="flex justify-between items-center mb-5 md:mb-8">
                 <h2 class="text-white font-bold text-xl sm:text-2xl">Related products</h2>
-                <a href="{{ route('products.landing') }}"
-                    class="text-gray-400 hover:text-white text-xs sm:text-sm transition">See More</a>
+                <a href="{{ route('products.landing') }}" class="text-gray-400 hover:text-white text-xs sm:text-sm transition">See More</a>
             </div>
 
-            @php
-                $relMode = $relCount > 5 ? 'carousel' : 'grid';
-            @endphp
+            @php $relMode = $relCount > 5 ? 'carousel' : 'grid'; @endphp
 
             <div class="rel-wrapper" data-rel-mode="{{ $relMode }}" data-count="{{ $relCount }}">
                 <div class="rel-fade left" id="relFadeLeft"></div>
                 <div class="rel-fade right" id="relFadeRight"></div>
 
                 @if ($relMode === 'carousel')
-                    <button class="rel-nav left carousel-only" type="button" aria-label="Scroll left" id="btnPrev">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button class="rel-nav right carousel-only" type="button" aria-label="Scroll right" id="btnNext">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
+                    <button class="rel-nav left carousel-only" type="button" aria-label="Scroll left" id="btnPrev"><i class="fas fa-chevron-left"></i></button>
+                    <button class="rel-nav right carousel-only" type="button" aria-label="Scroll right" id="btnNext"><i class="fas fa-chevron-right"></i></button>
                 @endif
 
                 <div id="relTrack" class="rel-track no-scrollbar {{ $relMode }}">
@@ -492,66 +288,44 @@
                         @forelse ($relatedProducts as $product)
                             @php
                                 $slug = Str::slug($product->name ?? 'product');
-
                                 $rImagesRaw = [];
                                 if (is_array($product->images ?? null)) {
                                     $rImagesRaw = $product->images;
                                 } elseif (is_string($product->images ?? '') && trim($product->images) !== '') {
                                     $dec = json_decode($product->images, true);
-                                    if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) {
-                                        $rImagesRaw = $dec;
-                                    }
+                                    if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) { $rImagesRaw = $dec; }
                                 }
                                 $rImages = [];
-                                foreach ($rImagesRaw as $im) {
-                                    $norm = $normalizeToFeBase($im);
-                                    if ($norm) {
-                                        $rImages[] = $norm;
-                                    }
-                                }
+                                foreach ($rImagesRaw as $im) { $norm = $normalizeToFeBase($im); if ($norm) { $rImages[] = $norm; } }
                                 $rImages = array_values(array_unique($rImages));
                                 $img = $rImages[0] ?? 'https://placehold.co/800x800?text=No+Image';
 
                                 $basePrice = (int) ($product->pricing ?? 0);
-                                $map = $relatedPriceMap[$product->id] ?? [
-                                    'has_discount' => false,
-                                    'discount_percent' => 0,
-                                    'final_price' => $basePrice,
-                                ];
+                                $map = $relatedPriceMap[$product->id] ?? ['has_discount' => false, 'discount_percent' => 0, 'final_price' => $basePrice];
                                 $rHas = (bool) ($map['has_discount'] ?? false);
                                 $rPct = (float) ($map['discount_percent'] ?? 0);
                                 $rFin = (int) ($map['final_price'] ?? $basePrice);
                             @endphp
 
                             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}"
-                                class="rel-card product-card block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 {{ $relMode === 'carousel' ? 'carousel-item' : '' }}"
-                                data-product-id="{{ $product->id }}">
-                                <div class="product-image-wrapper">
+                               class="rel-card product-card block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 {{ $relMode === 'carousel' ? 'carousel-item' : '' }}"
+                               data-product-id="{{ $product->id }}">
+                                <div class="img-wrapper" style="height:280px;">
+                                    <div class="img-loading"><div class="spinner"></div></div>
                                     <img src="{{ $img }}" alt="{{ $product->name ?? 'Product' }}"
-                                        loading="lazy"
-                                        onerror="this.onerror=null;this.src='https://placehold.co/800x800?text=No+Image';" />
+                                         data-lazy-load
+                                         onerror="this.onerror=null;this.src='https://placehold.co/800x800?text=No+Image';" />
                                 </div>
                                 <div class="product-info">
-                                    <h3 class="product-title" title="{{ $product->name ?? 'Product' }}">
-                                        {{ $product->name ?? 'Product' }}</h3>
-
+                                    <h3 class="product-title" title="{{ $product->name ?? 'Product' }}">{{ $product->name ?? 'Product' }}</h3>
                                     @if ($rHas)
                                         <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-[12px] text-gray-400 line-through">
-                                                Rp. {{ number_format($basePrice, 0, ',', '.') }}
-                                            </span>
-                                            <span
-                                                class="inline-flex items-center rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5">
-                                                -{{ number_format($rPct, 0) }}%
-                                            </span>
+                                            <span class="text-[12px] text-gray-400 line-through">Rp. {{ number_format($basePrice, 0, ',', '.') }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5">-{{ number_format($rPct, 0) }}%</span>
                                         </div>
-                                        <p class="product-price text-white font-semibold">
-                                            Rp. {{ number_format($rFin, 0, ',', '.') }},-
-                                        </p>
+                                        <p class="product-price text-white font-semibold">Rp. {{ number_format($rFin, 0, ',', '.') }},-</p>
                                     @else
-                                        <p class="product-price">
-                                            Rp. {{ number_format($basePrice, 0, ',', '.') }},-
-                                        </p>
+                                        <p class="product-price">Rp. {{ number_format($basePrice, 0, ',', '.') }},-</p>
                                     @endif
                                 </div>
                             </a>
@@ -564,14 +338,10 @@
         </section>
 
         @if (Auth::check() && (Auth::user()->roles ?? '') === 'user')
-            <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart && showCart()"
-                class="fixed right-4 sm:right-6 top-[60%] bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
+            <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart && showCart()" class="fixed right-4 sm:right-6 top-[60%] bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
                 <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
                 @if ($cartCount > 0)
-                    <span
-                        class="absolute top-0.5 right-0.5 bg-blue-600 text-white text-[10px] sm:text-xs font-semibold rounded-full w-4.5 h-4.5 sm:w-5 sm:h-5 flex items-center justify-center">
-                        {{ $cartCount }}
-                    </span>
+                    <span class="absolute top-0.5 right-0.5 bg-blue-600 text-white text-[10px] sm:text-xs font-semibold rounded-full w-4.5 h-4.5 sm:w-5 sm:h-5 flex items-center justify-center">{{ $cartCount }}</span>
                 @endif
             </button>
         @endif
@@ -583,94 +353,80 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        function changeMainImage(imageUrl, clickedThumb) {
-            const main = document.getElementById('mainImage');
-            if (main) main.src = imageUrl;
-            document.querySelectorAll('.thumbnail-image').forEach(t => {
-                t.classList.remove('border-blue-600');
-                t.classList.add('border-gray-600');
+        // =============== IMAGE LOADING HANDLER (spinner + fallback chain) ===============
+        function initImageLoading(root = document){
+            const imgs = root.querySelectorAll('img[data-lazy-load]');
+            imgs.forEach(img => {
+                const wrapper = img.closest('.img-wrapper');
+                const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+
+                // Parse candidate list (if provided)
+                let candidates = [];
+                try { candidates = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(_) {}
+                if(!Array.isArray(candidates) || !candidates.length){ candidates = [img.getAttribute('src')].filter(Boolean); }
+
+                let i = 0;
+                const showLoader = () => loader && loader.classList.remove('is-hidden');
+                const hideLoader = () => loader && loader.classList.add('is-hidden');
+                const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+                const tryNext = () => { if(i < candidates.length - 1){ i++; showLoader(); const next = candidates[i]; if(next && img.src !== next){ img.src = next; } } else { markLoaded(); } };
+
+                if (img.complete && img.naturalWidth > 0) { markLoaded(); }
+                else { showLoader(); }
+
+                img.addEventListener('load', () => { if(img.naturalWidth > 0) { markLoaded(); } }, { passive: true });
+                img.addEventListener('error', tryNext, { passive: true });
             });
-            clickedThumb.classList.remove('border-gray-600');
-            clickedThumb.classList.add('border-blue-600');
         }
 
+        // =============== MAIN IMAGE SWITCHER ===============
+        function changeMainImage(imageUrl, clickedThumb){
+            const main = document.getElementById('mainImage');
+            if(!main) return;
+
+            // Reset selection state on thumbnails
+            document.querySelectorAll('.thumbnail-image').forEach(t => {
+                const box = t.closest('.img-wrapper');
+                if(box){ box.classList.remove('border-blue-600'); box.classList.add('border-gray-600'); }
+            });
+            const clickedBox = clickedThumb.closest('.img-wrapper');
+            if(clickedBox){ clickedBox.classList.remove('border-gray-600'); clickedBox.classList.add('border-blue-600'); }
+
+            // Show loader again for main image
+            const mainWrap = main.closest('.img-wrapper');
+            const loader = mainWrap ? mainWrap.querySelector('.img-loading') : null;
+            if(main){ main.classList.remove('is-loaded'); }
+            if(loader){ loader.classList.remove('is-hidden'); }
+
+            // Update src (keep existing candidates on main)
+            main.src = imageUrl;
+        }
+
+        // =============== ADD TO CART (unchanged) ===============
         const cartForm = document.getElementById('addToCartForm');
         if (cartForm) {
             cartForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                Swal.fire({
-                    title: 'Mohon tunggu...',
-                    text: 'Sedang memproses permintaan Anda.',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading(),
-                    background: '#1E1E1F',
-                    color: '#FFFFFF'
-                });
-
+                Swal.fire({ title: 'Mohon tunggu...', text: 'Sedang memproses permintaan Anda.', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#1E1E1F', color: '#FFFFFF' });
                 const formData = new FormData(this);
-
-                fetch(this.action, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
-                    })
+                fetch(this.action, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
                     .then(async res => {
                         Swal.close();
-
                         if (res.status === 401) {
-                            Swal.fire({
-                                title: 'Belum Login!',
-                                text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-                                icon: 'warning',
-                                confirmButtonText: 'Login Sekarang',
-                                confirmButtonColor: '#3085d6',
-                                background: '#1E1E1F',
-                                color: '#FFFFFF'
-                            }).then(() => {
-                                window.location.href = '/login';
-                            });
+                            Swal.fire({ title: 'Belum Login!', text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.', icon: 'warning', confirmButtonText: 'Login Sekarang', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' }).then(() => { window.location.href = '/login'; });
                             return;
                         }
-
                         const data = await res.json().catch(() => null);
-
                         if (res.ok && data && (data.success ?? false)) {
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: 'Produk berhasil ditambahkan ke keranjang!',
-                                icon: 'success',
-                                confirmButtonText: 'OK',
-                                confirmButtonColor: '#3085d6',
-                                background: '#1E1E1F',
-                                color: '#FFFFFF',
-                                iconColor: '#4BB543'
-                            }).then(() => location.reload());
+                            Swal.fire({ title: 'Berhasil!', text: 'Produk berhasil ditambahkan ke keranjang!', icon: 'success', confirmButtonText: 'OK', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF', iconColor: '#4BB543' }).then(() => location.reload());
                         } else {
-                            Swal.fire({
-                                title: 'Gagal!',
-                                text: data?.message || 'Terjadi kesalahan, coba lagi.',
-                                icon: 'error',
-                                confirmButtonColor: '#3085d6',
-                                background: '#1E1E1F',
-                                color: '#FFFFFF'
-                            });
+                            Swal.fire({ title: 'Gagal!', text: data?.message || 'Terjadi kesalahan, coba lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
                         }
                     })
                     .catch(err => {
                         console.error(err);
                         Swal.close();
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
-                            icon: 'error',
-                            confirmButtonColor: '#3085d6',
-                            background: '#1E1E1F',
-                            color: '#FFFFFF'
-                        });
+                        Swal.fire({ title: 'Error!', text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
                     });
             });
         }
@@ -680,12 +436,12 @@
             addBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const form = document.getElementById('addToCartForm');
-                if (form) form.dispatchEvent(new Event('submit', {
-                    bubbles: true,
-                    cancelable: true
-                }));
+                if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             });
         }
+
+        // Init image loaders after DOM ready
+        document.addEventListener('DOMContentLoaded', () => { initImageLoading(); });
 
         // Carousel JS tetap sama...
     </script>

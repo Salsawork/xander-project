@@ -52,13 +52,35 @@
 
         .ev-thumb { background: #2b2b2b; height: 11rem; }
         @media (min-width: 768px){ .ev-thumb { height: 11rem; } }
-        .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
         .ev-body { flex: 1; display: flex; flex-direction: column; padding: 1rem; }
         .ev-title { font-weight: 600; font-size: 15px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
         .ev-info { margin-top: auto; }
         .ev-rule { border-color: #374151; }
+
+        /* =======================
+           IMAGE LOADING OVERLAY
+           ======================= */
+        .img-wrapper{ position: relative; background:#141414; width:100%; height:100%; overflow:hidden; }
+        .img-wrapper img{
+            width:100%; height:100%; object-fit:cover; display:block;
+            opacity:0; transition:opacity .28s ease;
+        }
+        .img-wrapper img.loaded{ opacity:1; }
+        .img-loading{
+            position:absolute; inset:0; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:10px;
+            background:#151515; color:#9ca3af; z-index:1;
+        }
+        .img-loading.hidden{ display:none; }
+        .spinner{
+            width:34px; height:34px; border:3px solid rgba(130,130,130,.25);
+            border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .camera-icon{ width:28px; height:28px; opacity:.6; }
+
+        .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     </style>
 @endpush
 
@@ -106,6 +128,10 @@
             $cand[] = asset($EVENT_IMG_DIR . $id . '.webp');
             $cand[] = asset($EVENT_IMG_DIR . $id . '.jpg');
             $cand[] = asset($EVENT_IMG_DIR . $id . '.png');
+            // last resort FE fallback (optional)
+            $cand[] = asset('images/community/community-1.png');
+            // and a remote placeholder
+            $cand[] = 'https://placehold.co/1200x800?text=Event';
             return array_values(array_unique(array_filter($cand)));
         };
     @endphp
@@ -115,12 +141,26 @@
         <!-- HERO -->
         <section class="relative isolate">
             <div class="relative overflow-hidden vh-section">
-                <img src="{{ asset('images/event/bg-event-1.png') }}" alt="Events Hero"
-                     class="hero-img absolute inset-0 h-full w-full object-cover object-center"
-                     loading="eager" decoding="async"
-                     onerror="this.src='https://via.placeholder.com/1600x800?text=Events+Banner'"/>
-                <div class="absolute inset-0 pointer-events-none">
-                    <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent"></div>
+                <div class="absolute inset-0">
+                    <div class="img-wrapper absolute inset-0">
+                        <div class="img-loading">
+                            <div class="spinner" aria-hidden="true"></div>
+                            <div class="sr-only">Loading banner...</div>
+                        </div>
+                        <img
+                            class="hero-img"
+                            data-lazy-img
+                            data-src-candidates='@json([asset('images/event/bg-event-1.png'), asset('images/community/community-1.png'), 'https://placehold.co/1600x800?text=Events+Banner'])'
+                            src="{{ asset('images/event/bg-event-1.png') }}"
+                            alt="Events Hero"
+                            loading="eager"
+                            decoding="async"
+                            style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center;"
+                        />
+                    </div>
+                    <div class="absolute inset-0 pointer-events-none">
+                        <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent"></div>
+                    </div>
                 </div>
                 <div class="relative z-10 h-full flex items-center">
                     <div class="w-full max-w-7xl mx-auto px-6 md:px-20">
@@ -154,14 +194,21 @@
                         <div class="ev-card">
                             <div class="ev-thumb relative">
                                 @if (!empty($srcs))
-                                    <img
-                                        class="js-img-fallback"
-                                        data-srcs='@json($srcs)'
-                                        data-idx="0"
-                                        src="{{ $srcs[0] }}"
-                                        alt="{{ $ev->name }}"
-                                        loading="lazy"
-                                        decoding="async">
+                                    <div class="img-wrapper w-full h-full">
+                                        <div class="img-loading">
+                                            <div class="spinner" aria-hidden="true"></div>
+                                            <div class="sr-only">Loading image...</div>
+                                        </div>
+                                        <img
+                                            class="js-img-fallback"
+                                            data-srcs='@json($srcs)'
+                                            data-idx="0"
+                                            data-lazy-img
+                                            src="{{ $srcs[0] }}"
+                                            alt="{{ $ev->name }}"
+                                            loading="lazy"
+                                            decoding="async">
+                                    </div>
                                 @else
                                     <div class="w-full h-full grid place-items-center text-gray-400">
                                         <i class="far fa-image text-3xl"></i>
@@ -216,14 +263,21 @@
                         <div class="ev-card">
                             <div class="ev-thumb relative">
                                 @if (!empty($srcs))
-                                    <img
-                                        class="js-img-fallback"
-                                        data-srcs='@json($srcs)'
-                                        data-idx="0"
-                                        src="{{ $srcs[0] }}"
-                                        alt="{{ $ev->name }}"
-                                        loading="lazy"
-                                        decoding="async">
+                                    <div class="img-wrapper w-full h-full">
+                                        <div class="img-loading">
+                                            <div class="spinner" aria-hidden="true"></div>
+                                            <div class="sr-only">Loading image...</div>
+                                        </div>
+                                        <img
+                                            class="js-img-fallback"
+                                            data-srcs='@json($srcs)'
+                                            data-idx="0"
+                                            data-lazy-img
+                                            src="{{ $srcs[0] }}"
+                                            alt="{{ $ev->name }}"
+                                            loading="lazy"
+                                            decoding="async">
+                                    </div>
                                 @else
                                     <div class="w-full h-full grid place-items-center text-gray-400">
                                         <i class="far fa-image text-3xl"></i>
@@ -261,43 +315,58 @@
 
     </main>
 
-    {{-- Fallback gambar berantai (.webp -> .jpg -> .png -> placeholder) --}}
+    {{-- Unified lazy image loader + chained fallback + camera icon --}}
     <script>
         (function () {
-            function showPlaceholder(img) {
-                img.onerror = null;
-                img.style.display = 'none';
-                var wrap = img.closest('.ev-thumb');
-                if (wrap && !wrap.querySelector('.placeholder')) {
-                    var ph = document.createElement('div');
-                    ph.className = 'placeholder w-full h-full grid place-items-center text-gray-400';
-                    ph.innerHTML = '<i class="far fa-image text-3xl"></i>';
-                    wrap.appendChild(ph);
-                }
+            function showCameraFallback(loaderEl) {
+                if (!loaderEl) return;
+                loaderEl.classList.remove('hidden');
+                loaderEl.innerHTML = `
+                  <svg class="camera-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M9 2a1 1 0 0 0-.894.553L7.382 4H5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-2.382l-.724-1.447A1 1 0 0 0 14 2H9zm3 6a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+                  </svg>
+                  <div class="text-xs text-gray-400">No image available</div>
+                `;
             }
 
-            function tryNext(img) {
-                try {
-                    var list = img.dataset.srcs ? JSON.parse(img.dataset.srcs) : [];
-                    var idx = parseInt(img.dataset.idx || '0', 10);
+            function initLazyImage(img) {
+                if (!img) return;
 
-                    if ((idx + 1) < list.length) {
-                        img.dataset.idx = String(idx + 1);
-                        img.src = list[idx + 1];
+                const wrap   = img.closest('.img-wrapper');
+                const loader = wrap ? wrap.querySelector('.img-loading') : null;
+
+                const onLoad = () => {
+                    img.classList.add('loaded');
+                    if (loader) loader.classList.add('hidden');
+                };
+                img.addEventListener('load', onLoad, { passive: true });
+
+                let list = [];
+                try { list = JSON.parse(img.getAttribute('data-src-candidates') || img.getAttribute('data-srcs') || '[]') || []; }
+                catch(e){ list = []; }
+
+                let idx = parseInt(img.getAttribute('data-idx') || '0', 10);
+                if (isNaN(idx)) idx = 0;
+
+                const onError = () => {
+                    idx++;
+                    if (idx < list.length) {
+                        img.setAttribute('data-idx', String(idx));
+                        img.src = list[idx];
                     } else {
-                        showPlaceholder(img);
+                        // Exhausted all candidates
+                        showCameraFallback(loader);
                     }
-                } catch (e) {
-                    showPlaceholder(img);
-                }
+                };
+                img.addEventListener('error', onError, { passive: true });
+
+                // Cached image quick path
+                if (img.complete && img.naturalWidth > 0) onLoad();
             }
 
-            document.addEventListener('error', function (ev) {
-                var t = ev.target;
-                if (t && t.classList && t.classList.contains('js-img-fallback')) {
-                    tryNext(t);
-                }
-            }, true);
+            document.addEventListener('DOMContentLoaded', function(){
+                document.querySelectorAll('img[data-lazy-img]').forEach(initLazyImage);
+            });
         })();
     </script>
 @endsection

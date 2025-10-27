@@ -95,17 +95,17 @@
     .sm-hidden{display:none!important;}
     .mobile-filter-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none;}
     .mobile-filter-overlay.active{display:block;}
-    .mobile-filter-sidebar{position:fixed;top:0;left:-100%;width:85%;max-width:340px;height:100%;background:#171717;z-index:50;transition:left .3s ease;overflow-y:auto;-webkit-overflow-scrolling:touch;border-right:1px solid rgba(255,255,255,.08);}
+    .mobile-filter-sidebar{position:fixed;top:0;left:-100%;width:85%;max-width:340px;height:100%;background:#171717;z-index:50;transition:left .3s ease;overflow-y:auto;-webkit-overflow-scrolling:touch;border-right:1px solid rgba(255,255,255,.08);}    
     .mobile-filter-sidebar.open{left:0;}
   }
 
-  .pager{display:inline-flex;align-items:center;gap:10px;background:#1f2937;border:1px solid rgba(255,255,255,.06);border-radius:9999px;padding:6px 10px;box-shadow:0 8px 20px rgba(0,0,0,.35) inset,0 4px 14px rgba(0,0,0,.25);}
-  .pager-label{min-width:90px;text-align:center;color:#e5e7eb;font-weight:600;letter-spacing:.2px;}
-  .pager-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:9999px;line-height:0;text-decoration:none;border:1px solid rgba(255,255,255,.15);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .15s ease,opacity .15s ease;}
-  .pager-btn:hover{transform:translateY(-1px);}
-  .pager-prev{background:#e5e7eb;color:#0f172a;}
-  .pager-next{background:#2563eb;color:#fff;}
-  .pager-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(20%);}
+  .pager{display:inline-flex;align-items:center;gap:10px;background:#1f2937;border:1px solid rgba(255,255,255,.06);border-radius:9999px;padding:6px 10px;box-shadow:0 8px 20px rgba(0,0,0,.35) inset,0 4px 14px rgba(0,0,0,.25);}  
+  .pager-label{min-width:90px;text-align:center;color:#e5e7eb;font-weight:600;letter-spacing:.2px;}  
+  .pager-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:9999px;line-height:0;text-decoration:none;border:1px solid rgba(255,255,255,.15);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .15s ease,opacity .15s ease;}  
+  .pager-btn:hover{transform:translateY(-1px);}  
+  .pager-prev{background:#e5e7eb;color:#0f172a;}  
+  .pager-next{background:#2563eb;color:#fff;}  
+  .pager-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(20%);}  
   @media (max-width:640px){.pager{padding:4px 8px;gap:8px}.pager-btn{width:40px;height:40px}.pager-label{min-width:80px;font-size:.9rem}}
 
   .disc-badge{
@@ -113,6 +113,29 @@
     background:#ef4444; color:#fff; font-weight:700;
     font-size:.75rem; line-height:1; padding:.4rem .5rem; border-radius:.5rem;
     box-shadow:0 6px 14px rgba(0,0,0,.35);
+    z-index:2;
+  }
+
+  /* ===================== */
+  /*   IMAGE LOADING UI    */
+  /* ===================== */
+  .img-wrapper{ position:relative; background:#171717; overflow:hidden; }
+  .img-wrapper > img{ display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .28s ease; }
+  .img-wrapper > img.is-loaded{ opacity:1; }
+
+  .img-loading{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+  .img-loading.is-hidden{ display:none; }
+
+  .spinner{ width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* Optional camera glyph when desired */
+  .camera-icon{ width:48px; height:48px; color:rgba(255,255,255,.35); }
+
+  /* Reduce motion preference */
+  @media (prefers-reduced-motion: reduce){
+    .img-wrapper > img{ transition:none; }
+    .spinner{ animation:none; }
   }
 </style>
 @endpush
@@ -304,15 +327,21 @@
 
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="cursor-pointer">
             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow h-full">
-              <div class="relative aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
+              <div class="relative aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3 img-wrapper">
                 @if($hasD)
                   <span class="disc-badge">-{{ rtrim(rtrim(number_format($dp, 2, ',', '.'), '0'), ',') }}%</span>
                 @endif
+
+                <!-- Loading overlay -->
+                <div class="img-loading" aria-hidden="true" role="progressbar" aria-label="Loading image">
+                  <div class="spinner" aria-hidden="true"></div>
+                </div>
 
                 <img
                   class="h-full w-full object-cover js-img-fallback"
                   src="{{ $primarySrc }}"
                   data-src-candidates='@json($candidates)'
+                  data-lazy-load="true"
                   alt="{{ $product->name }}"
                   loading="lazy"
                   decoding="async"
@@ -409,6 +438,53 @@
   }
   function unformatNumberInput(input){ return input.value.replace(/\./g,""); }
 
+  // =====================
+  // IMAGE LOADER + FALLBACK CHAIN
+  // =====================
+  function initImageLoadingWithFallback(){
+    document.querySelectorAll('.img-wrapper').forEach(wrapper => {
+      const img = wrapper.querySelector('img[data-lazy-load]');
+      const loader = wrapper.querySelector('.img-loading');
+      if(!img) return;
+
+      // candidate list from data attribute
+      let list = [];
+      try{ list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); }catch(e){ list = []; }
+      if(!Array.isArray(list) || list.length === 0){ list = [img.getAttribute('src')].filter(Boolean); }
+
+      let idx = 0;
+      const hideLoader = () => loader && loader.classList.add('is-hidden');
+      const showLoader = () => loader && loader.classList.remove('is-hidden');
+      const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+
+      // if cached
+      if(img.complete && img.naturalWidth > 0){
+        markLoaded();
+      } else {
+        showLoader();
+      }
+
+      // When image successfully loads
+      img.addEventListener('load', () => {
+        // naturalWidth>0 ensures it's a real image rendered
+        if(img.naturalWidth > 0){ markLoaded(); }
+      }, { passive:true });
+
+      // On error, try next candidate
+      img.addEventListener('error', () => {
+        if(idx < list.length - 1){
+          idx++;
+          showLoader();
+          const nextSrc = list[idx];
+          if(nextSrc && img.src !== nextSrc){ img.src = nextSrc; }
+        } else {
+          // No more candidates, stop spinner and reveal (will just show last src / broken icon avoided by placeholder list)
+          markLoaded();
+        }
+      }, { passive:true });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const minI = document.getElementById("price_min");
     const maxI = document.getElementById("price_max");
@@ -448,19 +524,8 @@
     closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
     mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
 
-    document.querySelectorAll('.js-img-fallback').forEach((img) => {
-      try {
-        const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
-        let i = 0;
-        const tryNext = () => {
-          i++;
-          if (i < list.length) {
-            if (img.src !== list[i]) img.src = list[i];
-          }
-        };
-        img.addEventListener('error', tryNext, { passive: true });
-      } catch (e) {}
-    });
+    // Init image loader + fallback chain
+    initImageLoadingWithFallback();
   });
 </script>
 @endsection

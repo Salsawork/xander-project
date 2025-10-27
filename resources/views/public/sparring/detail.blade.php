@@ -2,32 +2,63 @@
 
 @section('title', 'Sparring Detail')
 @php
-$cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
-$detail     = $athlete->athleteDetail ?? null;
-$years      = $detail->experience_years ?? null;
-$yearsText  = $years ? $years . ' Years' : 'N/A';
-$specialty  = $detail->specialty ?? 'N/A';
-$location   = $detail->location ?? 'N/A';
-$bio        = $detail->bio ?? 'Pemain biliar profesional dengan pengalaman mengajar lebih dari 5 tahun. Spesialis dalam teknik kontrol bola dan strategi permainan.';
+    $detail     = $athlete->athleteDetail ?? null;
+    $years      = $detail->experience_years ?? null;
+    $yearsText  = $years ? $years . ' Years' : 'N/A';
+    $specialty  = $detail->specialty ?? 'N/A';
+    $location   = $detail->location ?? 'N/A';
+    $bio        = $detail->bio ?? 'Pemain biliar profesional dengan pengalaman mengajar lebih dari 5 tahun. Spesialis dalam teknik kontrol bola dan strategi permainan.';
 
-// Share data
-$shareUrlAbs = url()->current();
-$shareText   = 'Sparring dengan ' . ($athlete->name ?? 'Athlete') . ' di Xander Billiard';
-$fbShareUrl  = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrlAbs);
-$xShareUrl   = 'https://twitter.com/intent/tweet?text=' . urlencode($shareText) . '&url=' . urlencode($shareUrlAbs);
+    // Share data
+    $shareUrlAbs = url()->current();
+    $shareText   = 'Sparring dengan ' . ($athlete->name ?? 'Athlete') . ' di Xander Billiard';
+    $fbShareUrl  = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($shareUrlAbs);
+    $xShareUrl   = 'https://twitter.com/intent/tweet?text=' . urlencode($shareText) . '&url=' . urlencode($shareUrlAbs);
 
-// WhatsApp
-$waPhone     = '6281284679921';
-$waMessage   = $shareText . ' ' . $shareUrlAbs;
-$waShareUrl  = 'https://wa.me/' . $waPhone . '?text=' . urlencode($waMessage);
+    // WhatsApp
+    $waPhone     = '6281284679921';
+    $waMessage   = $shareText . ' ' . $shareUrlAbs;
+    $waShareUrl  = 'https://wa.me/' . $waPhone . '?text=' . urlencode($waMessage);
 
-// Available dates
-$availableDates = $availableDates ?? [];
+    // Available dates
+    $availableDates = $availableDates ?? [];
 
-// Rating summary
-$avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
-$fullStars = floor((float)($averageRating ?? 0));
+    // Rating summary
+    $avgText   = number_format((float)($averageRating ?? 0), 1, ',', '.');
+    $fullStars = floor((float)($averageRating ?? 0));
+
+    /**
+     * Kandidat URL gambar atlet (detail):
+     * - Pertama: images/athlete/{basename dari DB}
+     * - Fallback FE-only: placeholder.webp -> athlete-1.png
+     * - Last resort: placehold.co (anti-404)
+     */
+    $athleteImgCandidates = function ($raw) {
+        $c = [];
+        $raw = is_string($raw) ? trim($raw) : '';
+        if ($raw !== '') {
+            $name = basename(parse_url($raw, PHP_URL_PATH) ?? $raw);
+            if ($name && $name !== '/' && $name !== '.') {
+                $c[] = asset('images/athlete/' . $name);
+            }
+        }
+        // Fallbacks FE-only
+        $c[] = asset('images/athlete/placeholder.webp');
+        $c[] = asset('images/athlete/athlete-1.png');
+        // Last resort
+        $c[] = 'https://placehold.co/800x1000?text=No+Image';
+        // Unik & bersih
+        $uniq = [];
+        foreach ($c as $x) {
+            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
+        }
+        return $uniq;
+    };
+
+    $imgCandidates = $athleteImgCandidates($detail->image ?? '');
+    $primarySrc    = $imgCandidates[0] ?? asset('images/athlete/athlete-1.png');
 @endphp
 
 @push('styles')
@@ -109,11 +140,32 @@ $fullStars = floor((float)($averageRating ?? 0));
     .rating-number{font-size:26px}
     .rating-outof{flex:1 1 100%;order:3;margin-left:0;margin-top:2px;text-align:left}
   }
-
   @media (max-width:380px){
     .rating-stars i{font-size:18px}
     .rating-number{font-size:24px}
   }
+
+  /* =======================
+     IMAGE LOADING OVERLAY
+     ======================= */
+  .img-wrapper{ position: relative; background:#141414; }
+  .img-wrapper img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    opacity:0; transition:opacity .28s ease;
+  }
+  .img-wrapper img.loaded{ opacity:1; }
+  .img-loading{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px;
+    background:#151515; color:#9ca3af; z-index:1;
+  }
+  .img-loading.hidden{ display:none; }
+  .spinner{
+    width:42px; height:42px; border:3px solid rgba(130,130,130,.25);
+    border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .camera-icon{ width:38px; height:38px; opacity:.6; }
 </style>
 @endpush
 
@@ -128,10 +180,22 @@ $fullStars = floor((float)($averageRating ?? 0));
         <a href="{{ route('sparring.index') }}" class="hover:text-white">Sparring</a><span class="text-gray-500">/</span>
         <span class="text-white">{{ $athlete->name }}</span>
       </nav>
-      @php
-        $photo = ($detail && $detail->image) ? asset('images/athlete/' . $detail->image) : asset('images/placeholder.jpg');
-      @endphp
-      <img src="{{ $photo }}" alt="{{ $athlete->name }}" class="w-full h-[430px] object-cover rounded-lg shadow-lg" onerror="this.src='{{ asset('images/placeholder.jpg') }}'">
+
+      <div class="img-wrapper w-full h-[430px] rounded-lg shadow-lg overflow-hidden">
+        <div class="img-loading" id="mainImgLoader">
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="sr-only">Loading image...</div>
+        </div>
+        <img
+          src="{{ $primarySrc }}"
+          data-src-candidates='@json($imgCandidates)'
+          data-lazy-load
+          alt="{{ $athlete->name }}"
+          loading="eager"
+          decoding="async"
+          id="mainAthleteImg"
+        />
+      </div>
     </div>
 
     <!-- Bio -->
@@ -183,7 +247,6 @@ $fullStars = floor((float)($averageRating ?? 0));
       <div class="card booking-card">
         <p class="text-sm text-gray-300">start from</p>
         <div class="flex items-baseline gap-2 mt-1">
-          {{-- HILANGKAN TITIK SETELAH Rp --}}
           <div class="price font-extrabold tracking-tight">Rp {{ number_format($detail->price_per_session ?? 0, 0, ',', '.') }}.-</div>
           <span class="text-sm text-gray-300">/ session</span>
         </div>
@@ -212,11 +275,11 @@ $fullStars = floor((float)($averageRating ?? 0));
             <label class="text-sm text-gray-300">Promo code (Optional)</label>
             <input type="text" name="promo" placeholder="Ex. PROMO70%DAY" class="input-pill mt-2">
           </div>
-        <button type="button"
-          id="addToCartButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
-          <i class="fas fa-shopping-cart mr-2"></i>  
-          Add to cart
-        </button>
+          <button type="button"
+            id="addToCartButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
+            <i class="fas fa-shopping-cart mr-2"></i>  
+            Add to cart
+          </button>
         </form>
       </div>
     </div>
@@ -227,7 +290,7 @@ $fullStars = floor((float)($averageRating ?? 0));
     <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
       <!-- Ringkasan -->
       <aside class="reviews-card md:col-span-1">
-        <h3 class="text-base">Customer Reviews</h3>
+        <h3 id="reviewsAnchor" class="text-base">Customer Reviews</h3>
         <hr>
         <div class="rating-row">
           <div class="rating-stars">
@@ -286,7 +349,7 @@ $fullStars = floor((float)($averageRating ?? 0));
 
       <!-- Create review -->
       <aside class="md:col-span-1">
-        <div class="create-card">
+        <div class="create-card" id="createReviewCard">
           <h3 class="text-base font-semibold">Buat Review</h3>
 
           @auth
@@ -359,6 +422,52 @@ $fullStars = floor((float)($averageRating ?? 0));
 document.addEventListener('DOMContentLoaded', function() {
   const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 
+  /* ====== IMAGE LOADER + FALLBACK (spinner → fade-in, lalu kamera jika semua gagal) ====== */
+  (function initMainImageLoader(){
+    const img = document.getElementById('mainAthleteImg');
+    if (!img) return;
+    const wrapper = img.closest('.img-wrapper');
+    const loader  = wrapper?.querySelector('.img-loading');
+
+    function showCameraFallback() {
+      if (!loader) return;
+      loader.classList.remove('hidden');
+      loader.innerHTML = `
+        <svg class="camera-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9 2a1 1 0 0 0-.894.553L7.382 4H5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-2.382l-.724-1.447A1 1 0 0 0 14 2H9zm3 6a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+        </svg>
+        <div class="text-xs text-gray-400">No image available</div>
+      `;
+    }
+
+    const onLoad = () => {
+      img.classList.add('loaded');
+      loader?.classList.add('hidden');
+    };
+    img.addEventListener('load', onLoad, { passive: true });
+
+    try {
+      const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+      let i = 0;
+      const onErr = () => {
+        i++;
+        if (i < list.length) {
+          if (img.src !== list[i]) img.src = list[i];
+        } else {
+          // Semua kandidat gagal → tampilkan kamera
+          showCameraFallback();
+        }
+      };
+      img.addEventListener('error', onErr, { passive: true });
+    } catch (e) {
+      img.addEventListener('error', showCameraFallback, { passive: true });
+    }
+
+    // jika sudah cache
+    if (img.complete && img.naturalWidth > 0) onLoad();
+  })();
+
+  /* ====== Penjajaran title & booking agar rata dengan breadcrumb ====== */
   function alignTitleAndCard() {
     const mq = window.matchMedia('(min-width: 768px)');
     const crumb = document.getElementById('breadcrumbTop');
@@ -379,23 +488,20 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', alignTitleAndCard);
   alignTitleAndCard();
 
+  /* ====== (Opsional) Ratakan posisi Create Review ke anchor ringkasan ====== */
   function alignCreateReview() {
     const mq = window.matchMedia('(min-width: 768px)');
-    const anchor = document.getElementById('reviewsAnchor');   // H3 "Customer Reviews"
+    const anchor = document.getElementById('reviewsAnchor');
     const createCard = document.getElementById('createReviewCard');
     if (!anchor || !createCard) return;
 
-    if (!mq.matches) { // mobile: reset
-      createCard.style.marginTop = '';
-      return;
-    }
+    if (!mq.matches) { createCard.style.marginTop = ''; return; }
 
     const extraDown = 14;
     const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
     const cardTop   = createCard.getBoundingClientRect().top + window.scrollY;
     const delta = anchorTop - cardTop;
-    const topMargin = (delta > 0 ? delta : 0) + extraDown;
-    createCard.style.marginTop = topMargin + 'px';
+    createCard.style.marginTop = ((delta>0?delta:0)+extraDown) + 'px';
   }
   window.addEventListener('resize', alignCreateReview);
   window.addEventListener('load', alignCreateReview);
