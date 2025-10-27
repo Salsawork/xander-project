@@ -109,4 +109,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Bracket::class, 'player_name', 'name')->latestOfMany('id');
     }
+
+    public function eventRegistrations()
+    {
+        return $this->hasMany(EventRegistration::class, 'user_id');
+    }
 }

@@ -6,7 +6,9 @@
 
     <style>
         :root {
-            color-scheme: dark;
+            --match-height: 88px;
+            /* Height of a match box (2 players) */
+            --base-gap: 20px;
         }
 
         :root,
@@ -145,26 +147,28 @@
         .matches-wrapper {
             display: flex;
             flex-direction: column;
-            justify-content: space-evenly;
             height: 100%;
-            min-height: 400px;
         }
 
         /* Dynamic spacing based on number of matches */
         .bracket-round.round-1 .matches-wrapper {
-            gap: 40px;
+            gap: var(--base-gap);
         }
 
         .bracket-round.round-2 .matches-wrapper {
-            gap: 140px;
+            gap: calc(var(--match-height) + var(--base-gap) * 2);
         }
 
         .bracket-round.round-3 .matches-wrapper {
-            gap: 340px;
+            gap: calc(var(--match-height) * 3 + var(--base-gap) * 4);
         }
 
         .bracket-round.round-4 .matches-wrapper {
-            gap: 740px;
+            gap: calc(var(--match-height) * 7 + var(--base-gap) * 8);
+        }
+
+        .bracket-round.round-5 .matches-wrapper {
+            gap: calc(var(--match-height) * 15 + var(--base-gap) * 16);
         }
 
         /* SVG Connector Container */
@@ -192,8 +196,8 @@
         }
 
         /* ============================================
-           RESPONSIVE STYLES
-           ============================================ */
+               RESPONSIVE STYLES
+               ============================================ */
 
         /* Mobile Styles (< 640px) */
         @media (max-width: 640px) {

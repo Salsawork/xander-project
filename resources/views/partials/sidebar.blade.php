@@ -7,5 +7,7 @@
         @include('partials.sidebar.venue')
     @elseif(auth()->user()->roles == 'athlete')
         @include('partials.sidebar.athlete')
+    @elseif(auth()->user()->roles == 'player')
+        @include('partials.sidebar.player')
     @endif
 @endauth

@@ -61,7 +61,7 @@
                 @endif
             </span>
             <span class="font-bold">{{ number_format($schedule->price, 0, ',', '.') }} <span
-                    class="text-sm font-normal">/ session</span></span>
+                    class="text-sm font-normal">/ Hour</span></span>
         </div>
     </div>
     @endforeach

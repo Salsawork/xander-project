@@ -94,6 +94,8 @@ class LoginController extends Controller
                 return redirect()->route('athlete.dashboard');
             } elseif ($user->roles === 'user') {
                 return redirect()->route('profile.edit');
+            } elseif ($user->roles === 'player') {
+                return redirect()->route('profile.edit');
             }
         }
 

@@ -25,7 +25,8 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ShippingController;
-use App\Http\Controllers\TicketController; // <-- NEW
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketPlayerController;
 
 // Event Admin
 use App\Http\Controllers\adminController\EventController as AdminEventController;
@@ -244,7 +245,8 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/booking', fn() => view('dash.user.booking'))->name('booking.index');
 
     /** Ticket page (NEW) */
-    Route::get('dashboard/ticket', [TicketController::class, 'index'])->name('ticket.index'); // <-- NEW
+    Route::get('dashboard/ticket', [TicketController::class, 'index'])->name('ticket.index');
+    Route::get('dashboard/ticket/player', [TicketPlayerController::class, 'index'])->name('ticket.player.index');
 
     /** Profile */
     Route::get('dashboard/profile', [ProfileController::class, 'edit'])->name('profile.edit');
