@@ -63,7 +63,7 @@
 
             {{-- Biaya (Rupiah) pakai pair: *_view + hidden name="price_ticket" --}}
             <div>
-              <label class="form-label" for="price_ticket_view">Biaya (Rp)</label>
+              <label class="form-label" for="price_ticket_view">Harga Tiket (Rp)</label>
               <input id="price_ticket_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 150.000"
                      value="{{ old('price_ticket') ? number_format((int)preg_replace('/\D/','', old('price_ticket')), 0, ',', '.') : '' }}">
               <input type="hidden" id="price_ticket" name="price_ticket" value="{{ (int)preg_replace('/\D/','', old('price_ticket', '')) }}">
@@ -72,9 +72,25 @@
 
             {{-- Stok --}}
             <div>
-              <label class="form-label" for="stock">Stok</label>
+              <label class="form-label" for="stock">Stok Tiket</label>
               <input name="stock" value="{{ old('stock') }}" id="stock" type="number" class="form-input" placeholder="0">
               @error('stock') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Harga tiket player --}}
+            <div>
+              <label class="form-label" for="price_player_view">Harga Tiket Pemain(Rp)</label>
+              <input id="price_player_view" type="text" inputmode="numeric" autocomplete="off" class="form-input" placeholder="Misal: 150.000"
+                     value="{{ old('price_ticket_player') ? number_format((int)preg_replace('/\D/','', old('price_ticket_player')), 0, ',', '.') : '' }}">
+              <input type="hidden" id="price_ticket_player" name="price_ticket_player" value="{{ (int)preg_replace('/\D/','', old('price_ticket_player', '')) }}">
+              @error('price_ticket_player') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Slot Player --}}
+            <div>
+              <label class="form-label" for="player_slots">Slot Player</label>
+              <input name="player_slots" value="{{ old('player_slots') }}" id="player_slots" type="number" class="form-input" placeholder="0">
+              @error('player_slots') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
 
             <div>
@@ -174,7 +190,7 @@
           </div>
 
           <div>
-            <label class="form-label" for="image_url">Gambar Event</label>
+            <label class="form-label" for="image_url">Gambar Event (Wajib diisi)</label>
             <input name="image_url" id="image_url" type="file" accept="image/*" class="form-input">
             @error('image_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
           </div>
@@ -223,6 +239,7 @@
   document.addEventListener('DOMContentLoaded', () => {
       // Bind semua field rupiah
       bindRupiahPair('price_ticket_view',      'price_ticket');
+      bindRupiahPair('price_player_view',      'price_ticket_player');
       bindRupiahPair('total_prize_money_view', 'total_prize_money');
       bindRupiahPair('champion_prize_view',    'champion_prize');
       bindRupiahPair('runner_up_prize_view',   'runner_up_prize');
@@ -231,7 +248,7 @@
       // Pastikan hidden tetap digit sebelum submit
       const form = document.getElementById('eventForm');
       form.addEventListener('submit', () => {
-          ['price_ticket','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
+          ['price_ticket' ,'price_ticket_player','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
               .forEach(id => {
                   const el = document.getElementById(id);
                   if (el) {

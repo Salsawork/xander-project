@@ -254,6 +254,8 @@ class EventController extends Controller
                 'status'              => 'pending',
             ]);
     
+
+    
             // Ubah role user ke player
             if ($user->roles === 'user') {
                 $user->update(['roles' => 'player']);

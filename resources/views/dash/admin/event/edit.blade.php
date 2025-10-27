@@ -57,6 +57,7 @@
 
   // Ambil nilai mentah dari DB/old() sebagai integer untuk hidden
   $raw_price_ticket      = (int) old('price_ticket',      $event->price_ticket);
+  $raw_price_ticket_player      = (int) old('price_ticket_player',      $event->price_ticket_player);
   $raw_total_prize       = (int) old('total_prize_money', $event->total_prize_money);
   $raw_champion_prize    = (int) old('champion_prize',    $event->champion_prize);
   $raw_runner_up_prize   = (int) old('runner_up_prize',   $event->runner_up_prize);
@@ -166,7 +167,7 @@
               {{-- Biaya & Stok --}}
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="form-label" for="price_ticket_view">Biaya (Rp)</label>
+                  <label class="form-label" for="price_ticket_view">Harga Tiket (Rp)</label>
                   {{-- INPUT TAMPILAN --}}
                   <input class="form-input" id="price_ticket_view" type="text"
                          inputmode="numeric" autocomplete="off"
@@ -183,6 +184,28 @@
                          value="{{ old('stock', $event->stock) }}"
                          placeholder="Masukkan stok tiket">
                   @error('stock') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="form-label" for="price_ticket_player_show">Harga Tiket Pemain (Rp)</label>
+                  {{-- INPUT TAMPILAN --}}
+                  <input class="form-input" id="price_ticket_player_show" type="text"
+                         inputmode="numeric" autocomplete="off"
+                         value="{{ $fmt($raw_price_ticket_player) }}"
+                         placeholder="Misal: 150.000">
+                  {{-- INPUT MENTAH (DIKIRIM) --}}
+                  <input type="hidden" id="price_ticket_player" name="price_ticket_player"
+                         value="{{ $raw_price_ticket_player }}">
+                  @error('price_ticket_player') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                  <label class="form-label" for="player_slots">Stok</label>
+                  <input class="form-input" id="player_slots" name="player_slots" type="number"
+                         value="{{ old('player_slots', $event->player_slots) }}"
+                         placeholder="Masukkan stok tiket">
+                  @error('player_slots') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
               </div>
             </div>
@@ -309,6 +332,7 @@
   document.addEventListener('DOMContentLoaded', function() {
       // Pasangkan semua field rupiah
       bindRupiahPair('price_ticket_view',      'price_ticket');
+      bindRupiahPair('price_ticket_player_show',      'price_ticket_player');
       bindRupiahPair('total_prize_money_view', 'total_prize_money');
       bindRupiahPair('champion_prize_view',    'champion_prize');
       bindRupiahPair('runner_up_prize_view',   'runner_up_prize');
@@ -317,7 +341,7 @@
       // Saat submit: pastikan hidden tetap digits
       const form = document.getElementById('eventEditForm');
       form.addEventListener('submit', () => {
-          ['price_ticket','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
+          ['price_ticket', 'price_ticket_player','total_prize_money','champion_prize','runner_up_prize','third_place_prize']
               .forEach(id => {
                   const el = document.getElementById(id);
                   if (el) {

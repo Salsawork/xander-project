@@ -61,6 +61,7 @@
                 break;
             case 'player':
                 $settingsRoute = route('profile.edit');
+                break;
             default:
                 $settingsRoute = route('dashboard'); // fallback jika role tidak dikenali
                 break;

@@ -1,5 +1,5 @@
 @extends('app')
-@section('title', ($event->name ?? 'Event') . ' - Xander Billiard')
+@section('title', ($events->name ?? 'Event') . ' - Xander Billiard')
 
 @push('styles')
 <style>
@@ -82,13 +82,13 @@
 
     // Resolve hero image
     $hero = null;
-    if (!empty($event->image_url)) {
-        $raw = trim($event->image_url);
+    if (!empty($events->image_url)) {
+        $raw = trim($events->image_url);
         $hero = preg_match('/^https?:\/\//i', $raw) ? $raw : asset('images/events/' . basename($raw));
     }
 
-    $startDate = $fmtDate($event->start_date ?? null);
-    $endDate   = $fmtDate($event->end_date ?? null);
+    $startDate = $fmtDate($events->start_date ?? null);
+    $endDate   = $fmtDate($events->end_date ?? null);
     $dateRange = $startDate && $endDate ? ($startDate . ' — ' . $endDate) : ($startDate ?: ($endDate ?: null));
 @endphp
 
@@ -99,7 +99,7 @@
       <div class="breadcrumbs flex items-center gap-2 text-gray-400 overflow-x-auto no-scrollbar">
         <a href="{{ route('events.list') }}" class="hover:text-white">Events</a>
         <span>/</span>
-        <span class="text-white line-clamp-1">{{ $event->name ?? 'Event' }}</span>
+        <span class="text-white line-clamp-1">{{ $events->name ?? 'Event' }}</span>
       </div>
     </div>
   </nav>
@@ -108,22 +108,22 @@
   <header class="px-4 sm:px-6 lg:px-24 pt-4">
     <div class="container-narrow">
       <div class="flex flex-wrap items-center gap-3 mb-2">
-        @if(!empty($event->status))
-          <span class="pill">{{ $event->status }}</span>
+        @if(!empty($events->status))
+          <span class="pill">{{ $events->status }}</span>
         @endif
       </div>
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
-        {{ $event->name ?? 'Event' }}
+        {{ $events->name ?? 'Event' }}
       </h1>
       <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base text-gray-400">
         @if($dateRange)
           <div class="flex items-center gap-2"><i class="far fa-calendar"></i><span>{{ $dateRange }}</span></div>
         @endif
-        @if(!empty($event->location))
-          <div class="flex items-center gap-2"><i class="fas fa-map-marker-alt"></i><span>{{ $event->location }}</span></div>
+        @if(!empty($events->location))
+          <div class="flex items-center gap-2"><i class="fas fa-map-marker-alt"></i><span>{{ $events->location }}</span></div>
         @endif
-        @if(!empty($event->game_types))
-          <div class="flex items-center gap-2"><i class="fas fa-bullseye"></i><span class="muted">{{ $event->game_types }}</span></div>
+        @if(!empty($events->game_types))
+          <div class="flex items-center gap-2"><i class="fas fa-bullseye"></i><span class="muted">{{ $events->game_types }}</span></div>
         @endif
       </div>
     </div>
@@ -133,7 +133,7 @@
   <section class="px-4 sm:px-6 lg:px-24 mt-5 mb-6">
     <div class="container-narrow">
       @if ($hero)
-        <img src="{{ $hero }}" alt="{{ $event->name ?? 'Event' }}" class="img-hero shadow-soft" style="max-height: 520px;">
+        <img src="{{ $hero }}" alt="{{ $events->name ?? 'Event' }}" class="img-hero shadow-soft" style="max-height: 520px;">
       @else
         <div class="w-full h-[220px] sm:h-[320px] md:h-[420px] bg-gray-800 rounded-2xl grid place-items-center shadow-soft">
           <i class="far fa-image text-5xl text-gray-600"></i>
@@ -150,10 +150,10 @@
         <article class="lg:col-span-2">
           <div class="article-content">
             {{-- Deskripsi: pertahankan line break --}}
-            @if(!empty($event->description))
+            @if(!empty($events->description))
               <h2 class="text-xl sm:text-2xl font-bold">Tentang Event</h2>
               <div class="text-[0.98rem] sm:text-base text-gray-300 mb-6">
-                {!! nl2br(e($event->description)) !!}
+                {!! nl2br(e($events->description)) !!}
               </div>
             @endif
 
@@ -163,36 +163,36 @@
                 <div class="text-xs text-gray-400 mb-1">Biaya Tiket</div>
                 <div class="text-lg font-semibold">
                   @php
-                    $rp = (int)($event->price_ticket ?? 0);
+                    $rp = (int)($events->price_ticket ?? 0);
                     echo $rp > 0 ? 'Rp. ' . number_format($rp,0,',','.') . ',-' : '—';
                   @endphp
                 </div>
               </div>
               <div class="bg-[#111827] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Stok Tiket</div>
-                <div class="text-lg font-semibold">{{ (int)($event->stock ?? 0) > 0 ? (int)$event->stock : '—' }}</div>
+                <div class="text-lg font-semibold">{{ (int)($events->stock ?? 0) > 0 ? (int)$events->stock : '—' }}</div>
               </div>
-              <div class="bg-[#111827] border border-white/10 rounded-xl p-4">
+              {{-- <div class="bg-[#111827] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Divisi</div>
-                <div class="text-base">{{ $event->divisions ?: '—' }}</div>
-              </div>
-              <div class="bg-[#111827] border border-white/10 rounded-xl p-4">
+                <div class="text-base">{{ $events->divisions ?: '—' }}</div>
+              </div> --}}
+              {{-- <div class="bg-[#111827] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Sosial Media</div>
-                <div class="text-base">{{ $event->social_media_handle ?: '—' }}</div>
-              </div>
+                <div class="text-base">{{ $events->social_media_handle ?: '—' }}</div>
+              </div> --}}
             </div>
 
             {{-- Format Pertandingan --}}
-            @if(!empty($event->match_style) || !empty($event->finals_format))
+            @if(!empty($events->match_style) || !empty($events->finals_format))
               <h3 class="text-lg sm:text-xl font-bold mb-3">Format Pertandingan</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 <div class="bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                   <div class="text-xs text-gray-400 mb-1">Format Umum</div>
-                  <div class="font-semibold">{{ $event->match_style ?? '—' }}</div>
+                  <div class="font-semibold">{{ $events->match_style ?? '—' }}</div>
                 </div>
                 <div class="bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                   <div class="text-xs text-gray-400 mb-1">Format Final</div>
-                  <div class="font-semibold">{{ $event->finals_format ?? '—' }}</div>
+                  <div class="font-semibold">{{ $events->finals_format ?? '—' }}</div>
                 </div>
               </div>
             @endif
@@ -203,25 +203,25 @@
               <div class="sm:col-span-3 bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Total Hadiah</div>
                 <div class="text-xl font-extrabold">
-                  @php $n=(int)($event->total_prize_money ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
+                  @php $n=(int)($events->total_prize_money ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
                 </div>
               </div>
               <div class="bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Juara 1</div>
                 <div class="text-lg font-semibold">
-                  @php $n=(int)($event->champion_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
+                  @php $n=(int)($events->champion_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
                 </div>
               </div>
               <div class="bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Juara 2</div>
                 <div class="text-lg font-semibold">
-                  @php $n=(int)($event->runner_up_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
+                  @php $n=(int)($events->runner_up_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
                 </div>
               </div>
               <div class="bg-gradient-to-b from-[#111827] to-[#0f172a] border border-white/10 rounded-xl p-4">
                 <div class="text-xs text-gray-400 mb-1">Juara 3</div>
                 <div class="text-lg font-semibold">
-                  @php $n=(int)($event->third_place_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
+                  @php $n=(int)($events->third_place_prize ?? 0); echo $n>0?'Rp. '.number_format($n,0,',','.').',-':'—'; @endphp
                 </div>
               </div>
             </div>
