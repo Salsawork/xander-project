@@ -8,7 +8,7 @@
             --page-bg: #0f0f0f;
             --card-bg: #161616;
             --card-border: #2a2a2a;
-            --hover-accent: #828282; /* warna hover yang diminta */
+            --hover-accent: #828282;
         }
 
         html, body {
@@ -32,7 +32,58 @@
         .no-scrollbar::-webkit-scrollbar{ display:none; }
         .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
 
-        /* ==== CARD PRODUK (tanpa overlay hitam) ==== */
+        /* ==== IMAGE LOADING STATES ==== */
+        .img-wrapper {
+            position: relative;
+            background: var(--card-bg);
+            overflow: hidden;
+        }
+
+        .img-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            z-index: 1;
+        }
+
+        .img-loading.hidden {
+            display: none;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(130, 130, 130, 0.2);
+            border-top-color: var(--hover-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Camera Icon Fallback */
+        .camera-icon {
+            width: 48px;
+            height: 48px;
+            color: rgba(130, 130, 130, 0.4);
+        }
+
+        .img-wrapper img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .img-wrapper img.loaded {
+            opacity: 1;
+        }
+
+        /* ==== CARD PRODUK ==== */
         .tp-card-ui{
             position: relative;
             background: var(--card-bg);
@@ -87,7 +138,7 @@
         .tp-meta h3{ transition: color .2s ease; }
         .tp-card-ui:hover .tp-meta h3{ color:#f3f3f3; }
 
-        /* ==== CHIP FILTER BUTTON (hover #828282) ==== */
+        /* ==== CHIP FILTER BUTTON ==== */
         .chip-btn{
             border-radius: 9999px;
             border: 1px solid #616161;
@@ -113,6 +164,16 @@
         /* Services card */
         .svc-card{ border:1px solid rgba(255,255,255,.18); background:#161616; border-radius:16px; transition:.25s ease; }
         .svc-card:hover{ transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+
+        /* Event Image Loading */
+        .event-img-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .event-img-wrapper .img-loading {
+            background: rgba(22, 22, 22, 0.95);
+        }
     </style>
 @endpush
 
@@ -163,10 +224,36 @@
             updateNav();
         }
 
+        // Image Loading Handler
+        function initImageLoading() {
+            const images = document.querySelectorAll('img[data-lazy-load]');
+            
+            images.forEach(img => {
+                const wrapper = img.closest('.img-wrapper, .event-img-wrapper');
+                const loader = wrapper?.querySelector('.img-loading');
+                
+                if (img.complete) {
+                    img.classList.add('loaded');
+                    if (loader) loader.classList.add('hidden');
+                } else {
+                    img.addEventListener('load', function() {
+                        this.classList.add('loaded');
+                        if (loader) loader.classList.add('hidden');
+                    });
+                    
+                    img.addEventListener('error', function() {
+                        this.classList.add('loaded');
+                        if (loader) loader.classList.add('hidden');
+                    });
+                }
+            });
+        }
+
         window.addEventListener('load', () => {
             setViewportVars();
             setHeaderHeightVar();
             initTopPicksSlider();
+            initImageLoading();
         });
         window.addEventListener('resize', () => {
             setViewportVars();
@@ -194,7 +281,7 @@
                         20% Off on All Billiard <br class="hidden sm:block" /> Accessories!
                     </h1>
                     <p class="hero-lead text-base md:text-lg text-white/85 leading-relaxed mb-8 max-w-prose">
-                        Save 20% on all our premium billiard accessories. Don’t miss out—shop now and grab this exclusive offer while it lasts!
+                        Save 20% on all our premium billiard accessories. Don't miss out—shop now and grab this exclusive offer while it lasts!
                     </p>
                     <a href="{{ route('products.landing') }}"
                        class="hero-btn inline-flex items-center rounded-md bg-[#2a2a2a] px-5 py-2.5 text-sm md:text-base font-medium
@@ -215,9 +302,7 @@
     </div>
 
     <div class="flex flex-wrap gap-3 mb-8">
-      <!-- NEW: All (reset ke halaman ini untuk menampilkan produk awal) -->
       <a href="{{ url()->current() }}"><button class="chip-btn">All</button></a>
-
       <a href="{{ route('level', ['level' => 'professional']) }}"><button class="chip-btn">Professional Grade</button></a>
       <a href="{{ route('level', ['level' => 'beginner']) }}"><button class="chip-btn">Beginner-Friendly</button></a>
       <a href="{{ route('level', ['level' => 'under50']) }}"><button class="chip-btn">Under $50</button></a>
@@ -227,25 +312,18 @@
     @php
       use Illuminate\Pagination\LengthAwarePaginator;
 
-      // Ambil koleksi raw (support kalau $products itu paginator/collection/array)
       $rawItems = ($products instanceof LengthAwarePaginator)
         ? collect($products->items())
         : collect($products ?? []);
 
-      // Deteksi mobile via User-Agent
       $ua       = request()->header('User-Agent', '');
       $isMobile = (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i', $ua);
 
-      // --- Penting: di MOBILE acak setiap reload ---
       $itemsMobile = $isMobile ? $rawItems->shuffle() : $rawItems;
-
-      // Desktop/Tablet tetap pakai urutan asli
       $itemsDesktop = $rawItems;
 
-      // ====== BASE URL produk CDN + helper generator ======
       $PRODUCT_CDN = 'https://demo-xanders.ptbmn.id/images/products/';
       $productImg = function ($images) use ($PRODUCT_CDN) {
-          // $images bisa array JSON/string array atau null
           $arr = is_array($images) ? $images : ($images ? json_decode($images, true) : []);
           $first = $arr[0] ?? null;
           $file  = $first ? basename((string)$first) : null;
@@ -257,7 +335,7 @@
       $defaultCdnImg = $PRODUCT_CDN . 'placeholder.png';
     @endphp
 
-    <!-- MOBILE (acak setiap reload) -->
+    <!-- MOBILE -->
     <div class="md:hidden">
       <div class="grid grid-cols-2 gap-4 px-2">
         @forelse ($itemsMobile as $product)
@@ -273,12 +351,19 @@
 
           <article class="tp-card-ui group">
             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
-              <div class="relative w-full aspect-[3/4] tp-imgwrap">
-                <img src="{{ $src }}" alt="{{ $product->name }}"
+              <div class="relative w-full aspect-[3/4] tp-imgwrap img-wrapper">
+                <!-- Loading State -->
+                <div class="img-loading">
+                  <div class="spinner"></div>
+                </div>
+                
+                <img src="{{ $src }}" 
+                     alt="{{ $product->name }}"
+                     data-lazy-load
                      onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
                 <span class="shine"></span>
                 @if ($hasDisc)
-                  <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full">
+                  <span class="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-extrabold px-2 py-1 rounded-full z-10">
                     -{{ number_format($discPct, 0) }}%
                   </span>
                 @endif
@@ -307,7 +392,7 @@
       </div>
     </div>
 
-    <!-- DESKTOP/TABLET (urutan asli) -->
+    <!-- DESKTOP/TABLET -->
     <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
       @forelse ($itemsDesktop as $product)
         @php
@@ -322,12 +407,19 @@
 
         <article class="tp-card-ui group">
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
-            <div class="relative aspect-[3/4] w-full tp-imgwrap">
-              <img src="{{ $src }}" alt="{{ $product->name }}"
+            <div class="relative aspect-[3/4] w-full tp-imgwrap img-wrapper">
+              <!-- Loading State -->
+              <div class="img-loading">
+                <div class="spinner"></div>
+              </div>
+              
+              <img src="{{ $src }}" 
+                   alt="{{ $product->name }}"
+                   data-lazy-load
                    onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
               <span class="shine"></span>
               @if ($hasDisc)
-                <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full">
+                <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-1 rounded-full z-10">
                   -{{ number_format($discPct, 0) }}%
                 </span>
               @endif
@@ -358,7 +450,6 @@
   </div>
 </section>
 
-
     <!-- Jumbotron 2 - Guidelines -->
     <section class="relative bg-cover bg-center min-h=[70vh] md:h-screen flex items-center"
              style="background-image: url('/images/jumbotron2.png')">
@@ -376,7 +467,7 @@
         </div>
     </section>
 
-    <!-- Services (klik ke detail; ambil dari model statik) -->
+    <!-- Services -->
     @php $svcHome = \App\Models\Service::take(6); @endphp
     <section class="relative bg-cover bg-center py-20 px-6 md:px-20"
              style="background-image: url('/images/bg/background_2.png')">
@@ -453,10 +544,8 @@
         use App\Models\Event;
         use Carbon\Carbon;
 
-        // BASE CDN untuk event images
         $EVENT_CDN = 'https://demo-xanders.ptbmn.id/images/events/';
 
-        // Helper membangun URL gambar event dari CDN:
         $eventImg = function ($path) use ($EVENT_CDN) {
             $filename = basename((string)$path);
             if (!$filename || $filename === '/' || $filename === '.' ) {
@@ -465,8 +554,6 @@
             return $EVENT_CDN . $filename;
         };
 
-        // === ACAK DI SETIAP RELOAD: pakai inRandomOrder() ===
-        // Ambil total 5 data acak: 1 untuk featured, 4 untuk side
         $latest   = Event::inRandomOrder()->take(5)->get();
         $featured = $latest->first();
         $side     = $latest->skip(1)->take(4);
@@ -506,9 +593,18 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- FEATURED CARD -->
             <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
-                <img src="{{ $eventImg($featured->image_url) }}" alt="{{ $featured->name }}"
-                     class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500"
-                     onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-hero.png') }}'"/>
+                <div class="event-img-wrapper absolute inset-0">
+                    <!-- Loading State -->
+                    <div class="img-loading">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <img src="{{ $eventImg($featured->image_url) }}" 
+                         alt="{{ $featured->name }}"
+                         data-lazy-load
+                         class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500"
+                         onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-hero.png') }}'"/>
+                </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
 
                 <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
@@ -539,14 +635,26 @@
                 <a href="{{ $showUrl($featured) }}" class="absolute inset-0 z-10" aria-label="Open {{ $featured->name }}"></a>
             </article>
 
-            <!-- SIDE LIST - MAKSIMAL 4 ITEM -->
+            <!-- SIDE LIST -->
             <aside class="flex flex-col h-[420px] md:h-[520px]">
                 <div class="flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-neutral-800/50">
                     @forelse ($side as $e)
                         <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition group flex-shrink-0">
-                            <img src="{{ $eventImg($e->image_url) }}" alt="{{ $e->name }}"
-                                 class="w-24 md:w-28 h-24 md:h-28 object-cover rounded-md bg-neutral-700 flex-shrink-0"
-                                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-thumb.png') }}'"/>
+                            <div class="event-img-wrapper w-24 md:w-28 h-24 md:h-28 rounded-md bg-neutral-700 flex-shrink-0 relative overflow-hidden">
+                                <!-- Loading State -->
+                                <div class="img-loading">
+                                    <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                                
+                                <img src="{{ $eventImg($e->image_url) }}" 
+                                     alt="{{ $e->name }}"
+                                     data-lazy-load
+                                     class="absolute inset-0 w-full h-full object-cover"
+                                     onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-thumb.png') }}'"/>
+                            </div>
                             <div class="flex flex-col justify-start flex-1 min-w-0">
                                 <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline line-clamp-2">{{ $e->name }}</h4>
                                 <div class="mt-1 flex flex-wrap gap-1.5 text-[10px] md:text-xs text-gray-300">

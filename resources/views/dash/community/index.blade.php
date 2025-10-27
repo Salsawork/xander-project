@@ -32,37 +32,99 @@
 
   /* ======== MOBILE TUNING: banner lebih kecil & rapi ======== */
   @media (max-width: 640px){
-    /* Kurangi tinggi hero agar tidak “gede” di HP */
     .hero-viewport{
       height: min(calc(48vh - var(--header-h, 0px)), 420px);
       min-height: 260px;
     }
-    /* Optimalkan crop gambar agar fokus tidak kepotong aneh */
     .featured-slider .swiper-slide img {
       object-position: 60% center;
     }
-    /* Kecilkan tombol panah agar tidak menutupi konten */
     .slider-prev, .slider-next {
       padding: 6px;
       transform: translateY(-50%) scale(0.9);
     }
-    /* Perkecil titik pagination */
     .swiper-pagination-bullet { width: 6px; height: 6px; }
-    /* Sesuaikan tipografi agar muat rapi */
     .featured-slider .swiper-slide h1 {
-      font-size: clamp(1.1rem, 5.2vw, 1.5rem); /* ~17.6px–24px */
+      font-size: clamp(1.1rem, 5.2vw, 1.5rem);
       line-height: 1.25;
       margin-bottom: .5rem;
     }
     .featured-slider .swiper-slide p {
-      font-size: .9rem; /* ~14.4px */
+      font-size: .9rem;
     }
   }
 
   .swiper-pagination-bullet { background: #ffffff !important; opacity: .5; }
   .swiper-pagination-bullet-active { opacity: 1; }
+
+  /* =======================
+     IMAGE LOADING OVERLAY
+     ======================= */
+  .img-wrapper{ position: relative; background:#141414; width:100%; height:100%; overflow:hidden; }
+  .img-wrapper img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    opacity:0; transition:opacity .28s ease;
+  }
+  .img-wrapper img.loaded{ opacity:1; }
+  .img-loading{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px;
+    background:#151515; color:#9ca3af; z-index:1;
+  }
+  .img-loading.hidden{ display:none; }
+  .spinner{
+    width:42px; height:42px; border:3px solid rgba(130,130,130,.25);
+    border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .camera-icon{ width:38px; height:38px; opacity:.6; }
 </style>
 @endpush
+
+@php
+  /**
+   * Build kandidat URL gambar news:
+   * 1) Jika absolute URL → pakai langsung
+   * 2) Jika relative:
+   *    - storage/... (tetap)
+   *    - uploads/... → storage/uploads/...
+   *    - string lain → storage/uploads/{string}
+   * 3) Fallback FE: images/community/community-1.png
+   * 4) Last resort: placehold.co
+   */
+  $newsImgCandidates = function (?string $raw) {
+      $raw = is_string($raw) ? trim($raw) : '';
+      // Bersihkan localhost dev base yang mungkin ikut tersimpan
+      $clean = str_replace([
+        'http://127.0.0.1:8000','https://127.0.0.1:8000',
+        'http://localhost:8000','https://localhost:8000','http://localhost','https://localhost'
+      ], '', $raw);
+
+      $c = [];
+      if ($clean !== '') {
+          if (preg_match('~^https?://~i', $clean)) {
+              $c[] = $clean;
+          } else {
+              $path = ltrim($clean, '/');
+              if (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
+                  $c[] = asset($path);
+              } elseif (\Illuminate\Support\Str::startsWith($path, 'uploads/')) {
+                  $c[] = asset('storage/'.$path);
+              } else {
+                  $c[] = asset('storage/uploads/'.$path);
+              }
+          }
+      }
+      // Fallbacks FE-only
+      $c[] = asset('images/community/community-1.png');
+      // Last resort
+      $c[] = 'https://placehold.co/1200x800?text=No+Image';
+      // Unique
+      $uniq = [];
+      foreach ($c as $x) if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
+      return $uniq;
+  };
+@endphp
 
 @section('content')
   <!-- Hero Slider Section -->
@@ -85,42 +147,37 @@
         <div class="swiper-wrapper">
           @forelse($featuredNews as $news)
             @php
-              $raw = $news->image_url ?? '';
-              $raw = is_string($raw) ? $raw : '';
-              $clean = str_replace([
-                'http://127.0.0.1:8000','https://127.0.0.1:8000',
-                'http://localhost:8000','https://localhost:8000','http://localhost','https://localhost'
-              ], '', $raw);
-              if (preg_match('/^https?:\\/\\//i', $clean)) {
-                $imgSrc = $clean;
-              } else {
-                $clean = ltrim($clean, '/');
-                if (\Illuminate\Support\Str::startsWith($clean, 'storage/')) {
-                  $imgSrc = asset($clean);
-                } elseif (\Illuminate\Support\Str::startsWith($clean, 'uploads/')) {
-                  $imgSrc = asset('storage/'.$clean);
-                } elseif (!empty($clean)) {
-                  $imgSrc = asset('storage/uploads/'.$clean);
-                } else {
-                  $imgSrc = asset('images/community/community-1.png');
-                }
-              }
-              $fallbackBanner = asset('images/community/community-1.png');
+              $candidates = $newsImgCandidates($news->image_url ?? '');
+              $primary    = $candidates[0] ?? asset('images/community/community-1.png');
             @endphp
 
             <div class="swiper-slide">
               <div class="absolute inset-0">
-                <img src="{{ $imgSrc }}" alt="{{ $news->title }}" class="h-full w-full object-cover"
-                     onerror="this.onerror=null;this.src='{{ $fallbackBanner }}'">
-                <div class="absolute inset-0 bg-black/45"></div>
+                <!-- Wrapper + Loader -->
+                <div class="img-wrapper absolute inset-0 z-10">
+                  <div class="img-loading">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <div class="sr-only">Loading image...</div>
+                  </div>
+                  <img
+                    src="{{ $primary }}"
+                    data-src-candidates='@json($candidates)'
+                    data-lazy-img
+                    alt="{{ $news->title }}"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </div>
+                <!-- Black overlay di bawah loader -->
+                <div class="absolute inset-0 bg-black/45 z-0 pointer-events-none"></div>
               </div>
 
               <!-- Anchor overlay -->
               <a href="{{ route('community.news.show', $news) }}"
-                 class="absolute inset-0 z-10" aria-label="{{ $news->title }}"></a>
+                 class="absolute inset-0 z-20" aria-label="{{ $news->title }}"></a>
 
               <!-- Text -->
-              <div class="absolute inset-0 z-20 flex items-center">
+              <div class="absolute inset-0 z-30 flex items-center">
                 <div class="mx-auto w-full max-w-7xl px-6 md:px-16">
                   <div class="max-w-3xl translate-y-6 md:translate-y-10">
                     <p class="mb-2 text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
@@ -133,11 +190,13 @@
           @empty
             <div class="swiper-slide">
               <div class="absolute inset-0">
-                <img src="{{ asset('images/community/community-1.png') }}" alt="Community Banner"
-                     class="h-full w-full object-cover object-center">
-                <div class="absolute inset-0 bg-black/45"></div>
+                <div class="img-wrapper absolute inset-0 z-10">
+                  <div class="img-loading hidden"></div>
+                  <img src="{{ asset('images/community/community-1.png') }}" class="loaded" alt="Community Banner" />
+                </div>
+                <div class="absolute inset-0 bg-black/45 z-0 pointer-events-none"></div>
               </div>
-              <div class="absolute inset-0 z-20 flex items-center">
+              <div class="absolute inset-0 z-30 flex items-center">
                 <div class="mx-auto w-full max-w-7xl px-6 md:px-16">
                   <div class="max-w-3xl translate-y-6 md:translate-y-10">
                     <p class="mb-2 text-sm text-gray-300">{{ now()->format('d F Y') }}</p>
@@ -171,21 +230,29 @@
 
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         @forelse($popularNews as $news)
-          @php $shareUrl = route('community.news.show', $news); @endphp
+          @php
+            $shareUrl   = route('community.news.show', $news);
+            $candidates = $newsImgCandidates($news->image_url ?? '');
+            $primary    = $candidates[0] ?? asset('images/community/community-1.png');
+          @endphp
           <!-- Card with Share bottom-right -->
           <a href="{{ $shareUrl }}"
              class="group relative overflow-hidden rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] flex flex-col hover:bg-[#303030] transition">
-            <div class="h-48 overflow-hidden {{ $news->image_url ? '' : 'bg-gray-800 flex items-center justify-center' }}">
-              @if($news->image_url)
-                <img src="{{ asset(ltrim(str_starts_with($news->image_url,'storage/') ? $news->image_url : 'storage/uploads/'.$news->image_url, '/')) }}"
-                     alt="{{ $news->title }}" class="h-full w-full object-cover"
-                     onerror="this.onerror=null;this.src='{{ asset('images/community/community-1.png') }}'">
-              @else
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-600 mx-auto my-14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              @endif
+            <div class="h-48 overflow-hidden">
+              <div class="img-wrapper relative w-full h-full">
+                <div class="img-loading">
+                  <div class="spinner" aria-hidden="true"></div>
+                  <div class="sr-only">Loading image...</div>
+                </div>
+                <img
+                  src="{{ $primary }}"
+                  data-src-candidates='@json($candidates)'
+                  data-lazy-img
+                  alt="{{ $news->title }}"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
             </div>
 
             <div class="p-4 pb-6">
@@ -218,162 +285,166 @@
     </div>
   </section>
 
-  <!-- Newsletter Section (slightly bigger than before) -->
-<section
-  class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
-         min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
-  style="background-image: url('{{ asset('images/community/background-1.png') }}')">
+  <!-- Newsletter Section -->
+  <section
+    class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
+           min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
+    style="background-image: url('{{ asset('images/community/background-1.png') }}')">
 
-  <!-- Gradient overlay -->
-  <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
-       style="background:linear-gradient(to right,
-          rgba(0,0,0,.88) 0%,
-          rgba(0,0,0,.76) 18%,
-          rgba(0,0,0,.62) 36%,
-          rgba(0,0,0,.45) 55%,
-          rgba(0,0,0,.28) 74%,
-          rgba(0,0,0,0) 100%);"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
+         style="background:linear-gradient(to right,
+            rgba(0,0,0,.88) 0%,
+            rgba(0,0,0,.76) 18%,
+            rgba(0,0,0,.62) 36%,
+            rgba(0,0,0,.45) 55%,
+            rgba(0,0,0,.28) 74%,
+            rgba(0,0,0,0) 100%);"></div>
 
-  <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
-    <div class="max-w-3xl">
-      <h2 class="text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
-        Receive Our Latest News Daily!
-      </h2>
-      <p class="mt-3 text-white/85 text-base md:text-lg">
-        We will send you our recent news and event right to your inbox
-      </p>
-
-      <form id="newsletterForm"
-            action="{{ route('subscribe.store') }}"
-            method="POST"
-            class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
-        @csrf
-        <input type="email" name="email" placeholder="Enter your Email"
-               class="h-12 sm:h-[56px] w-full sm:flex-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm
-                      px-5 text-white placeholder-white/70 caret-white shadow
-                      focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <button type="submit"
-                class="h-12 sm:h-[56px] shrink-0 rounded-md bg-gray-600 px-8 font-semibold text-white transition-colors
-                       hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
-          Subscribe
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <script>
-    (function(){
-      const form = document.getElementById('newsletterForm');
-      if(!form) return;
-      form.addEventListener('submit', function(){
-        const btn = form.querySelector('button[type="submit"]');
-        if(btn){
-          btn.disabled = true;
-          btn.classList.add('opacity-80','cursor-not-allowed');
-        }
-      }, { passive:true });
-    })();
-  </script>
-</section>
-
-
-<!-- Latest News Section -->
-<section class="relative bg-cover bg-center bg-no-repeat py-12"
-         style="background-image: url('{{ asset('images/bg/background_1.png') }}')">
-  <div class="container mx-auto px-4">
-    <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-white">LATEST NEWS</h2>
-      <a href="{{ route('community.news.index') }}" class="text-sm text-white hover:text-white/80">view all</a>
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-      @forelse($recentNews as $news)
-        @php $shareUrl = route('community.news.show', $news); @endphp
-        <a href="{{ $shareUrl }}"
-           class="group relative flex gap-4 rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] p-4 hover:bg-[#303030] transition">
-          <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md {{ $news->image_url ? '' : 'bg-gray-800 flex items-center justify-center' }}">
-            @if($news->image_url)
-              <img src="{{ asset(ltrim(str_starts_with($news->image_url,'storage/') ? $news->image_url : 'storage/uploads/'.$news->image_url, '/')) }}"
-                   alt="{{ $news->title }}" class="h-full w-full object-cover"
-                   onerror="this.onerror=null;this.src='{{ asset('images/community/community-1.png') }}'">
-            @else
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-600 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            @endif
-          </div>
-          <div class="flex-grow flex flex-col pr-12">
-            <h3 class="mb-2 text-lg font-semibold text-white group-hover:underline">{{ $news->title }}</h3>
-            <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
-          </div>
-
-          <!-- Share bottom-right (transparent) -->
-          <button type="button"
-                  class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
-                  style="right:12px;bottom:12px;background:transparent"
-                  aria-label="Share {{ $news->title }}"
-                  data-share-url="{{ $shareUrl }}"
-                  data-share-title="{{ $news->title }}"
-                  onclick="event.preventDefault(); event.stopPropagation(); handleShare(this);">
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="18" cy="8" r="2.25"></circle>
-              <circle cx="6"  cy="12" r="2.25"></circle>
-              <circle cx="18" cy="16" r="2.25"></circle>
-              <path d="M8.1 12.7l7.8 3.6M15.9 7.7L8.1 11.3"></path>
-            </svg>
-          </button>
-        </a>
-      @empty
-        <div class="col-span-2 text-center py-10">
-          <p class="text-gray-400">No recent news available at the moment.</p>
-        </div>
-      @endforelse
-    </div>
-  </div>
-</section>
-
-
-  <!-- Chatroom Section (matched size to Newsletter) -->
-<section
-  class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
-         min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
-  style="background-image: url('{{ asset('images/community/background-2.png') }}')">
-
-  <!-- Gradient overlay -->
-  <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
-       style="background:linear-gradient(to right,
-          rgba(0,0,0,.88) 0%,
-          rgba(0,0,0,.76) 18%,
-          rgba(0,0,0,.62) 36%,
-          rgba(0,0,0,.45) 55%,
-          rgba(0,0,0,.28) 74%,
-          rgba(0,0,0,0) 100%);"></div>
-
-  <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
-    <div class="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
-      <div class="md:w-1/2">
-        <h2 class="mb-3 text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
-          JOIN OUR CHATROOM NOW!
+    <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
+      <div class="max-w-3xl">
+        <h2 class="text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
+          Receive Our Latest News Daily!
         </h2>
-        <p class="mb-6 text-white/90 text-base md:text-lg">
-          Join a growing community of players with real-time discussions.
+        <p class="mt-3 text-white/85 text-base md:text-lg">
+          We will send you our recent news and event right to your inbox
         </p>
-        <a href="#"
-           class="inline-block rounded-md bg-gray-600 px-8 py-3 font-semibold text-white
-                  hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
-          Chat Now
-        </a>
-      </div>
 
-      <!-- Optional right-side visual / placeholder (kept responsive & non-blocking) -->
-      <div class="md:w-1/2 hidden md:block">
-        <!-- Tambahkan gambar/ilustrasi jika ada -->
-        <!-- <img src="{{ asset('images/community/chat-illustration.png') }}" class="w-full h-auto rounded-lg" alt="Chatroom"> -->
+        <form id="newsletterForm"
+              action="{{ route('subscribe.store') }}"
+              method="POST"
+              class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
+          @csrf
+          <input type="email" name="email" placeholder="Enter your Email"
+                 class="h-12 sm:h-[56px] w-full sm:flex-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm
+                        px-5 text-white placeholder-white/70 caret-white shadow
+                        focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="submit"
+                  class="h-12 sm:h-[56px] shrink-0 rounded-md bg-gray-600 px-8 font-semibold text-white transition-colors
+                         hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
+            Subscribe
+          </button>
+        </form>
       </div>
     </div>
-  </div>
-</section>
+
+    <script>
+      (function(){
+        const form = document.getElementById('newsletterForm');
+        if(!form) return;
+        form.addEventListener('submit', function(){
+          const btn = form.querySelector('button[type="submit"]');
+          if(btn){
+            btn.disabled = true;
+            btn.classList.add('opacity-80','cursor-not-allowed');
+          }
+        }, { passive:true });
+      })();
+    </script>
+  </section>
+
+
+  <!-- Latest News Section -->
+  <section class="relative bg-cover bg-center bg-no-repeat py-12"
+           style="background-image: url('{{ asset('images/bg/background_1.png') }}')">
+    <div class="container mx-auto px-4">
+      <div class="mb-6 flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-white">LATEST NEWS</h2>
+        <a href="{{ route('community.news.index') }}" class="text-sm text-white hover:text-white/80">view all</a>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        @forelse($recentNews as $news)
+          @php
+            $shareUrl   = route('community.news.show', $news);
+            $candidates = $newsImgCandidates($news->image_url ?? '');
+            $primary    = $candidates[0] ?? asset('images/community/community-1.png');
+          @endphp
+          <a href="{{ $shareUrl }}"
+             class="group relative flex gap-4 rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] p-4 hover:bg-[#303030] transition">
+            <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
+              <div class="img-wrapper relative w-full h-full">
+                <div class="img-loading">
+                  <div class="spinner" aria-hidden="true"></div>
+                  <div class="sr-only">Loading image...</div>
+                </div>
+                <img
+                  src="{{ $primary }}"
+                  data-src-candidates='@json($candidates)'
+                  data-lazy-img
+                  alt="{{ $news->title }}"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+            <div class="flex-grow flex flex-col pr-12">
+              <h3 class="mb-2 text-lg font-semibold text-white group-hover:underline">{{ $news->title }}</h3>
+              <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
+            </div>
+
+            <!-- Share bottom-right (transparent) -->
+            <button type="button"
+                    class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
+                    style="right:12px;bottom:12px;background:transparent"
+                    aria-label="Share {{ $news->title }}"
+                    data-share-url="{{ $shareUrl }}"
+                    data-share-title="{{ $news->title }}"
+                    onclick="event.preventDefault(); event.stopPropagation(); handleShare(this);">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="8" r="2.25"></circle>
+                <circle cx="6"  cy="12" r="2.25"></circle>
+                <circle cx="18" cy="16" r="2.25"></circle>
+                <path d="M8.1 12.7l7.8 3.6M15.9 7.7L8.1 11.3"></path>
+              </svg>
+            </button>
+          </a>
+        @empty
+          <div class="col-span-2 text-center py-10">
+            <p class="text-gray-400">No recent news available at the moment.</p>
+          </div>
+        @endforelse
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Chatroom Section -->
+  <section
+    class="relative isolate overflow-hidden bg-cover bg-center bg-no-repeat
+           min-h-[40vh] md:min-h-[46vh] lg:min-h-[52vh]"
+    style="background-image: url('{{ asset('images/community/background-2.png') }}')">
+
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0"
+         style="background:linear-gradient(to right,
+            rgba(0,0,0,.88) 0%,
+            rgba(0,0,0,.76) 18%,
+            rgba(0,0,0,.62) 36%,
+            rgba(0,0,0,.45) 55%,
+            rgba(0,0,0,.28) 74%,
+            rgba(0,0,0,0) 100%);"></div>
+
+    <div class="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-18 lg:py-20">
+      <div class="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+        <div class="md:w-1/2">
+          <h2 class="mb-3 text-3xl sm:text-4xl md:text-[52px] leading-tight font-extrabold text-white tracking-tight">
+            JOIN OUR CHATROOM NOW!
+          </h2>
+          <p class="mb-6 text-white/90 text-base md:text-lg">
+            Join a growing community of players with real-time discussions.
+          </p>
+          <a href="#"
+             class="inline-block rounded-md bg-gray-600 px-8 py-3 font-semibold text-white
+                    hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white/20">
+            Chat Now
+          </a>
+        </div>
+
+        <div class="md:w-1/2 hidden md:block">
+          <!-- Optional illustration -->
+        </div>
+      </div>
+    </div>
+  </section>
 
 
   <!-- Feedback Section -->
@@ -427,7 +498,7 @@
                 <label class="block flex-1">
                   <span class="mb-1 block text-sm text-white/80">Description</span>
                   <textarea rows="8" name="description" placeholder="Enter your description"
-                            class="h-full min-h-[200px] w-full rounded-xl border border-[#3A3A3A] bg-[#1E1E1E] px-4 py-3
+                            class="h-full min-h[200px] w-full rounded-xl border border-[#3A3A3A] bg-[#1E1E1E] px-4 py-3
                                    text-white placeholder-white/60
                                    focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent"></textarea>
                 </label>
@@ -513,6 +584,47 @@
     setTimeout(() => { t.style.opacity = '0'; }, 1600);
   }
 
+  // ===== Unified image loader for all images with [data-lazy-img] =====
+  function initLazyImage(img){
+    if (!img) return;
+    const wrap   = img.closest('.img-wrapper');
+    const loader = wrap ? wrap.querySelector('.img-loading') : null;
+
+    function showCameraFallback(){
+      if (!loader) return;
+      loader.classList.remove('hidden');
+      loader.innerHTML = `
+        <svg class="camera-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9 2a1 1 0 0 0-.894.553L7.382 4H5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-2.382l-.724-1.447A1 1 0 0 0 14 2H9zm3 6a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+        </svg>
+        <div class="text-xs text-gray-400">No image available</div>
+      `;
+    }
+
+    const onLoad = () => {
+      img.classList.add('loaded');
+      loader && loader.classList.add('hidden');
+    };
+    img.addEventListener('load', onLoad, { passive:true });
+
+    let list = [];
+    try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]') || []; } catch(e){ list = []; }
+    let i = 0;
+
+    const onError = () => {
+      i++;
+      if (i < list.length) {
+        if (img.src !== list[i]) img.src = list[i];
+      } else {
+        showCameraFallback();
+      }
+    };
+    img.addEventListener('error', onError, { passive:true });
+
+    // If already cached
+    if (img.complete && img.naturalWidth > 0) onLoad();
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const swiper = new Swiper('.featured-slider', {
       loop: true,
@@ -521,6 +633,9 @@
       pagination: { el: '.swiper-pagination', clickable: true },
       navigation: { nextEl: '.slider-next', prevEl: '.slider-prev' },
     });
+
+    // Init all lazy images with spinner + fallback chain
+    document.querySelectorAll('img[data-lazy-img]').forEach(initLazyImage);
 
     // iOS overscroll guard
     (function(){

@@ -3,7 +3,7 @@
 @section('title', 'Sparring')
 
 @php
-    $cartCount     = count($cartProducts) + count($cartVenues) + count($cartSparrings);
+    $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
     // Koleksi lokasi (array/Collection) dari controller, fallback default jika kosong
     $locations = (isset($locations) && count($locations)) ? collect($locations) : collect(['Jakarta', 'Bandung', 'Surabaya', 'Medan']);
@@ -34,6 +34,38 @@
     $reqPriceMaxRaw = preg_replace('/\D+/', '', (string) request('price_max', ''));
     $reqPriceMinFmt = $reqPriceMinRaw !== '' ? number_format((int) $reqPriceMinRaw, 0, ',', '.') : '';
     $reqPriceMaxFmt = $reqPriceMaxRaw !== '' ? number_format((int) $reqPriceMaxRaw, 0, ',', '.') : '';
+
+    /**
+     * Kandidat URL gambar atlet (berantai):
+     * - Pertama: images/athlete/{basename dari DB}
+     * - Fallback FE-only: placeholder.webp -> athlete-1.png
+     * - Last resort: placehold.co (anti-404)
+     */
+    $athleteImgCandidates = function ($athlete) {
+        $c = [];
+
+        $raw = (string) ($athlete->athleteDetail->image ?? '');
+        if ($raw !== '') {
+            $name = basename(parse_url($raw, PHP_URL_PATH) ?? $raw);
+            if ($name && $name !== '/' && $name !== '.') {
+                $c[] = asset('images/athlete/' . $name);
+            }
+        }
+
+        // Fallbacks FE-only
+        $c[] = asset('images/athlete/placeholder.webp');
+        $c[] = asset('images/athlete/athlete-1.png');
+
+        // Last resort
+        $c[] = 'https://placehold.co/480x640?text=No+Image';
+
+        // Unik & bersih
+        $uniq = [];
+        foreach ($c as $x) {
+            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
+        }
+        return $uniq;
+    };
 @endphp
 
 @push('styles')
@@ -50,15 +82,14 @@
   @media (max-width:1023px){
     .mobile-filter-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40; display:none; }
     .mobile-filter-overlay.active{ display:block; }
-    /* HILANGKAN BACKGROUND HITAM DI FILTER (sidebar) */
+    /* Sidebar filter transparan (tanpa bg hitam) */
     .mobile-filter-sidebar{
       position:fixed; top:0; left:-100%;
       width:85%; max-width:340px; height:100%;
-      background:transparent; /* transparan */
+      background:transparent;
       z-index:50; transition:left .3s ease;
       overflow-y:auto; -webkit-overflow-scrolling:touch;
-      padding-bottom:24px;
-      border-right:0; /* hilangkan border gelap */
+      padding-bottom:24px; border-right:0;
     }
     .mobile-filter-sidebar.open{ left:0; }
   }
@@ -92,6 +123,40 @@
   }
   .chip:hover { border-color:#93c5fd; color:#dbeafe; background:rgba(147,197,253,.08); }
   .chip.active { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.15); }
+
+  /* =======================
+     IMAGE LOADING OVERLAY
+     ======================= */
+  .img-wrapper {
+    position: relative;
+    background: #171717;
+    overflow: hidden;
+  }
+  .img-wrapper img {
+    width:100%; height:100%; object-fit:cover; display:block;
+    opacity: 0; transition: opacity .3s ease;
+  }
+  .img-wrapper img.loaded { opacity: 1; }
+
+  .img-loading {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background: #171717;
+    z-index:1;
+  }
+  .img-loading.hidden { display:none; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(130,130,130,.25);
+    border-top-color: #9ca3af;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* (Opsional) ikon kamera untuk thumb kecil */
+  .camera-icon { width: 48px; height: 48px; color: rgba(130,130,130,.45); }
 </style>
 @endpush
 
@@ -131,14 +196,12 @@
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 px-4 sm:px-6 lg:px-24 py-6 lg:py-12" id="list">
     <!-- Filter -->
     <aside id="filterSparring" class="mobile-filter-sidebar lg:relative lg:left-0 lg:col-span-1">
-      <!-- GANTI top-24 -> top-0 AGAR SEJAJAR DENGAN ATAS KARTU -->
       <div class="px-4 lg:px-0 space-y-6 text-white text-sm lg:sticky lg:top-0">
         <div class="flex items-center justify-between mb-4 lg-hidden">
           <h3 class="text-lg font-semibold">Filter & Search</h3>
           <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
         </div>
 
-        <!-- HILANGKAN BACKGROUND HITAM DI FORM FILTER: hapus lg:bg-neutral-900 -->
         <form method="GET" action="{{ route('sparring.index') }}" class="space-y-4 rounded-xl lg:p-3" id="filterForm">
           <input type="hidden" name="pp" id="ppInput" value="{{ $pp }}"/>
 
@@ -150,8 +213,6 @@
                    class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
             <p class="text-xs text-gray-400 mt-1">Ketik kata kunci lalu klik tombol <strong>Filter</strong> untuk menerapkan.</p>
           </div>
-
-          <!-- (HAPUS) Date: blok tanggal dihilangkan -->
 
           <!-- Location (klik = submit otomatis) -->
           <div>
@@ -185,7 +246,7 @@
             </div>
           </div>
 
-          <!-- Price Range (INPUT TERFORMAT 1.000.000) -->
+          <!-- Price Range -->
           <div>
             <div class="flex items-center justify-between my-2 font-semibold border-b border-gray-500 pb-1">
               <span>Price Range</span>
@@ -224,20 +285,28 @@
     <section class="lg:col-span-4 flex flex-col gap-6">
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         @forelse ($athletes as $athlete)
-          {{-- LINK DENGAN SLUG --}}
+          @php
+            $candidates = $athleteImgCandidates($athlete);
+            $primarySrc = $candidates[0] ?? asset('images/athlete/athlete-1.png');
+          @endphp
+
           <a href="{{ route('sparring.detail', ['id' => $athlete->id, 'slug' => \Illuminate\Support\Str::slug($athlete->name)]) }}" class="block">
             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow">
-              <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3">
-                @if ($athlete->athleteDetail && $athlete->athleteDetail->image)
-                  <img src="{{ asset('images/athlete/' . $athlete->athleteDetail->image) }}"
-                       class="h-full w-full object-cover"
-                       alt="{{ $athlete->name }}"
-                       onerror="this.src='{{ asset('images/athlete/athlete-1.png') }}'">
-                @else
-                  <img src="{{ asset('images/athlete/athlete-1.png') }}"
-                       class="h-full w-full object-cover"
-                       alt="{{ $athlete->name }}">
-                @endif
+              <div class="aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3 img-wrapper">
+                <!-- Loading overlay -->
+                <div class="img-loading">
+                  <div class="spinner"></div>
+                </div>
+
+                <img
+                  src="{{ $primarySrc }}"
+                  data-src-candidates='@json($candidates)'
+                  data-lazy-load
+                  class="h-full w-full object-cover js-img-fallback"
+                  alt="{{ $athlete->name }}"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
               <h3 class="text-xs sm:text-sm font-medium line-clamp-2">{{ $athlete->name }}</h3>
               <p class="text-xs sm:text-sm text-gray-400 mt-1">
@@ -368,22 +437,19 @@
   });
 
   // ====== FORMAT INPUT UANG (IDR) UNTUK PRICE RANGE ======
-  function unformatIDR(str) {
-      return (str || '').replace(/[^\d]/g, ''); // ambil digit saja
-  }
+  function unformatIDR(str) { return (str || '').replace(/[^\d]/g, ''); }
   function formatIDR(str) {
       const digits = unformatIDR(str);
       if (!digits) return '';
-      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // 1000000 -> 1.000.000
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
   function attachMoneyFormatter() {
       const inputs = document.querySelectorAll('.money-input');
       inputs.forEach((inp) => {
-          // Format awal (jaga-jaga kalau belum diformat server)
+          // Format awal
           inp.value = formatIDR(inp.value);
-
-          // Format saat user mengetik (caret bisa lompat ke ujung; acceptable)
+          // Saat mengetik
           inp.addEventListener('input', () => {
               const before = inp.value;
               const caretBefore = inp.selectionStart;
@@ -391,30 +457,70 @@
 
               inp.value = formatIDR(before);
 
-              // perkiraan posisi caret (sederhana: tahan di akhir)
               const lenAfter = inp.value.length;
               const delta = lenAfter - lenBefore;
               const newPos = typeof caretBefore === 'number' ? Math.max(0, Math.min(lenAfter, caretBefore + delta)) : lenAfter;
               try { inp.setSelectionRange(newPos, newPos); } catch(e) {}
           });
-
-          // Pastikan terformat saat blur
-          inp.addEventListener('blur', () => {
-              inp.value = formatIDR(inp.value);
-          });
+          // Saat blur
+          inp.addEventListener('blur', () => { inp.value = formatIDR(inp.value); });
       });
 
-      // Saat submit form, kirimkan angka mentah (tanpa titik) ke server
+      // Submit kirim angka mentah
       const form = document.getElementById('filterForm');
       if (form) {
           form.addEventListener('submit', () => {
-              inputs.forEach((inp) => {
-                  inp.value = unformatIDR(inp.value);
-              });
+              inputs.forEach((inp) => { inp.value = unformatIDR(inp.value); });
           });
       }
   }
-
   document.addEventListener('DOMContentLoaded', attachMoneyFormatter);
+
+  // ===========================
+  // IMAGE LOADER + FALLBACK JS
+  // ===========================
+  function initImageLoading() {
+    document.querySelectorAll('img[data-lazy-load]').forEach((img) => {
+      const wrapper = img.closest('.img-wrapper');
+      const loader  = wrapper?.querySelector('.img-loading');
+
+      // Fade-in ketika load sukses
+      const onLoad = () => {
+        img.classList.add('loaded');
+        if (loader) loader.classList.add('hidden');
+      };
+      img.addEventListener('load', onLoad, { passive: true });
+
+      // Fallback berantai dari data-src-candidates
+      try {
+        const list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+        let i = 0;
+        const onErr = () => {
+          i++;
+          if (i < list.length) {
+            if (img.src !== list[i]) img.src = list[i];
+          } else {
+            // Hentikan spinner walau gagal semua
+            img.classList.add('loaded');
+            if (loader) loader.classList.add('hidden');
+          }
+        };
+        img.addEventListener('error', onErr, { passive: true });
+      } catch (e) {
+        // Jika parsing gagal, tetap sembunyikan loader saat event error pertama
+        img.addEventListener('error', () => {
+          img.classList.add('loaded');
+          if (loader) loader.classList.add('hidden');
+        }, { passive: true });
+      }
+
+      // Jika sudah ter-cache
+      if (img.complete) {
+        // Paksa trigger 'load' pada img yang sudah cache tanpa event
+        requestAnimationFrame(() => onLoad());
+      }
+    });
+  }
+  window.addEventListener('load', initImageLoading);
 </script>
 @endpush

@@ -75,13 +75,7 @@
   /* ===== Responsive containers & helpers ===== */
   .container-narrow { max-width: 1200px; margin: 0 auto; }
   .shadow-soft { box-shadow: 0 8px 30px rgba(0,0,0,.35); }
-  .img-hero {
-    width: 100%;
-    display: block;
-    border-radius: 16px;
-    background: #111827;
-    object-fit: cover;
-  }
+
   /* Responsive 16:9 wrapper (untuk YouTube) */
   .video-wrap {
     position: relative;
@@ -91,33 +85,17 @@
     background: #0f172a;
     border: 1px solid rgba(255,255,255,.06);
   }
-  .video-wrap::before {
-    content: "";
-    display: block;
-    padding-top: 56.25%; /* 16:9 */
-  }
-  .video-wrap iframe {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-  }
+  .video-wrap::before { content:""; display:block; padding-top:56.25%; }
+  .video-wrap iframe { position:absolute; inset:0; width:100%; height:100%; }
 
   /* ===== Sidebar ===== */
-  .sidebar-card {
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 16px;
-  }
-  .rec-thumb {
-    width: 88px; height: 88px;
-    background: #1f2937;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
+  .sidebar-card { border: 1px solid rgba(255,255,255,.06); border-radius: 16px; }
+  .rec-thumb { width: 88px; height: 88px; background: #1f2937; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden.
+    overflow: hidden;
   }
 
   /* Desktop adjustments */
@@ -128,6 +106,20 @@
 
   /* Breadcrumb overflow fix */
   .breadcrumbs a, .breadcrumbs span { white-space: nowrap; }
+
+  /* ====== Progressive Image Loader (Spinner + Camera Fallback) ====== */
+  .img-frame{ position:relative; background:#111827; }
+  .img-el{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .25s ease; }
+  .img-frame.loaded .img-el{ opacity:1; }
+  .img-frame .spinner, .img-frame .ph{
+    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+  }
+  .img-frame .ph{ display:none; color:#9ca3af; }
+  .img-frame.error .ph{ display:grid; }
+  .img-frame.loaded .spinner{ display:none; }
+
+  .spinner svg{ animation:spin 1s linear infinite; opacity:.9; }
+  @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
 </style>
 @endpush
 
@@ -166,6 +158,7 @@
             $imagePath = asset($raw);
         }
     }
+    $placeholder = asset('images/guidelines/placeholder.jpg');
 
     // ==== Content fallback: jika user tidak pakai HTML, tetap hormati newline ====
     $contentRaw = (string) ($guideline->content ?? '');
@@ -193,7 +186,7 @@
                 <span>/</span>
                 <a href="{{ route('guideline.index') }}" class="hover:text-white">Guideline</a>
                 <span>/</span>
-                <span class="text-white line-clamp-1">{{ $titleSan }}</span>
+                <span class="text-white line-clamp-2">{{ $titleSan }}</span>
             </div>
         </div>
     </nav>
@@ -210,24 +203,30 @@
         </div>
     </header>
 
-    <!-- Featured Image -->
+    <!-- Featured Image (with spinner & camera fallback) -->
     <section class="px-4 sm:px-6 lg:px-24 mt-5 mb-6">
         <div class="container-narrow">
-            @if ($imagePath)
-                <img src="{{ $imagePath }}" alt="{{ $titleSan }}"
-                     class="img-hero shadow-soft"
-                     style="max-height: 520px;">
-            @else
-                <div class="w-full h-[220px] sm:h-[320px] md:h-[420px] bg-gray-800 rounded-2xl grid place-items-center shadow-soft">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 sm:w-20 sm:h-20 text-gray-600" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10" />
-                        <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
-                        <circle cx="8" cy="10" r="1" />
-                        <path d="m21 15-5-5L5 21" />
+            <div class="img-frame shadow-soft" style="border-radius:16px; height: clamp(220px, 48vh, 520px);">
+                <img
+                    class="img-el js-progressive"
+                    alt="{{ $titleSan }}"
+                    data-src="{{ $imagePath ?: $placeholder }}"
+                    data-fallback="{{ $placeholder }}"
+                    src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+                    loading="eager"
+                    decoding="async">
+                <div class="spinner" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle class="opacity-25" cx="12" cy="12" r="10"></circle>
+                        <path class="opacity-90" d="M22 12a10 10 0 0 0-10-10" stroke-linecap="round"></path>
                     </svg>
                 </div>
-            @endif
+                <div class="ph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
+                        <path d="M4 7h3l2-2h6l2 2h3a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2zm8 11a5 5 0 100-10 5 5 0 000 10z"/>
+                    </svg>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -253,7 +252,7 @@
                         {{-- Video --}}
                         @if (!empty($guideline->youtube_url))
                             @php
-                                $embed = str_replace('watch?v=', 'embed/', $guideline->youtube_url);
+                                $embed = preg_replace('~^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)~i', 'https://www.youtube.com/embed/', $guideline->youtube_url);
                             @endphp
                             <div class="mt-8">
                                 <h3 class="text-lg sm:text-xl font-bold mb-3">Video Tutorial</h3>
@@ -269,10 +268,8 @@
                             </div>
                         @endif
 
-                        {{-- === TAGS DIHAPUS SESUAI PERMINTAAN === --}}
-
                         {{-- Author --}}
-                        <div class="mt-10 pt-6 border-t border-white/10">
+                        <div class="mt-10 pt-6 border-top border-white/10" style="border-top:1px solid rgba(255,255,255,.1);">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 grid place-items-center ring-1 ring-white/10">
                                     <span class="text-lg font-bold">
@@ -321,10 +318,28 @@
                         @endphp
 
                         <div class="flex gap-4">
-                          <div class="rec-thumb w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
-                            @if ($rImage)
-                              <img src="{{ $rImage }}" alt="{{ $relatedTitleSan }}" class="w-full h-full object-cover">
-                            @endif
+                          <div class="rec-thumb relative">
+                            <div class="img-frame" style="border-radius:12px; width:100%; height:100%;">
+                                <img
+                                    class="img-el js-progressive"
+                                    alt="{{ $relatedTitleSan }}"
+                                    data-src="{{ $rImage ?: $placeholder }}"
+                                    data-fallback="{{ $placeholder }}"
+                                    src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+                                    loading="lazy"
+                                    decoding="async">
+                                <div class="spinner" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"></circle>
+                                        <path class="opacity-90" d="M22 12a10 10 0 0 0-10-10" stroke-linecap="round"></path>
+                                    </svg>
+                                </div>
+                                <div class="ph" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                                        <path d="M4 7h3l2-2h6l2 2h3a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2zm8 11a5 5 0 100-10 5 5 0 000 10z"/>
+                                    </svg>
+                                </div>
+                            </div>
                           </div>
 
                           <div class="min-w-0">
@@ -375,6 +390,49 @@
     const dy = e.touches[0].clientY - startY;
     if ((atTop && dy > 0) || (atBottom && dy < 0)) e.preventDefault();
   }, { passive: false });
+})();
+
+/* Progressive image loader (spinner + camera fallback) */
+(function(){
+  function setupProgressiveImages(root){
+    const scope = root || document;
+    const imgs = scope.querySelectorAll('img.js-progressive[data-src]');
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(onIntersect, { rootMargin: '200px 0px' }) : null;
+
+    imgs.forEach(img=>{
+      const frame = img.closest('.img-frame') || img.parentElement;
+      if (!frame) return;
+      if (io) io.observe(img); else loadNow(img, frame);
+      img.addEventListener('error', ()=> handleError(img, frame));
+      img.addEventListener('load',  ()=> handleLoad(img, frame));
+    });
+
+    function onIntersect(entries, obs){
+      entries.forEach(entry=>{
+        if (!entry.isIntersecting) return;
+        const img = entry.target;
+        const frame = img.closest('.img-frame') || img.parentElement;
+        loadNow(img, frame);
+        obs.unobserve(img);
+      });
+    }
+    function loadNow(img, frame){
+      const src = img.getAttribute('data-src');
+      if (src && img.src !== src) img.src = src;
+    }
+    function handleLoad(img, frame){
+      frame.classList.add('loaded');
+      frame.classList.remove('error');
+    }
+    function handleError(img, frame){
+      const fallback = img.getAttribute('data-fallback') || img.src;
+      if (img.src !== fallback){ img.src = fallback; }
+      else { frame.classList.add('error'); }
+    }
+  }
+  // Expose and run
+  window.setupProgressiveImages = setupProgressiveImages;
+  document.addEventListener('DOMContentLoaded', ()=> setupProgressiveImages(document));
 })();
 </script>
 @endpush

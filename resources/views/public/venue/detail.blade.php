@@ -78,6 +78,18 @@
   .iframe-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
 
   .img-clickable{ cursor: pointer; }
+
+  /* ===================== */
+  /*   IMAGE LOADING UI    */
+  /* ===================== */
+  .img-wrapper{ position:relative; background:#171717; overflow:hidden; border-radius:12px; }
+  .img-wrapper > img{ display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .28s ease; }
+  .img-wrapper > img.is-loaded{ opacity:1; }
+  .img-loading{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+  .img-loading.is-hidden{ display:none; }
+  .spinner{ width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .spinner{ animation:none; } .img-wrapper>img{ transition:none; } }
 </style>
 @endpush
 
@@ -115,11 +127,14 @@
       $url = $normalizeToFeVenue($ri);
       if ($url && !in_array($url, $resolvedImages, true)) $resolvedImages[] = $url;
   }
-  if (!$resolvedImages) $resolvedImages = [asset('images/placeholder/venue.png')];
+  $placeholderUrl = asset('images/placeholder/venue.png');
+  if (!$resolvedImages) $resolvedImages = [$placeholderUrl];
+  // Tambahkan placeholder sebagai fallback terakhir jika belum ada
+  if (!in_array($placeholderUrl, $resolvedImages, true)) { $resolvedImages[] = $placeholderUrl; }
 
   $mainImage = $resolvedImages[0];
   $thumbs = array_slice($resolvedImages, 1, 2);
-  while (count($thumbs) < 2) { $thumbs[] = asset('images/placeholder/venue.png'); }
+  while (count($thumbs) < 2) { $thumbs[] = $placeholderUrl; }
 
   $averageRating = $averageRating ?? 0;
   $avgText   = number_format((float)($averageRating), 1, ',', '.');
@@ -183,23 +198,33 @@
         {{-- Gallery --}}
         <div class="grid grid-cols-3 gap-4">
           <div class="col-span-2">
-            <img id="mainImage"
-                 src="{{ $mainImage }}"
-                 alt="{{ $detail->name }}"
-                 class="rounded-lg w-full h-[300px] md:h-[360px] object-cover img-clickable"
-                 onclick="onMainClick()"
-                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
+            <div class="img-wrapper h-[300px] md:h-[360px] rounded-lg">
+              <div class="img-loading" aria-hidden="true" role="progressbar"><div class="spinner" aria-hidden="true"></div></div>
+              <img id="mainImage"
+                   src="{{ $mainImage }}"
+                   alt="{{ $detail->name }}"
+                   class="w-full h-full object-cover img-clickable"
+                   data-lazy-load
+                   data-src-candidates='@json($resolvedImages)'
+                   decoding="async"
+                   onclick="onMainClick()" />
+            </div>
           </div>
           <div class="flex flex-col gap-4" id="thumbsWrap">
             @foreach ($thumbs as $t)
-              <img id="thumb{{ $loop->index }}"
-                   data-index="{{ $loop->index + 1 }}"
-                   src="{{ $t }}"
-                   alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
-                   class="rounded-lg w-full h-[140px] md:h-[170px] object-cover cursor-pointer"
-                   loading="lazy"
-                   onclick="onThumbClick(event)"
-                   onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
+              <div class="img-wrapper w-full h-[140px] md:h-[170px] rounded-lg">
+                <div class="img-loading" aria-hidden="true" role="progressbar"><div class="spinner" aria-hidden="true"></div></div>
+                <img id="thumb{{ $loop->index }}"
+                     data-index="{{ $loop->index + 1 }}"
+                     src="{{ $t }}"
+                     alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
+                     class="w-full h-full object-cover cursor-pointer"
+                     data-lazy-load
+                     data-src-candidates='@json([$t, $placeholderUrl])'
+                     loading="lazy"
+                     decoding="async"
+                     onclick="onThumbClick(event)" />
+              </div>
             @endforeach
           </div>
         </div>
@@ -444,32 +469,90 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  /* ========== GALLERY (rotate) ========== */
+  /* ========== GALLERY (rotate) + IMAGE LOADER ========== */
   const images = @json($resolvedImages);
-  const placeholder = @json(asset('images/placeholder/venue.png'));
+  const placeholder = @json($placeholderUrl);
   function $(sel){ return document.querySelector(sel); }
   const mainEl = $('#mainImage'); const thumb0 = $('#thumb0'); const thumb1 = $('#thumb1'); const thumbsWrap = $('#thumbsWrap');
   let currentIndex = 0;
+
   function getNextIndices(){
     if (images.length <= 1) return [];
     if (images.length === 2) return [(currentIndex + 1) % 2];
     return [(currentIndex + 1) % images.length, (currentIndex + 2) % images.length];
   }
+
+  function refreshImage(img, newSrc, candidates){
+    if (!img) return;
+    const wrapper = img.closest('.img-wrapper');
+    const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+    img.classList.remove('is-loaded');
+    if (loader) loader.classList.remove('is-hidden');
+    try { img.setAttribute('data-src-candidates', JSON.stringify(Array.isArray(candidates) ? candidates : [newSrc, placeholder])); } catch(e) {}
+    img.src = newSrc;
+  }
+
   function renderGallery(){
     if (!mainEl) return;
-    mainEl.src = images[currentIndex] || placeholder;
+    const mainCandidates = images.slice(currentIndex).concat(images.slice(0, currentIndex));
+    refreshImage(mainEl, images[currentIndex] || placeholder, mainCandidates);
+
     if (!thumb0 || !thumb1) return;
     const idxs = getNextIndices();
     if (images.length <= 1){ if (thumbsWrap) thumbsWrap.style.display = 'none'; return; } else { if (thumbsWrap) thumbsWrap.style.display = ''; }
-    if (idxs[0] !== undefined){ thumb0.src = images[idxs[0]] || placeholder; thumb0.dataset.index = String(idxs[0]); thumb0.style.pointerEvents = ''; thumb0.style.opacity = ''; }
-    else { thumb0.src = placeholder; delete thumb0.dataset.index; thumb0.style.pointerEvents = 'none'; thumb0.style.opacity = '.6'; }
-    if (idxs[1] !== undefined){ thumb1.src = images[idxs[1]] || placeholder; thumb1.dataset.index = String(idxs[1]); thumb1.style.pointerEvents = ''; thumb1.style.opacity = ''; }
-    else { thumb1.src = placeholder; delete thumb1.dataset.index; thumb1.style.pointerEvents = 'none'; thumb1.style.opacity = '.6'; }
+    if (idxs[0] !== undefined){
+      thumb0.dataset.index = String(idxs[0]);
+      refreshImage(thumb0, images[idxs[0]] || placeholder, [images[idxs[0]] || placeholder, placeholder]);
+      thumb0.style.pointerEvents = '';
+      thumb0.style.opacity = '';
+    } else { thumb0.removeAttribute('data-index'); thumb0.style.pointerEvents = 'none'; thumb0.style.opacity = '.6'; }
+
+    if (idxs[1] !== undefined){
+      thumb1.dataset.index = String(idxs[1]);
+      refreshImage(thumb1, images[idxs[1]] || placeholder, [images[idxs[1]] || placeholder, placeholder]);
+      thumb1.style.pointerEvents = '';
+      thumb1.style.opacity = '';
+    } else { thumb1.removeAttribute('data-index'); thumb1.style.pointerEvents = 'none'; thumb1.style.opacity = '.6'; }
   }
+
   function onMainClick(){ if (images.length <= 1) return; currentIndex = (currentIndex + 1) % images.length; renderGallery(); }
   function onThumbClick(e){ const t = e.currentTarget; const idx = parseInt(t?.dataset?.index, 10); if (Number.isNaN(idx)) return; currentIndex = idx; renderGallery(); }
   window.onMainClick = onMainClick; window.onThumbClick = onThumbClick;
-  document.addEventListener('DOMContentLoaded', renderGallery);
+
+  function initImageLoadingWithFallback(selector = '.img-wrapper img[data-lazy-load]'){
+    document.querySelectorAll(selector).forEach((img) => {
+      const wrapper = img.closest('.img-wrapper');
+      const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+
+      let list = [];
+      try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(e) { list = []; }
+      if (!Array.isArray(list) || list.length === 0) { list = [img.getAttribute('src')].filter(Boolean); }
+
+      let idx = Math.max(0, list.indexOf(img.getAttribute('src')));
+      const showLoader = () => loader && loader.classList.remove('is-hidden');
+      const hideLoader = () => loader && loader.classList.add('is-hidden');
+      const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+
+      if (img.complete && img.naturalWidth > 0) { markLoaded(); } else { showLoader(); }
+
+      img.addEventListener('load', () => { if (img.naturalWidth > 0) markLoaded(); }, { passive: true });
+      img.addEventListener('error', () => {
+        if (idx < list.length - 1) {
+          idx++;
+          showLoader();
+          const nextSrc = list[idx];
+          if (nextSrc && img.src !== nextSrc) { img.src = nextSrc; }
+        } else {
+          markLoaded();
+        }
+      }, { passive: true });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderGallery();
+    initImageLoadingWithFallback();
+  });
 </script>
 
 <script>
