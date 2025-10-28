@@ -264,27 +264,78 @@ class TournamentController extends Controller
     private function generateDoubleEliminationBrackets($event, $championship, $allGroups)
     {
         $round1Groups = $allGroups->where('round', 1);
-        $totalPlayers = $round1Groups->count() * 2;
-        $maxRound = $allGroups->max('round');
+        $numFighters = $round1Groups->count() * 2;
+        $numRounds = intval(log($numFighters, 2));
 
-        // CALCULATE: Separate upper and lower brackets
-        // For double elimination: roughly half rounds are upper, half are lower
-        $upperRounds = ceil($maxRound / 2);
-        $lowerRounds = $maxRound - $upperRounds - 1;
+        // Calculate structure
+        $upperBracketEnd = $numRounds + 1;
+        $lowerBracketStart = $upperBracketEnd + 1;
+        $maxRound = $allGroups->max('round');
         $grandFinalRound = $maxRound;
 
-        \Log::info('Double Elimination Structure', [
-            'total_players' => $totalPlayers,
-            'total_rounds' => $maxRound,
-            'upper_rounds' => $upperRounds,
-            'lower_rounds' => $lowerRounds,
-            'grand_final_round' => $grandFinalRound
+        \Log::info('Generating Double Elimination Brackets', [
+            'fighters' => $numFighters,
+            'round_1' => 1,
+            'upper_bracket' => "2-{$upperBracketEnd}",
+            'lower_bracket' => "{$lowerBracketStart}-" . ($grandFinalRound - 1),
+            'grand_final' => $grandFinalRound
         ]);
 
+        // ==========================================
+        // ROUND 1 - All players
+        // ==========================================
         $position = 1;
+        $groups = $allGroups->where('round', 1);
 
-        // UPPER BRACKET: Rounds 1 to upperRounds
-        for ($round = 1; $round <= $upperRounds; $round++) {
+        foreach ($groups as $group) {
+            $fight = $group->fights->first();
+
+            // Fighter 1
+            $player1Name = 'TBD';
+            $isWinner1 = false;
+            if ($fight && $fight->c1) {
+                $fighter1 = $this->getFighterById($fight->c1, $championship);
+                $player1Name = $fighter1 ? $this->getPlayerName($fighter1) : 'TBD';
+                $isWinner1 = ($fight->winner_id == $fight->c1);
+            }
+
+            Bracket::create([
+                'event_id' => $event->id,
+                'round' => 1,
+                'position' => $position,
+                'player_name' => $player1Name,
+                'is_winner' => $isWinner1,
+                'next_match_position' => (int) ceil($position / 2),
+                'bracket_type' => 'round_1'
+            ]);
+            $position++;
+
+            // Fighter 2
+            $player2Name = 'TBD';
+            $isWinner2 = false;
+            if ($fight && $fight->c2) {
+                $fighter2 = $this->getFighterById($fight->c2, $championship);
+                $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
+                $isWinner2 = ($fight->winner_id == $fight->c2);
+            }
+
+            Bracket::create([
+                'event_id' => $event->id,
+                'round' => 1,
+                'position' => $position,
+                'player_name' => $player2Name,
+                'is_winner' => $isWinner2,
+                'next_match_position' => (int) ceil($position / 2),
+                'bracket_type' => 'round_1'
+            ]);
+            $position++;
+        }
+
+        // ==========================================
+        // UPPER BRACKET - Winners path
+        // ==========================================
+        for ($round = 2; $round <= $upperBracketEnd; $round++) {
+            $position = 1;
             $groups = $allGroups->where('round', $round);
 
             foreach ($groups as $group) {
@@ -305,40 +356,39 @@ class TournamentController extends Controller
                     'position' => $position,
                     'player_name' => $player1Name,
                     'is_winner' => $isWinner1,
-                    'next_match_position' => $round < $upperRounds ? (int) ceil($position / 2) : null,
-                    'bracket_type' => 'upper' // ADDED: Mark as upper bracket
-                ]);
-
-                $position++;
-
-                // Fighter 2
-                $player2Name = 'TBD';
-                $isWinner2 = false;
-                if ($fight && $fight->c2) {
-                    $fighter2 = $this->getFighterById($fight->c2, $championship);
-                    $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
-                    $isWinner2 = ($fight->winner_id == $fight->c2);
-                }
-
-                Bracket::create([
-                    'event_id' => $event->id,
-                    'round' => $round,
-                    'position' => $position,
-                    'player_name' => $player2Name,
-                    'is_winner' => $isWinner2,
-                    'next_match_position' => $round < $upperRounds ? (int) ceil($position / 2) : null,
+                    'next_match_position' => $round < $upperBracketEnd ? (int) ceil($position / 2) : null,
                     'bracket_type' => 'upper'
                 ]);
+                $position++;
 
+                // Fighter 2
+                $player2Name = 'TBD';
+                $isWinner2 = false;
+                if ($fight && $fight->c2) {
+                    $fighter2 = $this->getFighterById($fight->c2, $championship);
+                    $player2Name = $fighter2 ? $this->getPlayerName($fighter2) : 'TBD';
+                    $isWinner2 = ($fight->winner_id == $fight->c2);
+                }
+
+                Bracket::create([
+                    'event_id' => $event->id,
+                    'round' => $round,
+                    'position' => $position,
+                    'player_name' => $player2Name,
+                    'is_winner' => $isWinner2,
+                    'next_match_position' => $round < $upperBracketEnd ? (int) ceil($position / 2) : null,
+                    'bracket_type' => 'upper'
+                ]);
                 $position++;
             }
         }
 
-        // LOWER BRACKET: Rounds after upper bracket (before grand final)
-        $lowerBracketStartRound = $upperRounds + 1;
-        $lowerPosition = 1;
-
-        for ($round = $lowerBracketStartRound; $round < $grandFinalRound; $round++) {
+        // ==========================================
+        // LOWER BRACKET - Losers path
+        // Starts right after upper bracket ends
+        // ==========================================
+        for ($round = $lowerBracketStart; $round < $grandFinalRound; $round++) {
+            $position = 1;
             $groups = $allGroups->where('round', $round);
 
             foreach ($groups as $group) {
@@ -356,14 +406,13 @@ class TournamentController extends Controller
                 Bracket::create([
                     'event_id' => $event->id,
                     'round' => $round,
-                    'position' => $lowerPosition,
+                    'position' => $position,
                     'player_name' => $player1Name,
                     'is_winner' => $isWinner1,
-                    'next_match_position' => $round < ($grandFinalRound - 1) ? (int) ceil($lowerPosition / 2) : null,
-                    'bracket_type' => 'lower' // ADDED: Mark as lower bracket
+                    'next_match_position' => $round < ($grandFinalRound - 1) ? (int) ceil($position / 2) : null,
+                    'bracket_type' => 'lower'
                 ]);
-
-                $lowerPosition++;
+                $position++;
 
                 // Fighter 2
                 $player2Name = 'TBD';
@@ -377,23 +426,24 @@ class TournamentController extends Controller
                 Bracket::create([
                     'event_id' => $event->id,
                     'round' => $round,
-                    'position' => $lowerPosition,
+                    'position' => $position,
                     'player_name' => $player2Name,
                     'is_winner' => $isWinner2,
-                    'next_match_position' => $round < ($grandFinalRound - 1) ? (int) ceil($lowerPosition / 2) : null,
+                    'next_match_position' => $round < ($grandFinalRound - 1) ? (int) ceil($position / 2) : null,
                     'bracket_type' => 'lower'
                 ]);
-
-                $lowerPosition++;
+                $position++;
             }
         }
 
-        // GRAND FINAL: Upper bracket winner vs Lower bracket winner
+        // ==========================================
+        // GRAND FINAL
+        // ==========================================
         $grandFinalGroup = $allGroups->where('round', $grandFinalRound)->first();
         if ($grandFinalGroup) {
             $fight = $grandFinalGroup->fights->first();
 
-            // Upper bracket winner (Fighter 1)
+            // Upper winner (c1)
             $player1Name = 'TBD';
             $isWinner1 = false;
             if ($fight && $fight->c1) {
@@ -412,7 +462,7 @@ class TournamentController extends Controller
                 'bracket_type' => 'grand_final'
             ]);
 
-            // Lower bracket winner (Fighter 2)
+            // Lower winner (c2)
             $player2Name = 'TBD';
             $isWinner2 = false;
             if ($fight && $fight->c2) {
@@ -432,10 +482,8 @@ class TournamentController extends Controller
             ]);
         }
 
-        $totalBrackets = Bracket::where('event_id', $event->id)->count();
-        \Log::info('Double Elimination Brackets Generated', [
-            'event_id' => $event->id,
-            'total_brackets' => $totalBrackets
+        \Log::info('Double Elimination Brackets Complete', [
+            'total_brackets' => Bracket::where('event_id', $event->id)->count()
         ]);
     }
 
