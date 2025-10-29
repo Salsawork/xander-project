@@ -94,31 +94,37 @@
 @endpush
 
 @php
+  // FE base untuk gambar venue
   $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
 
+  // Placeholder aman: data URI (SVG) → tidak ada network request
+  $placeholderDataUri = 'data:image/svg+xml;utf8,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="100%" height="100%" fill="#111"/></svg>');
+
+  // Normalizer ke FE base: https://demo-xanders.ptbmn.id/images/venue/<filename>
   $normalizeToFeVenue = function ($s) use ($feBaseVenue) {
       $s = is_string($s) ? trim($s) : '';
-      if ($s === '') return asset('images/placeholder/venue.png');
+      if ($s === '') return null;
       if (preg_match('#^https?://#i', $s)) {
-          $parts = parse_url($s);
-          $path  = $parts['path'] ?? '';
-          $name  = basename($path);
-          return $name ? $feBaseVenue . $name : asset('images/placeholder/venue.png');
+          $path = parse_url($s, PHP_URL_PATH) ?: '';
+          $name = basename($path);
+          return $name ? ($feBaseVenue . $name) : null;
       }
       $name = basename($s);
-      if ($name !== '' && $name !== '/' && $name !== '.') {
-          return $feBaseVenue . $name;
-      }
-      return asset('images/placeholder/venue.png');
+      if ($name && $name !== '/' && $name !== '.') return $feBaseVenue . $name;
+      return null;
   };
 
   $cartCount = count($cartProducts) + count($cartVenues) + count($cartSparrings);
 
+  // Kumpulkan gambar venue
   $rawImages = [];
   if (!empty($detail->images)) {
-      $rawImages = is_array($detail->images)
-          ? $detail->images
-          : (is_string($detail->images) ? (json_decode($detail->images, true) ?? []) : []);
+      if (is_array($detail->images)) {
+          $rawImages = $detail->images;
+      } elseif (is_string($detail->images)) {
+          $decoded = json_decode($detail->images, true);
+          $rawImages = is_array($decoded) ? $decoded : [];
+      }
   }
   if (empty($rawImages) && !empty($detail->image)) $rawImages = [$detail->image];
 
@@ -127,24 +133,36 @@
       $url = $normalizeToFeVenue($ri);
       if ($url && !in_array($url, $resolvedImages, true)) $resolvedImages[] = $url;
   }
-  $placeholderUrl = asset('images/placeholder/venue.png');
-  if (!$resolvedImages) $resolvedImages = [$placeholderUrl];
-  // Tambahkan placeholder sebagai fallback terakhir jika belum ada
-  if (!in_array($placeholderUrl, $resolvedImages, true)) { $resolvedImages[] = $placeholderUrl; }
+  if (!$resolvedImages) $resolvedImages = [$placeholderDataUri];
 
+  // Main + thumbnails
   $mainImage = $resolvedImages[0];
   $thumbs = array_slice($resolvedImages, 1, 2);
-  while (count($thumbs) < 2) { $thumbs[] = $placeholderUrl; }
+  while (count($thumbs) < 2) { $thumbs[] = $placeholderDataUri; }
 
+  // Kandidat untuk main image (precompute, tanpa arrow function)
+  $mainCandidates = $resolvedImages;
+  $idxMain = array_search($mainImage, $mainCandidates, true);
+  if ($idxMain !== false) {
+      array_splice($mainCandidates, $idxMain, 1);
+      array_unshift($mainCandidates, $mainImage);
+  }
+  if (!in_array($placeholderDataUri, $mainCandidates, true)) {
+      $mainCandidates[] = $placeholderDataUri;
+  }
+
+  // Rating
   $averageRating = $averageRating ?? 0;
-  $avgText   = number_format((float)($averageRating), 1, ',', '.');
-  $fullStars = floor((float)($averageRating));
+  $avgText   = number_format((float)$averageRating, 1, ',', '.');
+  $fullStars = (int)floor((float)$averageRating);
 
+  // Address
   $displayAddressRaw = trim((string)($detail->address ?? ''));
   $displayAddress = $displayAddressRaw !== '' ? $displayAddressRaw : 'Alamat belum tersedia';
 
+  // Map embed
   $mapRaw = trim((string)($detail->map_embed ?? ''));
-  $extractSrc = function(string $input) : string {
+  $extractSrc = function($input) {
       if ($input === '') return '';
       if (stripos($input, '<iframe') !== false) {
           if (preg_match('~src\s*=\s*"(.*?)"~i', $input, $m)) return trim($m[1]);
@@ -159,16 +177,19 @@
   }
   $mapsSrc = $src;
 
+  // Facilities
   $facilities = [];
   if (is_array($detail->facilities)) {
       $facilities = $detail->facilities;
   } elseif (is_string($detail->facilities) && $detail->facilities !== '') {
-      $facilities = json_decode($detail->facilities, true) ?? [];
+      $decodedF = json_decode($detail->facilities, true);
+      $facilities = is_array($decodedF) ? $decodedF : [];
   }
-  $facilities = array_values(array_filter(array_map(fn($x) => trim((string)$x), $facilities)));
+  $facilities = array_values(array_filter(array_map(function($x){ return trim((string)$x); }, $facilities)));
 
-  // filename utama untuk dikirim ke cart (biar cart gampang bentuk FE URL)
+  // Kirim filename jika mainImage bukan data URI
   $mainFilename = (function($u){
+      if (strpos((string)$u, 'data:') === 0) return null;
       $path = parse_url($u, PHP_URL_PATH);
       $bn = basename($path ?: (string)$u);
       return ($bn && $bn !== '/' && $bn !== '.') ? $bn : null;
@@ -205,7 +226,7 @@
                    alt="{{ $detail->name }}"
                    class="w-full h-full object-cover img-clickable"
                    data-lazy-load
-                   data-src-candidates='@json($resolvedImages)'
+                   data-src-candidates='@json($mainCandidates)'
                    decoding="async"
                    onclick="onMainClick()" />
             </div>
@@ -220,7 +241,7 @@
                      alt="Thumbnail {{ $loop->iteration }} - {{ $detail->name }}"
                      class="w-full h-full object-cover cursor-pointer"
                      data-lazy-load
-                     data-src-candidates='@json([$t, $placeholderUrl])'
+                     data-src-candidates='@json([$t, $placeholderDataUri])'
                      loading="lazy"
                      decoding="async"
                      onclick="onThumbClick(event)" />
@@ -357,7 +378,7 @@
             <input type="hidden" name="price" id="priceInput">
             <input type="hidden" name="table_number" id="tableNumberInput">
 
-            {{-- KIRIMKAN FILENAME GAMBAR UTAMA KE BACKEND (untuk disimpan/ditempel ke cart) --}}
+            {{-- Kirim filename gambar utama ke backend (kalau ada) --}}
             <input type="hidden" name="image" id="imageInput" value="{{ $mainFilename ?? '' }}">
 
             <div>
@@ -417,7 +438,12 @@
                 </div>
               @endif
               @if (session('error'))
-                <div class="mt-3 rounded-md bg-red-600/20 text-red-300 px-3 py-2 border border-green-600/30">
+                <div class="mt-3 rounded-md bg-red-600/20 text-red-300 px-3 py-2 border border-red-600/30">
+                  {{ session('error') }}
+                </div>
+              @endif
+              @if ($errors->any())
+                <div class="mt-3 rounded-md bg-red-600/20 text-red-300 px-3 py-2 border border-red-600/30">
                   {{ $errors->first() }}
                 </div>
               @endif
@@ -425,9 +451,9 @@
               <form action="{{ route('venues.reviews.store', ['venue' => $detail->id]) }}" method="POST" class="mt-3" id="reviewForm">
                 @csrf
                 <label class="block text-gray-300 mb-2">Rating</label>
-                <div class="flex items-center gap-2 stars-input mb-3" id="ratingBox">
+                <div class="flex items-center gap-2 stars-input mb-3" id="ratingBox" role="radiogroup" aria-label="Rating">
                   @for ($i = 1; $i <= 5; $i++)
-                    <i class="fas fa-star" data-value="{{ $i }}"></i>
+                    <i class="fas fa-star" data-value="{{ $i }}" tabindex="0" role="radio" aria-checked="false"></i>
                   @endfor
                 </div>
                 <input type="hidden" name="rating" id="ratingInput" value="{{ old('rating', 0) }}">
@@ -469,9 +495,9 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  /* ========== GALLERY (rotate) + IMAGE LOADER ========== */
+  /* ========== GALLERY (rotate) + IMAGE LOADER (no 404 placeholder) ========== */
   const images = @json($resolvedImages);
-  const placeholder = @json($placeholderUrl);
+  const placeholder = @json($placeholderDataUri); // data URI → tidak ada request
   function $(sel){ return document.querySelector(sel); }
   const mainEl = $('#mainImage'); const thumb0 = $('#thumb0'); const thumb1 = $('#thumb1'); const thumbsWrap = $('#thumbsWrap');
   let currentIndex = 0;
@@ -486,70 +512,106 @@
     if (!img) return;
     const wrapper = img.closest('.img-wrapper');
     const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+
+    // Simpan src sebelumnya agar bisa revert jika gagal
+    if (!img.dataset.prev || (!img.dataset.prev.startsWith('data:') && img.src)) {
+      img.dataset.prev = img.src || '';
+    }
+
     img.classList.remove('is-loaded');
     if (loader) loader.classList.remove('is-hidden');
-    try { img.setAttribute('data-src-candidates', JSON.stringify(Array.isArray(candidates) ? candidates : [newSrc, placeholder])); } catch(e) {}
+
+    try {
+      const list = Array.isArray(candidates) ? candidates.slice(0) : [newSrc];
+      if (list.indexOf(placeholder) === -1) list.push(placeholder); // fallback aman (data URI)
+      img.setAttribute('data-src-candidates', JSON.stringify(list));
+    } catch(e) {}
+
     img.src = newSrc;
   }
 
   function renderGallery(){
     if (!mainEl) return;
+
+    // Kandidat untuk main: semua gambar mulai dari index saat ini + placeholder
     const mainCandidates = images.slice(currentIndex).concat(images.slice(0, currentIndex));
     refreshImage(mainEl, images[currentIndex] || placeholder, mainCandidates);
 
     if (!thumb0 || !thumb1) return;
     const idxs = getNextIndices();
-    if (images.length <= 1){ if (thumbsWrap) thumbsWrap.style.display = 'none'; return; } else { if (thumbsWrap) thumbsWrap.style.display = ''; }
+
+    if (images.length <= 1){
+      if (thumbsWrap) thumbsWrap.style.display = 'none';
+      return;
+    } else {
+      if (thumbsWrap) thumbsWrap.style.display = '';
+    }
+
     if (idxs[0] !== undefined){
       thumb0.dataset.index = String(idxs[0]);
       refreshImage(thumb0, images[idxs[0]] || placeholder, [images[idxs[0]] || placeholder, placeholder]);
       thumb0.style.pointerEvents = '';
       thumb0.style.opacity = '';
-    } else { thumb0.removeAttribute('data-index'); thumb0.style.pointerEvents = 'none'; thumb0.style.opacity = '.6'; }
+    } else {
+      thumb0.removeAttribute('data-index');
+      thumb0.style.pointerEvents = 'none';
+      thumb0.style.opacity = '.6';
+    }
 
     if (idxs[1] !== undefined){
       thumb1.dataset.index = String(idxs[1]);
       refreshImage(thumb1, images[idxs[1]] || placeholder, [images[idxs[1]] || placeholder, placeholder]);
       thumb1.style.pointerEvents = '';
       thumb1.style.opacity = '';
-    } else { thumb1.removeAttribute('data-index'); thumb1.style.pointerEvents = 'none'; thumb1.style.opacity = '.6'; }
+    } else {
+      thumb1.removeAttribute('data-index');
+      thumb1.style.pointerEvents = 'none';
+      thumb1.style.opacity = '.6';
+    }
   }
 
   function onMainClick(){ if (images.length <= 1) return; currentIndex = (currentIndex + 1) % images.length; renderGallery(); }
-  function onThumbClick(e){ const t = e.currentTarget; const idx = parseInt(t?.dataset?.index, 10); if (Number.isNaN(idx)) return; currentIndex = idx; renderGallery(); }
+  function onThumbClick(e){ const t = e.currentTarget; const idx = parseInt(t && t.dataset ? t.dataset.index : '', 10); if (isNaN(idx)) return; currentIndex = idx; renderGallery(); }
   window.onMainClick = onMainClick; window.onThumbClick = onThumbClick;
 
   function initImageLoadingWithFallback(selector = '.img-wrapper img[data-lazy-load]'){
-    document.querySelectorAll(selector).forEach((img) => {
+    const nodeList = document.querySelectorAll(selector);
+    Array.prototype.forEach.call(nodeList, function(img){
       const wrapper = img.closest('.img-wrapper');
       const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
 
-      let list = [];
+      var list = [];
       try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(e) { list = []; }
       if (!Array.isArray(list) || list.length === 0) { list = [img.getAttribute('src')].filter(Boolean); }
+      if (list.indexOf(placeholder) === -1) list.push(placeholder); // jaga-jaga
 
-      let idx = Math.max(0, list.indexOf(img.getAttribute('src')));
-      const showLoader = () => loader && loader.classList.remove('is-hidden');
-      const hideLoader = () => loader && loader.classList.add('is-hidden');
-      const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+      var idx = Math.max(0, list.indexOf(img.getAttribute('src') || ''));
+      const showLoader = function(){ if (loader) loader.classList.remove('is-hidden'); };
+      const hideLoader = function(){ if (loader) loader.classList.add('is-hidden'); };
+      const markLoaded = function(){ img.classList.add('is-loaded'); hideLoader(); };
 
       if (img.complete && img.naturalWidth > 0) { markLoaded(); } else { showLoader(); }
 
-      img.addEventListener('load', () => { if (img.naturalWidth > 0) markLoaded(); }, { passive: true });
-      img.addEventListener('error', () => {
+      img.addEventListener('load', function(){ if (img.naturalWidth > 0) markLoaded(); }, { passive: true });
+      img.addEventListener('error', function(){
         if (idx < list.length - 1) {
           idx++;
           showLoader();
           const nextSrc = list[idx];
           if (nextSrc && img.src !== nextSrc) { img.src = nextSrc; }
         } else {
+          // Tidak ada kandidat lain → revert ke gambar sebelumnya jika ada
+          const prev = img.dataset.prev || '';
+          if (prev && prev !== img.src) {
+            img.src = prev;
+          }
           markLoaded();
         }
       }, { passive: true });
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', function(){
     renderGallery();
     initImageLoadingWithFallback();
   });
@@ -574,12 +636,12 @@
     let selectedSchedule = null;
     let selectedTableNumber = null;
 
-    if (openDateBtn && datePicker) openDateBtn.addEventListener('click', () => { datePicker.showPicker(); });
+    if (openDateBtn && datePicker) openDateBtn.addEventListener('click', function(){ datePicker.showPicker(); });
 
     function createScheduleSlot(slot, price) {
       const lbl = document.createElement("label");
       const isBooked = !!slot.is_booked;
-      lbl.className = `slot${isBooked ? ' slot--disabled' : ''}`;
+      lbl.className = "slot" + (isBooked ? " slot--disabled" : "");
       lbl.innerHTML = `
         <input type="radio" name="schedule" value="${slot.start}-${slot.end}"
                class="hidden" required ${isBooked ? 'disabled' : ''}>
@@ -587,8 +649,8 @@
       `;
       if (!isBooked) {
         const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
-          document.querySelectorAll('.slot').forEach(s => s.classList.remove('slot--active'));
+        radio.addEventListener("change", function() {
+          document.querySelectorAll('.slot').forEach(function(s){ s.classList.remove('slot--active'); });
           lbl.classList.add('slot--active');
           selectedSchedule = { start: slot.start, end: slot.end, price: price, tables: slot.tables || [] };
           if (priceDisplay) {
@@ -617,8 +679,8 @@
           scheduleList.innerHTML = `<p class="text-gray-400 text-sm">No schedules available for this date.</p>`;
           return;
         }
-        schedules.forEach(sch => {
-          (sch.schedule || []).forEach(slot => {
+        schedules.forEach(function(sch){
+          (sch.schedule || []).forEach(function(slot){
             const scheduleSlot = createScheduleSlot(slot, sch.price);
             scheduleList.appendChild(scheduleSlot);
           });
@@ -629,13 +691,14 @@
       }
     }
 
-    function renderTables(tables = []) {
+    function renderTables(tables) {
+      tables = tables || [];
       tableList.innerHTML = "";
-      if (!tables || tables.length === 0) {
+      if (tables.length === 0) {
         tableList.innerHTML = `<p class="text-gray-400 text-sm">No tables available.</p>`;
         return;
       }
-      tables.forEach(tbl => {
+      tables.forEach(function(tbl){
         const lbl = document.createElement("label");
         const disabledClass = tbl.is_booked ? 'opacity-40 pointer-events-none bg-gray-700' : '';
         lbl.className = `slot ${disabledClass}`;
@@ -644,7 +707,7 @@
           ${tbl.name || ("Table " + tbl.id)}
         `;
         const radio = lbl.querySelector("input");
-        radio.addEventListener("change", () => {
+        radio.addEventListener("change", function(){
           selectedTableNumber = tbl.name || ('Table ' + tbl.id);
         });
         tableList.appendChild(lbl);
@@ -655,7 +718,6 @@
       datePicker.addEventListener("change", function() { loadSchedules(this.value); });
     }
 
-    // INIT date = today + load schedules
     (function initDate() {
       if (!datePicker) return;
       const t = new Date();
@@ -665,11 +727,10 @@
       loadSchedules(todayStr);
     })();
 
-    // ADD TO CART button -> validate then submit the form (AJAX handled below)
     if (addBtn) {
-      addBtn.addEventListener('click', () => {
+      addBtn.addEventListener('click', function() {
         if (!isLoggedIn) {
-          Swal.fire({ title:'Belum Login!', text:'Silakan login terlebih dahulu untuk menambahkan ke keranjang.', icon:'warning', confirmButtonText:'Login Sekarang', confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF' }).then(() => { window.location.href = '/login'; });
+          Swal.fire({ title:'Belum Login!', text:'Silakan login terlebih dahulu untuk menambahkan ke keranjang.', icon:'warning', confirmButtonText:'Login Sekarang', confirmButtonColor:'#3085d6', background:'#1E1E1F', color:'#FFFFFF' }).then(function(){ window.location.href = '/login'; });
           return;
         }
         if (userRole !== 'user') {
@@ -680,32 +741,29 @@
         const schedule = document.querySelector('input[name="schedule"]:checked');
         const table    = document.querySelector('input[name="table_id"]:checked');
 
-        if (!datePicker?.value) { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
+        if (!datePicker || !datePicker.value) { Swal.fire({ title:'Oops!', text:'Silakan pilih tanggal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
         if (!schedule || !selectedSchedule) { Swal.fire({ title:'Oops!', text:'Silakan pilih jadwal terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
         if (!table) { Swal.fire({ title:'Oops!', text:'Silakan pilih meja terlebih dahulu.', icon:'warning', background:'#1E1E1F', color:'#FFFFFF' }); return; }
 
-        // keep hidden inputs in sync (optional)
         document.getElementById('startInput').value       = selectedSchedule.start;
         document.getElementById('endInput').value         = selectedSchedule.end;
-        document.getElementById('priceInput').value       = selectedSchedule.price ?? 0;
-        document.getElementById('tableNumberInput').value = selectedTableNumber ?? '';
+        document.getElementById('priceInput').value       = selectedSchedule.price || 0;
+        document.getElementById('tableNumberInput').value = selectedTableNumber || '';
 
-        // (opsional) update imageInput kalau user ganti foto utama via gallery
-        const main = document.getElementById('mainImage')?.getAttribute('src') || '';
+        const main = document.getElementById('mainImage') ? document.getElementById('mainImage').getAttribute('src') : '';
         try {
-          const url = new URL(main, window.location.origin);
-          const parts = url.pathname.split('/');
-          const fname = parts[parts.length - 1] || '';
-          if (fname) document.getElementById('imageInput').value = fname;
-        } catch (e) {
-          // abaikan jika gagal parse URL
-        }
+          if (main && main.indexOf('data:') !== 0) {
+            const url = new URL(main, window.location.origin);
+            const parts = url.pathname.split('/');
+            const fname = parts[parts.length - 1] || '';
+            if (fname) document.getElementById('imageInput').value = fname;
+          }
+        } catch (e) {}
 
-        form.requestSubmit();
+        document.getElementById("addToCartForm").requestSubmit();
       });
     }
 
-    // Intercept form submit dan POST via FormData
     if (form) {
       form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -731,26 +789,26 @@
           headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : ''
           },
           body: fd
         })
-        .then(res => res.json().then(json => ({ ok: res.ok, json })))
-        .then(({ ok, json }) => {
+        .then(function(res){ return res.json().then(function(json){ return { ok: res.ok, json: json }; }); })
+        .then(function(resp){
           Swal.close();
-          if (ok && json.success) {
+          if (resp.ok && resp.json && resp.json.success) {
             const badge = document.getElementById('cartCountBadge');
-            if (badge && json.cart_count) {
-              badge.textContent = json.cart_count;
+            if (badge && resp.json.cart_count) {
+              badge.textContent = resp.json.cart_count;
               badge.classList.remove('hidden');
             }
             Swal.fire({ title:'Berhasil!', text:'Venue berhasil ditambahkan ke keranjang.', icon:'success' })
-              .then(() => location.reload());
+              .then(function(){ location.reload(); });
           } else {
-            Swal.fire({ title:'Gagal!', text: json.message || 'Terjadi kesalahan, coba lagi.', icon:'error' });
+            Swal.fire({ title:'Gagal!', text: (resp.json && resp.json.message) ? resp.json.message : 'Terjadi kesalahan, coba lagi.', icon:'error' });
           }
         })
-        .catch((err) => {
+        .catch(function(err){
           console.error(err);
           Swal.close();
           Swal.fire({ title:'Error!', text:'Terjadi kesalahan jaringan.', icon:'error' });
@@ -758,7 +816,6 @@
       });
     }
 
-    // Align create review card
     function alignCreateReview() {
       const mq = window.matchMedia('(min-width: 768px)');
       const anchor = document.getElementById('reviewsAnchor');
@@ -776,5 +833,38 @@
     setTimeout(alignCreateReview, 250);
     alignCreateReview();
   });
+</script>
+
+{{-- ========== STAR RATING (click + keyboard, sets hidden input) ========== --}}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const box   = document.getElementById('ratingBox');
+  const input = document.getElementById('ratingInput');
+  if (!box || !input) return;
+
+  const stars = Array.prototype.slice.call(box.querySelectorAll('i[data-value]'));
+
+  function paint(n){
+    stars.forEach(function(s){
+      const v = parseInt(s.getAttribute('data-value') || '0', 10);
+      s.classList.toggle('active', v <= n);
+      s.setAttribute('aria-checked', v <= n ? 'true' : 'false');
+    });
+    input.value = n;
+  }
+
+  stars.forEach(function(s){
+    s.addEventListener('click', function(){ paint(parseInt(s.getAttribute('data-value') || '0', 10)); });
+    s.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        paint(parseInt(s.getAttribute('data-value') || '0', 10));
+      }
+    });
+  });
+
+  const initial = parseInt(input.value || '0', 10);
+  if (initial > 0) paint(initial);
+});
 </script>
 @endpush

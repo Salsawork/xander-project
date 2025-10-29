@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venue;
-use App\Models\BilliardSession;
 use App\Models\Booking;
 use App\Models\CartItem;
 use App\Models\PriceSchedule;
@@ -14,6 +13,7 @@ use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Auth;
 
 class VenueController extends Controller
 {
@@ -100,7 +100,6 @@ class VenueController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(function ($item) {
-                    // Ambil raw image dari model Venue (images[] atau image)
                     $rawImage = null;
                     $v = $item->venue;
                     if ($v) {
@@ -132,7 +131,6 @@ class VenueController extends Controller
                         'duration' => $item->start && $item->end
                             ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
                             : null,
-                        // kirim raw image ke view cart (bisa filename / url / path, nanti dibersihkan di blade)
                         'image'    => $rawImage,
                     ];
                 });
@@ -164,13 +162,13 @@ class VenueController extends Controller
         try {
             $venue = Venue::findOrFail($venueId);
             $requestedTime = $request->query('date')
-                ? \Carbon\Carbon::parse($request->query('date'))
+                ? Carbon::parse($request->query('date'))
                 : now();
 
             $today = strtolower($requestedTime->format('l'));
             $requestedDate = $requestedTime->format('Y-m-d');
 
-            $tables = \App\Models\Table::where('venue_id', $venueId)->get();
+            $tables = Table::where('venue_id', $venueId)->get();
             $bookings = Booking::where('venue_id', $venueId)
                 ->where('booking_date', $requestedDate)
                 ->where('status', 'booked')
@@ -184,7 +182,7 @@ class VenueController extends Controller
                     $days = is_string($item->days) ? json_decode($item->days, true) ?? [] : (array) $item->days;
                     return in_array($today, array_map('strtolower', $days));
                 })
-                ->map(function ($item) use ($requestedDate, $tables, $bookings) {
+                ->map(function ($item) use ($tables, $bookings) {
                     $tablesApplicable = $item->tables_applicable;
 
                     if (is_string($tablesApplicable)) {
@@ -196,11 +194,11 @@ class VenueController extends Controller
                     }
 
                     $slots = collect(
-                        \Carbon\CarbonInterval::minutes(60)->toPeriod(
-                            \Carbon\Carbon::parse($item->start_time),
-                            \Carbon\Carbon::parse($item->end_time)->subHour()
+                        CarbonInterval::minutes(60)->toPeriod(
+                            Carbon::parse($item->start_time),
+                            Carbon::parse($item->end_time)->subHour()
                         )
-                    )->map(function ($time) use ($tables, $bookings, $requestedDate, $tablesApplicable) {
+                    )->map(function ($time) use ($tables, $bookings, $tablesApplicable) {
                         $start = $time->format('H:i');
                         $end = $time->copy()->addHour()->format('H:i');
 
@@ -208,10 +206,10 @@ class VenueController extends Controller
                             $isInApplicableList = empty($tablesApplicable) || in_array($table->table_number ?? $table->id, $tablesApplicable);
 
                             $isBooked = $bookings->contains(function ($b) use ($table, $start, $end) {
-                                $bStart = \Carbon\Carbon::parse($b->start_time);
-                                $bEnd   = \Carbon\Carbon::parse($b->end_time);
-                                $sStart = \Carbon\Carbon::parse($start);
-                                $sEnd   = \Carbon\Carbon::parse($end);
+                                $bStart = Carbon::parse($b->start_time);
+                                $bEnd   = Carbon::parse($b->end_time);
+                                $sStart = Carbon::parse($start);
+                                $sEnd   = Carbon::parse($end);
 
                                 return $b->table_id == $table->id &&
                                     $sStart->lt($bEnd) && $sEnd->gt($bStart);
@@ -237,11 +235,10 @@ class VenueController extends Controller
                         'name'          => $item->name,
                         'price'         => $item->price,
                         'days'          => is_string($item->days) ? json_decode($item->days, true) ?? [] : (array) $item->days,
-                        'start_time'    => \Carbon\Carbon::parse($item->start_time)->format('H:i'),
-                        'end_time'      => \Carbon\Carbon::parse($item->end_time)->format('H:i'),
+                        'start_time'    => Carbon::parse($item->start_time)->format('H:i'),
+                        'end_time'      => Carbon::parse($item->end_time)->format('H:i'),
                         'time_category' => $item->time_category,
                         'schedule'      => $slots,
-                        'date'          => $requestedDate,
                     ];
                 })
                 ->values();
@@ -333,7 +330,6 @@ class VenueController extends Controller
                 ->where('item_type', 'venue')
                 ->get()
                 ->map(function ($item) {
-                    // Ambil raw image dari model Venue (images[] atau image)
                     $rawImage = null;
                     $v = $item->venue;
                     if ($v) {
@@ -365,7 +361,6 @@ class VenueController extends Controller
                         'duration' => $item->start && $item->end
                             ? gmdate('H:i', strtotime($item->end) - strtotime($item->start))
                             : null,
-                        // kirim raw image ke view cart (bisa filename / url / path, nanti dibersihkan di blade)
                         'image'    => $rawImage,
                     ];
                 });
@@ -401,6 +396,51 @@ class VenueController extends Controller
             'alreadyReviewed',
             'userHasBooking'
         ));
+    }
+
+    /**
+     * Simpan review user untuk venue (mengisi booking_id)
+     */
+    public function storeReview(Request $request, $venueId)
+    {
+        $venue = Venue::findOrFail($venueId);
+
+        // Cegah duplicate review user untuk venue ini
+        $already = Review::where('venue_id', $venue->id)
+            ->where('user_id', Auth::id())
+            ->exists();
+        if ($already) {
+            return back()->with('error', 'Kamu sudah memberi review untuk venue ini.');
+        }
+
+        // Ambil satu booking milik user untuk venue ini (sesuaikan kriteria status jika perlu)
+        $bookingQuery = Booking::where('user_id', Auth::id())
+            ->where('venue_id', $venue->id)
+            ->orderByDesc('booking_date')
+            ->orderByDesc('start_time');
+
+        $booking = $bookingQuery->first();
+
+        if (!$booking) {
+            return back()->with('error', 'Kamu belum memiliki booking di venue ini.');
+        }
+
+        // Validasi input
+        $validated = $request->validate([
+            'rating'  => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:2000',
+        ]);
+
+        // Simpan dengan booking_id
+        Review::create([
+            'venue_id'   => $venue->id,
+            'user_id'    => Auth::id(),
+            'booking_id' => $booking->id,
+            'rating'     => (int) $validated['rating'],
+            'comment'    => $validated['comment'] ?? null,
+        ]);
+
+        return back()->with('success', 'Terima kasih! Review kamu berhasil disimpan.');
     }
 
     private function uploadVenueFile(\Illuminate\Http\UploadedFile $file): string
