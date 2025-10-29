@@ -173,9 +173,8 @@
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
                                value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
-                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}"
-                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
                             <p class="text-white text-xs mt-1 cart-meta">

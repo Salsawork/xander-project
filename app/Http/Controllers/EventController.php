@@ -88,7 +88,7 @@ class EventController extends Controller
         }
 
         $events = $q->orderBy('start_date', 'asc')
-            ->paginate(8)
+            ->paginate(6)
             ->appends($request->query());
 
         // Optional featured: event terdekat yang akan datang
@@ -98,7 +98,12 @@ class EventController extends Controller
 
         // Dropdown statis
         $gameTypes = ['9-Ball', '8-Ball', '10-Ball'];
-        $regions   = ['Los Angeles, CA', 'New York, NY', 'Chicago, IL'];
+        
+        $regions = Event::select('location')
+            ->distinct()
+            ->orderBy('location')
+            ->pluck('location')
+            ->toArray();
 
         // Heading dinamis
         $heading = $request->filled('status')
