@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-
 class EventController extends Controller
 {
     /**
@@ -27,7 +26,6 @@ class EventController extends Controller
      */
     public function index()
     {
-        // Pastikan status up to date (pakai guard bila method tidak ada)
         if (method_exists(Event::class, 'refreshStatuses')) {
             Event::refreshStatuses();
         }
@@ -53,14 +51,12 @@ class EventController extends Controller
      */
     public function list(Request $request)
     {
-        // Pastikan status up to date
         if (method_exists(Event::class, 'refreshStatuses')) {
             Event::refreshStatuses();
         }
 
         $q = Event::query();
 
-        // Search (q)
         if ($term = trim((string) $request->query('q'))) {
             $q->where(function ($qq) use ($term) {
                 $qq->where('name', 'like', "%{$term}%")
@@ -69,7 +65,6 @@ class EventController extends Controller
             });
         }
 
-        // Status: upcoming/ongoing/ended (case-insensitive)
         if ($status = $request->query('status')) {
             $status = ucfirst(strtolower($status));
             if (in_array($status, ['Upcoming', 'Ongoing', 'Ended'])) {
@@ -77,12 +72,10 @@ class EventController extends Controller
             }
         }
 
-        // Game type (LIKE)
         if ($gt = trim((string) $request->query('game_type'))) {
             $q->where('game_types', 'like', "%{$gt}%");
         }
 
-        // Region (LIKE pada location)
         if ($region = trim((string) $request->query('region'))) {
             $q->where('location', 'like', "%{$region}%");
         }
@@ -91,12 +84,10 @@ class EventController extends Controller
             ->paginate(6)
             ->appends($request->query());
 
-        // Optional featured: event terdekat yang akan datang
         $featured = Event::whereDate('start_date', '>', now())
             ->orderBy('start_date')
             ->first();
 
-        // Dropdown statis
         $gameTypes = ['9-Ball', '8-Ball', '10-Ball'];
         
         $regions = Event::select('location')
@@ -105,7 +96,6 @@ class EventController extends Controller
             ->pluck('location')
             ->toArray();
 
-        // Heading dinamis
         $heading = $request->filled('status')
             ? (ucfirst($request->query('status')) . ' Events')
             : 'All Events';
@@ -132,7 +122,6 @@ class EventController extends Controller
         $event = Event::findOrFail($event);
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
     
-        // Ambil tiket default (jika tidak ada, buat)
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
         if (!$ticket) {
             $ticket = EventTicket::create([
@@ -143,7 +132,6 @@ class EventController extends Controller
                 'description' => 'Default ticket for ' . $event->name,
             ]);
         } else {
-            // Sinkron otomatis jika harga/stok berubah di events
             if (
                 (float) $ticket->price !== (float) $event->price_ticket ||
                 (int) $ticket->stock !== (int) $event->stock
@@ -155,12 +143,8 @@ class EventController extends Controller
             }
         }
     
-        // Tidak perlu lagi ambil dari EventRegistration untuk slot pemain
-    
         return view('public.event.detail', compact('event', 'banks', 'ticket'));
     }
-    
-    
 
     /**
      * Kompat lama: /event/{name} -> redirect ke /event/{id}/{slug}
@@ -189,7 +173,7 @@ class EventController extends Controller
     }
 
     /**
-     * Bracket (kompat lama): /event/{name}/bracket -> redirect
+     * Bracket (kompat lama)
      */
     public function bracketByName(Event $event)
     {
@@ -200,27 +184,23 @@ class EventController extends Controller
     }
 
     /**
-     * Register (POST) — hanya boleh sampai H-1 sebelum start_date.
-     * Route: POST /event/{event}/register (name: events.register) [auth]
-     * Field dari modal: username (alias name), email, phone
+     * Register (PLAYER) — H-1 sebelum start date
+     * POST /event/{event}/register
      */
     public function register(Request $request, $eventId)
     {
         $event = Event::lockForUpdate()->findOrFail($eventId);
         $user  = auth()->user();
     
-        // Validasi input
         $validated = $request->validate([
             'bank_id'       => 'required|integer|exists:mst_bank,id_bank',
             'bukti_payment' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
     
-        // Cek slot pemain
         if ($event->player_slots <= 0) {
             return back()->with('error', 'Slot pemain sudah penuh.');
         }
     
-        // Cek duplikat pendaftaran
         if (EventRegistration::where('event_id', $eventId)->where('user_id', $user->id)->exists()) {
             return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
         }
@@ -228,7 +208,6 @@ class EventController extends Controller
         try {
             DB::beginTransaction();
     
-            // Upload bukti pembayaran
             $file    = $request->file('bukti_payment');
             $ext     = $file->getClientOriginalExtension();
             $fname   = 'reg_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
@@ -237,17 +216,13 @@ class EventController extends Controller
             if (!file_exists($targetDir)) {
                 mkdir($targetDir, 0755, true);
             }
-    
             $file->move($targetDir, $fname);
     
-            // Generate nomor unik pendaftaran
             $registrationNumber = 'REG-' . strtoupper(Str::random(6));
     
-            // Hitung total
             $totalPayment = $event->price_ticket_player ?? 0;
     
-            // Simpan ke database
-            $registration = EventRegistration::create([
+            EventRegistration::create([
                 'event_id'            => $event->id,
                 'user_id'             => $user->id,
                 'bank_id'             => $validated['bank_id'],
@@ -259,15 +234,15 @@ class EventController extends Controller
                 'status'              => 'pending',
             ]);
     
-
-    
-            // Ubah role user ke player
             if ($user->roles === 'user') {
                 $user->update(['roles' => 'player']);
             }
     
             DB::commit();
-    
+
+            // Tampilkan Annual Pass (PLAYER)
+            $this->flashAnnualPass($user, 'player', $event);
+
             return back()->with('success', 'Pendaftaran pemain berhasil dikirim. Nomor registrasi: ' . $registrationNumber);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -279,65 +254,50 @@ class EventController extends Controller
             return back()->with('error', 'Terjadi kesalahan saat pendaftaran.');
         }
     }
+
     /**
-     * Buy Ticket (POST)
-     * - Diizinkan sebelum start_date (Upcoming) dan selama Ongoing
-     * - Dilarang saat sudah memasuki hari end_date
-     * Route: POST /event/{event}/buy (name: events.buy) [auth]
+     * Buy Ticket (VIEWER) — sebelum end_date
+     * POST /event/{event}/buy
      */
     public function buyTicket(Request $request, $event)
     {
-        // Lock baris event saat transaksi untuk menghindari race
         $event = Event::lockForUpdate()->findOrFail($event);
 
-        // Pastikan status up to date
         if (method_exists(Event::class, 'refreshStatuses')) {
             Event::refreshStatuses();
         }
 
         $user = Auth::user();
 
-        // Validasi awal (server-side)
         $validated = $request->validate([
             'qty'            => 'required|integer|min:1',
             'ticket_id'      => 'required|integer|exists:event_tickets,id',
             'bank_id'        => 'required|integer|exists:mst_bank,id_bank',
-            'bukti_payment'  => 'required|image|mimes:jpg,jpeg,png,webp|max:2048', // 2MB, image only
+            'bukti_payment'  => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
             '_from'          => 'nullable|string',
         ]);
 
-        // Aturan waktu pembelian
-        $startDate = $event->start_date instanceof Carbon
-            ? $event->start_date->copy()->startOfDay()
-            : Carbon::parse($event->start_date)->startOfDay();
         $endDate   = $event->end_date instanceof Carbon
             ? $event->end_date->copy()->startOfDay()
             : Carbon::parse($event->end_date)->startOfDay();
 
-        // Tidak boleh saat sudah memasuki hari end_date
         if (!now()->lt($endDate)) {
             return back()->withInput()->with('error', 'Penjualan tiket sudah berakhir.');
         }
-
-        // Boleh sebelum start & saat Ongoing
 
         $qty = (int) $validated['qty'];
 
         try {
             $orderEvent = DB::transaction(function () use ($event, $user, $validated, $qty, $request) {
-
-                // Pastikan ticket milik event ini & lock row ticket
                 $ticket = EventTicket::where('id', $validated['ticket_id'])
                     ->where('event_id', $event->id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                // Cek stok cukup
                 if ((int) $ticket->stock < $qty) {
                     abort(422, 'Stok tiket tidak mencukupi.');
                 }
 
-                // Hitung total berdasarkan harga ticket (bukan dari events)
                 $unitPrice    = (float) $ticket->price;
                 $totalPayment = $unitPrice * $qty;
 
@@ -347,25 +307,16 @@ class EventController extends Controller
                     $ext     = $file->getClientOriginalExtension();
                     $fname   = 'evt_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
 
-                    // Path target yang benar (naik 2 level ke public_html/demo-xanders)
                     $targetDir = base_path('../demo-xanders/images/payments/events');
-
-                    // Pastikan folder ada
                     if (!file_exists($targetDir)) {
                         mkdir($targetDir, 0755, true);
                     }
-
-                    // Simpan file
                     $file->move($targetDir, $fname);
-
-                    // Simpan hanya nama file di DB
                     $path = $fname;
                 }
 
-                // Generate order_number unik
                 $orderNumber = $this->generateUniqueOrderNumber();
 
-                // Buat order_events
                 $orderEvent = OrderEvent::create([
                     'order_number'  => $orderNumber,
                     'user_id'       => $user->id,
@@ -377,17 +328,14 @@ class EventController extends Controller
                     'status'        => 'paid',
                 ]);
 
-                // Kurangi stok ticket
                 $ticket->stock = (int) $ticket->stock - $qty;
                 $ticket->save();
 
-                // (Opsional) sinkron stok event agar tetap konsisten jika kolom event.stock digunakan
                 if (!is_null($event->stock)) {
                     $event->stock = max(0, (int) $event->stock - $qty);
                     $event->save();
                 }
 
-                // Pastikan role user sebagai 'user' (kecuali admin)
                 try {
                     if ($user->roles !== 'admin') {
                         $user->roles = 'user';
@@ -413,6 +361,9 @@ class EventController extends Controller
             return back()->withInput()->with('error', $msg);
         }
 
+        // Tampilkan Annual Pass (VIEWER)
+        $this->flashAnnualPass($user, 'viewer', $event);
+
         return back()->with('success', 'Pembelian tiket berhasil dibuat! Nomor pesanan: ' . $orderEvent->order_number);
     }
 
@@ -432,11 +383,186 @@ class EventController extends Controller
     }
 
     /**
+     * FLASH Annual Pass ke session untuk ditampilkan + diunduh di halaman detail event.
+     */
+    private function flashAnnualPass($user, string $type, Event $event): void
+    {
+        $year = now()->year;
+        $passNo = 'XB-' . $year . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $payload = [
+            'year'       => $year,
+            'type'       => strtoupper($type), // VIEWER / PLAYER
+            'number'     => $passNo,
+            'name'       => (string) ($user->name ?? 'Guest'),
+            'event'      => (string) ($event->name ?? 'Event'),
+            'valid_from' => now()->toDateString(),
+            'valid_to'   => now()->endOfYear()->toDateString(),
+            'qr_text'    => sprintf('XB|%s|%s|%s|%s', $year, strtoupper($type), $passNo, $user->name ?? 'Guest'),
+        ];
+
+        session()->flash('annual_pass', $payload);
+    }
+
+    /**
+     * ====== DOWNLOAD ANNUAL PASS (SERVER-SIDE PNG) ======
+     * GET /event/{event}/annual-pass/download?type=viewer|player
+     */
+    public function downloadAnnualPass(Request $request, $eventId)
+    {
+        $event = Event::findOrFail($eventId);
+        $user  = Auth::user();
+        if (!$user) {
+            abort(403, 'Unauthorized');
+        }
+
+        $type = strtolower($request->query('type', strtolower(session('annual_pass.type') ?? 'viewer')));
+        if (!in_array($type, ['viewer', 'player'])) {
+            $type = 'viewer';
+        }
+
+        $pngBinary = $this->renderAnnualPassPng($user, $type, $event);
+
+        $fileName = sprintf(
+            'AnnualPass-%s-%s-%s.png',
+            now()->year,
+            strtoupper($type),
+            Str::slug($user->name ?? 'guest')
+        );
+
+        return response($pngBinary, 200, [
+            'Content-Type'        => 'image/png',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'              => 'no-cache',
+        ]);
+    }
+
+    /**
+     * Render Annual Pass PNG (server-side) menggunakan GD.
+     * - Tanpa dependency wajib.
+     * - Jika package Simple QrCode tersedia, akan dipakai otomatis.
+     */
+    private function renderAnnualPassPng($user, string $type, Event $event): string
+    {
+        $w = 1400; $h = 770;
+        $im = imagecreatetruecolor($w, $h);
+
+        // Background gradient gelap
+        for ($y = 0; $y < $h; $y++) {
+            $ratio = $y / $h;
+            $color = imagecolorallocate($im,
+                (int)(11 + $ratio*4),
+                (int)(16 + $ratio*7),
+                (int)(32 + $ratio*10)
+            );
+            imageline($im, 0, $y, $w, $y, $color);
+        }
+
+        $white       = imagecolorallocate($im, 255, 255, 255);
+        $muted       = imagecolorallocate($im, 185, 193, 203);
+        $accentBlue  = imagecolorallocate($im, 37, 99, 235);
+        $accentGreen = imagecolorallocate($im, 16, 185, 129);
+        $border      = imagecolorallocatealpha($im, 255, 255, 255, 110);
+
+        // Border
+        imagerectangle($im, 8, 8, $w-9, $h-9, $border);
+
+        // Fonts (opsional)
+        $fontBold = public_path('fonts/Inter-Bold.ttf');
+        $fontReg  = public_path('fonts/Inter-Regular.ttf');
+        $hasTtfBold = is_file($fontBold);
+        $hasTtfReg  = is_file($fontReg);
+
+        $drawText = function($text, $size, $x, $y, $color, $bold = false) use ($im, $fontBold, $fontReg, $hasTtfBold, $hasTtfReg) {
+            if (($bold && $hasTtfBold) || (!$bold && $hasTtfReg)) {
+                $font = $bold ? $fontBold : $fontReg;
+                imagettftext($im, $size, 0, $x, $y, $color, $font, $text);
+            } else {
+                imagestring($im, $bold ? 5 : 4, $x, $y - 12, $text, $color);
+            }
+        };
+
+        // Payload
+        $year       = now()->year;
+        $validFrom  = now()->format('d M Y');
+        $validTo    = now()->endOfYear()->format('d M Y');
+        $name       = (string)($user->name ?? 'Guest');
+        $passNo     = 'XB-' . $year . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $typeText   = strtoupper($type);
+        $eventName  = (string)($event->name ?? 'Event');
+        $qrText     = sprintf('XB|%s|%s|%s|%s', $year, $typeText, $passNo, $name);
+
+        // Left texts
+        $padX = 72; $padY = 88;
+        $drawText('Xander Billiard', 22, $padX, $padY, $muted, true);
+        $drawText("Annual Pass {$year}", 48, $padX, $padY + 64, $white, true);
+        $drawText("Valid {$validFrom} — {$validTo}", 20, $padX, $padY + 104, $muted, false);
+
+        $kvY = $padY + 168;
+        $drawText('Name', 20, $padX, $kvY, $muted, false);
+        $drawText($name, 26, $padX + 180, $kvY, $white, true);
+
+        $kvY += 46;
+        $drawText('Pass No', 20, $padX, $kvY, $muted, false);
+        $drawText($passNo, 26, $padX + 180, $kvY, $white, true);
+
+        $kvY += 46;
+        $drawText('Type', 20, $padX, $kvY, $muted, false);
+        $badgeColor = ($type === 'viewer') ? $accentGreen : $accentBlue;
+        imagefilledrectangle($im, $padX + 180, $kvY - 24, $padX + 180 + 220, $kvY + 6, imagecolorallocatealpha($im, 255,255,255,110));
+        $drawText($typeText, 22, $padX + 200, $kvY, $badgeColor, true);
+
+        $kvY += 46;
+        $drawText('Event', 20, $padX, $kvY, $muted, false);
+        $drawText($eventName, 24, $padX + 180, $kvY, $white, true);
+
+        // QR area
+        $qrSize = 360;
+        $qrX = $w - $qrSize - 120;
+        $qrY = $padY;
+
+        $boxBorder = imagecolorallocatealpha($im, 255,255,255,90);
+        imagerectangle($im, $qrX - 14, $qrY - 14, $qrX + $qrSize + 14, $qrY + $qrSize + 14, $boxBorder);
+
+        // Try generate QR with Simple QrCode if available
+        $qrPngBin = null;
+        try {
+            if (class_exists(\SimpleSoftwareIO\QrCode\Generator::class)) {
+                $qr = new \SimpleSoftwareIO\QrCode\Generator;
+                $qrPngBin = $qr->format('png')->size($qrSize)->margin(1)->generate($qrText);
+            }
+        } catch (\Throwable $e) {
+            $qrPngBin = null;
+        }
+
+        if ($qrPngBin) {
+            $qrImg = imagecreatefromstring($qrPngBin);
+            if ($qrImg) {
+                imagecopyresampled($im, $qrImg, $qrX, $qrY, 0, 0, $qrSize, $qrSize, imagesx($qrImg), imagesy($qrImg));
+                imagedestroy($qrImg);
+            }
+        } else {
+            // Fallback kotak + teks
+            imagefilledrectangle($im, $qrX, $qrY, $qrX + $qrSize, $qrY + $qrSize, imagecolorallocatealpha($im, 255,255,255,115));
+            $drawText('QR not available', 18, $qrX + 80, $qrY + $qrSize/2, $muted, false);
+        }
+
+        $drawText('Scan QR untuk verifikasi pass (offline capable).', 18, $padX, $h - 72, $muted, false);
+
+        ob_start();
+        imagepng($im);
+        $data = ob_get_clean();
+        imagedestroy($im);
+
+        return $data;
+    }
+
+    /**
      * Update bracket winners dari fight results
      */
     private function updateBracketWinners($eventId, $championship)
     {
-        // Ambil semua fights yang sudah ada winner
         $fights = $championship->fights()
             ->whereNotNull('winner_id')
             ->get();
@@ -444,10 +570,7 @@ class EventController extends Controller
         foreach ($fights as $fight) {
             if (!$fight->winner_id) continue;
 
-            // Dapatkan winner berdasarkan winner_id
             $winner = null;
-
-            // Cek apakah c1 atau c2 yang menang
             if ($fight->c1 == $fight->winner_id) {
                 $winner = $fight->fighter1;
             } elseif ($fight->c2 == $fight->winner_id) {
@@ -459,33 +582,22 @@ class EventController extends Controller
             $winnerName = $winner->fullName ?? $winner->name;
             $round = $fight->round ?? 1;
 
-            // Update bracket: tandai sebagai winner
             Bracket::where('event_id', $eventId)
                 ->where('player_name', $winnerName)
                 ->where('round', $round)
                 ->update(['is_winner' => true]);
 
-            // Advance winner ke round berikutnya
             $this->advanceWinnerToNextRound($eventId, $winnerName, $round, $fight);
         }
     }
 
-    /**
-     * Advance winner ke round berikutnya
-     */
     private function advanceWinnerToNextRound($eventId, $winnerName, $currentRound, $fight)
     {
         $nextRound = $currentRound + 1;
-
-        // Dapatkan total rounds
         $maxRound = Bracket::where('event_id', $eventId)->max('round');
 
-        if ($currentRound >= $maxRound) {
-            // Sudah di final, tidak ada round berikutnya
-            return;
-        }
+        if ($currentRound >= $maxRound) return;
 
-        // Tentukan posisi di round berikutnya
         $currentBracket = Bracket::where('event_id', $eventId)
             ->where('player_name', $winnerName)
             ->where('round', $currentRound)
@@ -495,19 +607,16 @@ class EventController extends Controller
 
         $nextPosition = $currentBracket->next_match_position;
 
-        // Cek apakah sudah ada bracket di round berikutnya
         $nextBracket = Bracket::where('event_id', $eventId)
             ->where('round', $nextRound)
             ->where('position', $nextPosition)
             ->first();
 
         if ($nextBracket) {
-            // Update existing bracket
             if ($nextBracket->player_name === 'TBD') {
                 $nextBracket->update(['player_name' => $winnerName]);
             }
         } else {
-            // Create new bracket di round berikutnya
             $nextNextPosition = (int) ceil($nextPosition / 2);
 
             Bracket::create([
@@ -521,9 +630,6 @@ class EventController extends Controller
         }
     }
 
-    /**
-     * Method untuk manual update winner dari admin panel
-     */
     public function updateBracketWinner(Request $request, Event $event)
     {
         $validated = $request->validate([
@@ -533,18 +639,15 @@ class EventController extends Controller
 
         $bracket = Bracket::findOrFail($validated['bracket_id']);
 
-        // Pastikan bracket milik event ini
         if ($bracket->event_id !== $event->id) {
             return response()->json(['error' => 'Bracket not found'], 404);
         }
 
         DB::beginTransaction();
         try {
-            // Update winner status
             $bracket->update(['is_winner' => $validated['is_winner']]);
 
             if ($validated['is_winner']) {
-                // Reset winner lain di round yang sama di match yang sama
                 $matchPosition = (int) ceil($bracket->position / 2);
                 Bracket::where('event_id', $event->id)
                     ->where('round', $bracket->round)
@@ -552,7 +655,6 @@ class EventController extends Controller
                     ->whereRaw('CEIL(position / 2) = ?', [$matchPosition])
                     ->update(['is_winner' => false]);
 
-                // Advance ke round berikutnya
                 $this->advanceWinnerToNextRound(
                     $event->id,
                     $bracket->player_name,
@@ -569,9 +671,6 @@ class EventController extends Controller
         }
     }
 
-    /**
-     * Sync brackets dengan championship fights (dipanggil setelah generate tree)
-     */
     public function syncBracketsWithFights(Event $event)
     {
         if (!$event->tournament_id) {
@@ -588,7 +687,6 @@ class EventController extends Controller
             return;
         }
 
-        // Update winners dari fights
         $this->updateBracketWinners($event->id, $championship);
     }
 }

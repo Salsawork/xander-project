@@ -131,6 +131,12 @@ Route::get('/event/{event}/{name?}/bracket', [EventController::class, 'bracketBy
     ->where('event', '[0-9]+')
     ->name('events.bracket');
 
+// ===== Annual Pass Download (SERVER-SIDE PNG) =====
+Route::get('/event/{event}/annual-pass/download', [EventController::class, 'downloadAnnualPass'])
+    ->where('event', '[0-9]+')
+    ->middleware('auth')
+    ->name('events.pass.download');
+
 // Event Register (POST)
 Route::post('/event/{event}/register', [EventController::class, 'register'])
     ->where('event', '[0-9]+')
@@ -488,4 +494,3 @@ Route::prefix('blog')->group(function () {
     Route::view('/', 'blog.index')->name('blog.index');
     Route::view('/{slug}', 'blog.show')->name('blog.show');
 });
-
