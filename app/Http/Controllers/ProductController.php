@@ -136,7 +136,8 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'stock'       => 'required|integer|min:0',
+            // menerima stock_qty dari form, map ke stock
+            'stock_qty'   => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku',
             'images'      => 'nullable|array',
             'images.*'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
@@ -147,6 +148,10 @@ class ProductController extends Controller
             'pricing'     => 'required|numeric|min:0',
             'discount'    => 'nullable|numeric|min:0|max:100'
         ]);
+
+        // Map stock_qty -> stock (kolom DB)
+        $validatedData['stock'] = (int) ($validatedData['stock_qty'] ?? 0);
+        unset($validatedData['stock_qty']);
 
         // Upload images -> simpan array filename (tanpa path)
         $filenames = [];
@@ -183,7 +188,8 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand'       => 'required|in:Mezz,Predator,Cuetec,Other',
             'condition'   => 'required|in:new,used',
-            'stock'       => 'required|integer|min:0',
+            // menerima stock_qty dari form, map ke stock
+            'stock_qty'   => 'required|integer|min:0',
             'sku'         => 'nullable|string|unique:products,sku,' . $id,
             'images'      => 'nullable|array',
             'images.*'    => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
@@ -194,6 +200,10 @@ class ProductController extends Controller
             'pricing'     => 'required|numeric|min:0',
             'discount'    => 'required|numeric|min:0|max:100'
         ]);
+
+        // Map stock_qty -> stock (kolom DB)
+        $validatedData['stock'] = (int) ($validatedData['stock_qty'] ?? 0);
+        unset($validatedData['stock_qty']);
 
         $product = Product::findOrFail($id);
 
@@ -357,13 +367,10 @@ class ProductController extends Controller
         $detailHasDiscount     = $detailDiscountPercent > 0;
         $detailFinalPrice      = $this->finalPrice((float) ($detail->pricing ?? 0), $detailDiscountPercent);
 
-        $relatedQuery = Product::query()->where('id', '!=', $detail->id);
-        if (!empty($detail->category_id)) {
-            $relatedQuery->where('category_id', $detail->category_id);
-        }
-        $relatedProducts = $relatedQuery
+        // ==== RELATED: tampilkan SEMUA produk selain produk ini (tanpa filter kategori, tanpa limit) ====
+        $relatedProducts = Product::query()
+            ->where('id', '!=', $detail->id)
             ->orderBy('created_at', 'desc')
-            ->limit(12)
             ->get();
 
         $relatedPriceMap = [];
