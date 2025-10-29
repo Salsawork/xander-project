@@ -30,7 +30,7 @@ class SparringScheduleController extends Controller
      */
     public function create()
     {
-        return view('dash.athlete.sparring.create');
+        return view('dash.athlete.create-sparring-schedule');
     }
 
     /**
