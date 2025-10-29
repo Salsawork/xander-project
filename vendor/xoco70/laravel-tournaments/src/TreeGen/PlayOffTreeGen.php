@@ -7,131 +7,169 @@ use Xoco70\LaravelTournaments\Exceptions\TreeGenerationException;
 use Xoco70\LaravelTournaments\Models\ChampionshipSettings;
 use Xoco70\LaravelTournaments\Models\SingleEliminationFight;
 
+/**
+ * FIXED: Double Elimination Tree Generator
+ * 
+ * Correct Structure:
+ * - Round 1: All players (8 matches for 16 players)
+ * - Upper Bracket: Winners path (Round 2, 3, 4)
+ * - Lower Bracket: Losers path (starts RIGHT AFTER Round 1)
+ *   - LB Round 1: Receives losers from Upper Round 2
+ *   - LB Round 2: Winners from LB Round 1 advance
+ *   - LB Round 3: Receives losers from Upper Round 3
+ *   - LB Round 4: Winners from LB Round 3 advance
+ *   - LB Round 5: Receives losers from Upper Round 4
+ *   - LB Round 6: Winners from LB Round 5 advance (to Grand Final)
+ * - Grand Final: Upper winner vs Lower winner
+ */
 abstract class PlayOffTreeGen extends TreeGen
 {
-    /**
-     * Calculate the Byes needed to fill the Championship Tree.
-     */
     protected function getByeGroup($fighters)
     {
         $fighterCount = $fighters->count();
         $treeSize = $this->getTreeSize($fighterCount, 2);
         $byeCount = $treeSize - $fighterCount;
-
         return $this->createByeGroup($byeCount);
     }
 
-    /**
-     * Chunk Fighters into groups for fighting.
-     */
     protected function chunk(Collection $fightersByEntity)
     {
         if ($this->championship->hasPreliminary()) {
-            $fightersGroup = $fightersByEntity->chunk($this->settings->preliminaryGroupSize);
-            return $fightersGroup;
+            return $fightersByEntity->chunk($this->settings->preliminaryGroupSize);
         }
-
         return $fightersByEntity->chunk(2);
     }
 
-    /**
-     * Generate First Round Fights - SAMA SEPERTI SINGLE ELIMINATION
-     */
     protected function generateFights()
     {
-        $settings = $this->settings;
         $initialRound = 1;
-        
-        // Save fights - SAMA SEPERTI SINGLE ELIMINATION
         $fight = new SingleEliminationFight();
         $fight->saveFights($this->championship, $initialRound);
     }
 
     /**
-     * FIXED: Save Groups - DOUBLE ELIMINATION STRUCTURE
-     * Upper Bracket + Lower Bracket + Grand Final
+     * FIXED: Create correct Double Elimination structure
+     * 
+     * For 16 players:
+     * - Round 1: 8 matches
+     * - Upper: Rounds 2-4 (4, 2, 1 matches)
+     * - Lower: Rounds 5-10 (4, 4, 2, 2, 1, 1 matches)
+     * - Grand Final: Round 11 (1 match)
      */
     protected function pushGroups($numRounds, $numFighters)
     {
-        // ============================================
-        // UPPER BRACKET: Standard single elimination
-        // ============================================
-        $upperRounds = $numRounds + 1; // Rounds 2 to upperRounds
+        \Log::info('=== Creating Double Elimination Structure ===', [
+            'num_fighters' => $numFighters,
+            'base_rounds' => $numRounds
+        ]);
+
+        // ===================================
+        // UPPER BRACKET (Winners Path)
+        // ===================================
+        $upperRounds = $numRounds; // Rounds 2, 3, 4 for 16 players
         
-        for ($roundNumber = 2; $roundNumber <= $upperRounds; $roundNumber++) {
-            $maxMatches = ($numFighters / pow(2, $roundNumber));
+        for ($round = 2; $round <= $upperRounds + 1; $round++) {
+            $matchesInRound = $numFighters / pow(2, $round);
             
-            for ($matchNumber = 1; $matchNumber <= $maxMatches; $matchNumber++) {
+            \Log::info("Upper Bracket Round {$round}", [
+                'matches' => $matchesInRound
+            ]);
+            
+            for ($matchNum = 1; $matchNum <= $matchesInRound; $matchNum++) {
                 $fighters = $this->createByeGroup(2);
-                $group = $this->saveGroup($matchNumber, $roundNumber, null);
+                $group = $this->saveGroup($matchNum, $round, null);
                 $this->syncGroup($group, $fighters);
             }
         }
         
-        // ============================================
-        // LOWER BRACKET: Losers bracket structure
-        // ============================================
-        // Lower bracket has (numRounds * 2 - 1) rounds
-        // Because losers from each upper round join at different points
+        // ===================================
+        // LOWER BRACKET (Losers Path)
+        // Starts IMMEDIATELY after Round 1
+        // ===================================
+        $lowerBracketStart = $upperRounds + 2; // Round 5 for 16 players
         
-        $lowerBracketStart = $upperRounds + 1;
+        /**
+         * Lower Bracket Pattern (for 16 players):
+         * LB Round 1 (R5): 4 matches - receives 4 losers from Upper R2
+         * LB Round 2 (R6): 4 matches - 4 winners from LB R1 vs 4 losers from Upper R3
+         * LB Round 3 (R7): 2 matches - 4 winners from LB R2 → 2 matches
+         * LB Round 4 (R8): 2 matches - 2 winners from LB R3 vs 2 losers from Upper R4
+         * LB Round 5 (R9): 1 match   - 2 winners from LB R4 → 1 match
+         * LB Round 6 (R10): 1 match  - Winner goes to Grand Final
+         */
         
-        // Calculate lower bracket rounds
-        // Formula: For N players, lower bracket has (2N - 2) rounds
-        // Where N is the number of rounds in upper bracket
+        $lowerBracketRounds = [];
         
-        for ($lbRound = 0; $lbRound < ($numRounds * 2 - 1); $lbRound++) {
-            $roundNumber = $lowerBracketStart + $lbRound;
+        // Calculate lower bracket structure
+        for ($upperRound = 2; $upperRound <= $upperRounds + 1; $upperRound++) {
+            $losersFromUpper = $numFighters / pow(2, $upperRound);
             
-            // Lower bracket structure alternates:
-            // - Even rounds (0, 2, 4...): Upper bracket losers join
-            // - Odd rounds (1, 3, 5...): Winners progress
+            // First LB round receives losers from this upper round
+            $lowerBracketRounds[] = [
+                'matches' => $losersFromUpper,
+                'type' => 'receive_losers',
+                'from_upper' => $upperRound
+            ];
             
-            if ($lbRound % 2 == 0) {
-                // Rounds where upper losers drop in
-                // Matches = fighters from upper / 4 / (2^(lbRound/2))
-                $matchesInRound = max(1, $numFighters / pow(2, ($lbRound / 2) + 3));
-            } else {
-                // Pure progression rounds
-                $matchesInRound = max(1, $numFighters / pow(2, (($lbRound + 1) / 2) + 3));
-            }
-            
-            for ($matchNumber = 1; $matchNumber <= $matchesInRound; $matchNumber++) {
-                $fighters = $this->createByeGroup(2);
-                $group = $this->saveGroup($matchNumber, $roundNumber, null);
-                $this->syncGroup($group, $fighters);
+            // Second LB round: winners advance
+            if ($upperRound < $upperRounds + 1) {
+                $lowerBracketRounds[] = [
+                    'matches' => $losersFromUpper,
+                    'type' => 'advance_winners',
+                    'from_upper' => null
+                ];
             }
         }
         
-        // ============================================
-        // GRAND FINAL: One final match
-        // ============================================
-        $grandFinalRound = $lowerBracketStart + ($numRounds * 2 - 1);
+        // Last LB round before Grand Final
+        $lowerBracketRounds[] = [
+            'matches' => 1,
+            'type' => 'final_advance',
+            'from_upper' => null
+        ];
+        
+        // Create lower bracket groups
+        $lbRoundNumber = $lowerBracketStart;
+        foreach ($lowerBracketRounds as $lbRound) {
+            \Log::info("Lower Bracket Round {$lbRoundNumber}", [
+                'matches' => $lbRound['matches'],
+                'type' => $lbRound['type'],
+                'from_upper' => $lbRound['from_upper'] ?? 'N/A'
+            ]);
+            
+            for ($matchNum = 1; $matchNum <= $lbRound['matches']; $matchNum++) {
+                $fighters = $this->createByeGroup(2);
+                $group = $this->saveGroup($matchNum, $lbRoundNumber, null);
+                $this->syncGroup($group, $fighters);
+            }
+            
+            $lbRoundNumber++;
+        }
+        
+        // ===================================
+        // GRAND FINAL
+        // ===================================
+        $grandFinalRound = $lbRoundNumber;
+        
+        \Log::info("Grand Final Round {$grandFinalRound}");
+        
         $fighters = $this->createByeGroup(2);
         $group = $this->saveGroup(1, $grandFinalRound, null);
         $this->syncGroup($group, $fighters);
         
-        \Log::info('Double Elimination Structure Created', [
-            'num_fighters' => $numFighters,
-            'num_rounds_calculation' => $numRounds,
-            'upper_bracket_rounds' => "2 to {$upperRounds}",
-            'lower_bracket_start' => $lowerBracketStart,
-            'grand_final_round' => $grandFinalRound,
-            'total_rounds' => $grandFinalRound
+        \Log::info('=== Double Elimination Structure Complete ===', [
+            'total_rounds' => $grandFinalRound,
+            'upper_rounds' => "2-" . ($upperRounds + 1),
+            'lower_rounds' => "{$lowerBracketStart}-" . ($grandFinalRound - 1),
+            'grand_final' => $grandFinalRound
         ]);
     }
 
-    /**
-     * Return number of rounds based on fighter count
-     */
     protected function getNumRounds($numFighters)
     {
         return intval(log($numFighters, 2));
     }
 
-    /**
-     * Generate all trees with double elimination structure
-     */
     protected function generateAllTrees()
     {
         $this->minFightersCheck();
@@ -141,18 +179,12 @@ abstract class PlayOffTreeGen extends TreeGen
         $this->pushEmptyGroupsToTree($numFighters);
     }
 
-    /**
-     * Create empty groups after round 1
-     */
     protected function pushEmptyGroupsToTree($numFighters)
     {
         $numRounds = $this->getNumRounds($numFighters);
         return $this->pushGroups($numRounds, $numFighters);
     }
 
-    /**
-     * Generate groups for round 1
-     */
     public function generateGroupsForRound(Collection $usersByArea, $round)
     {
         $order = 1;
@@ -168,9 +200,6 @@ abstract class PlayOffTreeGen extends TreeGen
         }
     }
 
-    /**
-     * Check minimum fighters
-     */
     private function minFightersCheck()
     {
         $fighters = $this->getFighters();
@@ -189,9 +218,6 @@ abstract class PlayOffTreeGen extends TreeGen
         }
     }
 
-    /**
-     * Adjust fighters with byes - SAMA SEPERTI SINGLE ELIMINATION
-     */
     public function adjustFightersGroupWithByes($fighters, Collection $fighterGroups): Collection
     {
         $tmpFighterGroups = clone $fighterGroups;
@@ -209,13 +235,9 @@ abstract class PlayOffTreeGen extends TreeGen
         }
 
         $fighters = $this->insertByes($fighters, $numBye);
-
         return $fighters;
     }
 
-    /**
-     * Get max fighters by entity
-     */
     private function getMaxFightersByEntity($userGroups): int
     {
         return $userGroups
@@ -226,9 +248,6 @@ abstract class PlayOffTreeGen extends TreeGen
             ->count();
     }
 
-    /**
-     * Repart fighters
-     */
     private function repart($fighterGroups, $max)
     {
         $fighters = new Collection();
@@ -243,9 +262,6 @@ abstract class PlayOffTreeGen extends TreeGen
         return $fighters;
     }
 
-    /**
-     * Insert byes
-     */
     private function insertByes(Collection $fighters, $numByeTotal)
     {
         $bye = $this->createByeFighter();
@@ -276,12 +292,32 @@ abstract class PlayOffTreeGen extends TreeGen
         return $newFighters;
     }
 
-    /**
-     * Check if bye should be inserted
-     */
     private function shouldInsertBye($frequency, $count, $byeCount, $numByeTotal): bool
     {
         return $count != 0 && $count % $frequency == 0 && $byeCount < $numByeTotal;
     }
-}
 
+    protected function getTreeSize($fighterCount, $groupSize)
+    {
+        $squareMultiplied = collect([1, 2, 4, 8, 16, 32, 64])
+            ->map(function ($item) use ($groupSize) {
+                return $item * $groupSize;
+            });
+
+        foreach ($squareMultiplied as $limit) {
+            if ($fighterCount <= $limit) {
+                $treeSize = $limit;
+                $numAreas = $this->settings->fightingAreas;
+                $fighterCountPerArea = $treeSize / $numAreas;
+                
+                if ($fighterCountPerArea < $groupSize) {
+                    $treeSize = $treeSize * $numAreas;
+                }
+
+                return $treeSize;
+            }
+        }
+
+        return 64 * $groupSize;
+    }
+}

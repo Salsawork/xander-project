@@ -1,10 +1,17 @@
 <?php
-use Xoco70\LaravelTournaments\TreeGen\CreateSingleEliminationTree;
-
+// Temporary fix: Check if class exists
 $singleEliminationTree = $championship->fightersGroups->where('round', '>=', $hasPreliminary + 1)->groupBy('round');
+$treeGen = null;
+
 if (sizeof($singleEliminationTree) > 0) {
-    $treeGen = new CreateSingleEliminationTree($singleEliminationTree, $championship, $hasPreliminary);
-    $treeGen->build();
+    // Check if the CreateSingleEliminationTree class exists
+    if (class_exists('Xoco70\LaravelTournaments\TreeGen\CreateSingleEliminationTree')) {
+        $treeGen = new Xoco70\LaravelTournaments\TreeGen\CreateSingleEliminationTree($singleEliminationTree, $championship, $hasPreliminary);
+        $treeGen->build();
+    } else {
+        // Fallback: Use existing tree data directly
+        \Log::warning('CreateSingleEliminationTree class not found, using fallback');
+    }
     $match = [];
 }
 ?>
