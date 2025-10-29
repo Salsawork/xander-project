@@ -171,6 +171,23 @@
                       class="geocode-input">{{ old('map_embed') }}</textarea>
                     @error('map_embed') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
+                    {{-- NOTE: ditambahkan sesuai permintaan --}}
+                    <div class="mt-2 rounded-md border border-blue-500/40 bg-blue-500/10 text-blue-100 text-xs p-3 leading-relaxed">
+                      <p class="font-semibold mb-1">Panduan cepat Google Maps Embed</p>
+                      <ol class="list-decimal pl-4 space-y-1">
+                        <li>Buka <span class="font-semibold">Google Maps</span> dan cari lokasi venue.</li>
+                        <li>Pilih <span class="font-semibold">Bagikan</span> → <span class="font-semibold">Sematkan peta</span> lalu klik <span class="font-semibold">Salin HTML</span> (kode <code>&lt;iframe&gt;</code>), <em>atau</em> salin URL dengan pola <code>/maps/place/…</code> atau <code>?q=…</code>.</li>
+                        <li>Tempelkan di kolom ini. Jika format valid, <strong>preview akan muncul</strong> dan kolom <strong>Alamat Venue</strong> otomatis terisi.</li>
+                      </ol>
+                      <p class="mt-2 opacity-80">Format yang diterima:</p>
+                      <ul class="list-disc pl-5 space-y-1 mt-1">
+                        <li><code>&lt;iframe src="https://www.google.com/maps/embed?pb=..."&gt;&lt;/iframe&gt;</code></li>
+                        <li><code>https://www.google.com/maps/place/…</code></li>
+                        <li><code>https://www.google.com/maps?q=…</code></li>
+                      </ul>
+                    </div>
+                    {{-- END NOTE --}}
+
                     <div id="mapPreview" class="iframe-wrap mt-2" style="display:none;">
                       <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen=""></iframe>
                     </div>
