@@ -32,7 +32,7 @@
 
   /* Scroll containers: cegah chaining + wajib bg gelap */
   .scroll-root{ overscroll-behavior: contain; background:var(--page-bg); }
-  .scroll-inner{ overscroll-behavior: contain; background:var(--page-bg); }
+  .scroll-inner{ overscroll-beavior: contain; background:var(--page-bg); }
 
   /* ====== Animations shared ====== */
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
@@ -44,7 +44,7 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
   .pulse-slow{ animation: pulse 2s ease-in-out infinite; }
 
-  /* ====== Tambahan style untuk tampilan saat ADA data (sesuai kode bawah) ====== */
+  /* ====== Tambahan style untuk tampilan saat ADA data ====== */
   .fav-badge{
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
@@ -77,6 +77,15 @@
   .image-overlay{
     background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.3) 50%, rgba(0,0,0,.8) 100%);
   }
+
+  /* ====== Loader gambar + fade-in ====== */
+  .img-wrapper { position: relative; background: #171717; overflow: hidden; border-radius: .5rem; }
+  .img-wrapper > img { display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity .28s ease; }
+  .img-wrapper > img.is-loaded { opacity:1; }
+  .img-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+  .img-loading.is-hidden { display:none; }
+  .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 @endpush
 
@@ -96,6 +105,11 @@
   })();
 </script>
 
+@php
+  // FE base ABSOLUTE untuk venue
+  $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+@endphp
+
 <div class="min-h-screen bg-neutral-900 text-white scroll-root">
   <div class="flex min-h-[100dvh]">
     @include('partials.sidebar')
@@ -113,7 +127,7 @@
         @endif
 
         @if ($favorites->isEmpty())
-          {{-- ====== Tetap: Empty State (tidak diubah) ====== --}}
+          {{-- ====== Empty State (tetap) ====== --}}
           <div class="rounded-xl bg-gradient-to-br from-[#1f1f1f] to-[#151515] border border-white/10 p-12 text-center fade-in">
             <div class="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 grid place-items-center float-animation">
               <div class="w-20 h-20 rounded-full bg-gradient-to-br from-red-500/30 to-pink-500/30 grid place-items-center">
@@ -121,9 +135,9 @@
               </div>
             </div>
 
-            <h2 class="text-xl font-bold text-white mb-3">Belum Ada Venue Favorit</h2>
+            <h2 class="text-xl font-bold text-white mb-3">Belum Ada Venue Favorite</h2>
             <p class="text-gray-400 mb-2 max-w-md mx-auto">
-              Kamu belum menambahkan venue apapun ke daftar favorit.
+              Kamu belum menambahkan venue apapun ke daftar favorite.
             </p>
             <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto">
               Mulai jelajahi venue-venue menarik dan simpan yang kamu suka dengan menekan tombol <i class="fas fa-heart text-red-400"></i>
@@ -156,57 +170,90 @@
                   <div class="w-8 h-8 rounded-full bg-red-500/20 grid place-items-center mb-3">
                     <i class="fas fa-heart text-red-400 text-sm"></i>
                   </div>
-                  <p class="text-xs text-gray-400">Tekan ikon hati untuk menambahkan venue ke favorit</p>
+                  <p class="text-xs text-gray-400">Tekan ikon hati untuk menambahkan venue ke favorite</p>
                 </div>
                 <div class="bg-white/5 rounded-lg p-4 border border-white/5">
                   <div class="w-8 h-8 rounded-full bg-green-500/20 grid place-items-center mb-3">
                     <i class="fas fa-bookmark text-green-400 text-sm"></i>
                   </div>
-                  <p class="text-xs text-gray-400">Akses venue favorit kamu kapan saja dari halaman ini</p>
+                  <p class="text-xs text-gray-400">Akses venue favorite kamu kapan saja dari halaman ini</p>
                 </div>
               </div>
             </div>
           </div>
 
         @else
-          {{-- ====== Ubah hanya bagian ADA data: tampilan sesuai kode bawah ====== --}}
+          {{-- ====== ADA DATA: gambar utama FE /images/venue + fallback berantai aman ====== --}}
           <div id="favGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($favorites as $fav)
-              @php $venue = $fav->venue ?? null; @endphp
+              @php
+                $venue = $fav->venue ?? null;
+              @endphp
               @continue(!$venue)
 
               @php
                 $venueId     = $venue->id;
                 $venueName   = $venue->name ?? 'Venue';
                 $venueAddr   = $venue->address ?? null;
-                $venueImage  = $venue->image ?? null;
                 $venuePrice  = $venue->price ?? null;
                 $venueRating = $venue->rating ?? null;
+
+                // prioritas pertama: image_url yang disimpan saat favorite (kalau ada)
+                $candidates = [];
+                if (!empty($fav->image_url)) {
+                  $candidates[] = (string) $fav->image_url;
+                }
+
+                // prioritas kedua: FE base + basename dari $venue->image / $venue->images[0]
+                $rawImage = '';
+                if (!empty($venue->images)) {
+                  $arr = is_array($venue->images) ? $venue->images : (is_string($venue->images) ? json_decode($venue->images, true) : []);
+                  if (is_array($arr) && !empty($arr)) $rawImage = (string) $arr[0];
+                }
+                if ($rawImage === '' && !empty($venue->image)) {
+                  $rawImage = (string) $venue->image;
+                }
+                if ($rawImage !== '') {
+                  $name = basename(parse_url($rawImage, PHP_URL_PATH) ?? $rawImage);
+                  if ($name && $name !== '/' && $name !== '.') {
+                    $candidates[] = $feBase . $name;
+                  }
+                }
+
+                // fallback: global placeholder (bukan di /images/venue/, supaya tidak 404)
+                $candidates[] = 'https://demo-xanders.ptbmn.id/images/placeholder.webp';
+                $candidates[] = 'https://demo-xanders.ptbmn.id/images/placeholder.png';
+                $candidates[] = 'https://placehold.co/800x600?text=No+Image';
+
+                // unik & bersih
+                $candidates = array_values(array_unique(array_filter($candidates, fn($x) => is_string($x) && $x !== '')));
+
+                $primarySrc = $candidates[0] ?? 'https://placehold.co/800x600?text=No+Image';
               @endphp
 
               <div class="fav-card gradient-border rounded-2xl overflow-hidden bg-[#1f1f1f] border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-white/5 hover:-translate-y-1 fade-in group">
-                <div class="h-48 bg-black/20 relative overflow-hidden">
-                  @if($venueImage)
-                    <img src="{{ asset('storage/'.$venueImage) }}"
-                         alt="{{ $venueName }}"
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                  @else
-                    <div class="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 grid place-items-center">
-                      <div class="text-center">
-                        <i class="fas fa-building text-5xl text-gray-600 mb-2"></i>
-                        <p class="text-gray-500 text-sm font-medium">{{ $venueName }}</p>
-                      </div>
-                    </div>
-                  @endif
+                <div class="h-48 bg-black/20 relative overflow-hidden img-wrapper">
+                  <div class="img-loading" aria-hidden="true" role="progressbar"><div class="spinner"></div></div>
+
+                  {{-- IMG dengan kandidat fallback berantai --}}
+                  <img
+                    src="{{ $primarySrc }}"
+                    data-src-candidates='@json($candidates)'
+                    alt="{{ $venueName }}"
+                    class="w-full h-full object-cover js-fav-img"
+                    loading="lazy"
+                    decoding="async"
+                  />
 
                   <div class="image-overlay absolute inset-0"></div>
 
+                  {{-- Unfavorite --}}
                   <button
                     class="absolute top-3 right-3 inline-flex items-center gap-2 text-xs font-semibold rounded-full px-3.5 py-2 bg-red-500/95 hover:bg-red-600 text-white shadow-xl shadow-red-500/30 backdrop-blur-sm transition-all duration-200 hover:scale-105 z-10 border border-red-400/30"
                     onclick="toggleFavorite({{ $venueId }}, this)"
-                    title="Hapus dari favorit">
+                    title="Hapus dari favorite">
                     <i class="fas fa-heart"></i>
-                    <span>Favorit</span>
+                    <span>Favorite</span>
                   </button>
 
                   @if($venueRating)
@@ -262,6 +309,45 @@
 </div>
 
 <script>
+  // Fallback berantai untuk semua .js-fav-img
+  function initFavImages(){
+    document.querySelectorAll('.js-fav-img').forEach((img) => {
+      const wrapper = img.closest('.img-wrapper');
+      const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
+
+      let list = [];
+      try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(e) { list = []; }
+      if (!Array.isArray(list) || list.length === 0) { list = [img.getAttribute('src')].filter(Boolean); }
+
+      let idx = 0;
+      const showLoader = () => loader && loader.classList.remove('is-hidden');
+      const hideLoader = () => loader && loader.classList.add('is-hidden');
+      const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
+
+      if (img.complete && img.naturalWidth > 0) { markLoaded(); }
+      else { showLoader(); }
+
+      img.addEventListener('load', () => {
+        if (img.naturalWidth > 0) { markLoaded(); }
+      }, { passive: true });
+
+      img.addEventListener('error', () => {
+        if (idx < list.length - 1) {
+          idx++;
+          showLoader();
+          const nextSrc = list[idx];
+          if (nextSrc && img.src !== nextSrc) { img.src = nextSrc; }
+        } else {
+          // Sudah tidak ada kandidat lain → sembunyikan loader agar tidak muter
+          markLoaded();
+        }
+      }, { passive: true });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initFavImages);
+</script>
+
+<script>
   async function toggleFavorite(venueId, btnEl){
     if(!venueId){ return; } // guard ekstra jika null
     
@@ -279,7 +365,7 @@
       });
       if (!res.ok) {
         if (res.status === 401) {
-          window.location.href = "{{ route('login') }}";
+          window.location.href = '{{ route('login') }}';
           return;
         }
         throw new Error('Request gagal');
@@ -308,7 +394,7 @@
       }
     } catch (e) {
       console.error('Error:', e);
-      alert('Gagal mengubah favorit. Coba lagi.');
+      alert('Gagal mengubah favorite. Coba lagi.');
       btnEl.disabled = false;
       btnEl.style.opacity = '1';
     }
