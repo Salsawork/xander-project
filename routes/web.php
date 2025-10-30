@@ -435,8 +435,7 @@ Route::post('/shipping/cost', [ShippingController::class, 'getCost'])->name('raj
 */
 Route::middleware(['auth'])->prefix('dashboard/event')->name('admin.event.')->group(function () {
     Route::get('/', [AdminEventController::class, 'index'])->name('index');
-    Route::get('/export', [AdminEventController::class, 'export'])
-        ->name('export');
+    Route::get('/export', [AdminEventController::class, 'export'])->name('export');
     Route::get('/create', [AdminEventController::class, 'create'])->name('create');
     Route::post('/', [AdminEventController::class, 'store'])->name('store');
 

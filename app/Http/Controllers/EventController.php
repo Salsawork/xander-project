@@ -14,7 +14,6 @@ use Illuminate\Support\Str;
 use Xoco70\LaravelTournaments\Models\Tournament;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -89,24 +88,13 @@ class EventController extends Controller
             ->first();
 
         $gameTypes = ['9-Ball', '8-Ball', '10-Ball'];
-        
-        $regions = Event::select('location')
-            ->distinct()
-            ->orderBy('location')
-            ->pluck('location')
-            ->toArray();
+        $regions = Event::select('location')->distinct()->orderBy('location')->pluck('location')->toArray();
 
         $heading = $request->filled('status')
             ? (ucfirst($request->query('status')) . ' Events')
             : 'All Events';
 
-        return view('public.event.show', compact(
-            'events',
-            'featured',
-            'gameTypes',
-            'regions',
-            'heading'
-        ));
+        return view('public.event.show', compact('events','featured','gameTypes','regions','heading'));
     }
 
     /**
@@ -118,10 +106,10 @@ class EventController extends Controller
         if (method_exists(Event::class, 'refreshStatuses')) {
             Event::refreshStatuses();
         }
-    
+
         $event = Event::findOrFail($event);
         $banks = Bank::orderBy('nama_bank', 'asc')->get();
-    
+
         $ticket = EventTicket::where('event_id', $event->id)->orderBy('id')->first();
         if (!$ticket) {
             $ticket = EventTicket::create([
@@ -132,18 +120,16 @@ class EventController extends Controller
                 'description' => 'Default ticket for ' . $event->name,
             ]);
         } else {
-            if (
-                (float) $ticket->price !== (float) $event->price_ticket ||
-                (int) $ticket->stock !== (int) $event->stock
-            ) {
+            if ((float) $ticket->price !== (float) $event->price_ticket ||
+                (int) $ticket->stock !== (int) $event->stock) {
                 $ticket->update([
                     'price' => (float) $event->price_ticket,
                     'stock' => (int) $event->stock,
                 ]);
             }
         }
-    
-        return view('public.event.detail', compact('event', 'banks', 'ticket'));
+
+        return view('public.event.detail', compact('event','banks','ticket'));
     }
 
     /**
@@ -165,9 +151,7 @@ class EventController extends Controller
         $event = Event::findOrFail($event);
 
         $brackets = Bracket::where('event_id', $event->id)
-            ->orderBy('round')
-            ->orderBy('position')
-            ->get();
+            ->orderBy('round')->orderBy('position')->get();
 
         return view('public.event.bracket', compact('event', 'brackets'));
     }
@@ -184,44 +168,43 @@ class EventController extends Controller
     }
 
     /**
-     * Register (PLAYER) — H-1 sebelum start date
+     * Register (PLAYER)
      * POST /event/{event}/register
      */
     public function register(Request $request, $eventId)
     {
         $event = Event::lockForUpdate()->findOrFail($eventId);
         $user  = auth()->user();
-    
+
         $validated = $request->validate([
             'bank_id'       => 'required|integer|exists:mst_bank,id_bank',
             'bukti_payment' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
-    
+
         if ($event->player_slots <= 0) {
             return back()->with('error', 'Slot pemain sudah penuh.');
         }
-    
+
         if (EventRegistration::where('event_id', $eventId)->where('user_id', $user->id)->exists()) {
             return back()->with('error', 'Anda sudah mendaftar sebagai pemain.');
         }
-    
+
         try {
             DB::beginTransaction();
-    
+
             $file    = $request->file('bukti_payment');
             $ext     = $file->getClientOriginalExtension();
             $fname   = 'reg_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
-    
+
             $targetDir = base_path('../demo-xanders/images/payments/registrations');
             if (!file_exists($targetDir)) {
                 mkdir($targetDir, 0755, true);
             }
             $file->move($targetDir, $fname);
-    
+
             $registrationNumber = 'REG-' . strtoupper(Str::random(6));
-    
             $totalPayment = $event->price_ticket_player ?? 0;
-    
+
             EventRegistration::create([
                 'event_id'            => $event->id,
                 'user_id'             => $user->id,
@@ -233,14 +216,14 @@ class EventController extends Controller
                 'total_payment'       => $totalPayment,
                 'status'              => 'pending',
             ]);
-    
+
             if ($user->roles === 'user') {
                 $user->update(['roles' => 'player']);
             }
-    
+
             DB::commit();
 
-            // Tampilkan Annual Pass (PLAYER)
+            // FLASH Annual Pass (PLAYER)
             $this->flashAnnualPass($user, 'player', $event);
 
             return back()->with('success', 'Pendaftaran pemain berhasil dikirim. Nomor registrasi: ' . $registrationNumber);
@@ -256,7 +239,7 @@ class EventController extends Controller
     }
 
     /**
-     * Buy Ticket (VIEWER) — sebelum end_date
+     * Buy Ticket (VIEWER)
      * POST /event/{event}/buy
      */
     public function buyTicket(Request $request, $event)
@@ -277,7 +260,7 @@ class EventController extends Controller
             '_from'          => 'nullable|string',
         ]);
 
-        $endDate   = $event->end_date instanceof Carbon
+        $endDate = $event->end_date instanceof Carbon
             ? $event->end_date->copy()->startOfDay()
             : Carbon::parse($event->end_date)->startOfDay();
 
@@ -361,7 +344,7 @@ class EventController extends Controller
             return back()->withInput()->with('error', $msg);
         }
 
-        // Tampilkan Annual Pass (VIEWER)
+        // FLASH Annual Pass (VIEWER)
         $this->flashAnnualPass($user, 'viewer', $event);
 
         return back()->with('success', 'Pembelian tiket berhasil dibuat! Nomor pesanan: ' . $orderEvent->order_number);
@@ -407,6 +390,7 @@ class EventController extends Controller
     /**
      * ====== DOWNLOAD ANNUAL PASS (SERVER-SIDE PNG) ======
      * GET /event/{event}/annual-pass/download?type=viewer|player
+     * Route name: events.pass.download
      */
     public function downloadAnnualPass(Request $request, $eventId)
     {
@@ -563,9 +547,7 @@ class EventController extends Controller
      */
     private function updateBracketWinners($eventId, $championship)
     {
-        $fights = $championship->fights()
-            ->whereNotNull('winner_id')
-            ->get();
+        $fights = $championship->fights()->whereNotNull('winner_id')->get();
 
         foreach ($fights as $fight) {
             if (!$fight->winner_id) continue;
@@ -634,7 +616,7 @@ class EventController extends Controller
     {
         $validated = $request->validate([
             'bracket_id' => 'required|exists:brackets,id',
-            'is_winner' => 'required|boolean',
+            'is_winner'  => 'required|boolean',
         ]);
 
         $bracket = Bracket::findOrFail($validated['bracket_id']);
@@ -655,12 +637,7 @@ class EventController extends Controller
                     ->whereRaw('CEIL(position / 2) = ?', [$matchPosition])
                     ->update(['is_winner' => false]);
 
-                $this->advanceWinnerToNextRound(
-                    $event->id,
-                    $bracket->player_name,
-                    $bracket->round,
-                    null
-                );
+                $this->advanceWinnerToNextRound($event->id, $bracket->player_name, $bracket->round, null);
             }
 
             DB::commit();
@@ -673,19 +650,13 @@ class EventController extends Controller
 
     public function syncBracketsWithFights(Event $event)
     {
-        if (!$event->tournament_id) {
-            return;
-        }
+        if (!$event->tournament_id) { return; }
 
         $tournament = Tournament::with('championships.fights.winner')->find($event->tournament_id);
-        if (!$tournament) {
-            return;
-        }
+        if (!$tournament) { return; }
 
         $championship = $tournament->championships->first();
-        if (!$championship) {
-            return;
-        }
+        if (!$championship) { return; }
 
         $this->updateBracketWinners($event->id, $championship);
     }

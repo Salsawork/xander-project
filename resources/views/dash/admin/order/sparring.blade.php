@@ -3,20 +3,13 @@
 
 @push('styles')
 <style>
-    [x-cloak] {
-        display: none !important;
-    }
+    [x-cloak] { display: none !important; }
 
     /* Hide scrollbar for Chrome, Safari and Opera */
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
 
     /* Hide scrollbar for IE, Edge and Firefox */
-    .scrollbar-hide {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none;    /* Firefox */
-    }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
     /* ====== Anti overscroll / white bounce ====== */
     :root{ color-scheme: dark; --page-bg:#0a0a0a; }
@@ -46,6 +39,24 @@
     }
 </style>
 @endpush
+
+@php
+    /**
+     * Bangun URL bukti transfer dari field $order->file
+     * - Ambil hanya basename dari apapun (contoh: 'storage/1761.png' -> '1761.png')
+     * - Hasil: https://demo-xanders.ptbmn.id/images/payment_proof/{basename}
+     */
+    if (!function_exists('proof_url_from_order_file')) {
+        function proof_url_from_order_file($order): ?string {
+            $f = $order->file ?? null;
+            if (!$f) return null;
+            $name = basename(str_replace('\\','/',$f));
+            if ($name === '' || $name === '.' || $name === '..') return null;
+            // asset() -> https://demo-xanders.ptbmn.id/images/payment_proof/{file}
+            return asset('images/payment_proof/'.$name);
+        }
+    }
+@endphp
 
 @section('content')
 <div id="antiBounceBg" aria-hidden="true"></div>
@@ -191,86 +202,67 @@
                     </thead>
                     <tbody class="text-sm font-normal">
                         @forelse($orders as $order)
+                        @php
+                            $proofUrl = proof_url_from_order_file($order); // <<— pakai images/payment_proof
+                        @endphp
                         <tr class="border-b border-gray-700">
                             <td class="px-4 py-3">{{ $order->id }}</td>
                             <td class="px-4 py-3">{{ $order->created_at->format('d/m/Y') }}</td>
-                            <td class="px-4 py-3 truncate max-w-[160px]"
-                                title="{{ $order->user->name ?? 'Guest' }}">
+                            <td class="px-4 py-3 truncate max-w-[160px]" title="{{ $order->user->name ?? 'Guest' }}">
                                 {{ $order->user->name ?? 'Guest' }}
                             </td>
                             <td class="px-4 py-3">{{ $order->payment_method === 'transfer_manual' ? 'Transfer manual' : $order->payment_method }}</td>
                             <td class="px-4 py-3">
                                 @php
                                 $statusClass = [
-                                'pending' => 'bg-blue-600 text-white',
-                                'processing' => 'bg-yellow-400 text-gray-900',
-                                'paid' => 'bg-green-600 text-white',
-                                'failed' => 'bg-red-600 text-white',
-                                'refunded' => 'bg-gray-600 text-white',
+                                  'pending' => 'bg-blue-600 text-white',
+                                  'processing' => 'bg-yellow-400 text-gray-900',
+                                  'paid' => 'bg-green-600 text-white',
+                                  'failed' => 'bg-red-600 text-white',
+                                  'refunded' => 'bg-gray-600 text-white',
                                 ];
                                 @endphp
-                                <span
-                                    class="{{ $statusClass[$order->payment_status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
+                                <span class="{{ $statusClass[$order->payment_status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full inline-block min-w-[80px] text-center">
                                     {{ ucfirst($order->payment_status) }}
                                 </span>
                             </td>
-                            <td>
-                                @if ($order->file)
-                                <a href="{{ asset('storage/' . $order->file) }}" target="_blank"
-                                    class="text-blue-400 hover:underline">
-                                    <i class="fas fa-file-alt"></i> View File
-                                </a>
+                            <td class="px-4 py-3">
+                                @if ($proofUrl)
+                                    <a href="{{ $proofUrl }}" target="_blank" class="text-blue-400 hover:underline">
+                                        <i class="fas fa-file-alt"></i> View File
+                                    </a>
                                 @else
-                                <span class="text-gray-500">No File</span>
+                                    <span class="text-gray-500">No File</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3">Rp. {{ number_format($order->total, 0, ',', '.') }}</td>
-                            <td class="px-4 py-3 text-gray-300">
-                                Rp {{ number_format($order->fee_admin_total ?? 0, 0, ',', '.') }}
-                            </td>                            
+                            <td class="px-4 py-3 text-gray-300">Rp {{ number_format($order->fee_admin_total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 flex gap-4 text-gray-500">
-                                <a href="{{ route('order.detail.index', $order->id) }}"
-                                    aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
+                                <a href="{{ route('order.detail.index', $order->id) }}" aria-label="View order {{ $order->id }}" class="hover:text-gray-300">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <div class="relative" x-data="{ openPayment: false }">
-                                    <button @click="openPayment = !openPayment"
-                                        aria-label="Update payment status order {{ $order->id }}"
-                                        class="hover:text-blue-400">
+                                    <button @click="openPayment = !openPayment" aria-label="Update payment status order {{ $order->id }}" class="hover:text-blue-400">
                                         <i class="fas fa-money-bill-wave"></i>
                                     </button>
-                                    <div x-show="openPayment" x-cloak @click.away="openPayment = false"
-                                        class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50"
-                                        style="transform: translateX(-30%); min-width: 12rem;">
+                                    <div x-show="openPayment" x-cloak @click.away="openPayment = false" class="absolute right-0 mt-2 w-48 bg-[#333333] rounded-md shadow-lg z-50" style="transform: translateX(-30%); min-width: 12rem;">
                                         <div class="py-1">
-                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'pending']) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Pending">Pending</a>
-                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'processing']) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Processing">Processing</a>
-                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'paid']) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Paid">Paid</a>
-                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'failed']) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Failed">Failed</a>
-                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'refunded']) }}"
-                                                class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link"
-                                                data-status="Refunded">Refunded</a>
+                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'pending']) }}"   class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link" data-status="Pending">Pending</a>
+                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'processing']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link" data-status="Processing">Processing</a>
+                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'paid']) }}"       class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link" data-status="Paid">Paid</a>
+                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'failed']) }}"     class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link" data-status="Failed">Failed</a>
+                                            <a href="{{ route('admin.orders.update-payment-status', ['order' => $order->id, 'status' => 'refunded']) }}"  class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] payment-status-link" data-status="Refunded">Refunded</a>
                                         </div>
                                     </div>
                                 </div>
-                                <button aria-label="Delete order {{ $order->id }}"
-                                    class="hover:text-red-500 delete-order" data-id="{{ $order->id }}"
-                                    data-name="{{ $order->user->name ?? 'Guest' }}">
+                                <button aria-label="Delete order {{ $order->id }}" class="hover:text-red-500 delete-order" data-id="{{ $order->id }}" data-name="{{ $order->user->name ?? 'Guest' }}">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
                         </tr>
                         @empty
                         <tr class="border-b border-gray-700">
-                            <td colspan="8" class="px-4 py-3 text-center">Belum ada order</td>
+                            <td colspan="9" class="px-4 py-3 text-center">Belum ada order</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -280,6 +272,9 @@
             <!-- Tablet & Mobile Card View -->
             <section class="lg:hidden mx-4 space-y-4">
                 @forelse($orders as $order)
+                @php
+                    $proofUrlMobile = proof_url_from_order_file($order); // <<— pakai images/payment_proof
+                @endphp
                 <div class="bg-[#292929] rounded-lg p-4" x-data="{ open: false }">
                     <!-- Card Header -->
                     <div class="flex justify-between items-start mb-3">
@@ -289,11 +284,11 @@
                         </div>
                         @php
                         $statusClass = [
-                        'pending' => 'bg-blue-600 text-white',
-                        'processing' => 'bg-yellow-400 text-gray-900',
-                        'paid' => 'bg-green-600 text-white',
-                        'failed' => 'bg-red-600 text-white',
-                        'refunded' => 'bg-gray-600 text-white',
+                          'pending' => 'bg-blue-600 text-white',
+                          'processing' => 'bg-yellow-400 text-gray-900',
+                          'paid' => 'bg-green-600 text-white',
+                          'failed' => 'bg-red-600 text-white',
+                          'refunded' => 'bg-gray-600 text-white',
                         ];
                         @endphp
                         <span class="{{ $statusClass[$order->payment_status] ?? 'bg-gray-500 text-white' }} px-3 py-1 rounded-full text-xs">
@@ -321,58 +316,37 @@
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-400">File:</span>
-                            @if ($order->file)
-                            <a href="{{ asset('storage/' . $order->file) }}" target="_blank"
-                                class="text-blue-400 hover:underline text-xs">
-                                <i class="fas fa-file-alt"></i> View File
-                            </a>
+                            @if ($proofUrlMobile)
+                                <a href="{{ $proofUrlMobile }}" target="_blank" class="text-blue-400 hover:underline text-xs">
+                                    <i class="fas fa-file-alt"></i> View File
+                                </a>
                             @else
-                            <span class="text-gray-500 text-xs">No File</span>
+                                <span class="text-gray-500 text-xs">No File</span>
                             @endif
                         </div>
                     </div>
 
                     <!-- Card Actions -->
                     <div class="flex gap-3 mt-4 pt-3 border-t border-gray-700 justify-end">
-                        <a href="{{ route('order.detail.index', $order->id) }}"
-                            aria-label="View order {{ $order->id }}"
-                            class="text-gray-400 hover:text-gray-300">
+                        <a href="{{ route('order.detail.index', $order->id) }}" aria-label="View order {{ $order->id }}" class="text-gray-400 hover:text-gray-300">
                             <i class="fas fa-eye"></i> View
                         </a>
                         <div class="relative">
-                            <button @click="open = !open"
-                                aria-label="Update status order {{ $order->id }}"
-                                class="text-gray-400 hover:text-blue-400">
+                            <button @click="open = !open" aria-label="Update status order {{ $order->id }}" class="text-gray-400 hover:text-blue-400">
                                 <i class="fas fa-shipping-fast"></i> Status
                             </button>
-                            <div x-show="open" x-cloak @click.away="open = false"
-                                class="absolute right-0 bottom-full mb-2 w-48 bg-[#333333] rounded-md shadow-lg z-50">
+                            <div x-show="open" x-cloak @click.away="open = false" class="absolute right-0 bottom-full mb-2 w-48 bg-[#333333] rounded-md shadow-lg z-50">
                                 <div class="py-1">
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'pending']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Pending">Pending</a>
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'processing']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Processing">Processing</a>
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'packed']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Packed">Packed</a>
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'shipped']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Shipped">Shipped</a>
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'delivered']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Delivered">Delivered</a>
-                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'cancelled']) }}"
-                                        class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link"
-                                        data-status="Cancelled">Cancelled</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'pending']) }}"   class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Pending">Pending</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'processing']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Processing">Processing</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'packed']) }}"    class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Packed">Packed</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'shipped']) }}"   class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Shipped">Shipped</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'delivered']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Delivered">Delivered</a>
+                                    <a href="{{ route('admin.orders.update-status', ['order' => $order->id, 'status' => 'cancelled']) }}" class="block w-full text-left px-4 py-2 text-sm hover:bg-[#444444] status-link" data-status="Cancelled">Cancelled</a>
                                 </div>
                             </div>
                         </div>
-                        <button aria-label="Delete order {{ $order->id }}"
-                            class="text-gray-400 hover:text-red-500 delete-order"
-                            data-id="{{ $order->id }}"
-                            data-name="{{ $order->user->name ?? 'Guest' }}">
+                        <button aria-label="Delete order {{ $order->id }}" class="text-gray-400 hover:text-red-500 delete-order" data-id="{{ $order->id }}" data-name="{{ $order->user->name ?? 'Guest' }}">
                             <i class="fas fa-trash-alt"></i> Delete
                         </button>
                     </div>
@@ -401,8 +375,7 @@
         @if(session('success'))
         Swal.fire({
             title: 'Success!',
-            text: '{{ session('
-            success ') }}',
+            text: '{{ session('success') }}', // <<— diperbaiki
             icon: 'success',
             confirmButtonText: 'OK',
             confirmButtonColor: '#3085d6',
@@ -411,7 +384,7 @@
         });
         @endif
 
-        // Tambahkan event listener untuk link update status
+        // Tambahkan event listener untuk link update status (jika ada)
         const statusLinks = document.querySelectorAll('.status-link');
         statusLinks.forEach(link => {
             link.addEventListener('click', function(e) {
@@ -480,7 +453,6 @@
                                         background: '#1E1E1F',
                                         color: '#FFFFFF'
                                     });
-                                    // Muat ulang halaman
                                     window.location.reload();
                                 } else {
                                     Swal.fire({

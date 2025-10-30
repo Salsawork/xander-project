@@ -172,6 +172,7 @@
 
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
+                               data-image="{{ $filenameVenue ?? '' }}"
                                value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
                                class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
                         <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
@@ -316,9 +317,15 @@
     });
     updateCartTotal();
 
+    /** Saat submit ke checkout:
+     *  - Kita kirim selected_items[]
+     *  - PLUS: selected_images[type:id]=<filename> khusus venue (diambil dari data-image)
+     */
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {
         const form = this;
         form.querySelectorAll('input[name="selected_items[]"]').forEach(el => el.remove());
+        form.querySelectorAll('input[name^="selected_images"]').forEach(el => el.remove());
+
         const checked = document.querySelectorAll('#cart input[type="checkbox"]:checked');
 
         if (checked.length === 0) {
@@ -356,11 +363,23 @@
         checked.forEach(cb => {
             const type = cb.dataset.type || 'product';
             const id = cb.value.split(':')[1] || cb.value;
+
+            // selected_items[]
             const hidden = document.createElement('input');
             hidden.type = 'hidden';
             hidden.name = 'selected_items[]';
             hidden.value = `${type}:${id}`;
             form.appendChild(hidden);
+
+            // selected_images[type:id] = filename (khusus venue)
+            if (type === 'venue') {
+                const filename = cb.dataset.image || '';
+                const hid2 = document.createElement('input');
+                hid2.type = 'hidden';
+                hid2.name = `selected_images[${type}:${id}]`;
+                hid2.value = filename; // bisa kosong (fallback di view)
+                form.appendChild(hid2);
+            }
         });
     });
 </script>
