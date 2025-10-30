@@ -5,6 +5,7 @@
     <style>
         :root { color-scheme: dark; }
 
+        /* ===== Base (mobile-first) ===== */
         html, body{
             height:100%;
             min-height:100%;
@@ -17,60 +18,121 @@
         body{ -webkit-overflow-scrolling:touch; touch-action:pan-y; }
         img{ display:block; background:transparent; }
 
-        /* ===== Modal (Register & Buy Ticket) ===== */
-        .modal{ display:none; position:fixed; z-index:9999; inset:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); }
-        .modal.active{ display:flex; align-items:center; justify-content:center; }
-        .modal-content{ background:#1f1f1f; margin:auto; padding:0; border-radius:12px; width:90%; max-width:520px; box-shadow:0 4px 6px rgba(0,0,0,.3); animation:slideDown .3s ease-out; }
-        @keyframes slideDown{ from{opacity:0;transform:translateY(-50px);} to{opacity:1;transform:translateY(0);} }
-        .modal-header{ padding:20px 24px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
-        .modal-body{ padding:24px; }
-        .modal-footer{ padding:16px 24px; border-top:1px solid #333; display:flex; justify-content:flex-end; gap:12px; }
-        .close{ color:#aaa; font-size:28px; font-weight:bold; cursor:pointer; transition:color .3s; }
-        .close:hover,.close:focus{ color:#fff; }
-        .form-group{ margin-bottom:16px; }
-        .form-label{ display:block; margin-bottom:8px; font-weight:500; color:#e5e5e5; }
-        .form-input,.form-select{ width:100%; padding:12px 14px; background:#2a2a2a; border:1px solid #404040; border-radius:8px; color:#fff; font-size:14px; transition:all .3s; }
-        .form-input:focus,.form-select:focus{ outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); }
-        .form-input::placeholder{ color:#666; }
-        .btn-primary{ background:#3b82f6; color:#fff; padding:10px 24px; border:none; border-radius:8px; font-weight:500; cursor:pointer; transition:background-color .3s; }
-        .btn-primary:hover{ background:#2563eb; }
-        .btn-secondary{ background:transparent; color:#9ca3af; padding:10px 24px; border:1px solid #404040; border-radius:8px; font-weight:500; cursor:pointer; transition:all .3s; }
-        .btn-secondary:hover{ background:#2a2a2a; color:#fff; }
-        .hint{ font-size:12px; color:#9ca3af; }
+        /* ===== Hero (responsive) ===== */
+        .hero{
+            position:relative;
+            background-size:cover;
+            background-position:center;
+            padding: 40px 16px; /* mobile */
+        }
+        .hero::after{
+            content:"";
+            position:absolute; inset:0;
+            background: radial-gradient(120% 120% at 0% 0%, rgba(0,0,0,.35), transparent 60%),
+                        linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.1));
+            pointer-events:none;
+        }
+        .hero-inner{ position:relative; z-index:1; }
+        .breadcrumb{
+            color:#9ca3af;
+            font-size:12px;
+            max-width: 92vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hero-title{ font-size:1.625rem; line-height:1.2; font-weight:800; text-transform:uppercase; }
+        @media (min-width:640px){
+            .hero{ padding: 48px 24px; }
+            .hero-title{ font-size:2.25rem; }
+        }
+        @media (min-width:1024px){
+            .hero{ padding: 6rem; }
+            .hero-title{ font-size:2.5rem; }
+        }
 
-        /* ===== Unified image loading UI ===== */
-        .img-wrapper{ position:relative; width:100%; height:100%; background:#141414; overflow:hidden; }
+        /* ===== Cards & sections ===== */
+        .section-card{ background:#1f1f1f; border-radius:14px; padding:16px; }
+        @media (min-width:640px){ .section-card{ padding:20px; } }
+        @media (min-width:768px){ .section-card{ padding:24px; } }
+
+        /* ===== Image block (aspect-ratio friendly) ===== */
+        .img-wrapper{ position:relative; width:100%; background:#141414; overflow:hidden; border-radius:12px; }
+        .media-16x9{ aspect-ratio: 16 / 9; }
+        @supports not (aspect-ratio: 16/9){
+            .media-16x9{ position:relative; padding-top:56.25%; }
+            .media-16x9 > img, .media-16x9 > .img-loading{ position:absolute; inset:0; }
+        }
         .img-wrapper img{ width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .28s ease; }
         .img-wrapper img.loaded{ opacity:1; }
         .img-loading{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:#151515; color:#9ca3af; z-index:1; }
         .img-loading.hidden{ display:none; }
-        .spinner{ width:34px; height:34px; border:3px solid rgba(130,130,130,.25); border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite; }
+        .spinner{ width:32px; height:32px; border:3px solid rgba(130,130,130,.25); border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .camera-icon{ width:28px; height:28px; opacity:.6; }
+        .camera-icon{ width:26px; height:26px; opacity:.6; }
         .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
-        /* ===== Info/Alert cards ===== */
-        .card-info{ border:1px solid rgba(59,130,246,.35); background: rgba(59,130,246,.08); }
-        .card-warn{ border:1px solid rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+        /* ===== Status pill ===== */
+        .status-pill{ padding:.35rem .75rem; border-radius:9999px; font-size:.75rem; font-weight:700; }
+
+        /* ===== Meta row ===== */
+        .meta-grid{
+            display:grid; gap:12px;
+            grid-template-columns: 1fr; /* mobile */
+            background:#202226; border-radius:12px; padding:14px;
+        }
+        .meta-item-title{ color:#9ca3af; font-size:.75rem; text-transform:uppercase; margin-bottom:4px; }
+        .meta-item-value{ font-weight:700; font-size:.95rem; }
+        @media (min-width:480px){ .meta-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+        @media (min-width:768px){ .meta-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); padding:18px; } }
+
+        /* ===== Info & warn cards ===== */
+        .card-info{ border:1px solid rgba(59,130,246,.35); background: rgba(59,130,246,.08); border-radius:10px; }
+        .card-warn{ border:1px solid rgba(245,158,11,.35); background: rgba(245,158,11,.08); border-radius:10px; }
         .badge{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:9999px; font-size:.75rem; line-height:1; letter-spacing:.2px; }
         .badge-viewer{ background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.35); color:#a7f3d0; }
         .badge-player{ background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.35); color:#bfdbfe; }
 
-        /* ===== Annual Pass Toast (BOTTOM) ===== */
+        /* ===== Buttons (mobile block) ===== */
+        .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:10px; padding:10px 16px; font-weight:600; transition:.25s background-color, .25s color, .25s border-color; }
+        .btn-primary{ background:#3b82f6; color:#fff; }
+        .btn-primary:hover{ background:#2563eb; }
+        .btn-outline{ background:transparent; color:#60a5fa; border:1px solid #2563eb; }
+        .btn-outline:hover{ background:#2563eb; color:#fff; }
+        .btn-block-sm{ width:100%; }
+        @media (min-width:640px){ .btn-block-sm{ width:auto; } }
+
+        /* ===== Modal (Register & Buy Ticket) ===== */
+        .modal{ display:none; position:fixed; z-index:9999; inset:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); }
+        .modal.active{ display:flex; align-items:flex-end; justify-content:center; } /* bottom sheet on mobile */
+        .modal-content{ background:#1f1f1f; margin:0 12px 12px; padding:0; border-radius:16px; width:calc(100% - 24px); max-width:520px; box-shadow:0 8px 24px rgba(0,0,0,.5); animation:slideUp .28s ease-out; overflow:hidden; display:flex; flex-direction:column; max-height:calc(100svh - 24px); }
+        @keyframes slideUp{ from{opacity:0; transform:translateY(24px);} to{opacity:1; transform:translateY(0);} }
+        .modal-header{ padding:14px 16px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#1f1f1f; z-index:1; }
+        .modal-body{ padding:16px; overflow:auto; }
+        .modal-footer{ padding:12px 16px; border-top:1px solid #333; display:flex; gap:10px; justify-content:flex-end; position:sticky; bottom:0; background:#1f1f1f; }
+        .close{ color:#aaa; font-size:22px; font-weight:bold; cursor:pointer; transition:color .2s; }
+        .close:hover,.close:focus{ color:#fff; }
+        .form-group{ margin-bottom:14px; }
+        .form-label{ display:block; margin-bottom:6px; font-weight:500; color:#e5e5e5; font-size:14px; }
+        .form-input,.form-select{ width:100%; padding:12px 14px; background:#2a2a2a; border:1px solid #404040; border-radius:10px; color:#fff; font-size:14px; transition:all .2s; }
+        .form-input:focus,.form-select:focus{ outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+        .form-input::placeholder{ color:#666; }
+        .btn-secondary{ background:transparent; color:#9ca3af; padding:10px 16px; border:1px solid #404040; border-radius:10px; font-weight:600; }
+        .btn-secondary:hover{ background:#2a2a2a; color:#fff; }
+        .hint{ font-size:12px; color:#9ca3af; }
+
+        /* ===== Annual Pass Toast (mobile-safe) ===== */
         .ap-toast{
             position: fixed;
             left: 50%;
             transform: translateX(-50%);
-            bottom: 20px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
             width: min(920px, 96%);
             z-index: 9998;
             pointer-events: none;
-            animation: apToastIn .35s ease-out;
+            animation: apToastIn .28s ease-out;
         }
-        @keyframes apToastIn{
-            from{ opacity:0; transform: translateX(-50%) translateY(20px); }
-            to{ opacity:1; transform: translateX(-50%) translateY(0); }
-        }
+        @keyframes apToastIn{ from{ opacity:0; transform: translateX(-50%) translateY(10px); } to{ opacity:1; transform: translateX(-50%) translateY(0); } }
         .ap-toast-inner{
             pointer-events: auto;
             border-radius: 16px;
@@ -83,99 +145,39 @@
             color:#e5e7eb;
             overflow:hidden;
         }
-        .ap-toast-header{
-            display:flex; align-items:center; justify-content:space-between;
-            padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.08);
-        }
-        .ap-toast-body{
-            padding:16px;
-            display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-        }
-        .ap-title{ font-size:18px; font-weight:800; letter-spacing:.2px; }
-        .ap-left{ display:flex; flex-direction:column; gap:6px; min-width: 240px; }
-        .ap-row{ display:grid; grid-template-columns:120px 1fr; gap:6px; font-size:14px; }
+        .ap-toast-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08); }
+        .ap-toast-body{ padding:12px; display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+        .ap-title{ font-size:16px; font-weight:800; letter-spacing:.2px; }
+        .ap-left{ display:flex; flex-direction:column; gap:6px; min-width: 220px; }
+        .ap-row{ display:grid; grid-template-columns:110px 1fr; gap:6px; font-size:13px; }
         .ap-kv{ opacity:.75; }
         .ap-badge{ display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:9999px; font-weight:700; letter-spacing:.2px; font-size:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); }
         .ap-badge.viewer{ color:#a7f3d0; border-color:rgba(16,185,129,.35); background:rgba(16,185,129,.08); }
         .ap-badge.player{ color:#bfdbfe; border-color:rgba(59,130,246,.35); background:rgba(59,130,246,.08); }
-        .ap-actions{ display:flex; gap:10px; flex-wrap:wrap; }
-        .ap-btn{ appearance:none; border:none; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer; }
+        .ap-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+        .ap-btn{ appearance:none; border:none; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
         .ap-btn.primary{ background:#2563eb; color:#fff; }
         .ap-btn.primary:hover{ background:#1d4ed8; }
         .ap-btn.ghost{ background:transparent; color:#e5e7eb; border:1px solid rgba(255,255,255,.2); }
         .ap-btn.ghost:hover{ background:rgba(255,255,255,.06); }
         .ap-close{ appearance:none; border:none; background:transparent; color:#9ca3af; font-size:18px; cursor:pointer; padding:6px 8px; }
-        .ap-toast.closing{ animation: apToastOut .28s ease-in forwards; }
-        @keyframes apToastOut{
-            from{ opacity:1; transform: translateX(-50%) translateY(0); }
-            to{ opacity:0; transform: translateX(-50%) translateY(16px); }
-        }
+        .ap-toast.closing{ animation: apToastOut .22s ease-in forwards; }
+        @keyframes apToastOut{ from{ opacity:1; transform: translateX(-50%) translateY(0); } to{ opacity:0; transform: translateX(-50%) translateY(12px); } }
 
-        /* ===== Kartu Annual Pass dengan Icon Billiard (dipakai juga di toast kanan) ===== */
-        .ap-card{
-            position:relative;
-            width:900px;
-            aspect-ratio: 90/48;
-            border-radius:20px;
-            background:
-                radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,.28), transparent 60%),
-                radial-gradient(120% 120% at 100% 100%, rgba(16,185,129,.28), transparent 60%),
-                linear-gradient(135deg,#0f172a,#0b1020);
-            border:1px solid rgba(255,255,255,.1);
-            box-shadow:0 25px 60px rgba(0,0,0,.5);
-            overflow:hidden; 
-            color:#e5e7eb;
-            display:flex; 
-            align-items:center; 
-            justify-content:space-between; 
-            padding:30px 36px;
-        }
-        .ap-card-left{ flex: 1; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
-        .ap-card-right{ position: relative; width: 280px; height: 280px; display: flex; align-items: center; justify-content: center; z-index: 1; }
-
-        .billiard-icon{ position: relative; width: 240px; height: 240px; opacity: 0.15; filter: drop-shadow(0 0 30px rgba(59,130,246,.4)); }
-        .cue-stick{ position: absolute; width: 12px; height: 200px; background: linear-gradient(180deg, rgba(139,92,246,.8) 0%, rgba(219,234,254,.9) 15%, rgba(219,234,254,.9) 85%, rgba(234,179,8,.8) 100% ); border-radius: 6px; top: 50%; left: 50%; transform-origin: center center; }
+        /* Icon kanan toast (sembunyikan di mobile) */
+        .ap-right{ flex:0 0 auto; width: 240px; height: 140px; display:flex; align-items:center; justify-content:center; position: relative; }
+        .billiard-icon{ position: relative; width: 200px; height: 200px; opacity:.18; filter: drop-shadow(0 0 30px rgba(59,130,246,.4)); }
+        .cue-stick{ position: absolute; width: 10px; height: 170px; background: linear-gradient(180deg, rgba(139,92,246,.8) 0%, rgba(219,234,254,.9) 15%, rgba(219,234,254,.9) 85%, rgba(234,179,8,.8) 100% ); border-radius: 6px; top: 50%; left: 50%; transform-origin: center center; }
         .cue-stick:nth-child(1){ transform: translate(-50%, -50%) rotate(-45deg); }
         .cue-stick:nth-child(2){ transform: translate(-50%, -50%) rotate(45deg); }
+        .billiard-ball{ position: absolute; width: 52px; height: 52px; background: radial-gradient(circle at 30% 30%, #1f1f1f, #000); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 3px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; box-shadow: inset -4px -4px 8px rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.6); }
+        .ball-number{ width: 28px; height: 28px; background: white; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px; color:#000; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
+        @media (max-width: 640px){ .ap-right{ display:none; } }
 
-        .billiard-ball{
-            position: absolute; width: 60px; height: 60px; background: radial-gradient(circle at 30% 30%, #1f1f1f, #000);
-            border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border: 3px solid rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center;
-            box-shadow: inset -4px -4px 8px rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.6);
-        }
-        .ball-number{ width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: #000; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
-
-        .ap-brand{ font-weight:800; letter-spacing:.5px; font-size:19px; opacity:.95; }
-        .ap-bigtitle{ font-size:32px; font-weight:900; line-height:1.1; margin-top:4px; }
-        .ap-sub{ font-size:13px; opacity:.8; margin-top:2px; }
-        .ap-card-row{ display:grid; grid-template-columns:140px 1fr; gap:8px; margin-top:12px; font-size:14px; }
-        .ap-note{ font-size:12px; opacity:.75; margin-top:8px; font-style:italic; }
-
-        .ap-card::before{ content: ''; position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(59,130,246,.15) 0%, transparent 70%); top: -200px; right: -100px; border-radius: 50%; pointer-events: none; }
-        .ap-card::after{ content: ''; position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(16,185,129,.12) 0%, transparent 70%); bottom: -150px; left: -50px; border-radius: 50%; pointer-events: none; }
-
-        /* ===== Tambahan khusus ikon di sisi kanan Toast ===== */
-        .ap-right{
-            flex:0 0 auto;
-            width: 260px;
-            height: 160px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            position: relative;
-        }
-        .ap-right .billiard-icon{
-            width: 200px;
-            height: 200px;
-            opacity:.22; /* sedikit lebih terlihat di toast */
-        }
-        .ap-right .cue-stick{ height: 170px; width: 10px; }
-        .ap-right .billiard-ball{ width: 52px; height: 52px; }
-        .ap-right .ball-number{ width: 28px; height: 28px; font-size:16px; }
-        @media (max-width: 640px){
-            .ap-right{ display:none; } /* sembunyikan di mobile biar tidak sempit */
-        }
+        /* ===== Utility spacing for mobile ===== */
+        .container-pad{ padding-left:16px; padding-right:16px; }
+        @media (min-width:640px){ .container-pad{ padding-left:32px; padding-right:32px; } }
+        @media (min-width:1024px){ .container-pad{ padding-left:2rem; padding-right:2rem; } }
     </style>
 
     @php
@@ -229,31 +231,33 @@
 
     <div class="min-h-screen bg-neutral-900 text-white">
         <!-- HERO / BREADCRUMB -->
-        <div class="mb-8 bg-cover bg-center p-24" style="background-image: url('/images/bg/product_breadcrumb.png');">
-            <nav class="text-sm text-gray-400 mt-1" aria-label="Breadcrumb">
-                <a href="{{ route('index') }}" class="hover:text-white transition">Home</a>
-                <span class="mx-1 opacity-60">/</span>
-                <a href="{{ route('events.index') }}" class="hover:text-white transition">Event</a>
-                <span class="mx-1 opacity-60">/</span>
-                <span class="text-gray-200" aria-current="page">{{ $event->name }}</span>
-            </nav>
-            <h2 class="text-4xl font-bold uppercase text-white">{{ $event->name }}</h2>
+        <div class="hero mb-6 sm:mb-8" style="background-image: url('/images/bg/product_breadcrumb.png');">
+            <div class="hero-inner">
+                <nav class="breadcrumb mb-2" aria-label="Breadcrumb">
+                    <a href="{{ route('index') }}" class="hover:text-white transition">Home</a>
+                    <span class="mx-1 opacity-60">/</span>
+                    <a href="{{ route('events.index') }}" class="hover:text-white transition">Event</a>
+                    <span class="mx-1 opacity-60">/</span>
+                    <span class="text-gray-200" aria-current="page">{{ $event->name }}</span>
+                </nav>
+                <h2 class="hero-title">{{ $event->name }}</h2>
+            </div>
         </div>
 
         <!-- ALERTS -->
-        <div class="container mx-auto px-8">
+        <div class="container mx-auto container-pad">
             @if (session('success'))
-                <div class="mb-6 rounded-lg bg-green-600/15 border border-green-600/40 text-green-300 px-4 py-3">
+                <div class="mb-4 sm:mb-6 rounded-lg bg-green-600/15 border border-green-600/40 text-green-300 px-4 py-3">
                     {{ session('success') }}
                 </div>
             @endif
             @if (session('error'))
-                <div class="mb-6 rounded-lg bg-red-600/15 border border-red-600/40 text-red-300 px-4 py-3">
+                <div class="mb-4 sm:mb-6 rounded-lg bg-red-600/15 border border-red-600/40 text-red-300 px-4 py-3">
                     {{ session('error') }}
                 </div>
             @endif
             @if ($errors->any())
-                <div class="mb-6 rounded-lg bg-red-600/15 border border-red-600/40 text-red-300 px-4 py-3">
+                <div class="mb-4 sm:mb-6 rounded-lg bg-red-600/15 border border-red-600/40 text-red-300 px-4 py-3">
                     <strong>Terjadi kesalahan:</strong>
                     <ul class="list-disc list-inside text-sm mt-2">
                         @foreach ($errors->all() as $err)
@@ -287,13 +291,12 @@
                                 <div class="ap-kv">Valid</div>
                                 <div>{{ \Carbon\Carbon::parse($ap['valid_from'])->translatedFormat('d M Y') }} — {{ \Carbon\Carbon::parse($ap['valid_to'])->translatedFormat('d M Y') }}</div>
                             </div>
-                            <div class="ap-actions" style="margin-top:8px">
+                            <div class="ap-actions" style="margin-top:6px">
                                 <button id="btnDownloadPass" class="ap-btn primary" type="button">Download PNG</button>
                             </div>
-                            <div class="ap-note">Setelah diunduh, panel ini akan tertutup otomatis.</div>
+                            <div class="ap-note text-xs opacity-80 mt-1">Setelah diunduh, panel ini akan tertutup otomatis.</div>
                         </div>
 
-                        {{-- === NEW: Ikon billiard di sisi kanan toast === --}}
                         <div class="ap-right" aria-hidden="true">
                             <div class="billiard-icon">
                                 <div class="cue-stick"></div>
@@ -303,20 +306,20 @@
                                 </div>
                             </div>
                         </div>
-                        {{-- === END NEW === --}}
                     </div>
                 </div>
             </div>
         @endif
 
         <!-- Layout utama -->
-        <div class="container mx-auto px-8 pb-16">
+        <div class="container mx-auto container-pad pb-16">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Kiri -->
+                <!-- Kiri (main) -->
                 <div class="lg:col-span-2">
-                    <div class="bg-neutral-800 rounded-xl p-6 h-auto">
-                        <div class="mb-6 rounded-lg overflow-hidden">
-                            <div class="img-wrapper w-full h-auto">
+                    <div class="section-card">
+                        <!-- Image -->
+                        <div class="mb-4 sm:mb-6 rounded-lg overflow-hidden">
+                            <div class="img-wrapper media-16x9">
                                 <div class="img-loading">
                                     <div class="spinner" aria-hidden="true"></div>
                                     <div class="sr-only">Loading image...</div>
@@ -324,7 +327,7 @@
                                 <img
                                     src="{{ $primaryImage }}"
                                     alt="{{ $event->name }}"
-                                    class="w-full h-auto object-cover rounded-lg js-img-fallback"
+                                    class="w-full h-full object-cover rounded-lg js-img-fallback"
                                     data-lazy-img
                                     data-src-candidates='@json($imgCandidates)'
                                     loading="lazy"
@@ -332,188 +335,174 @@
                             </div>
                         </div>
 
-                        <div>
-                            <div class="flex justify-between items-center mb-6">
-                                <h1 class="text-3xl font-bold">{{ $event->name }}</h1>
-                                <span
-                                    class="px-4 py-1 rounded-full text-sm
-                                    @if ($event->status == 'Upcoming') bg-red-600
-                                    @elseif($event->status == 'Ongoing') bg-green-600
-                                    @else bg-gray-600 @endif text-white">
-                                    {{ $event->status }}
-                                </span>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-neutral-700 p-6 rounded-lg">
-                                <div>
-                                    <p class="text-gray-400 text-sm mb-1 uppercase">Date:</p>
-                                    <p class="font-semibold">
-                                        {{ $startDate->format('M d') }} - {{ $endDate->format('M d, Y') }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400 text-sm mb-1 uppercase">Location:</p>
-                                    <p class="font-semibold">{{ $event->location }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400 text-sm mb-1 uppercase">Game Types:</p>
-                                    <p class="font-semibold">{{ $event->game_types }}</p>
-                                </div>
-                            </div>
-
-                            <div class="mb-8">
-                                <h3 class="text-xl font-bold mb-4">Registration & Tickets</h3>
-                                <div class="space-y-4 bg-neutral-700 p-6 rounded-lg">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <p class="font-medium mb-1">Player Registration</p>
-                                            <p class="text-gray-300">Until {{ $startDate->copy()->subDay()->format('F d, Y') }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium mb-1">Ticket Price (Viewer)</p>
-                                            <p class="text-gray-300">Rp {{ number_format($ticketPrice, 0, ',', '.') }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium mb-1">Stock Left</p>
-                                            <p class="text-gray-300">{{ $stockLeft }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium mb-1">Ticket Price (Player)</p>
-                                            <p class="text-gray-300">Rp {{ number_format($ticketPricePlayer, 0, ',', '.') }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium mb-1">Slot Player Left</p>
-                                            <p class="text-gray-300">{{ $slotPlayerLeft }}</p>
-                                        </div>
-                                    </div>
-
-                                    {{-- ===== BUTTONS ===== --}}
-                                    @if ($role == 'user')
-                                        <div class="flex flex-wrap items-center gap-3 pt-4">
-                                            @if ($showRegister)
-                                                @guest
-                                                    <a href="{{ route('login') }}"
-                                                       class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                                                        <span class="badge badge-player">Player</span>
-                                                        Register Player
-                                                    </a>
-                                                @else
-                                                    <button type="button" onclick="openModal('#registrationModal')"
-                                                            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                                                        <span class="badge badge-player">Player</span>
-                                                        Register Player
-                                                    </button>
-                                                @endguest
-                                            @endif
-
-                                            @if ($showBuyTicket)
-                                                @guest
-                                                    <a href="{{ route('login') }}"
-                                                       class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                                                        <span class="badge badge-viewer">Viewer</span>
-                                                        Buy Ticket
-                                                    </a>
-                                                @else
-                                                    <button type="button" onclick="openModal('#buyTicketModal')"
-                                                            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                                                        <span class="badge badge-viewer">Viewer</span>
-                                                        Buy Ticket
-                                                    </button>
-                                                @endguest
-                                            @endif
-
-                                            {{-- Tombol untuk menampilkan ulang Annual Pass bila belum didownload --}}
-                                            <button id="btnShowAnnualPass" type="button"
-                                                class="hidden border border-emerald-500 text-emerald-400 hover:bg-emerald-500 hover:text-white px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2"
-                                                title="Show your Annual Pass again">
-                                                🎟️ Show Annual Pass
-                                            </button>
-                                        </div>
-                                    @endif
-
-                                    <div class="mt-4 rounded-lg p-4 card-info text-blue-100 text-sm leading-relaxed">
-                                        <p class="font-semibold mb-2">Catatan penting:</p>
-                                        <ul class="list-disc pl-5 space-y-1">
-                                            <li><strong>Buy Ticket (Penonton/Viewer)</strong> khusus untuk masuk venue dan menonton pertandingan. <em>Tidak</em> memberi hak bertanding atau akses area pemain.</li>
-                                            <li><strong>Register Player (Buy Ticket Player)</strong> adalah pendaftaran pemain berbayar. Termasuk hak bertanding, verifikasi data, dan akses area pemain.</li>
-                                            <li>Jika sudah <strong>terdaftar sebagai pemain</strong>, Anda <em>tidak perlu</em> membeli tiket penonton terpisah untuk diri sendiri.</li>
-                                            <li>Semua pembelian bersifat mengikuti kuota & jadwal event. Kebijakan refund/exchange mengikuti aturan panitia.</li>
-                                            <li>
-                                                <strong>Annual Pass</strong>: Berlaku hanya untuk <em>{{ $event->name }}</em> pada tanggal yang tertera,
-                                                <strong>tidak dapat dipindahtangankan</strong>, dan wajib ditunjukkan bersama identitas saat check-in.
-                                                Setelah pembelian, gunakan tombol <em>“Show Annual Pass”</em> untuk mengunduh kartu (PNG) ke perangkat Anda.
-                                                <strong>Simpan file tersebut dengan aman</strong> untuk keperluan verifikasi panitia.
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
+                        <!-- Title + status -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                            <h1 class="text-2xl sm:text-3xl font-extrabold leading-tight">{{ $event->name }}</h1>
+                            <span
+                                class="status-pill
+                                @if ($event->status == 'Upcoming') bg-red-600
+                                @elseif($event->status == 'Ongoing') bg-green-600
+                                @else bg-gray-600 @endif text-white">
+                                {{ $event->status }}
+                            </span>
                         </div>
+
+                        <!-- Meta -->
+                        <div class="meta-grid mb-6">
+                            <div>
+                                <p class="meta-item-title">Date</p>
+                                <p class="meta-item-value">{{ $startDate->format('M d') }} - {{ $endDate->format('M d, Y') }}</p>
+                            </div>
+                            <div>
+                                <p class="meta-item-title">Location</p>
+                                <p class="meta-item-value">{{ $event->location }}</p>
+                            </div>
+                            <div>
+                                <p class="meta-item-title">Game Types</p>
+                                <p class="meta-item-value">{{ $event->game_types }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Registration & Tickets -->
+                        <div class="mb-6 sm:mb-8">
+                            <h3 class="text-lg sm:text-xl font-extrabold mb-3 sm:mb-4">Registration & Tickets</h3>
+                            <div class="space-y-4 section-card" style="background:#202226">
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <p class="font-semibold mb-1 text-sm">Player Registration</p>
+                                        <p class="text-gray-300 text-sm">Until {{ $startDate->copy()->subDay()->format('F d, Y') }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold mb-1 text-sm">Ticket Price (Viewer)</p>
+                                        <p class="text-gray-300 text-sm">Rp {{ number_format($ticketPrice, 0, ',', '.') }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold mb-1 text-sm">Stock Left</p>
+                                        <p class="text-gray-300 text-sm">{{ $stockLeft }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold mb-1 text-sm">Ticket Price (Player)</p>
+                                        <p class="text-gray-300 text-sm">Rp {{ number_format($ticketPricePlayer, 0, ',', '.') }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold mb-1 text-sm">Slot Player Left</p>
+                                        <p class="text-gray-300 text-sm">{{ $slotPlayerLeft }}</p>
+                                    </div>
+                                </div>
+
+                                {{-- Buttons: full-width on mobile --}}
+                                @if ($role == 'user')
+                                    <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 pt-2">
+                                        @if ($showRegister)
+                                            @guest
+                                                <a href="{{ route('login') }}" class="btn btn-primary btn-block-sm">
+                                                    <span class="badge badge-player">Player</span> Register Player
+                                                </a>
+                                            @else
+                                                <button type="button" onclick="openModal('#registrationModal')" class="btn btn-primary btn-block-sm">
+                                                    <span class="badge badge-player">Player</span> Register Player
+                                                </button>
+                                            @endguest
+                                        @endif
+
+                                        @if ($showBuyTicket)
+                                            @guest
+                                                <a href="{{ route('login') }}" class="btn btn-primary btn-block-sm">
+                                                    <span class="badge badge-viewer">Viewer</span> Buy Ticket
+                                                </a>
+                                            @else
+                                                <button type="button" onclick="openModal('#buyTicketModal')" class="btn btn-primary btn-block-sm">
+                                                    <span class="badge badge-viewer">Viewer</span> Buy Ticket
+                                                </button>
+                                            @endguest
+                                        @endif
+
+                                        <button id="btnShowAnnualPass" type="button"
+                                                class="hidden btn btn-outline btn-block-sm"
+                                                title="Show your Annual Pass again">
+                                            🎟️ Show Annual Pass
+                                        </button>
+                                    </div>
+                                @endif
+
+                                <div class="mt-3 rounded-lg p-4 card-info text-blue-100 text-sm leading-relaxed">
+                                    <p class="font-semibold mb-2">Catatan penting:</p>
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <li><strong>Buy Ticket (Penonton/Viewer)</strong> khusus untuk masuk venue dan menonton pertandingan. <em>Tidak</em> memberi hak bertanding atau akses area pemain.</li>
+                                        <li><strong>Register Player (Buy Ticket Player)</strong> adalah pendaftaran pemain berbayar. Termasuk hak bertanding, verifikasi data, dan akses area pemain.</li>
+                                        <li>Jika sudah <strong>terdaftar sebagai pemain</strong>, Anda <em>tidak perlu</em> membeli tiket penonton terpisah untuk diri sendiri.</li>
+                                        <li>Semua pembelian mengikuti kuota & jadwal event. Kebijakan refund/exchange mengikuti aturan panitia.</li>
+                                        <li><strong>Annual Pass</strong>: Berlaku hanya untuk <em>{{ $event->name }}</em> pada tanggal yang tertera, <strong>tidak dapat dipindahtangankan</strong>, dan wajib ditunjukkan bersama identitas saat check-in. Gunakan tombol <em>“Show Annual Pass”</em> untuk mengunduh kartu (PNG).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /Registration & Tickets -->
                     </div>
                 </div>
 
-                <!-- Kanan -->
+                <!-- Kanan (sidebar) -->
                 <div class="space-y-6">
-                    <div class="bg-neutral-800 rounded-xl p-6">
-                        <h3 class="text-xl font-bold mb-4">About the Event</h3>
-                        <p class="text-gray-300">
+                    <div class="section-card">
+                        <h3 class="text-lg sm:text-xl font-extrabold mb-3 sm:mb-4">About the Event</h3>
+                        <p class="text-gray-300 text-sm sm:text-base">
                             The {{ $event->name }}
                             {{ $descInline ? ' ' . $descInline : '' }}
                             <strong>Rp {{ number_format((float) ($event->total_prize_money ?? 0), 0, ',', '.') }}</strong>.
                         </p>
                     </div>
 
-                    <div class="bg-neutral-800 rounded-xl p-6">
-                        <h3 class="text-xl font-bold mb-4">Prize Pool & Awards</h3>
-                        <div class="space-y-2">
+                    <div class="section-card">
+                        <h3 class="text-lg sm:text-xl font-extrabold mb-3 sm:mb-4">Prize Pool & Awards</h3>
+                        <div class="space-y-2 text-sm sm:text-base">
                             <div>
-                                <p class="font-medium">Total Prize Pool:</p>
+                                <p class="font-semibold">Total Prize Pool:</p>
                                 <p class="text-gray-300">Rp {{ number_format((float) ($event->total_prize_money ?? 0), 0, ',', '.') }}+</p>
                             </div>
                             <div>
-                                <p class="font-medium">Champion:</p>
+                                <p class="font-semibold">Champion:</p>
                                 <p class="text-gray-300">Rp {{ number_format((float) ($event->champion_prize ?? 0), 0, ',', '.') }} + National Champion Trophy</p>
                             </div>
                             <div>
-                                <p class="font-medium">Runner-up:</p>
+                                <p class="font-semibold">Runner-up:</p>
                                 <p class="text-gray-300">Rp {{ number_format((float) ($event->runner_up_prize ?? 0), 0, ',', '.') }}</p>
                             </div>
                             <div>
-                                <p class="font-medium">Third Place:</p>
+                                <p class="font-semibold">Third Place:</p>
                                 <p class="text-gray-300">{{ number_format((float) ($event->third_place_prize ?? 0), 0, ',', '.') }}</p>
                             </div>
                             <div>
-                                <p class="font-medium">Top 8 Finalists:</p>
+                                <p class="font-semibold">Top 8 Finalists:</p>
                                 <p class="text-gray-300">Cash prizes & special recognition</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-neutral-800 rounded-xl p-6">
-                        <h3 class="text-xl font-bold mb-4">Tournament Format</h3>
-                        <div class="space-y-2">
+                    <div class="section-card">
+                        <h3 class="text-lg sm:text-xl font-extrabold mb-3 sm:mb-4">Tournament Format</h3>
+                        <div class="space-y-2 text-sm sm:text-base">
                             <div>
-                                <p class="font-medium">Divisions:</p>
+                                <p class="font-semibold">Divisions:</p>
                                 <p class="text-gray-300">{{ $event->divisions }}</p>
                             </div>
                             <div>
-                                <p class="font-medium">Match Style:</p>
+                                <p class="font-semibold">Match Style:</p>
                                 <p class="text-gray-300">{{ $event->match_style }}</p>
                             </div>
                             <div>
-                                <p class="font-medium">Finals:</p>
+                                <p class="font-semibold">Finals:</p>
                                 <p class="text-gray-300">{{ $event->finals_format }}</p>
                             </div>
                         </div>
                         <div class="mt-4">
                             <a href="{{ route('events.bracket', ['event' => $event->id, 'name' => $pretty]) }}"
-                               class="block text-center bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                               class="btn btn-outline btn-block-sm text-center">
                                 View Tournament Bracket
-                            </a>
+                            </a>                                        
                         </div>
                     </div>
                 </div>
+                <!-- /sidebar -->
             </div>
         </div>
     </div>
@@ -522,18 +511,20 @@
     @auth
         @php $showRegisterModal = $showRegister; @endphp
         @if ($showRegisterModal)
-            <div id="registrationModal" class="modal">
-                <div class="modal-content">
+            <div id="registrationModal" class="modal" aria-hidden="true">
+                <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="regTitle">
                     <div class="modal-header">
-                        <h2 class="text-2xl font-bold text-white">Event Registration (Player)</h2>
-                        <span class="close" onclick="closeModal('#registrationModal')">&times;</span>
+                        <h2 id="regTitle" class="text-xl sm:text-2xl font-extrabold text-white">Event Registration (Player)</h2>
+                        <button class="close" type="button" aria-label="Close" onclick="closeModal('#registrationModal')">&times;</button>
                     </div>
-                    <div class="px-6 pt-4">
+
+                    <div class="px-4 pt-3">
                         <div class="rounded-lg p-3 card-warn text-amber-100 text-xs leading-relaxed">
-                            <strong>Catatan:</strong> Form ini khusus <strong>pemain</strong> (Buy Ticket Player). Tidak untuk penonton.
+                            <strong>Catatan:</strong> Form ini khusus <strong>pemain</strong> (Buy Ticket Player).
                             Setelah terdaftar & terverifikasi, Anda mendapatkan hak bertanding dan tidak perlu membeli tiket penonton untuk diri sendiri.
                         </div>
                     </div>
+
                     <form id="registrationForm" action="{{ route('events.register', $event->id) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="_from" value="event-registration">
@@ -552,7 +543,7 @@
                                 <input type="tel" id="phone" name="phone" class="form-input" value="{{ old('phone', auth()->user()->phone ?? '') }}" required>
                             </div>
 
-                            <div class="form-group mt-4">
+                            <div class="form-group mt-3">
                                 <label class="form-label">Player Ticket Price</label>
                                 <input type="text" class="form-input bg-gray-800 text-white cursor-not-allowed" value="Rp {{ number_format($event->price_ticket_player ?? 0, 0, ',', '.') }}" readonly>
                             </div>
@@ -595,7 +586,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn-secondary" onclick="closeModal('#registrationModal')">Cancel</button>
-                            <button type="submit" class="btn-primary">Submit Registration</button>
+                            <button type="submit" class="btn btn-primary">Submit Registration</button>
                         </div>
                     </form>
                 </div>
@@ -606,16 +597,16 @@
     {{-- ========== MODAL: Buy Ticket (Viewer) ========== --}}
     @auth
         @if ($showBuyTicket)
-            <div id="buyTicketModal" class="modal">
-                <div class="modal-content">
+            <div id="buyTicketModal" class="modal" aria-hidden="true">
+                <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="buyTitle">
                     <div class="modal-header">
-                        <h2 class="text-2xl font-bold text-white">Buy Ticket (Viewer)</h2>
-                        <span class="close" onclick="closeModal('#buyTicketModal')">&times;</span>
+                        <h2 id="buyTitle" class="text-xl sm:text-2xl font-extrabold text-white">Buy Ticket (Viewer)</h2>
+                        <button class="close" type="button" aria-label="Close" onclick="closeModal('#buyTicketModal')">&times;</button>
                     </div>
-                    <div class="px-6 pt-4">
+                    <div class="px-4 pt-3">
                         <div class="rounded-lg p-3 card-warn text-amber-100 text-xs leading-relaxed">
                             <strong>Catatan:</strong> Form ini khusus <strong>penonton</strong>. Tiket ini tidak memberikan hak bertanding
-                            dan tidak menggantikan pendaftaran pemain. Jika Anda ingin bertanding, gunakan menu <strong>Register Player</strong>.
+                            dan tidak menggantikan pendaftaran pemain. Jika ingin bertanding, gunakan <strong>Register Player</strong>.
                         </div>
                     </div>
                     <form id="buyTicketForm" action="{{ route('events.buy', $event->id) }}" method="POST" enctype="multipart/form-data">
@@ -676,7 +667,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn-secondary" onclick="closeModal('#buyTicketModal')">Cancel</button>
-                            <button type="submit" class="btn-primary">Submit Purchase</button>
+                            <button type="submit" class="btn btn-primary">Submit Purchase</button>
                         </div>
                     </form>
                 </div>
@@ -688,10 +679,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script>
+        /* ===== Modal helpers ===== */
         function openModal(sel){ const m=document.querySelector(sel); if(!m) return; m.classList.add('active'); document.body.style.overflow='hidden'; }
         function closeModal(sel){ const m=document.querySelector(sel); if(!m) return; m.classList.remove('active'); document.body.style.overflow='auto'; }
 
-        // Lazy image + fallbacks
+        /* ===== Lazy image + fallbacks ===== */
         (function(){
             function showCameraFallback(loaderEl){
                 if(!loaderEl) return;
@@ -735,7 +727,7 @@
             });
         })();
 
-        // Auto-calc total payment (Viewer ticket)
+        /* ===== Auto-calc total payment (Viewer ticket) ===== */
         (function(){
             const qtyEl = document.getElementById('qty');
             const priceEl = document.getElementById('unitPrice');
@@ -751,7 +743,7 @@
             recalc();
         })();
 
-        // ====== Annual Pass persistence & re-open button logic ======
+        /* ===== Annual Pass persistence & re-open button logic ===== */
         (function(){
             const EVENT_ID = {{ $event->id }};
             const AP_KEY = `xb_ap_${EVENT_ID}`;
@@ -785,14 +777,8 @@
                 localStorage.setItem(AP_KEY, JSON.stringify(payload));
             }
 
-            function removeAP(){
-                localStorage.removeItem(AP_KEY);
-            }
-
-            function setShowBtnVisible(show){
-                if(!btnShow) return;
-                btnShow.classList.toggle('hidden', !show);
-            }
+            function removeAP(){ localStorage.removeItem(AP_KEY); }
+            function setShowBtnVisible(show){ if(btnShow) btnShow.classList.toggle('hidden', !show); }
 
             // Build toast DOM (same style) from DS
             function buildToast(ds){
@@ -822,26 +808,20 @@
                           <div class="ap-kv">Event</div><div>${ds?.event || 'Event'}</div>
                           <div class="ap-kv">Valid</div><div>{{ \Carbon\Carbon::parse(session('annual_pass.valid_from') ?? now()->toDateString())->translatedFormat('d M Y') }} — {{ \Carbon\Carbon::parse(session('annual_pass.valid_to') ?? now()->endOfYear()->toDateString())->translatedFormat('d M Y') }}</div>
                         </div>
-                        <div class="ap-actions" style="margin-top:8px">
+                        <div class="ap-actions" style="margin-top:6px">
                           <button id="btnDownloadPass" class="ap-btn primary" type="button">Download PNG</button>
                         </div>
                         <div class="ap-note">Setelah diunduh, panel ini akan tertutup otomatis.</div>
                       </div>
-
-                      <!-- NEW: Ikon kanan pada toast (JS-rendered) -->
                       <div class="ap-right" aria-hidden="true">
                         <div class="billiard-icon">
                           <div class="cue-stick"></div>
                           <div class="cue-stick"></div>
-                          <div class="billiard-ball">
-                            <div class="ball-number">8</div>
-                          </div>
+                          <div class="billiard-ball"><div class="ball-number">8</div></div>
                         </div>
                       </div>
-                      <!-- END NEW -->
                     </div>
-                  </div>
-                `;
+                  </div>`;
                 document.body.appendChild(wrap);
                 wireToastHandlers(wrap, ds);
                 return wrap;
@@ -859,25 +839,26 @@
             async function generateClientPNG(ds){
                 const card = document.createElement('div');
                 card.className = 'ap-card';
+                card.style.cssText = 'position:fixed; left:-9999px; top:-9999px; width:900px; aspect-ratio:90/48; border-radius:20px; background:radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,.28), transparent 60%), radial-gradient(120% 120% at 100% 100%, rgba(16,185,129,.28), transparent 60%), linear-gradient(135deg,#0f172a,#0b1020); border:1px solid rgba(255,255,255,.1); color:#e5e7eb; display:flex; align-items:center; justify-content:space-between; padding:30px 36px; box-shadow:0 25px 60px rgba(0,0,0,.5);';
                 card.innerHTML = `
-                    <div class="ap-card-left">
-                        <div class="ap-brand">Xander Billiard</div>
-                        <div class="ap-bigtitle">Annual Pass ${ds?.year || ''}</div>
-                        <div class="ap-sub">Valid {{ \Carbon\Carbon::parse(session('annual_pass.valid_from') ?? now()->toDateString())->translatedFormat('d M Y') }} — {{ \Carbon\Carbon::parse(session('annual_pass.valid_to') ?? now()->endOfYear()->toDateString())->translatedFormat('d M Y') }}</div>
-                        <div class="ap-card-row">
+                    <div style="display:flex;flex-direction:column;gap:8px;z-index:2;flex:1;">
+                        <div style="font-weight:800;letter-spacing:.5px;font-size:19px;opacity:.95;">Xander Billiard</div>
+                        <div style="font-size:32px;font-weight:900;line-height:1.1;margin-top:4px;">Annual Pass ${ds?.year || ''}</div>
+                        <div style="font-size:13px;opacity:.8;margin-top:2px;">Valid {{ \Carbon\Carbon::parse(session('annual_pass.valid_from') ?? now()->toDateString())->translatedFormat('d M Y') }} — {{ \Carbon\Carbon::parse(session('annual_pass.valid_to') ?? now()->endOfYear()->toDateString())->translatedFormat('d M Y') }}</div>
+                        <div style="display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:12px;font-size:14px;">
                             <div class="ap-kv">Name</div><div>${ds?.name || 'Guest'}</div>
                             <div class="ap-kv">Pass No</div><div>${ds?.number || ''}</div>
-                            <div class="ap-kv">Type</div><div><span class="ap-badge ${(String(ds?.type||'').toLowerCase()==='viewer')?'viewer':'player'}">${String(ds?.type||'').toUpperCase()}</span></div>
+                            <div class="ap-kv">Type</div><div><span style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:9999px;font-weight:700;letter-spacing:.2px;font-size:12px;border:1px solid rgba(255,255,255,.14);background:${(String(ds?.type||'').toLowerCase()==='viewer')?'rgba(16,185,129,.08)':'rgba(59,130,246,.08)'};color:${(String(ds?.type||'').toLowerCase()==='viewer')?'#a7f3d0':'#bfdbfe'}">${String(ds?.type||'').toUpperCase()}</span></div>
                             <div class="ap-kv">Event</div><div>${ds?.event || 'Event'}</div>
                         </div>
-                        <div class="ap-note">Simpan kartu ini untuk verifikasi ke panitia.</div>
+                        <div style="font-size:12px;opacity:.75;margin-top:8px;font-style:italic;">Simpan kartu ini untuk verifikasi ke panitia.</div>
                     </div>
-                    <div class="ap-card-right">
-                        <div class="billiard-icon">
-                            <div class="cue-stick"></div>
-                            <div class="cue-stick"></div>
-                            <div class="billiard-ball">
-                                <div class="ball-number">8</div>
+                    <div style="position:relative;width:280px;height:280px;display:flex;align-items:center;justify-content:center;opacity:.18;">
+                        <div style="position:absolute;width:200px;height:200px;filter:drop-shadow(0 0 30px rgba(59,130,246,.4));">
+                            <div style="position:absolute;width:10px;height:170px;background:linear-gradient(180deg, rgba(139,92,246,.8) 0%, rgba(219,234,254,.9) 15%, rgba(219,234,254,.9) 85%, rgba(234,179,8,.8) 100% );border-radius:6px;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);"></div>
+                            <div style="position:absolute;width:10px;height:170px;background:linear-gradient(180deg, rgba(139,92,246,.8) 0%, rgba(219,234,254,.9) 15%, rgba(219,234,254,.9) 85%, rgba(234,179,8,.8) 100% );border-radius:6px;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);"></div>
+                            <div style="position:absolute;width:52px;height:52px;background:radial-gradient(circle at 30% 30%, #1f1f1f, #000);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);border:3px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;box-shadow: inset -4px -4px 8px rgba(255,255,255,.1), 0 8px 20px rgba(0,0,0,.6);">
+                                <div style="width:28px;height:28px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#000;box-shadow: inset 0 2px 4px rgba(0,0,0,.2);">8</div>
                             </div>
                         </div>
                     </div>
@@ -890,7 +871,6 @@
                     const fname = `AnnualPass-${ds?.year || ''}-${(ds?.type || 'VIEWER').toUpperCase()}-${(ds?.number || 'XB')}.png`;
                     a.href = dataUrl; a.download = fname; a.style.display='none';
                     document.body.appendChild(a); a.click(); a.remove();
-                    // mark downloaded & UI
                     markDownloaded();
                 } catch(e){
                     console.error('Error generating Annual Pass:', e);
@@ -900,58 +880,36 @@
                 }
             }
 
-            function markDownloaded(){
-                removeAP();
-                setShowBtnVisible(false);
-                hideAnnualPassToast();
-            }
+            function markDownloaded(){ removeAP(); setShowBtnVisible(false); hideAnnualPassToast(); }
 
-            // Attach handlers to a toast element
             function wireToastHandlers(toastEl, ds){
                 const btnClient = toastEl.querySelector('#btnDownloadPass');
                 const btnClose  = toastEl.querySelector('.ap-close');
-
-                if(btnClient){
-                    btnClient.addEventListener('click', function(){
-                        generateClientPNG(ds);
-                    });
-                }
-                if(btnClose){
-                    btnClose.addEventListener('click', hideAnnualPassToast);
-                }
+                btnClient && btnClient.addEventListener('click', () => generateClientPNG(ds));
+                btnClose  && btnClose.addEventListener('click', hideAnnualPassToast);
             }
 
-            // On first render with flash, simpan ke localStorage
             document.addEventListener('DOMContentLoaded', function(){
-                // Jika server mengirim flash annual_pass, simpan ke localStorage
                 @if (session('annual_pass'))
                     const dsFlash = @json(session('annual_pass'));
                     saveAP(dsFlash);
                     setShowBtnVisible(true);
-                    (function(){
-                        const toast = document.getElementById('annualPassToast');
-                        if (toast) wireToastHandlers(toast, dsFlash);
-                    })();
+                    (function(){ const toast = document.getElementById('annualPassToast'); if (toast) wireToastHandlers(toast, dsFlash); })();
                 @else
                     const ds = loadAP();
                     setShowBtnVisible(!!ds);
                 @endif
 
-                // Tombol "Show Annual Pass"
-                if (btnShow){
-                    btnShow.addEventListener('click', function(){
-                        const ds = loadAP();
-                        if(!ds){
-                            setShowBtnVisible(false);
-                            return;
-                        }
-                        buildToast(ds);
-                    });
-                }
+                const btnShow = document.getElementById('btnShowAnnualPass');
+                btnShow && btnShow.addEventListener('click', function(){
+                    const ds = loadAP();
+                    if(!ds){ setShowBtnVisible(false); return; }
+                    buildToast(ds);
+                });
             });
         })();
 
-        // Reopen modal on validation error
+        /* ===== Reopen modal on validation error ===== */
         @if ($errors->any())
             @if (old('_from') === 'event-registration')
                 window.addEventListener('load', () => openModal('#registrationModal'));
@@ -961,7 +919,7 @@
             @endif
         @endif
 
-        // Digits-only helper untuk Nomor Rekening
+        /* ===== Digits-only helper untuk Nomor Rekening ===== */
         (function(){
             function onlyDigitsHandler(e){
                 const before = e.target.value;
