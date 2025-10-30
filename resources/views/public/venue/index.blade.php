@@ -336,15 +336,18 @@
                                     @auth
                                       @if (auth()->user()->roles === 'user')
                                         <i
+                                        onclick="event.stopPropagation();event.preventDefault();"
                                           data-id="{{ $venue->id }}"
+                                          data-url="{{ route('venues.favorite', $venue->id) }}"
                                           class="{{ auth()->user()->favorites->contains('venue_id', $venue->id)
                                               ? 'fa-solid text-blue-500'
                                               : 'fa-regular text-gray-400' }}
-                                              fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition">
+                                              fa-bookmark text-xl sm:text-2xl cursor-pointer hover:text-blue-500 transition favorite-toggle">
                                         </i>
                                       @endif
                                     @endauth
-                                </div>
+                                  </div>
+                                  
                             </div>
                             <p class="text-gray-400 text-sm mb-2">{{ $venue->address ?? 'Jakarta' }}</p>
                             <div class="mt-12">
@@ -592,4 +595,56 @@
         initImageLoadingWithFallback();
     });
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const icons = document.querySelectorAll('.favorite-toggle');
+    
+      icons.forEach(icon => {
+        icon.addEventListener('click', async (e) => {
+          e.preventDefault();           // cegah aksi default
+          e.stopPropagation();          // cegah klik menembus ke <a>
+    
+          const url = icon.dataset.url;
+          if (!url) return;
+    
+          // Opsional: efek loading kecil
+          icon.classList.add('fa-spin', 'fa-spinner');
+          icon.classList.remove('fa-bookmark');
+    
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+              },
+            });
+    
+            const data = await response.json();
+    
+            if (data.success) {
+              if (data.action === 'added') {
+                icon.classList.remove('fa-regular', 'text-gray-400', 'fa-spinner', 'fa-spin');
+                icon.classList.add('fa-solid', 'fa-bookmark', 'text-blue-500');
+              } else if (data.action === 'removed') {
+                icon.classList.remove('fa-solid', 'text-blue-500', 'fa-spinner', 'fa-spin');
+                icon.classList.add('fa-regular', 'fa-bookmark', 'text-gray-400');
+              }
+            } else {
+              alert(data.message || 'Terjadi kesalahan.');
+            }
+    
+          } catch (err) {
+            console.error(err);
+            alert('Gagal memproses permintaan.');
+          } finally {
+            icon.classList.remove('fa-spin', 'fa-spinner');
+            icon.classList.add('fa-bookmark');
+          }
+        });
+      });
+    });
+</script>
+    
 @endsection
