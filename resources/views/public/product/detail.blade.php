@@ -41,24 +41,23 @@
         return is_countable($v) ? count($v) : (is_null($v) ? 0 : (is_array($v) ? count($v) : 0));
     };
 
-    $cartProducts = $cartProducts ?? [];
-    $cartVenues = $cartVenues ?? [];
-    $cartSparrings = $cartSparrings ?? [];
-    $relatedProducts = $relatedProducts ?? [];
-    $relatedPriceMap = $relatedPriceMap ?? [];
+    $cartProducts     = $cartProducts     ?? [];
+    $cartVenues       = $cartVenues       ?? [];
+    $cartSparrings    = $cartSparrings    ?? [];
+    $relatedProducts  = $relatedProducts  ?? [];
+    $relatedPriceMap  = $relatedPriceMap  ?? [];
 
     $cartCount = $toCount($cartProducts) + $toCount($cartVenues) + $toCount($cartSparrings);
-    $relCount = $toCount($relatedProducts);
+    $relCount  = $toCount($relatedProducts);
 
-    $detail = $detail ?? null;
-    $detailId = $detail->id ?? 0;
-    $detailName = $detail->name ?? 'Product';
-    $detailDesc = $detail->description ?? '';
-    $detailPrice = (int) ($detail->pricing ?? 0);
-
-    $detailHasDiscount = $detailHasDiscount ?? false;
+    $detail                = $detail ?? null;
+    $detailId              = $detail->id ?? 0;
+    $detailName            = $detail->name ?? 'Product';
+    $detailDesc            = $detail->description ?? '';
+    $detailPrice           = (int) ($detail->pricing ?? 0);
+    $detailHasDiscount     = $detailHasDiscount ?? false;
     $detailDiscountPercent = (float) ($detailDiscountPercent ?? 0);
-    $detailFinalPrice = (int) ($detailFinalPrice ?? $detailPrice);
+    $detailFinalPrice      = (int) ($detailFinalPrice ?? $detailPrice);
 
     $imagesRaw = [];
     if ($detail) {
@@ -230,11 +229,12 @@
 
                 <hr class="border-gray-700 mb-6" />
 
-                {{-- ==== FIX: render newline jadi <br> + tetap aman (escape HTML) ==== --}}
+                {{-- Deskripsi aman (newline -> <br>) --}}
                 <div class="text-xs md:text-sm text-gray-400 mt-6 max-w-xl break-words leading-relaxed">
                     {!! nl2br(e($detailDesc)) !!}
                 </div>
 
+                {{-- FORM ADD TO CART (pola sama dengan Venues Page: cek via JS) --}}
                 <form id="addToCartForm" action="{{ \Illuminate\Support\Facades\Route::has('cart.add.product') ? route('cart.add.product') : url('/cart/add/product') }}" method="POST">
                     @csrf
                     <input type="hidden" name="id" value="{{ $detailId }}">
@@ -287,7 +287,7 @@
                     <div id="relRow" class="{{ $relMode === 'carousel' ? 'rel-row-scroll' : 'rel-row-grid' }}">
                         @forelse ($relatedProducts as $product)
                             @php
-                                $slug = Str::slug($product->name ?? 'product');
+                                $slug      = Str::slug($product->name ?? 'product');
                                 $rImagesRaw = [];
                                 if (is_array($product->images ?? null)) {
                                     $rImagesRaw = $product->images;
@@ -301,10 +301,10 @@
                                 $img = $rImages[0] ?? 'https://placehold.co/800x800?text=No+Image';
 
                                 $basePrice = (int) ($product->pricing ?? 0);
-                                $map = $relatedPriceMap[$product->id] ?? ['has_discount' => false, 'discount_percent' => 0, 'final_price' => $basePrice];
+                                $map       = $relatedPriceMap[$product->id] ?? ['has_discount' => false, 'discount_percent' => 0, 'final_price' => $basePrice];
                                 $rHas = (bool) ($map['has_discount'] ?? false);
                                 $rPct = (float) ($map['discount_percent'] ?? 0);
-                                $rFin = (int) ($map['final_price'] ?? $basePrice);
+                                $rFin = (int)   ($map['final_price'] ?? $basePrice);
                             @endphp
 
                             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}"
@@ -337,6 +337,7 @@
             </div>
         </section>
 
+        {{-- Floating Cart hanya untuk role "user" --}}
         @if (Auth::check() && (Auth::user()->roles ?? '') === 'user')
             <button aria-label="Shopping cart with {{ $cartCount }} items" onclick="showCart && showCart()" class="fixed right-4 sm:right-6 top-[60%] bg-[#2a2a2a] rounded-full w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
                 <i class="fas fa-shopping-cart text-white text-2xl sm:text-3xl"></i>
@@ -353,6 +354,10 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // ====== State login/role (pola sama seperti Venues Page) ======
+        const isLoggedIn = @json(auth()->check());
+        const userRole   = @json(\Illuminate\Support\Facades\Auth::check() ? (\Illuminate\Support\Facades\Auth::user()->roles ?? null) : null);
+
         // =============== IMAGE LOADING HANDLER (spinner + fallback chain) ===============
         function initImageLoading(root = document){
             const imgs = root.querySelectorAll('img[data-lazy-load]');
@@ -402,47 +407,134 @@
             main.src = imageUrl;
         }
 
-        // =============== ADD TO CART (unchanged) ===============
+        // =============== ADD TO CART (disamakan dengan Venues Page: gate by login & role) ===============
         const cartForm = document.getElementById('addToCartForm');
-        if (cartForm) {
-            cartForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                Swal.fire({ title: 'Mohon tunggu...', text: 'Sedang memproses permintaan Anda.', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#1E1E1F', color: '#FFFFFF' });
-                const formData = new FormData(this);
-                fetch(this.action, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
-                    .then(async res => {
-                        Swal.close();
-                        if (res.status === 401) {
-                            Swal.fire({ title: 'Belum Login!', text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.', icon: 'warning', confirmButtonText: 'Login Sekarang', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' }).then(() => { window.location.href = '/login'; });
-                            return;
-                        }
-                        const data = await res.json().catch(() => null);
-                        if (res.ok && data && (data.success ?? false)) {
-                            Swal.fire({ title: 'Berhasil!', text: 'Produk berhasil ditambahkan ke keranjang!', icon: 'success', confirmButtonText: 'OK', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF', iconColor: '#4BB543' }).then(() => location.reload());
-                        } else {
-                            Swal.fire({ title: 'Gagal!', text: data?.message || 'Terjadi kesalahan, coba lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        Swal.close();
-                        Swal.fire({ title: 'Error!', text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.', icon: 'error', confirmButtonColor: '#3085d6', background: '#1E1E1F', color: '#FFFFFF' });
-                    });
-            });
-        }
+        const addBtn   = document.getElementById('addToCartButton');
 
-        const addBtn = document.getElementById('addToCartButton');
         if (addBtn) {
             addBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+
+                if (!isLoggedIn) {
+                    Swal.fire({
+                        title: 'Belum Login!',
+                        text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+                        icon: 'warning',
+                        confirmButtonText: 'Login Sekarang',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    }).then(() => { window.location.href = '/login'; });
+                    return;
+                }
+
+                if (userRole !== 'user') {
+                    Swal.fire({
+                        title: 'Akses Ditolak!',
+                        text: 'Hanya role "user" yang bisa menambahkan ke keranjang.',
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    });
+                    return;
+                }
+
+                // Lolos gate → submit form
                 const form = document.getElementById('addToCartForm');
                 if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             });
         }
 
+        if (cartForm) {
+            cartForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                Swal.fire({
+                    title: 'Mohon tunggu...',
+                    text: 'Sedang memproses permintaan Anda.',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                    background: '#1E1E1F',
+                    color: '#FFFFFF'
+                });
+
+                const formData = new FormData(this);
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                })
+                .then(async res => {
+                    Swal.close();
+
+                    // Tangani 401/403 agar sama seperti Venues
+                    if (res.status === 401) {
+                        Swal.fire({
+                            title: 'Belum Login!',
+                            text: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+                            icon: 'warning',
+                            confirmButtonText: 'Login Sekarang',
+                            confirmButtonColor: '#3085d6',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF'
+                        }).then(() => { window.location.href = '/login'; });
+                        return null;
+                    }
+                    if (res.status === 403) {
+                        const data403 = await res.json().catch(() => null);
+                        Swal.fire({
+                            title: 'Akses ditolak',
+                            text: data403?.message || 'Hanya role "user" yang diizinkan.',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF'
+                        });
+                        return null;
+                    }
+
+                    const data = await res.json().catch(() => null);
+                    if (res.ok && data && (data.success ?? false)) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Produk berhasil ditambahkan ke keranjang!',
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF',
+                            iconColor: '#4BB543'
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: data?.message || 'Terjadi kesalahan, coba lagi.',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            background: '#1E1E1F',
+                            color: '#FFFFFF'
+                        });
+                    }
+                    return null;
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.close();
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan jaringan. Silakan coba beberapa saat lagi.',
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        background: '#1E1E1F',
+                        color: '#FFFFFF'
+                    });
+                });
+            });
+        }
+
         // Init image loaders after DOM ready
         document.addEventListener('DOMContentLoaded', () => { initImageLoading(); });
-
-        // Carousel JS tetap sama...
+        // (Jika ada JS carousel tambahan, masukkan di sini)
     </script>
 @endpush

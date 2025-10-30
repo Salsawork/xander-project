@@ -17,6 +17,8 @@ class OrderEvent extends Model
         'total_payment',
         'bukti_payment',
         'status',
+        // ===== field baru =====
+        'no_rekening',
     ];
 
     protected $casts = [

@@ -174,7 +174,7 @@
                         <input type="checkbox" name="selected_items[]" data-type="venue"
                                data-image="{{ $filenameVenue ?? '' }}"
                                value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" />
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked /> {{-- AUTO-CHECK VENUE --}}
                         <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
@@ -312,10 +312,51 @@
             'Rp. ' + (total || 0).toLocaleString('id-ID');
     }
 
-    document.querySelectorAll('#cart input[type="checkbox"]').forEach(function(checkbox) {
-        checkbox.addEventListener('change', updateCartTotal);
-    });
-    updateCartTotal();
+    /* ==== EVENT DELEGATION + AUTO-CHECK VENUE (awal & item baru) ==== */
+    (function autoCheckVenue(){
+        const cartEl = document.getElementById('cart');
+        if (!cartEl) return;
+
+        // 1) Delegasi event agar item dinamis tetap dihitung
+        cartEl.addEventListener('change', function(e){
+            if (e.target && e.target.matches('input[type="checkbox"]')) {
+                updateCartTotal();
+            }
+        });
+
+        // 2) Pastikan venue yang sudah ada -> auto checked
+        cartEl.querySelectorAll('input[type="checkbox"][data-type="venue"]').forEach(cb => {
+            cb.checked = true;
+        });
+
+        // 3) Pantau penambahan item baru (MutationObserver) -> auto-check yang venue
+        const obs = new MutationObserver((mutations) => {
+            let needRecalc = false;
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (!(node instanceof Element)) return;
+
+                    // node sendiri checkbox venue?
+                    const single = node.matches?.('input[type="checkbox"][data-type="venue"]') ? [node] : [];
+
+                    // cari checkbox venue di dalam node
+                    const nested = node.querySelectorAll?.('input[type="checkbox"][data-type="venue"]') || [];
+
+                    [...single, ...nested].forEach(cb => {
+                        if (!cb.checked) {
+                            cb.checked = true;   // <-- AUTO-CHECK saat ditambahkan
+                            needRecalc = true;
+                        }
+                    });
+                });
+            });
+            if (needRecalc) updateCartTotal();
+        });
+        obs.observe(cartEl, { childList: true, subtree: true });
+
+        // hitung awal
+        updateCartTotal();
+    })();
 
     /** Saat submit ke checkout:
      *  - Kita kirim selected_items[]
