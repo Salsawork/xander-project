@@ -19,7 +19,6 @@
 
   .img-tile{ position:relative; width:80px; height:80px; }
   .img-tile img{ width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
-  .badge-replace{ display:inline-block; background:#2563eb; color:#fff; font-size:11px; padding:2px 6px; border-radius:999px; }
 </style>
 @endpush
 
@@ -100,7 +99,7 @@
                   </div>
                 </div>
 
-                {{-- Facilities --}}
+                {{-- Facilities (tetap) --}}
                 @php
                   $facFromDb = [];
                   if (is_array($venue->facilities)) $facFromDb = $venue->facilities;
@@ -154,91 +153,51 @@
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- ===== Gambar: pilih file → GANTI semua gambar lama (maks 3) ===== --}}
+                    {{-- ===== Gambar: UI sama seperti CREATE (maks 3, hidden input + grid preview) ===== --}}
                     @php
-                      $maxImages = 3;
-
-                      // ==== NORMALIZER ROBUST ====
+                      // Normalizer untuk menampilkan "Gambar Saat Ini"
                       $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
                       $placeholder = asset('images/placeholder/venue.png');
                       $normalizeImg = function($img) use ($feBase, $placeholder) {
                           $raw = is_string($img) ? trim($img) : '';
                           if ($raw === '') return $placeholder;
-
-                          // 1) Full URL
                           if (preg_match('~^https?://~i', $raw)) return $raw;
-
-                          // 2) Sudah mengarah ke /storage (public disk)
-                          if (stripos($raw, 'storage/') === 0) {
-                              return asset($raw);
-                          }
-
-                          // 3) Path relatif yang biasa disimpan di DB (public disk)
-                          //    contoh: "venue/abc.jpg", "uploads/venue/abc.jpg"
-                          if (preg_match('~^(venue/|uploads/venue/)~i', $raw)) {
-                              return asset('storage/'.$raw);
-                          }
-
-                          // 4) Asset publik di folder /public/images/venue/...
-                          if (preg_match('~^(images/venue/|images/venues/|img/venue/)~i', $raw)) {
-                              return asset($raw);
-                          }
-
-                          // 5) Hanya nama file → arahkan ke FE CDN bawaan
+                          if (stripos($raw, 'storage/') === 0) return asset($raw);
+                          if (preg_match('~^(venue/|uploads/venue/)~i', $raw)) return asset('storage/'.$raw);
+                          if (preg_match('~^(images/venue/|images/venues/|img/venue/)~i', $raw)) return asset($raw);
                           $name = basename($raw);
-                          if ($name && $name !== '/' && $name !== '.') {
-                              return $feBase.$name;
-                          }
-
-                          return $placeholder;
+                          return $name ? $feBase.$name : $placeholder;
                       };
-
-                      $existingImages = is_array($venue->images ?? null) ? $venue->images : [];
-                      $existingImages = array_values(array_filter(array_map(fn($v)=> (string)$v, $existingImages)));
-                      $existingImages = array_slice($existingImages, 0, $maxImages);
+                      $existingImages = is_array($venue->images ?? null) ? array_values(array_filter($venue->images)) : [];
                     @endphp
 
                     <div>
-                      <label class="block text-xs text-gray-400 mb-1">Upload Gambar (maks {{ $maxImages }})</label>
-                      <input
-                        id="imagesInput"
-                        type="file"
-                        name="images[]"
-                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        accept="image/*"
-                        multiple
-                        data-max-total="{{ $maxImages }}"
-                      />
-                      <input type="hidden" name="replace_images" id="replaceImagesFlag" value="0">
-                      <p id="imagesHelp" class="text-xs mt-1 text-gray-500">
-                        Memilih file akan <span class="badge-replace">MENGGANTI</span> semua gambar lama saat disimpan (maks {{ $maxImages }} gambar).
-                        Jika tidak memilih file, gambar lama dipertahankan.
-                      </p>
+                      <label class="block text-xs text-gray-400 mb-1" for="images">Gambar Venue (maks. 3)</label>
+                      <input name="images[]" id="images" type="file" multiple accept="image/*" class="hidden">
+                      <div id="imagePreview" class="mt-3 grid grid-cols-3 gap-3">
+                        <div class="h-24 border-2 border-dashed border-gray-500 rounded-md flex items-center justify-center text-gray-400 text-xs col-span-3 sm:col-span-3 md:col-span-3 hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
+                          onclick="document.getElementById('images').click()">
+                          Klik untuk pilih hingga 3 gambar
+                        </div>
+                      </div>
+                      @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                      {{-- Preview gambar baru (belum upload) --}}
-                      <div id="newPreview" class="flex flex-wrap gap-2 mt-3"></div>
-
-                      {{-- Gambar lama (informasi) --}}
+                      {{-- Informasi Gambar Saat Ini (read-only, bukan input) --}}
                       @if(count($existingImages))
                         <div class="mt-4">
                           <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
-                          <div class="flex flex-wrap gap-2" id="oldImagesWrap">
+                          <div class="flex flex-wrap gap-2">
                             @foreach($existingImages as $img)
                               @php $src = $normalizeImg($img); @endphp
                               <div class="img-tile">
-                                <img src="{{ $src }}" alt="venue image"
-                                     onerror="this.onerror=null;this.src='{{ $placeholder }}'">
+                                <img src="{{ $src }}" alt="venue image" onerror="this.onerror=null;this.src='{{ $placeholder }}'">
                               </div>
                             @endforeach
                           </div>
-                          <p class="text-xs text-gray-500 mt-2" id="oldInfo">Akan <u>tetap digunakan</u> jika tidak memilih file baru.</p>
                         </div>
                       @endif
-
-                      @error('images') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                      @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
-                    {{-- ===== END Gambar ===== --}}
+                    {{-- ===== END Gambar (UI seperti create) ===== --}}
 
                     {{-- Alamat --}}
                     <div class="space-y-2">
@@ -257,7 +216,6 @@
                         placeholder='Tempel: <iframe src="https://www.google.com/maps/embed?..."></iframe> atau URL "https://www.google.com/maps/place/...".'>{{ old('map_embed', $venue->map_embed) }}</textarea>
                       @error('map_embed') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                      {{-- NOTE: panduan embed (disamakan dengan halaman create) --}}
                       <div class="mt-2 rounded-md border border-blue-500/40 bg-blue-500/10 text-blue-100 text-xs p-3 leading-relaxed">
                         <p class="font-semibold mb-1">Panduan cepat Google Maps Embed</p>
                         <ol class="list-decimal pl-4 space-y-1">
@@ -272,7 +230,6 @@
                           <li><code>https://www.google.com/maps?q=…</code></li>
                         </ul>
                       </div>
-                      {{-- END NOTE --}}
 
                       <div id="mapPreview" class="iframe-wrap mt-2" style="display:none;">
                         <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen=""></iframe>
@@ -349,7 +306,7 @@
     Swal.fire({ icon:'error', title:'Error!', text:'{{ session('error') }}', showConfirmButton:true, background:'#222', color:'#fff' });
   @endif
 
-  // ====== Map preview + auto address ======
+  // ====== Map preview + auto address (tetap) ======
   const embedEl = document.getElementById('map_embed');
   const previewWrap = document.getElementById('mapPreview');
   const previewIframe = document.getElementById('mapPreviewIframe');
@@ -400,7 +357,7 @@
   }
   if (embedEl) { embedEl.addEventListener('input', renderPreview); renderPreview(); }
 
-  // ====== Facilities (chips) ======
+  // ====== Facilities (chips) (tetap) ======
   const facInput   = document.getElementById('facilityInputEdit');
   const facAddBtn  = document.getElementById('addFacilityBtnEdit');
   const facChips   = document.getElementById('facilitiesChipsEdit');
@@ -435,51 +392,63 @@
   if (form) { form.addEventListener('submit', () => renderFacilities()); }
   renderFacilities();
 
-  // ====== File baru = GANTI semua gambar lama (maks 3) + preview ======
-  (function(){
-    const input  = document.getElementById('imagesInput');
-    const help   = document.getElementById('imagesHelp');
-    const previewWrap = document.getElementById('newPreview');
-    const flag   = document.getElementById('replaceImagesFlag');
-    const oldWrap= document.getElementById('oldImagesWrap');
-    const oldInfo= document.getElementById('oldInfo');
+  // ======= Preview upload (MAKS 3) — SAMA PERSIS DENGAN CREATE =======
+  const fileInput = document.getElementById('images');
+  const previewContainer = document.getElementById('imagePreview');
+  let selectedFiles = [];
 
-    if(!input) return;
-    const maxTotal = parseInt(input.dataset.maxTotal || '3', 10);
-
-    function renderPreviews(files){
-      previewWrap.innerHTML = '';
-      files.forEach(file => {
-        const url = URL.createObjectURL(file);
-        const fig = document.createElement('div');
-        fig.className = 'img-tile';
-        fig.innerHTML = `<img src="${url}" alt="preview">`;
-        previewWrap.appendChild(fig);
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const incoming = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+      const newFiles = incoming.map(file => {
+        const uniqueName = Date.now() + '-' + file.name;
+        return new File([file], uniqueName, { type: file.type });
       });
-    }
-
-    input.addEventListener('change', () => {
-      const files = Array.from(input.files || []);
-      if(files.length > maxTotal){
-        const dt = new DataTransfer();
-        files.slice(0, maxTotal).forEach(f => dt.items.add(f));
-        input.files = dt.files;
-      }
-      const picked = Array.from(input.files || []);
-      if (picked.length > 0) {
-        flag.value = '1';
-        help.className = 'text-xs mt-1 text-yellow-300';
-        help.innerHTML = `Mode <b>GANTI</b> aktif. Semua gambar lama akan diganti dengan ${picked.length} gambar baru (maks ${maxTotal}).`;
-        if (oldInfo) oldInfo.textContent = 'Akan DIGANTI saat disimpan.';
-      } else {
-        flag.value = '0';
-        help.className = 'text-xs mt-1 text-gray-500';
-        help.textContent = `Memilih file akan MENGGANTI semua gambar lama saat disimpan (maks ${maxTotal} gambar). Jika tidak memilih file, gambar lama dipertahankan.`;
-        if (oldInfo) oldInfo.textContent = 'Akan tetap digunakan jika tidak memilih file baru.';
-      }
-      renderPreviews(picked);
-      if (oldWrap) oldWrap.style.opacity = picked.length ? '.35' : '1';
+      selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
+      updatePreview(); updateFileInput();
     });
-  })();
+  }
+
+  function updatePreview() {
+    if (!previewContainer) return;
+    previewContainer.innerHTML = '';
+    selectedFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = event => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative group';
+        const img = document.createElement('img');
+        img.src = event.target.result;
+        img.className = 'w-full h-24 object-cover rounded-md border border-gray-600';
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '×';
+        removeBtn.className = 'absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity';
+        removeBtn.onclick = (e) => { e.stopPropagation(); removeFile(index); };
+        wrapper.appendChild(img); wrapper.appendChild(removeBtn);
+        previewContainer.appendChild(wrapper);
+      };
+      reader.readAsDataURL(file);
+    });
+    const emptySlots = 3 - selectedFiles.length;
+    for (let i = 0; i < emptySlots; i++) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'h-24 border-2 border-dashed border-gray-500 rounded-md flex items-center justify-center text-gray-400 text-xs cursor-pointer hover:border-blue-500 hover:text-blue-400 transition';
+      placeholder.textContent = 'Klik untuk pilih';
+      placeholder.onclick = () => fileInput.click();
+      previewContainer.appendChild(placeholder);
+    }
+  }
+
+  function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updatePreview(); updateFileInput();
+  }
+
+  function updateFileInput() {
+    const dt = new DataTransfer();
+    selectedFiles.forEach(file => dt.items.add(file));
+    if (fileInput) fileInput.files = dt.files;
+  }
 </script>
 @endpush

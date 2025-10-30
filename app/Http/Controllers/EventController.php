@@ -179,6 +179,10 @@ class EventController extends Controller
         $validated = $request->validate([
             'bank_id'       => 'required|integer|exists:mst_bank,id_bank',
             'bukti_payment' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            // Tambahan: nomor rekening pemain → disimpan ke users.no_rekening
+            'no_rek'        => ['required','string','regex:/^\d{6,25}$/'],
+        ], [
+            'no_rek.regex'  => 'Nomor rekening harus 6–25 digit angka.',
         ]);
 
         if ($event->player_slots <= 0) {
@@ -192,6 +196,7 @@ class EventController extends Controller
         try {
             DB::beginTransaction();
 
+            // Simpan bukti pembayaran
             $file    = $request->file('bukti_payment');
             $ext     = $file->getClientOriginalExtension();
             $fname   = 'reg_' . $event->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
@@ -201,6 +206,18 @@ class EventController extends Controller
                 mkdir($targetDir, 0755, true);
             }
             $file->move($targetDir, $fname);
+
+            // Sanitize nomor rekening dan simpan ke USERS
+            $noRekDigits = preg_replace('/\D+/', '', (string)$validated['no_rek']);
+            try {
+                $user->no_rekening = $noRekDigits;
+                $user->save();
+            } catch (\Throwable $e) {
+                Log::warning('Failed saving user no_rekening on register', [
+                    'user_id' => $user->id,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
 
             $registrationNumber = 'REG-' . strtoupper(Str::random(6));
             $totalPayment = $event->price_ticket_player ?? 0;
@@ -258,6 +275,10 @@ class EventController extends Controller
             'bank_id'        => 'required|integer|exists:mst_bank,id_bank',
             'bukti_payment'  => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
             '_from'          => 'nullable|string',
+            // Tambahan: nomor rekening viewer → disimpan ke order_events.no_rekening
+            'no_rek'         => ['required','string','regex:/^\d{6,25}$/'],
+        ], [
+            'no_rek.regex'    => 'Nomor rekening harus 6–25 digit angka.',
         ]);
 
         $endDate = $event->end_date instanceof Carbon
@@ -300,6 +321,9 @@ class EventController extends Controller
 
                 $orderNumber = $this->generateUniqueOrderNumber();
 
+                // Sanitize nomor rekening untuk disimpan pada ORDER
+                $payerAcc = preg_replace('/\D+/', '', (string)$validated['no_rek']);
+
                 $orderEvent = OrderEvent::create([
                     'order_number'  => $orderNumber,
                     'user_id'       => $user->id,
@@ -309,6 +333,8 @@ class EventController extends Controller
                     'total_payment' => $totalPayment,
                     'bukti_payment' => $path,
                     'status'        => 'paid',
+                    // ===== Tambahan field baru =====
+                    'no_rekening'   => $payerAcc,
                 ]);
 
                 $ticket->stock = (int) $ticket->stock - $qty;

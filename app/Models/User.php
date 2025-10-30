@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'status_player',
         'firstname',
         'lastname',
+        // ===== field baru =====
+        'no_rekening',
     ];
 
     /**
@@ -90,7 +92,6 @@ class User extends Authenticatable implements MustVerifyEmail
         }
         return null;
     }
-    
 
     /**
      * ====== Tambahan relasi untuk kolom "Event Diikuti" ======

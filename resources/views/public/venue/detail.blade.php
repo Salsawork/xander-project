@@ -415,11 +415,25 @@
         </div>
 
         <div class="bg-neutral-800 p-5 rounded-lg text-sm text-gray-300">
-          <h3 class="font-semibold mb-2">Terms & Conditions</h3>
-          <p class="mb-2">Guests are expected to follow all venue rules and staff instructions.</p>
-          <p class="mb-2">Any damage due to negligence is guest responsibility.</p>
-          <p class="mb-2">Outside food and beverages are not permitted unless explicitly allowed.</p>
-          <p>Disruptive behavior may result in removal without refund.</p>
+          <h3 class="font-semibold mb-2">Venue Description</h3>
+
+          {{-- ===== Deskripsi Venue dari input create/edit ===== --}}
+          @php
+            $venueDescription = trim((string)($detail->description ?? ''));
+          @endphp
+          @if($venueDescription !== '')
+            <div class="mb-3">
+              <!--<h4 class="font-semibold text-white text-sm mb-1">Venue Description</h4>-->
+              <div class="text-gray-300 leading-6">{!! nl2br(e($venueDescription)) !!}</div>
+              <hr class="border-white/10 mt-3">
+            </div>
+          @endif
+          {{-- ===== /Deskripsi Venue ===== --}}
+
+          <!--<p class="mb-2">Guests are expected to follow all venue rules and staff instructions.</p>-->
+          <!--<p class="mb-2">Any damage due to negligence is guest responsibility.</p>-->
+          <!--<p class="mb-2">Outside food and beverages are not permitted unless explicitly allowed.</p>-->
+          <!--<p>Disruptive behavior may result in removal without refund.</p>-->
         </div>
 
         {{-- CREATE REVIEW --}}
