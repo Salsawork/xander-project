@@ -57,6 +57,7 @@ class Tournament extends Model
         'type',
         'venue_id',
         'level_id',
+        'event_id'
     ];
 
     protected $dates = ['dateIni', 'dateFin', 'registerDateLimit', 'created_at', 'updated_at', 'deleted_at'];
