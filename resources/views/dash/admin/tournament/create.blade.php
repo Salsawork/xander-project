@@ -169,7 +169,7 @@
                                     </label>
                                     <select name="treeType" id="treeType"
                                         class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="0" {{ old('treeType', 1) == 0 ? 'selected' : '' }}>Playoff
+                                        <option value="0" {{ old('treeType', 1) == 0 ? 'selected' : '' }}>Double Elimination
                                         </option>
                                         <option value="1" {{ old('treeType', 1) == 1 ? 'selected' : '' }}>Single
                                             Elimination</option>
