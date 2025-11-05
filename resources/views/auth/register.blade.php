@@ -101,15 +101,8 @@
                     @enderror
 
                     <button type="submit"
-                        class="mb-4 w-full rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
+                        class="w-full rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
                         Sign Up
-                    </button>
-
-                    <div class="mb-4 border-t border-gray-600"></div>
-
-                    <button type="button"
-                        class="w-full rounded-md border border-blue-500 px-4 py-2 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors">
-                        Google
                     </button>
                 </form>
             </div>
