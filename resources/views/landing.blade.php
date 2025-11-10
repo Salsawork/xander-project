@@ -322,7 +322,7 @@
       $itemsMobile = $isMobile ? $rawItems->shuffle() : $rawItems;
       $itemsDesktop = $rawItems;
 
-      $PRODUCT_CDN = 'https://demo-xanders.ptbmn.id/images/products/';
+      $PRODUCT_CDN = 'https://xanderbilliard.site/images/products/';
       $productImg = function ($images) use ($PRODUCT_CDN) {
           $arr = is_array($images) ? $images : ($images ? json_decode($images, true) : []);
           $first = $arr[0] ?? null;
@@ -544,7 +544,7 @@
         use App\Models\Event;
         use Carbon\Carbon;
 
-        $EVENT_CDN = 'https://demo-xanders.ptbmn.id/images/events/';
+        $EVENT_CDN = 'https://xanderbilliard.site/images/events/';
 
         $eventImg = function ($path) use ($EVENT_CDN) {
             $filename = basename((string)$path);

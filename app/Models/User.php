@@ -88,7 +88,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if (!empty($this->photo_profile)) {
             return asset('images/avatars/' . $this->photo_profile);
-            // return 'https://demo-xanders.ptbmn.id/images/avatars/' . $this->photo_profile;
+            // return 'https://xanderbilliard.site/images/avatars/' . $this->photo_profile;
         }
         return null;
     }

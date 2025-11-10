@@ -24,7 +24,7 @@ setSVH();window.addEventListener('resize',setSVH);})();
   use App\Models\Order;
 
   // CDN base (override-able via .env XB_CDN)
-  $cdnHost = config('app.xb_cdn', env('XB_CDN', 'https://demo-xanders.ptbmn.id'));
+  $cdnHost = config('app.xb_cdn', env('XB_CDN', 'https://xanderbilliard.site'));
   $cdn = [
     'venue' => rtrim($cdnHost, '/') . '/images/venue/',
   ];

@@ -14,7 +14,7 @@
         @php
           use App\Models\Order;
 
-          $cdnHost = config('app.xb_cdn', env('XB_CDN', 'https://demo-xanders.ptbmn.id'));
+          $cdnHost = config('app.xb_cdn', env('XB_CDN', 'https://xanderbilliard.site'));
           $athleteCdnBase = rtrim($cdnHost, '/') . '/images/athlete/';
           $athFallbacks = ['athlete-1.png','athlete-2.png','athlete-3.png','athlete-4.png'];
 

@@ -26,7 +26,7 @@
     // Path server tempat file bukti transfer disimpan
     $__proofDir     = base_path('../demo-xanders/images/payment_proof');
     // Base URL CDN untuk menampilkan file (HARUS ini, bukan storage)
-    $__proofCdnBase = 'https://demo-xanders.ptbmn.id/images/payment_proof/';
+    $__proofCdnBase = 'https://xanderbilliard.site/images/payment_proof/';
 
     if (!function_exists('__proof_cdn_url')) {
         /**

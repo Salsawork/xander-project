@@ -156,7 +156,7 @@
                     {{-- ===== Gambar: UI sama seperti CREATE (maks 3, hidden input + grid preview) ===== --}}
                     @php
                       // Normalizer untuk menampilkan "Gambar Saat Ini"
-                      $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                      $feBase = 'https://xanderbilliard.site/images/venue/';
                       $placeholder = asset('images/placeholder/venue.png');
                       $normalizeImg = function($img) use ($feBase, $placeholder) {
                           $raw = is_string($img) ? trim($img) : '';

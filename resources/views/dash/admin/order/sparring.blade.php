@@ -44,7 +44,7 @@
     /**
      * Bangun URL bukti transfer dari field $order->file
      * - Ambil hanya basename dari apapun (contoh: 'storage/1761.png' -> '1761.png')
-     * - Hasil: https://demo-xanders.ptbmn.id/images/payment_proof/{basename}
+     * - Hasil: https://xanderbilliard.site/images/payment_proof/{basename}
      */
     if (!function_exists('proof_url_from_order_file')) {
         function proof_url_from_order_file($order): ?string {
@@ -52,7 +52,7 @@
             if (!$f) return null;
             $name = basename(str_replace('\\','/',$f));
             if ($name === '' || $name === '.' || $name === '..') return null;
-            // asset() -> https://demo-xanders.ptbmn.id/images/payment_proof/{file}
+            // asset() -> https://xanderbilliard.site/images/payment_proof/{file}
             return asset('images/payment_proof/'.$name);
         }
     }

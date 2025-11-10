@@ -8,7 +8,7 @@
      * FE base untuk SEMUA gambar venue.
      * Catatan: kita TIDAK akan memakai images/products/* atau placeholder CMS.
      */
-    $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
+    $feBaseVenue = 'https://xanderbilliard.site/images/venue/';
 
     /**
      * Bangun kandidat URL gambar venue:

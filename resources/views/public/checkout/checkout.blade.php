@@ -203,7 +203,7 @@
                         if ($firstImageRaw) {
                             $firstImage = filter_var($firstImageRaw, FILTER_VALIDATE_URL)
                                 ? $firstImageRaw
-                                : ('https://demo-xanders.ptbmn.id/images/products/' . basename(str_replace('\\','/',$firstImageRaw)));
+                                : ('https://xanderbilliard.site/images/products/' . basename(str_replace('\\','/',$firstImageRaw)));
                         }
                         $idx = ($loop->index % 5) + 1;
                         $defaultImg = asset("images/products/{$idx}.png");
@@ -240,7 +240,7 @@
                                     : basename(str_replace('\\','/',$raw)))
                                 : null;
                             $img = $filename
-                                ? ('https://demo-xanders.ptbmn.id/images/athlete/' . $filename)
+                                ? ('https://xanderbilliard.site/images/athlete/' . $filename)
                                 : asset('images/placeholder/athlete.png');
                         @endphp
                         <div class="flex items-center space-x-4 mb-4">
@@ -268,7 +268,7 @@
                 @if(isset($venues) && count($venues) > 0)
                     @foreach($venues as $venue)
                         @php
-                            $cdnBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                            $cdnBase = 'https://xanderbilliard.site/images/venue/';
                             $filename = trim((string)($venue['image'] ?? ''));
                             $venueImg = $filename !== '' ? ($cdnBase . basename($filename)) : asset('images/placeholder/venue.png');
                             $fallbackVenue = asset('images/placeholder/venue.png');
@@ -443,7 +443,7 @@
 
                     <!-- Place Order Button -->
                     <div>
-                        <button type="button" id="pay-button"
+                        <button type="submit" id="pay-button"
                                 class="w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700">
                             Place Order
                         </button>
@@ -702,7 +702,7 @@
                         Swal.fire({
                             icon: 'error',
                             title: 'Order Error',
-                            text: data.message || 'Order gagal diproses.',
+                            text: data.error || 'Order gagal diproses.',
                             confirmButtonColor: '#3085d6'
                         });
                         btn.disabled = false;

@@ -252,7 +252,7 @@ class CartItemController extends Controller
      * ======================= */
 
     /**
-     * Normalisasi image produk ke https://demo-xanders.ptbmn.id/images/products/{filename}
+     * Normalisasi image produk ke https://xanderbilliard.site/images/products/{filename}
      * Menerima: array string, JSON-string, atau string path.
      */
     private function buildProductImageUrl($images): string
@@ -285,7 +285,7 @@ class CartItemController extends Controller
     }
 
     /**
-     * Normalisasi image venue ke https://demo-xanders.ptbmn.id/images/venue/{filename}
+     * Normalisasi image venue ke https://xanderbilliard.site/images/venue/{filename}
      */
     private function buildVenueImageUrl($image): string
     {

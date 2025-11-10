@@ -5,7 +5,7 @@
     use Illuminate\Support\Str;
 
     // ===== FE base URL untuk gambar produk =====
-    $feBaseProducts = 'https://demo-xanders.ptbmn.id/images/products/';
+    $feBaseProducts = 'https://xanderbilliard.site/images/products/';
 
     // Normalizer: apapun input (URL penuh / relative / nama file) -> absolut ke FE base di atas
     $normalizeToFeBase = function ($s) use ($feBaseProducts) {

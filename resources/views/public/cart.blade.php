@@ -93,8 +93,8 @@
                         if (is_string($first)) { $first = str_replace('\\','/',$first); }
                         $filename = $first ? basename($first) : null;
                         $imageUrl = $filename
-                            ? ('https://demo-xanders.ptbmn.id/images/products/' . $filename)
-                            : 'https://demo-xanders.ptbmn.id/images/products/default.png';
+                            ? ('https://xanderbilliard.site/images/products/' . $filename)
+                            : 'https://xanderbilliard.site/images/products/default.png';
                     @endphp
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="product"
@@ -133,7 +133,7 @@
                 {{-- Venue (gambar dikirim dari controller/detail -> 'image', lalu dibangun ke FE base) --}}
                 @forelse ($cartVenues ?? [] as $venue)
                     @php
-                        $feVenueBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                        $feVenueBase = 'https://xanderbilliard.site/images/venue/';
 
                         // Prioritas: pakai $venue['image'] yang sudah dikirim controller/form.
                         $rawVenue = $venue['image'] ?? null;
@@ -208,8 +208,8 @@
                             else { $filenameAthlete = basename(str_replace('\\', '/', $rawAthlete)); }
                         }
                         $athleteImageUrl = $filenameAthlete
-                            ? ('https://demo-xanders.ptbmn.id/images/athlete/' . $filenameAthlete)
-                            : 'https://demo-xanders.ptbmn.id/images/athlete/default.png';
+                            ? ('https://xanderbilliard.site/images/athlete/' . $filenameAthlete)
+                            : 'https://xanderbilliard.site/images/athlete/default.png';
                     @endphp
 
                     <li class="flex items-center cart-item">

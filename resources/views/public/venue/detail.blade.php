@@ -95,12 +95,12 @@
 
 @php
   // FE base untuk gambar venue
-  $feBaseVenue = 'https://demo-xanders.ptbmn.id/images/venue/';
+  $feBaseVenue = 'https://xanderbilliard.site/images/venue/';
 
   // Placeholder aman: data URI (SVG) → tidak ada network request
   $placeholderDataUri = 'data:image/svg+xml;utf8,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="100%" height="100%" fill="#111"/></svg>');
 
-  // Normalizer ke FE base: https://demo-xanders.ptbmn.id/images/venue/<filename>
+  // Normalizer ke FE base: https://xanderbilliard.site/images/venue/<filename>
   $normalizeToFeVenue = function ($s) use ($feBaseVenue) {
       $s = is_string($s) ? trim($s) : '';
       if ($s === '') return null;

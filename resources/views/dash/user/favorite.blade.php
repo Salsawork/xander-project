@@ -107,7 +107,7 @@
 
 @php
   // FE base ABSOLUTE untuk venue
-  $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+  $feBase = 'https://xanderbilliard.site/images/venue/';
 @endphp
 
 <div class="min-h-screen bg-neutral-900 text-white scroll-root">
@@ -221,8 +221,8 @@
                 }
 
                 // fallback: global placeholder (bukan di /images/venue/, supaya tidak 404)
-                $candidates[] = 'https://demo-xanders.ptbmn.id/images/placeholder.webp';
-                $candidates[] = 'https://demo-xanders.ptbmn.id/images/placeholder.png';
+                $candidates[] = 'https://xanderbilliard.site/images/placeholder.webp';
+                $candidates[] = 'https://xanderbilliard.site/images/placeholder.png';
                 $candidates[] = 'https://placehold.co/800x600?text=No+Image';
 
                 // unik & bersih

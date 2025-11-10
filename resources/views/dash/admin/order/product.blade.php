@@ -42,7 +42,7 @@
 
 @php
     // Base CDN untuk bukti transfer (TARGET YANG DIINGINKAN)
-    $__proofCdnBase = 'https://demo-xanders.ptbmn.id/images/payment_proof/';
+    $__proofCdnBase = 'https://xanderbilliard.site/images/payment_proof/';
 
     if (!function_exists('proof_cdn_url_simple')) {
         /**
