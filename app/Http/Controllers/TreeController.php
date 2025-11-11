@@ -207,31 +207,28 @@ class TreeController extends Controller
             return;
         }
 
+        // Calculate structure
         $round1Count = $championship->groupsByRound(1)->count();
         $numFighters = $round1Count * 2;
         $numRounds = intval(log($numFighters, 2));
 
-        // Calculate structure
         $upperBracketEnd = $numRounds + 1;
         $lowerBracketStart = $upperBracketEnd + 1;
         $maxRound = $allGroups->max('round');
         $grandFinalRound = $maxRound;
 
-        \Log::info('Double Elimination Auto-fill Started', [
-            'num_fighters' => $numFighters,
-            'round_1_matches' => $round1Count,
-            'upper_bracket' => "2-{$upperBracketEnd}",
-            'lower_bracket_start' => $lowerBracketStart,
+        \Log::info('=== Double Elimination Auto-fill V3 (FIXED LB ADVANCEMENT) ===', [
+            'fighters' => $numFighters,
+            'upper_bracket' => "1-{$upperBracketEnd}",
+            'lower_bracket' => "{$lowerBracketStart}-" . ($grandFinalRound - 1),
             'grand_final' => $grandFinalRound
         ]);
 
-        // =========================================
+        // ==================================================
         // STEP 1: Process Round 1
-        // Winners → Upper R2
-        // Losers → Lower Bracket (stored for later)
-        // =========================================
+        // ==================================================
+        $round1Groups = $allGroups->where('round', 1)->sortBy('order')->values();
         $round1Losers = [];
-        $round1Groups = $allGroups->where('round', 1)->values();
 
         foreach ($round1Groups as $groupIndex => $group) {
             $fight = $group->fights->first();
@@ -240,19 +237,19 @@ class TreeController extends Controller
             $winnerId = $fight->winner_id;
             $loserId = ($fight->c1 == $winnerId) ? $fight->c2 : $fight->c1;
 
-            // Store loser for LB Round 1
+            // Store loser
             if ($loserId && !$this->isEmptySlot($loserId)) {
                 $round1Losers[] = $loserId;
             }
 
             // Winner advances to Upper R2
             $nextPosition = (int) ceil(($groupIndex + 1) / 2);
-            $nextRoundGroup = $allGroups->where('round', 2)
+            $nextGroup = $allGroups->where('round', 2)
                 ->where('order', $nextPosition)
                 ->first();
 
-            if ($nextRoundGroup) {
-                $nextFight = $nextRoundGroup->fights->first();
+            if ($nextGroup) {
+                $nextFight = $nextGroup->fights->first();
                 if ($nextFight) {
                     $isFirstInMatch = ($groupIndex % 2 == 0);
                     if ($isFirstInMatch) {
@@ -266,46 +263,41 @@ class TreeController extends Controller
         }
 
         \Log::info('Round 1 processed', [
-            'losers_collected' => count($round1Losers)
+            'winners_advanced' => $round1Count,
+            'losers_to_lb' => count($round1Losers)
         ]);
 
-        // =========================================
-        // STEP 2: Process Upper Bracket
-        // Winners → Next Upper Round
-        // Losers → Lower Bracket
-        // =========================================
-        $lowerBracketQueue = []; // Track which LB round receives which losers
+        // ==================================================
+        // STEP 2: Process Upper Bracket & Collect Losers
+        // ==================================================
+        $upperLosersQueue = [];
 
         for ($round = 2; $round <= $upperBracketEnd; $round++) {
-            $currentRoundGroups = $allGroups->where('round', $round)->values();
-            $losersFromThisRound = [];
+            $roundGroups = $allGroups->where('round', $round)->sortBy('order')->values();
+            $losersThisRound = [];
 
-            foreach ($currentRoundGroups as $groupIndex => $group) {
+            foreach ($roundGroups as $groupIndex => $group) {
                 $fight = $group->fights->first();
                 if (!$fight || !$fight->winner_id) continue;
 
                 $winnerId = $fight->winner_id;
                 $loserId = ($fight->c1 == $winnerId) ? $fight->c2 : $fight->c1;
 
-                \Log::info("Upper Round {$round}, Match " . ($groupIndex + 1), [
-                    'winner_id' => $winnerId,
-                    'loser_id' => $loserId
-                ]);
-
                 // Store loser
                 if ($loserId && !$this->isEmptySlot($loserId)) {
-                    $losersFromThisRound[] = $loserId;
+                    $losersThisRound[] = $loserId;
                 }
 
-                // WINNER: Advance to next upper round
+                // Winner advances
                 if ($round < $upperBracketEnd) {
+                    // Advance to next upper round
                     $nextPosition = (int) ceil(($groupIndex + 1) / 2);
-                    $nextRoundGroup = $allGroups->where('round', $round + 1)
+                    $nextGroup = $allGroups->where('round', $round + 1)
                         ->where('order', $nextPosition)
                         ->first();
 
-                    if ($nextRoundGroup) {
-                        $nextFight = $nextRoundGroup->fights->first();
+                    if ($nextGroup) {
+                        $nextFight = $nextGroup->fights->first();
                         if ($nextFight) {
                             $isFirstInMatch = ($groupIndex % 2 == 0);
                             if ($isFirstInMatch) {
@@ -317,69 +309,250 @@ class TreeController extends Controller
                         }
                     }
                 } else {
-                    // Upper bracket final winner → Grand Final c1
-                    $grandFinalGroup = $allGroups->where('round', $grandFinalRound)->first();
-                    if ($grandFinalGroup) {
-                        $grandFinalFight = $grandFinalGroup->fights->first();
-                        if ($grandFinalFight) {
-                            $grandFinalFight->c1 = $winnerId;
-                            $grandFinalFight->save();
-                            \Log::info("Upper winner placed in Grand Final c1");
+                    // Upper Final winner → Grand Final c1
+                    $grandGroup = $allGroups->where('round', $grandFinalRound)->first();
+                    if ($grandGroup) {
+                        $grandFight = $grandGroup->fights->first();
+                        if ($grandFight) {
+                            $grandFight->c1 = $winnerId;
+                            $grandFight->save();
+                            \Log::info("✓ Upper Final winner → Grand Final c1: {$winnerId}");
                         }
                     }
                 }
             }
 
-            // Queue losers for lower bracket
-            if (!empty($losersFromThisRound)) {
-                $lowerBracketQueue[$round] = $losersFromThisRound;
-                \Log::info("Queued {count} losers from Upper Round {$round}", [
-                    'count' => count($losersFromThisRound),
-                    'round' => $round
-                ]);
+            if (!empty($losersThisRound)) {
+                $upperLosersQueue[$round] = $losersThisRound;
+                \Log::info("Upper R{$round}: {$roundGroups->count()} matches, " . count($losersThisRound) . " losers queued");
             }
         }
 
-        // =========================================
-        // STEP 3: Fill Lower Bracket
-        // =========================================
-        $lbRoundNumber = $lowerBracketStart;
+        // ==================================================
+        // STEP 3: Fill Lower Bracket (FIXED ADVANCEMENT)
+        // ==================================================
+        $lbRound = $lowerBracketStart;
 
-        // LB Round 1: Round 1 losers fight each other
+        // LB R1: Round 1 losers fight each other
         if (!empty($round1Losers)) {
-            $this->fillLowerBracketRound($allGroups, $lbRoundNumber, $round1Losers, null);
-            $lbRoundNumber++;
+            \Log::info("═══ LB R{$lbRound}: R1 losers fight each other ═══");
+            $this->fillLowerBracketMatches($allGroups, $lbRound, $round1Losers);
+            $lbRound++;
         }
 
-        // Process queued losers from upper bracket
-        foreach ($lowerBracketQueue as $upperRound => $losers) {
-            // First: Upper losers vs LB survivors
-            $this->fillLowerBracketRound($allGroups, $lbRoundNumber, $losers, 'vs_survivors');
-            $lbRoundNumber++;
+        // Process each upper round's losers with FIXED pattern
+        foreach ($upperLosersQueue as $upperRound => $upperLosers) {
+            \Log::info("═══ Processing Upper R{$upperRound} losers (" . count($upperLosers) . " losers) ═══");
 
-            // Second: LB winners advance
-            if ($lbRoundNumber < $grandFinalRound) {
-                $this->processLowerBracketAdvancement($allGroups, $lbRoundNumber - 1, $lbRoundNumber);
-                $lbRoundNumber++;
-            }
-        }
+            // ROUND A: LB winners meet Upper losers
+            \Log::info("LB R{$lbRound}: LB R" . ($lbRound - 1) . " winners MEET Upper R{$upperRound} losers");
 
-        // Final LB round winner → Grand Final c2
-        $finalLBRound = $grandFinalRound - 1;
-        $finalLBGroup = $allGroups->where('round', $finalLBRound)->first();
-        if ($finalLBGroup) {
-            $fight = $finalLBGroup->fights->first();
-            if ($fight && $fight->winner_id) {
-                $grandFinalGroup = $allGroups->where('round', $grandFinalRound)->first();
-                if ($grandFinalGroup) {
-                    $grandFinalFight = $grandFinalGroup->fights->first();
-                    if ($grandFinalFight) {
-                        $grandFinalFight->c2 = $fight->winner_id;
-                        $grandFinalFight->save();
-                        \Log::info("Lower winner placed in Grand Final c2");
-                    }
+            $lbGroups = $allGroups->where('round', $lbRound)->sortBy('order')->values();
+            $prevLBRound = $lbRound - 1;
+
+            // CRITICAL FIX: Get ALL winners from previous LB round
+            $prevLBWinners = [];
+            $prevLBGroups = $allGroups->where('round', $prevLBRound)->sortBy('order')->values();
+
+            foreach ($prevLBGroups as $prevGroup) {
+                $prevFight = $prevGroup->fights->first();
+                if ($prevFight && $prevFight->winner_id) {
+                    $prevLBWinners[] = $prevFight->winner_id;
+                    \Log::info("  LB R{$prevLBRound} Match {$prevGroup->order} winner: {$prevFight->winner_id}");
                 }
             }
+
+            \Log::info("  Total LB R{$prevLBRound} winners: " . count($prevLBWinners));
+            \Log::info("  Total Upper R{$upperRound} losers: " . count($upperLosers));
+
+            // Fill matches: LB winners (c1) vs Upper losers (c2)
+            foreach ($lbGroups as $matchIndex => $group) {
+                $fight = $group->fights->first();
+                if (!$fight) continue;
+
+                // c1: LB winner
+                if (isset($prevLBWinners[$matchIndex])) {
+                    $fight->c1 = $prevLBWinners[$matchIndex];
+                }
+
+                // c2: Upper loser
+                if (isset($upperLosers[$matchIndex])) {
+                    $fight->c2 = $upperLosers[$matchIndex];
+                }
+
+                $fight->save();
+                \Log::info("  Match {$group->order}: c1={$fight->c1} (LB winner) vs c2={$fight->c2} (Upper loser)");
+            }
+
+            $lbRound++;
+
+            // ROUND B: LB winners advance (except for last upper round)
+            if ($upperRound < $upperBracketEnd) {
+                \Log::info("LB R{$lbRound}: Advancement round (winners advance)");
+                $this->advanceLowerBracketWinners($allGroups, $lbRound - 1, $lbRound);
+                $lbRound++;
+            }
+        }
+
+        // ==================================================
+        // STEP 4: Grand Final - Upper vs Lower Winners
+        // ==================================================
+        \Log::info('═══ GRAND FINAL SETUP ═══');
+
+        $lowerFinalRound = $grandFinalRound - 1;
+
+        // Get Grand Final fight
+        $grandGroup = $allGroups->where('round', $grandFinalRound)->first();
+        if (!$grandGroup) {
+            \Log::error('Grand Final group not found!');
+            return;
+        }
+
+        $grandFight = $grandGroup->fights->first();
+        if (!$grandFight) {
+            \Log::error('Grand Final fight not found!');
+            return;
+        }
+
+        // Upper Final winner → Grand Final c1 (already set in STEP 2)
+        $upperFinalGroup = $allGroups->where('round', $upperBracketEnd)->first();
+        if ($upperFinalGroup) {
+            $upperFight = $upperFinalGroup->fights->first();
+            if ($upperFight && $upperFight->winner_id) {
+                // Verify it's already in Grand Final c1
+                if ($grandFight->c1 == $upperFight->winner_id) {
+                    \Log::info("✓ Upper Final winner already in Grand Final c1: {$upperFight->winner_id}");
+                } else {
+                    // Set it if not already set
+                    $grandFight->c1 = $upperFight->winner_id;
+                    $grandFight->save();
+                    \Log::info("✓ Upper Final winner → Grand Final c1: {$upperFight->winner_id}");
+                }
+            } else {
+                \Log::warning('⚠ Upper Final winner not determined yet');
+            }
+        }
+
+        // Lower Final winner → Grand Final c2
+        $lowerFinalGroup = $allGroups->where('round', $lowerFinalRound)->first();
+        if ($lowerFinalGroup) {
+            $lowerFight = $lowerFinalGroup->fights->first();
+            if ($lowerFight && $lowerFight->winner_id) {
+                $grandFight->c2 = $lowerFight->winner_id;
+                $grandFight->save();
+                \Log::info("✓ Lower Final winner → Grand Final c2: {$lowerFight->winner_id}");
+            } else {
+                \Log::warning('⚠ Lower Final winner not determined yet');
+            }
+        }
+
+        // Display Grand Final matchup
+        if ($grandFight->c1 && $grandFight->c2) {
+            \Log::info('🏆 GRAND FINAL MATCHUP SET!');
+            \Log::info("   c1 (Upper Winner): {$grandFight->c1}");
+            \Log::info("   c2 (Lower Winner): {$grandFight->c2}");
+
+            // Check if Grand Final has been played
+            if ($grandFight->winner_id) {
+                $champion = $grandFight->winner_id;
+                $runnerUp = ($grandFight->c1 == $champion) ? $grandFight->c2 : $grandFight->c1;
+                \Log::info('👑 CHAMPION: ' . $champion);
+                \Log::info('🥈 RUNNER-UP: ' . $runnerUp);
+            } else {
+                \Log::info('⏳ Grand Final not yet played - waiting for winner selection');
+            }
+        } else {
+            \Log::warning('⚠ Grand Final not complete:');
+            \Log::warning('   c1 (Upper): ' . ($grandFight->c1 ?? 'NOT SET'));
+            \Log::warning('   c2 (Lower): ' . ($grandFight->c2 ?? 'NOT SET'));
+        }
+
+        \Log::info('=== Double Elimination Auto-fill Complete ===');
+    }
+
+
+
+    private function advanceLowerBracketWinners($allGroups, $fromRound, $toRound)
+    {
+        $fromGroups = $allGroups->where('round', $fromRound)->sortBy('order')->values();
+
+        foreach ($fromGroups as $groupIndex => $group) {
+            $fight = $group->fights->first();
+            if (!$fight || !$fight->winner_id) continue;
+
+            // Calculate next position
+            $nextPosition = (int) ceil(($groupIndex + 1) / 2);
+            $nextGroup = $allGroups->where('round', $toRound)
+                ->where('order', $nextPosition)
+                ->first();
+
+            if ($nextGroup) {
+                $nextFight = $nextGroup->fights->first();
+                if ($nextFight) {
+                    $isFirstInMatch = ($groupIndex % 2 == 0);
+                    if ($isFirstInMatch) {
+                        $nextFight->c1 = $fight->winner_id;
+                    } else {
+                        $nextFight->c2 = $fight->winner_id;
+                    }
+                    $nextFight->save();
+
+                    $slot = $isFirstInMatch ? 'c1' : 'c2';
+                    \Log::info("  Advanced: Match {$group->order} winner → LB R{$toRound} Match {$nextGroup->order} ({$slot})");
+                }
+            }
+        }
+    }
+
+    private function fillLowerBracketWithUpperLosers($allGroups, $lbRound, $upperLosers)
+    {
+        $lbGroups = $allGroups->where('round', $lbRound)->sortBy('order')->values();
+
+        \Log::info("Filling LB R{$lbRound} with upper losers", [
+            'losers' => count($upperLosers),
+            'matches' => $lbGroups->count()
+        ]);
+
+        foreach ($lbGroups as $matchIndex => $group) {
+            $fight = $group->fights->first();
+            if (!$fight) continue;
+
+            // Place upper loser in c2 (c1 should already have LB winner)
+            if (isset($upperLosers[$matchIndex])) {
+                if ($this->isEmptySlot($fight->c2)) {
+                    $fight->c2 = $upperLosers[$matchIndex];
+                } elseif ($this->isEmptySlot($fight->c1)) {
+                    $fight->c1 = $upperLosers[$matchIndex];
+                }
+                $fight->save();
+            }
+        }
+    }
+
+    private function fillLowerBracketMatches($allGroups, $lbRound, $fighters)
+    {
+        $lbGroups = $allGroups->where('round', $lbRound)->sortBy('order')->values();
+
+        $fighterIndex = 0;
+
+        foreach ($lbGroups as $group) {
+            $fight = $group->fights->first();
+            if (!$fight) continue;
+
+            // Fill c1
+            if (isset($fighters[$fighterIndex])) {
+                $fight->c1 = $fighters[$fighterIndex];
+                $fighterIndex++;
+            }
+
+            // Fill c2
+            if (isset($fighters[$fighterIndex])) {
+                $fight->c2 = $fighters[$fighterIndex];
+                $fighterIndex++;
+            }
+
+            $fight->save();
+            \Log::info("  Match {$group->order}: c1={$fight->c1} vs c2={$fight->c2}");
         }
     }
 
