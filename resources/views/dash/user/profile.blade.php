@@ -29,37 +29,21 @@
     background:var(--page-bg);
   }
 
-  /* ===== MOBILE-ONLY TIDY (≤ 767px). Desktop & background unchanged. ===== */
+  /* ===== MOBILE ONLY (≤ 767px) ===== */
   @media (max-width: 767px){
-    /* container: pakai padding 1rem, bukan mx-16 yang bikin sempit */
     .profile-wrap{ margin-left:1rem !important; margin-right:1rem !important; }
-
-    /* card: padding & radius lebih ringkas */
     .profile-card{ padding:1rem !important; border-radius:16px !important; }
-
-    /* header: center dan rapat */
     .profile-header{ align-items:center !important; text-align:center !important; gap:.75rem !important; }
     .profile-avatar{ width:80px !important; height:80px !important; border-radius:9999px; outline:2px solid rgba(255,255,255,.12); box-shadow:0 6px 20px rgba(0,0,0,.35); }
-
-    /* teks */
-    .profile-name{ font-size:1.25rem !important; }          /* ~20px */
+    .profile-name{ font-size:1.25rem !important; }
     .profile-meta{ font-size:.9375rem !important; line-height:1.6; color:#d0d0d0; }
-
-    /* form: 16px agar iOS tidak auto-zoom, tinggi klik nyaman */
     .profile-label{ display:block; font-size:.8rem; color:#c8c8c8; margin-bottom:.35rem; letter-spacing:.02em; }
     .profile-input{
-      width:100%;
-      min-height:44px;
-      border-radius:12px;
-      background:#1a1a1a;
-      border:1px solid rgba(255,255,255,.12);
-      padding:.75rem .9rem;
-      color:#fff;
+      width:100%; min-height:44px; border-radius:12px; background:#1a1a1a;
+      border:1px solid rgba(255,255,255,.12); padding:.75rem .9rem; color:#fff;
       font-size:16px; line-height:1.2;
     }
     .profile-input:focus{ outline:none; border-color:rgba(10,138,255,.55); box-shadow:0 0 0 2px rgba(10,138,255,.30); }
-
-    /* tombol save: full width di mobile */
     .profile-save{ width:100%; justify-content:center; }
   }
 </style>
@@ -91,8 +75,61 @@
         @endif
 
         @php
+          /** @var \App\Models\User|null $user */
           $user = auth()->user();
-          $avatarUrl = $user?->avatar_url; // dari accessor
+
+          /*
+           |=========================================================
+           | Avatar lookup order:
+           | 1) NEW PATH: public/images/demo-xanders/avatars/{id}_*.ext
+           | 2) LEGACY  : public/images/avatars/{id}_*.ext
+           | 3) $user->avatar_url (absolute/relative)
+           | 4) Initials
+           |=========================================================
+          */
+
+          $searchBases = [
+            ['web' => 'images/demo-xanders/avatars', 'fs' => public_path('images/demo-xanders/avatars')], // NEW
+            ['web' => 'images/avatars',              'fs' => public_path('images/avatars')],              // LEGACY
+          ];
+
+          $avatarUrl = null;  // final <img src="">
+          $avatarFs  = null;  // file path for cache-busting
+
+          if ($user?->id) {
+            $uid = $user->id;
+            foreach ($searchBases as $base) {
+              $pattern = rtrim($base['fs'], '/').'/'.$uid.'_*'.'.{jpg,jpeg,png,webp}';
+              $found = glob($pattern, GLOB_BRACE) ?: [];
+              if (!empty($found)) {
+                // pilih file terbaru berdasarkan mtime
+                usort($found, function($a,$b){ return filemtime($b) <=> filemtime($a); });
+                $avatarFs  = $found[0];
+                $avatarUrl = asset(rtrim($base['web'], '/').'/'.basename($avatarFs));
+                break;
+              }
+            }
+          }
+
+          // Fallback: accessor avatar_url
+          if (!$avatarUrl && ($user?->avatar_url)) {
+            $maybe = $user->avatar_url;
+            if (filter_var($maybe, FILTER_VALIDATE_URL)) {
+              $avatarUrl = $maybe;                      // absolute URL
+            } else {
+              $avatarUrl = asset(ltrim($maybe, '/'));   // relative to public/
+            }
+          }
+
+          // Cache-busting: append ?v=mtime jika tahu file fisiknya
+          if ($avatarUrl && $avatarFs) {
+            $mtime = @filemtime($avatarFs);
+            if ($mtime) {
+              $avatarUrl .= (strpos($avatarUrl, '?') !== false ? '&' : '?').'v='.$mtime;
+            }
+          }
+
+          // Initials fallback
           $nameRaw = trim($user->name ?? '');
           $parts = preg_split('/\s+/', $nameRaw, -1, PREG_SPLIT_NO_EMPTY);
           $initials = '';
@@ -103,10 +140,10 @@
           if ($initials === '') $initials = 'U';
         @endphp
 
-        {{-- PROFILE CARD (desktop tetap, mobile dirapikan via CSS di atas) --}}
+        {{-- PROFILE CARD --}}
         <section class="mt-20 rounded-2xl bg-[#2a2a2a] shadow-xl ring-1 ring-white/10 p-6 md:p-8 profile-card">
           <div class="flex flex-col md:flex-row md:items-center md:gap-6 profile-header">
-            {{-- AVATAR (klik untuk menu) --}}
+            {{-- AVATAR --}}
             <div class="relative">
               <button id="avatarTrigger"
                       type="button"
@@ -215,9 +252,6 @@
             </div>
           </form>
         </section>
-
-        {{-- OPTIONAL: Payment Method demo (dibiarkan) --}}
-        {{-- ... --}}
       </div>
     </main>
   </div>
@@ -253,7 +287,6 @@
       e.stopPropagation();
       closeMenu();
       if (rmInput) rmInput.value = '1';
-      // Sembunyikan preview & tampilkan placeholder
       if (preview) preview.classList.add('hidden');
       if (holder)  holder.classList.remove('hidden');
     });

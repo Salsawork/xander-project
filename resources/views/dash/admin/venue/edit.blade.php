@@ -53,10 +53,12 @@
           @endif
 
           @php
-            // Formatter HH:MM
+            // Formatter ke HH:MM
             $toHi = function($val) {
               if (!$val) return '';
-              if (is_object($val) && method_exists($val, 'format')) { return $val->format('H:i'); }
+              if (is_object($val) && method_exists($val, 'format')) {
+                  return $val->format('H:i');
+              }
               $s = (string) $val;
               if (preg_match('/^\d{2}:\d{2}/', $s, $m)) return $m[0];
               $ts = strtotime($s);
@@ -67,7 +69,8 @@
           @endphp
 
           <form id="editVenueForm" action="{{ route('venue.update', $venue->id) }}" method="POST" enctype="multipart/form-data">
-            @csrf @method('PUT')
+            @csrf
+            @method('PUT')
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               {{-- KIRI --}}
@@ -80,36 +83,48 @@
                   <div class="space-y-4">
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="name">Nama Pengelola</label>
-                      <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="name" id="name" type="text" value="{{ old('name', $venue->user->name) }}" />
+                      <input
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        name="name" id="name" type="text"
+                        value="{{ old('name', $venue->user->name ?? '') }}" />
                       @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="email">Email</label>
-                      <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="email" id="email" type="email" value="{{ old('email', $venue->user->email) }}" />
+                      <input
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        name="email" id="email" type="email"
+                        value="{{ old('email', $venue->user->email ?? '') }}" />
                       @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="password">Password (opsional)</label>
-                      <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="password" id="password" type="password" placeholder="Kosongkan jika tidak ingin mengubah" />
+                      <input
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        name="password" id="password" type="password"
+                        placeholder="Kosongkan jika tidak ingin mengubah" />
                       @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                   </div>
                 </div>
 
-                {{-- Facilities (tetap) --}}
+                {{-- Facilities --}}
                 @php
                   $facFromDb = [];
-                  if (is_array($venue->facilities)) $facFromDb = $venue->facilities;
-                  elseif (is_string($venue->facilities) && $venue->facilities !== '') {
-                    $json = json_decode($venue->facilities, true);
-                    $facFromDb = is_array($json) ? $json : preg_split('/[\r\n,]+/', $venue->facilities);
+                  if (is_array($venue->facilities)) {
+                      $facFromDb = $venue->facilities;
+                  } elseif (is_string($venue->facilities) && $venue->facilities !== '') {
+                      $json = json_decode($venue->facilities, true);
+                      $facFromDb = is_array($json)
+                          ? $json
+                          : preg_split('/[\r\n,]+/', $venue->facilities);
                   }
-                  $facFromDb = array_values(array_filter(array_map(fn($s)=>trim((string)$s), $facFromDb)));
+                  $facFromDb = array_values(array_filter(array_map(fn($s) => trim((string)$s), $facFromDb)));
+
                   $facOld = old('facilities', $facFromDb);
-                  if (!is_array($facOld) && is_string($facOld)) $facOld = preg_split('/[\r\n,]+/', $facOld);
+                  if (!is_array($facOld) && is_string($facOld)) {
+                      $facOld = preg_split('/[\r\n,]+/', $facOld);
+                  }
                   $facOld = array_values(array_filter(array_map(fn($s)=>trim((string)$s),(array)$facOld)));
                 @endphp
 
@@ -125,9 +140,13 @@
                         class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                         placeholder="Contoh: VIP Lounge" />
                       <button type="button" id="addFacilityBtnEdit"
-                        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-md text-sm">Tambah</button>
+                        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-md text-sm">
+                        Tambah
+                      </button>
                     </div>
-                    <p class="text-xs text-gray-400">Tekan <strong>Enter</strong> untuk menambah. Maks 50 item, masing-masing 100 karakter.</p>
+                    <p class="text-xs text-gray-400">
+                      Tekan <strong>Enter</strong> untuk menambah. Maks 50 item, masing-masing 100 karakter.
+                    </p>
 
                     <div id="facilitiesChipsEdit" class="mt-3 flex flex-wrap gap-2"></div>
                     <div id="facilitiesHiddenEdit"></div>
@@ -146,43 +165,68 @@
                   </h2>
 
                   <div class="space-y-4">
+                    {{-- Nama Venue --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="venue_name">Nama Venue</label>
-                      <input class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        name="venue_name" id="venue_name" type="text" value="{{ old('venue_name', $venue->name) }}" />
+                      <input
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        name="venue_name" id="venue_name" type="text"
+                        value="{{ old('venue_name', $venue->name) }}" />
                       @error('venue_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- ===== Gambar: UI sama seperti CREATE (maks 3, hidden input + grid preview) ===== --}}
+                    {{-- Gambar Venue dari /images/venue --}}
                     @php
-                      // Normalizer untuk menampilkan "Gambar Saat Ini"
-                      $feBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                      /**
+                       * Folder fisik:
+                       *   /home/xanderbilliard.site/public_html/images/venue
+                       * URL publik:
+                       *   https://xanderbilliard.site/images/venue/{filename}
+                       *
+                       * Di DB disimpan: hanya filename (contoh: "20241107010101-foto-venue.jpg")
+                       */
+                      $venueImageBaseUrl = 'https://xanderbilliard.site/images/venue/';
                       $placeholder = asset('images/placeholder/venue.png');
-                      $normalizeImg = function($img) use ($feBase, $placeholder) {
+
+                      $normalizeImg = function ($img) use ($venueImageBaseUrl, $placeholder) {
                           $raw = is_string($img) ? trim($img) : '';
-                          if ($raw === '') return $placeholder;
-                          if (preg_match('~^https?://~i', $raw)) return $raw;
-                          if (stripos($raw, 'storage/') === 0) return asset($raw);
-                          if (preg_match('~^(venue/|uploads/venue/)~i', $raw)) return asset('storage/'.$raw);
-                          if (preg_match('~^(images/venue/|images/venues/|img/venue/)~i', $raw)) return asset($raw);
-                          $name = basename($raw);
-                          return $name ? $feBase.$name : $placeholder;
+                          if ($raw === '') {
+                              return $placeholder;
+                          }
+
+                          // Jika sudah URL full, pakai apa adanya
+                          if (preg_match('~^https?://~i', $raw)) {
+                              return $raw;
+                          }
+
+                          // Jika yang tersimpan path lama / full path server -> ambil nama file saja
+                          $filename = basename($raw);
+                          if ($filename === '' || $filename === '/' || $filename === '.' || $filename === '..') {
+                              return $placeholder;
+                          }
+
+                          // Bangun URL ke folder /images/venue
+                          return $venueImageBaseUrl . $filename;
                       };
-                      $existingImages = is_array($venue->images ?? null) ? array_values(array_filter($venue->images)) : [];
+
+                      $existingImages = is_array($venue->images ?? null)
+                          ? array_values(array_filter($venue->images))
+                          : [];
                     @endphp
 
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="images">Gambar Venue (maks. 3)</label>
                       <input name="images[]" id="images" type="file" multiple accept="image/*" class="hidden">
                       <div id="imagePreview" class="mt-3 grid grid-cols-3 gap-3">
-                        <div class="h-24 border-2 border-dashed border-gray-500 rounded-md flex items-center justify-center text-gray-400 text-xs col-span-3 sm:col-span-3 md:col-span-3 hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
+                        <div
+                          class="h-24 border-2 border-dashed border-gray-500 rounded-md flex items-center justify-center text-gray-400 text-xs col-span-3 hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
                           onclick="document.getElementById('images').click()">
                           Klik untuk pilih hingga 3 gambar
                         </div>
                       </div>
                       @error('images.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
-                      {{-- Informasi Gambar Saat Ini (read-only, bukan input) --}}
+                      {{-- Gambar Saat Ini --}}
                       @if(count($existingImages))
                         <div class="mt-4">
                           <label class="block text-xs text-gray-400 mb-2">Gambar Saat Ini</label>
@@ -190,19 +234,21 @@
                             @foreach($existingImages as $img)
                               @php $src = $normalizeImg($img); @endphp
                               <div class="img-tile">
-                                <img src="{{ $src }}" alt="venue image" onerror="this.onerror=null;this.src='{{ $placeholder }}'">
+                                <img src="{{ $src }}" alt="venue image"
+                                     onerror="this.onerror=null;this.src='{{ $placeholder }}'">
                               </div>
                             @endforeach
                           </div>
                         </div>
                       @endif
                     </div>
-                    {{-- ===== END Gambar (UI seperti create) ===== --}}
 
                     {{-- Alamat --}}
                     <div class="space-y-2">
                       <label class="block text-xs text-gray-400">Alamat Venue</label>
-                      <div id="addressDisplay" class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-gray-200 min-h-[90px] whitespace-pre-line select-text cursor-default pointer-events-none">
+                      <div
+                        id="addressDisplay"
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-gray-200 min-h-[90px] whitespace-pre-line select-text cursor-default pointer-events-none">
                         {{ $venue->address }}
                       </div>
                       <input type="hidden" name="address" id="addressHidden" value="{{ $venue->address }}">
@@ -212,27 +258,26 @@
                     {{-- Google Maps Embed --}}
                     <div class="space-y-2">
                       <label class="block text-xs text-gray-400" for="map_embed">Google Maps Embed (iframe/URL)</label>
-                      <textarea name="map_embed" id="map_embed" rows="3" class="geocode-input"
-                        placeholder='Tempel: <iframe src="https://www.google.com/maps/embed?..."></iframe> atau URL "https://www.google.com/maps/place/...".'>{{ old('map_embed', $venue->map_embed) }}</textarea>
+                      <textarea
+                        name="map_embed"
+                        id="map_embed"
+                        rows="3"
+                        class="geocode-input"
+                        placeholder='Tempel: <iframe src="https://www.google.com/maps/embed?pb=..."></iframe> atau URL "https://www.google.com/maps/place/...".'>{{ old('map_embed', $venue->map_embed) }}</textarea>
                       @error('map_embed') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
 
                       <div class="mt-2 rounded-md border border-blue-500/40 bg-blue-500/10 text-blue-100 text-xs p-3 leading-relaxed">
                         <p class="font-semibold mb-1">Panduan cepat Google Maps Embed</p>
                         <ol class="list-decimal pl-4 space-y-1">
-                          <li>Buka <span class="font-semibold">Google Maps</span> dan cari lokasi venue.</li>
-                          <li>Pilih <span class="font-semibold">Bagikan</span> → <span class="font-semibold">Sematkan peta</span> lalu klik <span class="font-semibold">Salin HTML</span> (kode <code>&lt;iframe&gt;</code>), <em>atau</em> salin URL dengan pola <code>/maps/place/…</code> atau <code>?q=…</code>.</li>
-                          <li>Tempelkan di kolom ini. Jika format valid, <strong>preview muncul</strong> dan <strong>Alamat Venue</strong> otomatis terisi.</li>
+                          <li>Buka <strong>Google Maps</strong> dan cari lokasi venue.</li>
+                          <li>Pilih <strong>Bagikan</strong> → <strong>Sematkan peta</strong> lalu klik <strong>Salin HTML</strong>,
+                              atau salin URL dengan pola <code>/maps/place/…</code> atau <code>?q=…</code>.</li>
+                          <li>Tempelkan di kolom ini. Jika valid, preview akan tampil & alamat otomatis terisi.</li>
                         </ol>
-                        <p class="mt-2 opacity-80">Format yang diterima:</p>
-                        <ul class="list-disc pl-5 space-y-1 mt-1">
-                          <li><code>&lt;iframe src="https://www.google.com/maps/embed?pb=..."&gt;&lt;/iframe&gt;</code></li>
-                          <li><code>https://www.google.com/maps/place/…</code></li>
-                          <li><code>https://www.google.com/maps?q=…</code></li>
-                        </ul>
                       </div>
 
                       <div id="mapPreview" class="iframe-wrap mt-2" style="display:none;">
-                        <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen=""></iframe>
+                        <iframe id="mapPreviewIframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
                       </div>
                       <p class="text-xs text-gray-400">Preview & alamat akan terisi otomatis dari link di atas.</p>
                     </div>
@@ -240,25 +285,29 @@
                     {{-- Phone --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="phone">Nomor Telepon</label>
-                      <input name="phone" id="phone" type="text"
+                      <input
+                        name="phone" id="phone" type="text"
                         value="{{ old('phone', $venue->phone) }}"
                         placeholder="Masukkan nomor telepon"
                         class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
+                    {{-- Jam Operasional --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Jam Operasional</label>
                       <div class="flex gap-3">
                         <div class="flex-1">
-                          <input name="operating_hour"
+                          <input
+                            name="operating_hour"
                             value="{{ $openValue }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="operating_hour" type="time" />
                           @error('operating_hour') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div class="flex-1">
-                          <input name="closing_hour"
+                          <input
+                            name="closing_hour"
                             value="{{ $closeValue }}"
                             class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             id="closing_hour" type="time" />
@@ -268,9 +317,11 @@
                       <p class="text-xs text-gray-500 mt-1">Mendukung format HH:MM dan HH:MM:SS.</p>
                     </div>
 
+                    {{-- Deskripsi --}}
                     <div>
                       <label class="block text-xs text-gray-400 mb-1" for="description">Deskripsi</label>
-                      <textarea class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      <textarea
+                        class="w-full rounded-md border border-gray-600 bg-[#262626] px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                         name="description" id="description" rows="4">{{ old('description', $venue->description) }}</textarea>
                       @error('description') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
@@ -281,11 +332,11 @@
 
             <div class="flex flex-col sm:flex-row justify-end mt-6 sm:mt-8 gap-3 sm:gap-0 sm:space-x-4">
               <a href="{{ route('venue.index') }}"
-                class="w-full sm:w-auto px-6 py-2 border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 transition text-center text-sm order-2 sm:order-1">
+                 class="w-full sm:w-auto px-6 py-2 border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 transition text-center text-sm order-2 sm:order-1">
                 Batal
               </a>
               <button type="submit"
-                class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm order-1 sm:order-2">
+                 class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm order-1 sm:order-2">
                 Simpan Perubahan
               </button>
             </div>
@@ -300,13 +351,29 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   @if(session('success'))
-    Swal.fire({ icon:'success', title:'Berhasil!', text:'{{ session('success') }}', showConfirmButton:false, timer:3000, background:'#222', color:'#fff' });
-  @endif
-  @if(session('error'))
-    Swal.fire({ icon:'error', title:'Error!', text:'{{ session('error') }}', showConfirmButton:true, background:'#222', color:'#fff' });
+    Swal.fire({
+      icon:'success',
+      title:'Berhasil!',
+      text:'{{ session('success') }}',
+      showConfirmButton:false,
+      timer:3000,
+      background:'#222',
+      color:'#fff'
+    });
   @endif
 
-  // ====== Map preview + auto address (tetap) ======
+  @if(session('error'))
+    Swal.fire({
+      icon:'error',
+      title:'Error!',
+      text:'{{ session('error') }}',
+      showConfirmButton:true,
+      background:'#222',
+      color:'#fff'
+    });
+  @endif
+
+  // ====== Map preview + auto address ======
   const embedEl = document.getElementById('map_embed');
   const previewWrap = document.getElementById('mapPreview');
   const previewIframe = document.getElementById('mapPreviewIframe');
@@ -322,42 +389,67 @@
     }
     return val;
   }
+
   function parseAddressFromSrc(src){
     if (!src) return '';
     try{
       const u = new URL(src);
       const q = u.searchParams.get('q');
       if (q) return decodeURIComponent(q.replace(/\+/g,' '));
+
       const mPlace = u.pathname.match(/\/maps\/place\/([^/]+)/i);
       if (mPlace && mPlace[1]) return decodeURIComponent(mPlace[1].replace(/\+/g,' '));
+
       const pb = u.searchParams.get('pb');
       if (pb) {
-        let pbDec = decodeURIComponent(pb); try { pbDec = decodeURIComponent(pbDec); } catch(e){}
-        const matches = [...pbDec.matchAll(/!2s([^!]+)/g)].map(x=>x[1]);
-        const cleaned = matches.map(t=>{
-          try{ t = decodeURIComponent(t); }catch(e){}
+        let pbDec = decodeURIComponent(pb);
+        try { pbDec = decodeURIComponent(pbDec); } catch(e){}
+        const matches = [...pbDec.matchAll(/!2s([^!]+)/g)].map(x => x[1]);
+        const cleaned = matches.map(t => {
+          try { t = decodeURIComponent(t); } catch(e){}
           t = t.replace(/\+/g,' ').replace(/\\u0026/gi,'&').trim();
           return t;
-        }).filter(t => t.length >= 5 && /[A-Za-z]/.test(t) && !/^[a-z]{2}(-[A-Z]{2})?$/.test(t) && !/^(Google|Maps|Street View)$/i.test(t));
-        if (cleaned.length){ cleaned.sort((a,b)=>b.length-a.length); return cleaned[0]; }
+        }).filter(t =>
+          t.length >= 5 &&
+          /[A-Za-z]/.test(t) &&
+          !/^[a-z]{2}(-[A-Z]{2})?$/.test(t) &&
+          !/^(Google|Maps|Street View)$/i.test(t)
+        );
+        if (cleaned.length) {
+          cleaned.sort((a,b) => b.length - a.length);
+          return cleaned[0];
+        }
       }
-    }catch(e){}
+    } catch(e){}
     if (src && src.toLowerCase().startsWith('<iframe')) {
       const t = src.match(/title\s*=\s*"(.*?)"/i);
       if (t && t[1] && t[1].toLowerCase() !== 'google maps') return t[1];
     }
     return '';
   }
+
   function renderPreview(){
     const src = extractSrc(embedEl.value);
-    if (src && /^https?:\/\//i.test(src)) { previewIframe.src = src; previewWrap.style.display = ''; }
-    else { previewIframe.removeAttribute('src'); previewWrap.style.display = 'none'; }
+    if (src && /^https?:\/\//i.test(src)) {
+      previewIframe.src = src;
+      previewWrap.style.display = '';
+    } else {
+      previewIframe.removeAttribute('src');
+      previewWrap.style.display = 'none';
+    }
     const parsed = parseAddressFromSrc(src);
-    if (parsed) { addressHidden.value = parsed; addressDisplay.textContent = parsed; }
+    if (parsed) {
+      addressHidden.value = parsed;
+      addressDisplay.textContent = parsed;
+    }
   }
-  if (embedEl) { embedEl.addEventListener('input', renderPreview); renderPreview(); }
 
-  // ====== Facilities (chips) (tetap) ======
+  if (embedEl) {
+    embedEl.addEventListener('input', renderPreview);
+    renderPreview();
+  }
+
+  // ====== Facilities (chips) ======
   const facInput   = document.getElementById('facilityInputEdit');
   const facAddBtn  = document.getElementById('addFacilityBtnEdit');
   const facChips   = document.getElementById('facilitiesChipsEdit');
@@ -365,34 +457,59 @@
   const form       = document.getElementById('editVenueForm');
 
   let facilities = @json($facOld);
+
   function renderFacilities(){
-    facChips.innerHTML = ''; facHidden.innerHTML = '';
+    facChips.innerHTML = '';
+    facHidden.innerHTML = '';
+
     facilities.forEach((text, idx) => {
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.innerHTML = `<span>${text}</span> <button type="button" aria-label="hapus">&times;</button>`;
-      chip.querySelector('button').addEventListener('click', () => { facilities.splice(idx, 1); renderFacilities(); });
+      chip.querySelector('button').addEventListener('click', () => {
+        facilities.splice(idx, 1);
+        renderFacilities();
+      });
       facChips.appendChild(chip);
 
       const hidden = document.createElement('input');
-      hidden.type = 'hidden'; hidden.name = 'facilities[]'; hidden.value = text;
+      hidden.type = 'hidden';
+      hidden.name = 'facilities[]';
+      hidden.value = text;
       facHidden.appendChild(hidden);
     });
   }
+
   function addFacilityFromInput(){
     const v = (facInput.value || '').trim();
     if (!v) return;
     if (v.length > 100) return alert('Maksimal 100 karakter per item.');
     if (facilities.length >= 50) return alert('Maksimal 50 fasilitas.');
-    if (!facilities.includes(v)) { facilities.push(v); renderFacilities(); }
-    facInput.value = ''; facInput.focus();
+    if (!facilities.includes(v)) {
+      facilities.push(v);
+      renderFacilities();
+    }
+    facInput.value = '';
+    facInput.focus();
   }
+
   if (facAddBtn) facAddBtn.addEventListener('click', addFacilityFromInput);
-  if (facInput) facInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addFacilityFromInput(); } });
-  if (form) { form.addEventListener('submit', () => renderFacilities()); }
+  if (facInput) {
+    facInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addFacilityFromInput();
+      }
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', () => renderFacilities());
+  }
+
   renderFacilities();
 
-  // ======= Preview upload (MAKS 3) — SAMA PERSIS DENGAN CREATE =======
+  // ====== Preview upload (maks 3) ======
   const fileInput = document.getElementById('images');
   const previewContainer = document.getElementById('imagePreview');
   let selectedFiles = [];
@@ -405,31 +522,41 @@
         return new File([file], uniqueName, { type: file.type });
       });
       selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
-      updatePreview(); updateFileInput();
+      updatePreview();
+      updateFileInput();
     });
   }
 
-  function updatePreview() {
+  function updatePreview(){
     if (!previewContainer) return;
     previewContainer.innerHTML = '';
+
     selectedFiles.forEach((file, index) => {
       const reader = new FileReader();
       reader.onload = event => {
         const wrapper = document.createElement('div');
         wrapper.className = 'relative group';
+
         const img = document.createElement('img');
         img.src = event.target.result;
         img.className = 'w-full h-24 object-cover rounded-md border border-gray-600';
+
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.textContent = '×';
         removeBtn.className = 'absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity';
-        removeBtn.onclick = (e) => { e.stopPropagation(); removeFile(index); };
-        wrapper.appendChild(img); wrapper.appendChild(removeBtn);
+        removeBtn.onclick = (ev) => {
+          ev.stopPropagation();
+          removeFile(index);
+        };
+
+        wrapper.appendChild(img);
+        wrapper.appendChild(removeBtn);
         previewContainer.appendChild(wrapper);
       };
       reader.readAsDataURL(file);
     });
+
     const emptySlots = 3 - selectedFiles.length;
     for (let i = 0; i < emptySlots; i++) {
       const placeholder = document.createElement('div');
@@ -440,15 +567,18 @@
     }
   }
 
-  function removeFile(index) {
+  function removeFile(index){
     selectedFiles.splice(index, 1);
-    updatePreview(); updateFileInput();
+    updatePreview();
+    updateFileInput();
   }
 
-  function updateFileInput() {
+  function updateFileInput(){
     const dt = new DataTransfer();
     selectedFiles.forEach(file => dt.items.add(file));
-    if (fileInput) fileInput.files = dt.files;
+    if (fileInput) {
+      fileInput.files = dt.files;
+    }
   }
 </script>
 @endpush

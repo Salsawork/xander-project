@@ -109,7 +109,7 @@
                                                                     $imagePath = $raw;
                                                                 } else {
                                                                     $filename  = basename($raw);
-                                                                    $imagePath = asset('images/community/' . $filename);
+                                                                    $imagePath = asset('demo-xanders/images/community/' . $filename);
                                                                 }
                                                             }
                                                         @endphp

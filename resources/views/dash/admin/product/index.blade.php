@@ -9,14 +9,80 @@
     overscroll-behavior-y:none; overscroll-behavior-x:none;
     touch-action: pan-y; -webkit-text-size-adjust:100%;
   }
-  #antiBounceBg{ position:fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg); z-index:-1; pointer-events:none; }
+  #antiBounceBg{
+    position:fixed; left:0; right:0;
+    top:-120svh; bottom:-120svh;
+    background:var(--page-bg);
+    z-index:-1; pointer-events:none;
+  }
   #app, main{ background:var(--page-bg); }
-  .scroll-safe{ background-color:#171717; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  .scroll-safe{
+    background-color:#171717;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
 </style>
 @endpush
 
 @section('content')
   <div id="antiBounceBg" aria-hidden="true"></div>
+
+  @php
+    /**
+     * BASE URL GAMBAR PRODUCT (FRONTEND)
+     *
+     * File fisik:
+     *   /home/xanderbilliard.site/public_html/images/products/{filename}
+     *
+     * URL publik (di Blade):
+     *   asset('images/products/'.$filename)
+     *   → https://xanderbilliard.site/images/products/{filename}
+     */
+    $feProductBase = rtrim(asset('images/products'), '/') . '/';
+
+    /**
+     * Ambil URL gambar utama produk dari berbagai kemungkinan:
+     * - $product->images: array / json / string filename / path lama
+     * - $product->first_image_url: fallback legacy (ambil basename)
+     * Lalu selalu diarahkan ke $feProductBase . $filename
+     */
+    $resolveProductImage = function ($product) use ($feProductBase) {
+        $filename = null;
+
+        // 1) Dari kolom images (bisa array atau json atau string tunggal)
+        $rawImages = $product->images ?? null;
+
+        if (is_array($rawImages) && !empty($rawImages)) {
+            $filename = $rawImages[0];
+        } elseif (is_string($rawImages) && $rawImages !== '') {
+            $maybe = json_decode($rawImages, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($maybe) && !empty($maybe)) {
+                $filename = $maybe[0];
+            } else {
+                // anggap string ini path/filename tunggal
+                $filename = $rawImages;
+            }
+        }
+
+        // 2) Kalau masih kosong → fallback ke accessor / URL lama first_image_url
+        if (!$filename && !empty($product->first_image_url)) {
+            $src  = $product->first_image_url;
+            $path = parse_url($src, PHP_URL_PATH) ?? $src;
+            $filename = basename(str_replace('\\','/',$path));
+        }
+
+        // 3) Normalisasi → selalu ambil basename saja
+        if ($filename) {
+            $filename = basename(str_replace('\\','/',$filename));
+            if ($filename !== '' && $filename !== '.' && $filename !== '/') {
+                return $feProductBase . $filename;
+            }
+        }
+
+        // 4) Fallback global kalau tetap tidak ada
+        return 'https://placehold.co/600x400?text=No+Image';
+    };
+  @endphp
 
   <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
       <div class="flex flex-1 min-h-0">
@@ -40,42 +106,6 @@
                           {{ session('error') }}
                       </div>
                   @endif
-
-                  @php
-                    /**
-                     * NORMALISASI URL GAMBAR PRODUK
-                     *
-                     * Target akhir SELALU:
-                     *   https://domain.tld/images/products/<filename>
-                     *
-                     * Kasus yang dibersihkan:
-                     *   1) https://domain.tld/images/demo-xanders/products/<filename>
-                     *   2) https://domain.tld/demo-xanders/images/products/<filename>
-                     *   3) Varian "demo-xander" (tanpa "s")
-                     *   4) URL relatif dengan pola yang sama
-                     */
-                    $normalizeProductImage = function ($url) {
-                        if (!$url) return null;
-
-                        // Ambil PATH dari URL absolute, atau pakai string jika sudah relatif
-                        $path = parse_url($url, PHP_URL_PATH) ?: $url;
-
-                        // Pastikan diawali slash
-                        $path = '/'.ltrim($path, '/');
-
-                        // Ganti "/images/demo-xanders/products/" atau "/images/demo-xander/products/" -> "/images/products/"
-                        $path = preg_replace('#/images/(demo-xanders?|demo-xander)/products/#', '/images/products/', $path);
-
-                        // Ganti "/demo-xanders/images/products/" atau "/demo-xander/images/products/" -> "/images/products/"
-                        $path = preg_replace('#/demo-xanders?/images/products/#', '/images/products/', $path);
-
-                        // Rapikan double slash
-                        $path = preg_replace('#/+#', '/', $path);
-
-                        // Kembalikan absolute URL berbasis app URL (scheme+host dari app)
-                        return url($path);
-                    };
-                  @endphp
 
                   <!-- Filter & Search -->
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
@@ -124,20 +154,23 @@
                           </thead>
                           <tbody class="divide-y divide-gray-700">
                               @foreach ($products as $product)
+                                  @php
+                                      $imagePath = $resolveProductImage($product);
+                                  @endphp
                                   <tr>
                                       <td class="px-4 py-3">
                                           <div class="flex items-center gap-4">
                                               <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                                  @php
-                                                      $imagePath = $normalizeProductImage($product->first_image_url) ?? 'https://placehold.co/600x400';
-                                                  @endphp
                                                   <img class="w-10 h-10 object-cover rounded"
                                                        src="{{ $imagePath }}"
                                                        alt="{{ $product->name }}"
-                                                       onerror="this.src='https://placehold.co/600x400'"/>
+                                                       onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';"/>
                                               </div>
                                               <div>
-                                                  <a href="{{ route('products.edit', $product->id) }}" class="hover:text-blue-400 font-medium">{{ $product->name }}</a>
+                                                  <a href="{{ route('products.edit', $product->id) }}"
+                                                     class="hover:text-blue-400 font-medium">
+                                                      {{ $product->name }}
+                                                  </a>
                                                   <p class="text-xs text-gray-500">{{ $product->brand }}</p>
                                               </div>
                                           </div>
@@ -150,7 +183,9 @@
                                               {{ $product->condition }}
                                           </span>
                                       </td>
-                                      <td class="px-4 py-3">Rp {{ number_format($product->pricing, 0, ',', '.') }}</td>
+                                      <td class="px-4 py-3">
+                                          Rp {{ number_format($product->pricing, 0, ',', '.') }}
+                                      </td>
                                       <td class="px-4 py-3">{{ $product->stock }}</td>
                                       <td class="px-4 py-3">
                                           <span class="inline-block {{ $product->stock > 0 ? 'bg-green-500' : 'bg-red-500' }} rounded-full px-3 py-1 text-xs font-semibold">
@@ -159,8 +194,16 @@
                                       </td>
                                       <td class="px-4 py-3">
                                           <div class="flex gap-3 text-gray-400">
-                                              <a href="{{ route('products.edit', $product->id) }}" aria-label="Edit" class="hover:text-gray-200"><i class="fas fa-pen"></i></a>
-                                              <button aria-label="Delete" class="hover:text-gray-200" onclick="deleteProduct({{ $product->id }})"><i class="fas fa-trash"></i></button>
+                                              <a href="{{ route('products.edit', $product->id) }}"
+                                                 aria-label="Edit"
+                                                 class="hover:text-gray-200">
+                                                  <i class="fas fa-pen"></i>
+                                              </a>
+                                              <button aria-label="Delete"
+                                                      class="hover:text-gray-200"
+                                                      onclick="deleteProduct({{ $product->id }})">
+                                                  <i class="fas fa-trash"></i>
+                                              </button>
                                           </div>
                                       </td>
                                   </tr>
@@ -172,16 +215,16 @@
                   <!-- Mobile Cards -->
                   <div class="sm:hidden space-y-4">
                       @foreach ($products as $product)
+                          @php
+                              $imagePath = $resolveProductImage($product);
+                          @endphp
                           <div class="bg-[#2c2c2c] border border-gray-700 rounded-lg p-4">
                               <div class="flex items-start gap-3 mb-3">
                                   <div class="w-16 h-16 bg-gray-600 rounded flex items-center justify-center shrink-0">
-                                      @php
-                                          $imagePath = $normalizeProductImage($product->first_image_url) ?? 'https://placehold.co/600x400';
-                                      @endphp
                                       <img class="w-full h-full object-cover rounded"
                                            src="{{ $imagePath }}"
                                            alt="{{ $product->name }}"
-                                           onerror="this.src='https://placehold.co/600x400'"/>
+                                           onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';"/>
                                   </div>
                                   <div class="flex-1 min-w-0">
                                       <h2 class="font-semibold text-sm mb-1">{{ $product->name }}</h2>
@@ -193,17 +236,33 @@
                               </div>
 
                               <div class="space-y-2 text-sm mb-3 pb-3 border-b border-gray-700">
-                                  <div class="flex justify-between"><span class="text-gray-400">Category:</span><span class="text-xs">{{ $product->category->name ?? '-' }}</span></div>
-                                  <div class="flex justify-between"><span class="text-gray-400">Condition:</span><span class="text-xs">{{ $product->condition }}</span></div>
-                                  <div class="flex justify-between"><span class="text-gray-400">Price:</span><span class="font-medium">Rp {{ number_format($product->pricing, 0, ',', '.') }}</span></div>
-                                  <div class="flex justify-between"><span class="text-gray-400">Stock:</span><span class="font-medium">{{ $product->stock }}</span></div>
+                                  <div class="flex justify-between">
+                                      <span class="text-gray-400">Category:</span>
+                                      <span class="text-xs">{{ $product->category->name ?? '-' }}</span>
+                                  </div>
+                                  <div class="flex justify-between">
+                                      <span class="text-gray-400">Condition:</span>
+                                      <span class="text-xs">{{ $product->condition }}</span>
+                                  </div>
+                                  <div class="flex justify-between">
+                                      <span class="text-gray-400">Price:</span>
+                                      <span class="font-medium">
+                                          Rp {{ number_format($product->pricing, 0, ',', '.') }}
+                                      </span>
+                                  </div>
+                                  <div class="flex justify-between">
+                                      <span class="text-gray-400">Stock:</span>
+                                      <span class="font-medium">{{ $product->stock }}</span>
+                                  </div>
                               </div>
 
                               <div class="flex gap-2">
-                                  <a href="{{ route('products.edit', $product->id) }}" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                  <a href="{{ route('products.edit', $product->id) }}"
+                                     class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                       <i class="fas fa-pen text-xs"></i> Edit
                                   </a>
-                                  <button onclick="deleteProduct({{ $product->id }})" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
+                                  <button onclick="deleteProduct({{ $product->id }})"
+                                          class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                       <i class="fas fa-trash text-xs"></i> Delete
                                   </button>
                               </div>
@@ -211,7 +270,7 @@
                       @endforeach
                   </div>
 
-                  <!-- Pagination (clean, centered, no "Showing" text) -->
+                  <!-- Pagination -->
                   @php
                       $current = $products->currentPage();
                       $last    = $products->lastPage();
@@ -223,18 +282,23 @@
                       <div class="mt-8 w-full flex justify-center">
                           <nav role="navigation" aria-label="Pagination" class="flex items-center justify-center">
                               <ul class="inline-flex items-stretch rounded-xl overflow-hidden border border-slate-700 bg-slate-800/40 backdrop-blur-sm shadow-lg shadow-black/20 divide-x divide-slate-700">
-                                  {{-- Prev icon --}}
+                                  {{-- Prev --}}
                                   @if ($current > 1)
                                       <li>
-                                          <a href="{{ $products->url($current - 1) }}" rel="prev" aria-label="@lang('pagination.previous')"
+                                          <a href="{{ $products->url($current - 1) }}" rel="prev"
+                                             aria-label="@lang('pagination.previous')"
                                              class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                              </svg>
                                           </a>
                                       </li>
                                   @else
                                       <li>
                                           <span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 bg-slate-900/40 select-none cursor-not-allowed">
-                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                              </svg>
                                           </span>
                                       </li>
                                   @endif
@@ -242,12 +306,15 @@
                                   {{-- First + ellipsis --}}
                                   @if ($start > 1)
                                       <li>
-                                          <a href="{{ $products->url(1) }}" class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                                          <a href="{{ $products->url(1) }}"
+                                             class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                                               <span class="text-xs">1</span>
                                           </a>
                                       </li>
                                       @if ($start > 2)
-                                          <li><span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 select-none">…</span></li>
+                                          <li>
+                                              <span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 select-none">…</span>
+                                          </li>
                                       @endif
                                   @endif
 
@@ -261,7 +328,8 @@
                                           </li>
                                       @else
                                           <li>
-                                              <a href="{{ $products->url($i) }}" class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                                              <a href="{{ $products->url($i) }}"
+                                                 class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                                                   <span class="text-xs">{{ $i }}</span>
                                               </a>
                                           </li>
@@ -271,27 +339,35 @@
                                   {{-- Ellipsis + last --}}
                                   @if ($end < $last)
                                       @if ($end < $last - 1)
-                                          <li><span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 select-none">…</span></li>
+                                          <li>
+                                              <span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 select-none">…</span>
+                                          </li>
                                       @endif
                                       <li>
-                                          <a href="{{ $products->url($last) }}" class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                                          <a href="{{ $products->url($last) }}"
+                                             class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center justify-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                                               <span class="text-xs">{{ $last }}</span>
                                           </a>
                                       </li>
                                   @endif
 
-                                  {{-- Next icon --}}
+                                  {{-- Next --}}
                                   @if ($current < $last)
                                       <li>
-                                          <a href="{{ $products->url($current + 1) }}" rel="next" aria-label="@lang('pagination.next')"
+                                          <a href="{{ $products->url($current + 1) }}" rel="next"
+                                             aria-label="@lang('pagination.next')"
                                              class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-200 hover:bg-slate-700/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                              </svg>
                                           </a>
                                       </li>
                                   @else
                                       <li>
                                           <span class="px-3 sm:px-4 h-10 sm:h-9 inline-flex items-center text-slate-500 bg-slate-900/40 select-none cursor-not-allowed">
-                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                              </svg>
                                           </span>
                                       </li>
                                   @endif
@@ -308,64 +384,64 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function deleteProduct(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                background: '#222',
-                color: '#fff'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/dashboard/products/${id}`;
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function deleteProduct(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This action cannot be undone!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            background: '#222',
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/dashboard/products/${id}`;
 
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-                    form.appendChild(csrfToken);
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
 
-                    const methodField = document.createElement('input');
-                    methodField.type = 'hidden';
-                    methodField.name = '_method';
-                    methodField.value = 'DELETE';
-                    form.appendChild(methodField);
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                form.appendChild(methodField);
 
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        }
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
 
-        @if (session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: '{{ session('success') }}',
-                showConfirmButton: false,
-                timer: 3000,
-                background: '#222',
-                color: '#fff'
-            });
-        @endif
+    @if (session('success'))
+    Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: '{{ session('success') }}',
+        showConfirmButton: false,
+        timer: 3000,
+        background: '#222',
+        color: '#fff'
+    });
+    @endif
 
-        @if (session('error'))
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: '{{ session('error') }}',
-                background: '#222',
-                color: '#fff'
-            });
-        @endif
-    </script>
+    @if (session('error'))
+    Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: '{{ session('error') }}',
+        background: '#222',
+        color: '#fff'
+    });
+    @endif
+</script>
 @endpush

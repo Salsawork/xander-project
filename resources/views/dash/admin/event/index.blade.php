@@ -32,6 +32,52 @@
 @section('content')
 <div id="antiBounceBg" aria-hidden="true"></div>
 
+@php
+    /**
+     * BASE URL GAMBAR EVENT (FRONTEND)
+     *
+     * File fisik:
+     *   /home/xanderbilliard.site/public_html/images/event/{filename}
+     *
+     * URL publik:
+     *   https://xanderbilliard.site/images/event/{filename}
+     *
+     * Di Blade:
+     *   asset('images/event/'.$filename)
+     *
+     * Di DB:
+     *   hanya disimpan NAMA FILE (contoh: "20241107123456-event-keren.jpg")
+     */
+    $eventImageBase = rtrim(asset('images/event'), '/') . '/';
+
+    /**
+     * Normalisasi nilai image_url menjadi URL penuh:
+     * - Jika sudah http/https -> pakai apa adanya
+     * - Jika hanya nama file / path lama -> ambil basename dan gabung ke $eventImageBase
+     */
+    $resolveEventImage = function ($event) use ($eventImageBase) {
+        if (empty($event->image_url)) {
+            return null;
+        }
+
+        $raw = trim((string) $event->image_url);
+
+        // Kalau full URL eksternal / sudah lengkap
+        if (preg_match('/^https?:\/\//i', $raw)) {
+            return $raw;
+        }
+
+        // Kalau "images/event/foo.jpg" atau "event/foo.jpg" atau hanya "foo.jpg"
+        $filename = basename(str_replace('\\', '/', $raw));
+
+        if ($filename !== '' && $filename !== '.' && $filename !== '/') {
+            return $eventImageBase . $filename;
+        }
+
+        return null;
+    };
+@endphp
+
 <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
     <div class="flex flex-1 min-h-0">
         @include('partials.sidebar')
@@ -50,14 +96,14 @@
                         name="search" value="{{ request('search') }}" placeholder="Cari event..."
                         type="search"
                         onchange="window.location.href='{{ route('admin.event.index') }}?search=' + encodeURIComponent(this.value)" />
-                
+
                     <div class="flex gap-2">
                         <a href="{{ route('admin.event.export', ['search' => request('search')]) }}"
                            class="flex items-center justify-center gap-1 border border-green-500 text-green-500 rounded px-3 py-2 text-xs sm:text-sm hover:bg-green-500 hover:text-white transition whitespace-nowrap">
                             <i class="fas fa-file-excel"></i>
                             Export Excel
                         </a>
-                         
+
                         <button type="button"
                            onclick="confirmAddEvent('{{ route('admin.event.create') }}')"
                            class="flex items-center justify-center gap-1 border border-[#1e90ff] text-[#1e90ff] rounded px-3 py-2 text-xs sm:text-sm hover:bg-[#1e90ff] hover:text-white transition whitespace-nowrap">
@@ -65,9 +111,9 @@
                             Tambah Event
                         </button>
                     </div>
-                </div>                
+                </div>
 
-                <!-- Desktop Table -->
+                {{-- DESKTOP TABLE --}}
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
                         <thead class="bg-[#2c2c2c] text-gray-300">
@@ -84,27 +130,15 @@
                         <tbody class="divide-y divide-gray-800">
                             @forelse ($events as $event)
                                 @php
-                                    /**
-                                     * Normalisasi path gambar:
-                                     * - Jika full URL (http/https) → pakai apa adanya
-                                     * - Jika hanya filename atau path lama (events/foo.jpg / images/events/foo.jpg)
-                                     *   → ambil basename lalu bangun ulang ke asset('images/events/{filename}')
-                                     */
-                                    $imgDesktop = null;
-                                    if (!empty($event->image_url)) {
-                                        $raw = trim($event->image_url);
-                                        if (preg_match('/^https?:\/\//i', $raw)) {
-                                            $imgDesktop = $raw;
-                                        } else {
-                                            $filename = basename($raw); // ambil nama file saja
-                                            $imgDesktop = asset('images/events/' . $filename);
-                                        }
-                                    }
+                                    $imgDesktop = $resolveEventImage($event);
                                 @endphp
                                 <tr class="bg-[#1c1c1c] hover:bg-[#2c2c2c] transition">
                                     <td class="px-4 py-3">
                                         @if ($imgDesktop)
-                                            <img src="{{ $imgDesktop }}" class="w-16 h-16 rounded object-cover" alt="{{ $event->name }}">
+                                            <img src="{{ $imgDesktop }}"
+                                                 class="w-16 h-16 rounded object-cover"
+                                                 alt="{{ $event->name }}"
+                                                 onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=No+Image';">
                                         @else
                                             <div class="w-16 h-16 flex items-center justify-center bg-gray-700 text-xs text-gray-400 rounded">
                                                 No Img
@@ -122,26 +156,26 @@
                                     <td class="px-4 py-3 text-gray-300">{{ $event->status }}</td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex gap-3 text-gray-400 justify-end">
-                                            <!-- Detail -->
+                                            {{-- Detail --}}
                                             <a href="{{ route('admin.event.detail', $event->id) }}"
                                                class="hover:text-gray-200"
                                                title="Detail Event">
                                                 <i class="fas fa-ticket"></i>
                                             </a>
-                                    
-                                            <!-- Edit -->
+
+                                            {{-- Edit --}}
                                             <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                                     class="hover:text-gray-200" title="Edit">
                                                 <i class="fas fa-pen"></i>
                                             </button>
-                                    
-                                            <!-- Delete -->
+
+                                            {{-- Delete --}}
                                             <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                                     class="hover:text-gray-200" title="Delete">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
-                                    </td>                                    
+                                    </td>
                                 </tr>
                             @empty
                                 <tr class="bg-[#1c1c1c]">
@@ -154,57 +188,53 @@
                     </table>
                 </div>
 
-                <!-- Mobile Card View -->
+                {{-- MOBILE CARD VIEW --}}
                 <div class="sm:hidden space-y-4">
                     @forelse ($events as $event)
                         @php
-                            $mobileImg = null;
-                            if (!empty($event->image_url)) {
-                                $raw = trim($event->image_url);
-                                if (preg_match('/^https?:\/\//i', $raw)) {
-                                    $mobileImg = $raw;
-                                } else {
-                                    $mobileImg = asset('images/events/' . basename($raw));
-                                }
-                            }
-                            if (!$mobileImg) $mobileImg = 'https://placehold.co/160x160?text=No+Image';
+                            $mobileImg = $resolveEventImage($event)
+                                ?: 'https://placehold.co/160x160?text=No+Image';
                         @endphp
 
                         <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                             <div class="flex gap-3 mb-3 pb-3 border-b border-gray-700">
                                 <img src="{{ $mobileImg }}"
-                                     class="h-16 w-16 rounded object-cover shrink-0" alt="{{ $event->name }}">
+                                     class="h-16 w-16 rounded object-cover shrink-0"
+                                     alt="{{ $event->name }}"
+                                     onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=No+Image';">
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold text-base mb-1">{{ $event->name }}</h3>
                                     <p class="text-xs text-gray-400">
                                         {{ $event->start_date ? \Carbon\Carbon::parse($event->start_date)->format('d M Y') : '-' }}
                                     </p>
+                                    <p class="text-[11px] text-gray-500">
+                                        {{ $event->location ?? '-' }}
+                                    </p>
                                 </div>
                             </div>
 
                             <div class="flex gap-2 pt-3 border-t border-gray-700">
-                                <!-- Detail -->
+                                {{-- Detail --}}
                                 <a href="{{ route('admin.event.detail', $event->id) }}"
                                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-ticket text-xs"></i>
                                     Detail
                                 </a>
-                            
-                                <!-- Edit -->
+
+                                {{-- Edit --}}
                                 <button onclick="confirmEditEvent('{{ route('admin.event.edit', $event->id) }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-pen text-xs"></i>
                                     Edit
                                 </button>
-                            
-                                <!-- Delete -->
+
+                                {{-- Delete --}}
                                 <button onclick="confirmDeleteEvent('{{ route('admin.event.destroy', $event->id) }}', '{{ $event->name }}')"
                                         class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition">
                                     <i class="fas fa-trash text-xs"></i>
                                     Delete
                                 </button>
                             </div>
-                            
                         </div>
                     @empty
                         <div class="bg-[#2c2c2c] rounded-lg p-6 border border-gray-700 text-center">
@@ -220,7 +250,6 @@
 {{-- SweetAlert Script --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // 🔹 Konfirmasi Tambah Event
     function confirmAddEvent(url) {
         Swal.fire({
             title: 'Tambah Event?',
@@ -237,7 +266,6 @@
         });
     }
 
-    // 🔹 Konfirmasi Edit Event
     function confirmEditEvent(url) {
         Swal.fire({
             title: 'Edit Event?',
@@ -254,7 +282,6 @@
         });
     }
 
-    // 🔹 Konfirmasi Delete Event
     function confirmDeleteEvent(url, name) {
         Swal.fire({
             title: 'Hapus Event?',
@@ -288,7 +315,6 @@
         });
     }
 
-    // 🔹 Notifikasi dari session
     @if (session('success'))
         Swal.fire({
             icon: 'success',

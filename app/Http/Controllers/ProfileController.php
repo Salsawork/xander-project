@@ -29,11 +29,15 @@ class ProfileController extends Controller
             'firstname'     => ['nullable', 'string', 'max:255'],
             'lastname'      => ['nullable', 'string', 'max:255'],
             'phone'         => ['nullable', 'string', 'max:30'],
-            'email'         => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'email'         => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
             'photo_profile' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'remove_photo'  => ['nullable', 'boolean'],
 
-            // Optional (athlete / venue)
+            // Optional Athlete
             'handicap'          => ['nullable', 'string', 'max:255'],
             'experience_years'  => ['nullable', 'numeric'],
             'specialty'         => ['nullable', 'string', 'max:255'],
@@ -41,12 +45,14 @@ class ProfileController extends Controller
             'bio'               => ['nullable', 'string', 'max:2000'],
             'price_per_session' => ['nullable', 'numeric'],
 
+            // Optional Venue
             'address'           => ['nullable', 'string', 'max:255'],
             'description'       => ['nullable', 'string', 'max:2000'],
             'operating_hours'   => ['nullable', 'string', 'max:255'],
             'price'             => ['nullable', 'numeric'],
         ]);
 
+        // Update basic user info
         $user->fill([
             'name'      => $validated['name'],
             'firstname' => $validated['firstname'] ?? $user->firstname,
@@ -55,32 +61,47 @@ class ProfileController extends Controller
             'email'     => $validated['email'],
         ]);
 
-        // === 🔹 Folder tujuan upload di luar project Laravel ===
-        // Ganti path di bawah ini sesuai lokasi real folder demo-xanders kamu.
-        $externalAvatarDir = base_path('../demo-xanders/images/avatars'); // naik 1 level keluar project
+        /**
+         * 🔹 Folder tujuan upload avatar (ABSOLUTE PATH di server)
+         * Pastikan folder ini sudah ada / bisa dibuat dan permissionnya benar.
+         *
+         * URL publiknya: https://xanderbilliard.site/images/avatars/{filename}
+         */
+        $externalAvatarDir = '/home/xanderbilliard.site/public_html/images/avatars';
 
         // Handle avatar
         if ($request->boolean('remove_photo')) {
+            // Hapus file lama jika ada
             $this->deletePhotoIfExists($user->photo_profile, $externalAvatarDir);
             $user->photo_profile = null;
         } elseif ($request->hasFile('photo_profile')) {
+            // Hapus file lama jika ada
             $this->deletePhotoIfExists($user->photo_profile, $externalAvatarDir);
 
             $file = $request->file('photo_profile');
+
+            // Pastikan folder ada
             if (!is_dir($externalAvatarDir)) {
                 @mkdir($externalAvatarDir, 0755, true);
             }
 
-            $filename = $user->id . '_' . now()->format('YmdHis') . '.' . $file->getClientOriginalExtension();
+            // Nama file unik
+            $filename = 'user_' . $user->id . '_' . now()->format('YmdHis') . '.' . $file->getClientOriginalExtension();
+
+            // Pindahkan file ke folder absolut
             $file->move($externalAvatarDir, $filename);
 
-            // Simpan hanya path relatif untuk akses di web (bukan absolute path server)
+            /**
+             * Simpan hanya NAMA FILE di database.
+             * Di view nanti kamu tinggal panggil:
+             * https://xanderbilliard.site/images/avatars/{{ $user->photo_profile }}
+             */
             $user->photo_profile = $filename;
         }
 
         $user->save();
 
-        // Athlete
+        // Update Athlete Detail jika ada
         $athlete = AthleteDetail::where('user_id', $user->id)->first();
         if ($athlete) {
             $athlete->update([
@@ -93,7 +114,7 @@ class ProfileController extends Controller
             ]);
         }
 
-        // Venue
+        // Update Venue jika ada
         $venue = Venue::where('user_id', $user->id)->first();
         if ($venue) {
             $venue->update([
@@ -107,12 +128,18 @@ class ProfileController extends Controller
         return back()->with('success', 'Profile updated successfully');
     }
 
+    /**
+     * Hapus foto lama jika ada di folder avatars.
+     */
     private function deletePhotoIfExists(?string $relativePath, string $baseDir): void
     {
-        if (!$relativePath) return;
+        if (!$relativePath) {
+            return;
+        }
 
+        // Antisipasi jika yang disimpan sudah termasuk path, ambil basename saja
         $filename = basename($relativePath);
-        $fullPath = rtrim($baseDir, '/') . '/' . $filename;
+        $fullPath = rtrim($baseDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
 
         if (is_file($fullPath)) {
             @unlink($fullPath);

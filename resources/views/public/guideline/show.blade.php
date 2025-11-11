@@ -1,18 +1,20 @@
 @extends('app')
-@section('title', $guideline->title . ' - Xander Billiard')
+@section('title', ($guideline->title ?? 'Guideline') . ' - Xander Billiard')
 
 @push('styles')
 <style>
   :root { color-scheme: dark; }
+  :root, html, body { background:#0a0a0a; }
   html, body {
     min-height: 100%;
     margin: 0;
-    background: #0a0a0a;
     overscroll-behavior: none;
+    touch-action: pan-y;
+    -webkit-text-size-adjust: 100%;
   }
   body { overflow-x: hidden; }
 
-  /* ===== Typography for article content (mobile-first) ===== */
+  /* ===== Article typography ===== */
   .article-content {
     --c-text: #e5e7eb;
     --c-muted: #9ca3af;
@@ -72,11 +74,10 @@
     font-size: .9em;
   }
 
-  /* ===== Responsive containers & helpers ===== */
   .container-narrow { max-width: 1200px; margin: 0 auto; }
   .shadow-soft { box-shadow: 0 8px 30px rgba(0,0,0,.35); }
 
-  /* Responsive 16:9 wrapper (untuk YouTube) */
+  /* Responsive 16:9 wrapper (YouTube) */
   .video-wrap {
     position: relative;
     width: 100%;
@@ -88,7 +89,7 @@
   .video-wrap::before { content:""; display:block; padding-top:56.25%; }
   .video-wrap iframe { position:absolute; inset:0; width:100%; height:100%; }
 
-  /* ===== Sidebar ===== */
+  /* Sidebar */
   .sidebar-card { border: 1px solid rgba(255,255,255,.06); border-radius: 16px; }
   .rec-thumb { width: 88px; height: 88px; background: #1f2937; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
   .line-clamp-2 {
@@ -97,14 +98,10 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-
-  /* Desktop adjustments */
   @media (min-width: 1024px){
     .article-content { font-size: 1.06rem; line-height: 1.9; }
     .sticky-desktop { position: sticky; top: 88px; }
   }
-
-  /* Breadcrumb overflow fix */
   .breadcrumbs a, .breadcrumbs span { white-space: nowrap; }
 
   /* ====== Progressive Image Loader (Spinner + Camera Fallback) ====== */
@@ -115,38 +112,42 @@
     position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
   }
   .img-frame .ph{ display:none; color:#9ca3af; }
-  .img-frame.error .ph{ display:grid; }
   .img-frame.loaded .spinner{ display:none; }
-
+  .img-frame.error .spinner{ display:none; }
+  .img-frame.error .ph{ display:grid; }
   .spinner svg{ animation:spin 1s linear infinite; opacity:.9; }
   @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
 </style>
 @endpush
 
 @section('content')
+<div id="antiBounceBg" aria-hidden="true" style="position:fixed;left:0;right:0;top:-120svh;bottom:-120svh;background:#0a0a0a;z-index:-1;pointer-events:none;"></div>
+
 @php
     use Illuminate\Support\Str;
     use Illuminate\Support\Facades\Storage;
 
-    /* ====== Hapus kata-kata terlarang dari output ====== */
+    /* ====== Filter kata-kata terlarang dari output ====== */
     $removeWords = ['billiards','basics','beginner','cue','balls'];
-    $pattern = '/\b(' . implode('|', array_map(fn($w)=>preg_quote($w,'/'), $removeWords)) . ')\b/iu';
+    $quoted = [];
+    foreach ($removeWords as $w) { $quoted[] = preg_quote($w, '/'); }
+    $pattern = '/\b(' . implode('|', $quoted) . ')\b/iu';
 
-    // Untuk teks biasa (rapikan spasi setelah dihapus)
+    // Untuk teks biasa
     $stripWordsPlain = function ($text) use ($pattern) {
         $text = preg_replace($pattern, '', (string)$text);
         $text = preg_replace('/\s{2,}/', ' ', $text);
         $text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
-        return trim($text ?? '');
+        return trim((string)$text);
     };
-    // Untuk HTML: hanya hapus kata, tanpa normalisasi spasi agar aman untuk atribut/tag
+    // Untuk HTML (tanpa normalisasi spasi agresif)
     $stripWordsHtml = function ($html) use ($pattern) {
         return preg_replace($pattern, '', (string)$html);
     };
 
     $pubDate = optional($guideline->published_at)->format('d F Y');
 
-    // resolve featured image
+    // Resolve featured image → prioritaskan Storage::url('guidelines/...'), fallback ke public/images/guidelines/<basename>, lalu asset($raw)
     $imagePath = null;
     if (!empty($guideline->featured_image)) {
         $raw = $guideline->featured_image;
@@ -160,25 +161,24 @@
     }
     $placeholder = asset('images/guidelines/placeholder.jpg');
 
-    // ==== Content fallback: jika user tidak pakai HTML, tetap hormati newline ====
+    // Content fallback (hormati newline jika bukan HTML)
     $contentRaw = (string) ($guideline->content ?? '');
     $looksHtml = Str::contains(Str::lower($contentRaw), ['<p','<br','<h','<ul','<ol','<div','<section','<table','</']);
-    // Terapkan filter kata terlarang
     if ($looksHtml) {
         $contentFiltered = $stripWordsHtml($contentRaw);
-        $contentSafe = $contentFiltered; // sudah HTML
+        $contentSafe = $contentFiltered;
     } else {
         $contentFiltered = $stripWordsPlain($contentRaw);
         $contentSafe = nl2br(e($contentFiltered));
     }
 
-    // Title & description yang sudah difilter
+    // Title & description yang difilter
     $titleSan = $stripWordsPlain($guideline->title ?? '');
     $descSan  = $stripWordsPlain($guideline->description ?? '');
 @endphp
 
 <div class="bg-neutral-900 text-white min-h-screen">
-    <!-- Breadcrumbs -->
+    {{-- Breadcrumbs --}}
     <nav class="px-4 sm:px-6 lg:px-24 pt-5 pb-2 text-sm">
         <div class="container-narrow">
             <div class="breadcrumbs flex items-center gap-2 text-gray-400 overflow-x-auto no-scrollbar">
@@ -191,7 +191,7 @@
         </div>
     </nav>
 
-    <!-- Header -->
+    {{-- Header --}}
     <header class="px-4 sm:px-6 lg:px-24 pt-4">
         <div class="container-narrow">
             <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
@@ -203,7 +203,7 @@
         </div>
     </header>
 
-    <!-- Featured Image (with spinner & camera fallback) -->
+    {{-- Featured Image (Progressive + Spinner seperti di index) --}}
     <section class="px-4 sm:px-6 lg:px-24 mt-5 mb-6">
         <div class="container-narrow">
             <div class="img-frame shadow-soft" style="border-radius:16px; height: clamp(220px, 48vh, 520px);">
@@ -230,26 +230,23 @@
         </div>
     </section>
 
-    <!-- Content & Sidebar -->
+    {{-- Content & Sidebar --}}
     <main class="px-4 sm:px-6 lg:px-24 pb-16">
         <div class="container-narrow">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-                <!-- Main -->
+                {{-- Main --}}
                 <article class="lg:col-span-2">
                     <div class="article-content">
-                        {{-- Short description: HORMATI NEWLINE (setelah filter) --}}
                         @if(!empty($guideline->description))
                             <div class="text-[0.98rem] sm:text-base text-gray-300 mb-4 whitespace-pre-line break-words">
                                 {!! nl2br(e($descSan)) !!}
                             </div>
                         @endif
 
-                        {{-- Main content (HTML atau plain text fallback) --}}
                         <div class="mt-4">
                             {!! $contentSafe !!}
                         </div>
 
-                        {{-- Video --}}
                         @if (!empty($guideline->youtube_url))
                             @php
                                 $embed = preg_replace('~^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)~i', 'https://www.youtube.com/embed/', $guideline->youtube_url);
@@ -269,7 +266,7 @@
                         @endif
 
                         {{-- Author --}}
-                        <div class="mt-10 pt-6 border-top border-white/10" style="border-top:1px solid rgba(255,255,255,.1);">
+                        <div class="mt-10 pt-6" style="border-top:1px solid rgba(255,255,255,.1);">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 grid place-items-center ring-1 ring-white/10">
                                     <span class="text-lg font-bold">
@@ -283,7 +280,7 @@
                             </div>
                         </div>
 
-                        {{-- Back button (mobile-first) --}}
+                        {{-- Back button --}}
                         <div class="mt-10">
                             <a href="{{ route('guideline.index') }}"
                                class="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-white/10 hover:bg-white/15 transition ring-1 ring-white/10">
@@ -296,7 +293,7 @@
                     </div>
                 </article>
 
-                <!-- Sidebar -->
+                {{-- Sidebar --}}
                 <aside class="lg:col-span-1">
                   <div class="sidebar-card p-5 lg:p-6 sticky-desktop bg-[#1f1f1f] rounded-xl text-white">
                     <h3 class="text-lg sm:text-xl font-bold mb-5">Recommended</h3>
@@ -363,7 +360,6 @@
                     </div>
                   </div>
                 </aside>
-
             </div>
         </div>
     </main>
@@ -372,52 +368,58 @@
 
 @push('scripts')
 <script>
-/* iOS rubber-band guard: cegah putih saat overscroll tepi */
+/* iOS rubber-band guard */
 (function () {
-  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+  var isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
   if (!isIOS) return;
 
-  let startY = 0;
-  window.addEventListener('touchstart', (e) => {
+  var startY = 0;
+  window.addEventListener('touchstart', function(e){
     if (e.touches && e.touches.length) startY = e.touches[0].clientY;
   }, { passive: true });
 
-  window.addEventListener('touchmove', (e) => {
+  window.addEventListener('touchmove', function(e){
     if (!e.touches || !e.touches.length) return;
-    const scroller = document.scrollingElement || document.documentElement;
-    const atTop = scroller.scrollTop <= 0;
-    const atBottom = (scroller.scrollTop + window.innerHeight) >= (scroller.scrollHeight - 1);
-    const dy = e.touches[0].clientY - startY;
+    var scroller = document.scrollingElement || document.documentElement;
+    var atTop = scroller.scrollTop <= 0;
+    var atBottom = (scroller.scrollTop + window.innerHeight) >= (scroller.scrollHeight - 1);
+    var dy = e.touches[0].clientY - startY;
     if ((atTop && dy > 0) || (atBottom && dy < 0)) e.preventDefault();
   }, { passive: false });
 })();
+</script>
 
-/* Progressive image loader (spinner + camera fallback) */
+{{-- Progressive image loader (sama seperti di halaman index) --}}
+<script>
 (function(){
   function setupProgressiveImages(root){
-    const scope = root || document;
-    const imgs = scope.querySelectorAll('img.js-progressive[data-src]');
-    const io = 'IntersectionObserver' in window ? new IntersectionObserver(onIntersect, { rootMargin: '200px 0px' }) : null;
+    var scope = root || document;
+    var imgs = scope.querySelectorAll('img.js-progressive[data-src]');
+    if (!imgs.length) return;
 
-    imgs.forEach(img=>{
-      const frame = img.closest('.img-frame') || img.parentElement;
+    var io = ('IntersectionObserver' in window)
+      ? new IntersectionObserver(onIntersect, { rootMargin: '200px 0px' })
+      : null;
+
+    Array.prototype.forEach.call(imgs, function(img){
+      var frame = img.closest('.img-frame') || img.parentElement;
       if (!frame) return;
       if (io) io.observe(img); else loadNow(img, frame);
-      img.addEventListener('error', ()=> handleError(img, frame));
-      img.addEventListener('load',  ()=> handleLoad(img, frame));
+      img.addEventListener('error', function(){ handleError(img, frame); });
+      img.addEventListener('load',  function(){ handleLoad(img, frame); });
     });
 
     function onIntersect(entries, obs){
-      entries.forEach(entry=>{
+      entries.forEach(function(entry){
         if (!entry.isIntersecting) return;
-        const img = entry.target;
-        const frame = img.closest('.img-frame') || img.parentElement;
+        var img = entry.target;
+        var frame = img.closest('.img-frame') || img.parentElement;
         loadNow(img, frame);
         obs.unobserve(img);
       });
     }
     function loadNow(img, frame){
-      const src = img.getAttribute('data-src');
+      var src = img.getAttribute('data-src');
       if (src && img.src !== src) img.src = src;
     }
     function handleLoad(img, frame){
@@ -425,14 +427,13 @@
       frame.classList.remove('error');
     }
     function handleError(img, frame){
-      const fallback = img.getAttribute('data-fallback') || img.src;
-      if (img.src !== fallback){ img.src = fallback; }
+      var fallback = img.getAttribute('data-fallback') || img.src || '';
+      if (fallback && img.src !== fallback){ img.src = fallback; }
       else { frame.classList.add('error'); }
     }
   }
-  // Expose and run
   window.setupProgressiveImages = setupProgressiveImages;
-  document.addEventListener('DOMContentLoaded', ()=> setupProgressiveImages(document));
+  document.addEventListener('DOMContentLoaded', function(){ setupProgressiveImages(document); });
 })();
 </script>
 @endpush

@@ -17,49 +17,107 @@ use Illuminate\Support\Facades\Log;
 
 class AdminVenueController extends Controller
 {
+    /**
+     * Lokasi absolut folder gambar venue (FE):
+     *   /home/xanderbilliard.site/public_html/images/venue
+     *
+     * URL publik yang cocok:
+     *   https://xanderbilliard.site/images/venue/{filename}
+     *
+     * Di Blade:
+     *   asset('images/venue/'.$filename)
+     */
+    private function getFeVenueDir(): string
+    {
+        return '/home/xanderbilliard.site/public_html/images/venue';
+    }
+
+    /**
+     * Upload gambar venue ke folder FE (di luar public Laravel utama).
+     * Yang disimpan di DB: hanya nama file.
+     */
     private function uploadImages(array $files): array
     {
-        $fePath = base_path('../demo-xanders/images/venue');
-        if (!File::exists($fePath)) File::makeDirectory($fePath, 0755, true);
+        $fePath = $this->getFeVenueDir();
+
+        if (!File::exists($fePath)) {
+            File::makeDirectory($fePath, 0755, true);
+        }
 
         $filenames = [];
+
         foreach ($files as $file) {
-            if (!$file || !$file->isValid()) continue;
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
 
             $ext      = strtolower($file->getClientOriginalExtension());
             $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $safeBase = Str::slug($origName) ?: 'img';
             $unique   = now()->format('YmdHis') . '-' . Str::random(6);
+
             $filename = "{$unique}-{$safeBase}.{$ext}";
+
+            // Simpan ke folder FE target
             $file->move($fePath, $filename);
+
             $filenames[] = $filename;
         }
+
         return $filenames;
     }
 
+    /**
+     * Hapus file-file berdasarkan nama yang tersimpan di DB
+     * dari folder FE:
+     *   /home/xanderbilliard.site/public_html/images/venue
+     */
     private function deleteImages(array $filenames): void
     {
-        $fePath = base_path('../demo-xanders/images/venue');
+        $fePath = $this->getFeVenueDir();
+
         foreach ($filenames as $file) {
-            if (!$file) continue;
+            if (!$file) {
+                continue;
+            }
+
             $feFile = $fePath . DIRECTORY_SEPARATOR . $file;
-            if (File::exists($feFile)) @unlink($feFile);
+
+            if (File::exists($feFile)) {
+                @unlink($feFile);
+            }
         }
     }
 
+    /**
+     * Normalisasi input Google Maps agar hanya menyimpan src URL.
+     */
     private function extractGoogleMapsSrc(?string $input): ?string
     {
-        if (!$input) return null;
-        $input = trim($input);
-
-        if (stripos($input, '<iframe') !== false) {
-            if (preg_match('~src\s*=\s*"(.*?)"~i', $input, $m)) return trim($m[1]);
-            if (preg_match("~src\s*=\s*'(.*?)'~i", $input, $m)) return trim($m[1]);
+        if (!$input) {
             return null;
         }
+
+        $input = trim($input);
+
+        // Jika embed iframe, ambil hanya src
+        if (stripos($input, '<iframe') !== false) {
+            if (preg_match('~src\s*=\s*"(.*?)"~i', $input, $m)) {
+                return trim($m[1]);
+            }
+            if (preg_match("~src\s*=\s*'(.*?)'~i", $input, $m)) {
+                return trim($m[1]);
+            }
+            return null;
+        }
+
+        // Jika sudah URL langsung
         return $input;
     }
 
+    /**
+     * Sanitasi facilities → array string pendek & unik.
+     */
     private function sanitizeFacilities($input): array
     {
         if (is_array($input)) {
@@ -71,11 +129,19 @@ class AdminVenueController extends Controller
         }
 
         $items = array_map(function ($s) {
-            $s = trim(strip_tags((string)$s));
+            $s = trim(strip_tags((string) $s));
             return mb_substr($s, 0, 100);
         }, $items);
 
-        $items = array_values(array_unique(array_filter($items, fn ($s) => $s !== '')));
+        // buang kosong
+        $items = array_filter($items, function ($s) {
+            return $s !== '';
+        });
+
+        // unik dan reindex
+        $items = array_values(array_unique($items));
+
+        // batasi 50 item
         return array_slice($items, 0, 50);
     }
 
@@ -84,6 +150,7 @@ class AdminVenueController extends Controller
         $venues = Venue::with('user')
             ->when(request('search'), function ($query) {
                 $search = request('search');
+
                 $query->where('name', 'like', "%{$search}%")
                       ->orWhereHas('user', function ($q) use ($search) {
                           $q->where('name', 'like', "%{$search}%")
@@ -122,6 +189,7 @@ class AdminVenueController extends Controller
             'facilities.*'    => 'nullable|string|max:100',
         ]);
 
+        // Validasi jam buka < jam tutup
         $request->validate([
             'operating_hour' => function ($attribute, $value, $fail) use ($request) {
                 if (strtotime($value) >= strtotime($request->closing_hour)) {
@@ -133,6 +201,7 @@ class AdminVenueController extends Controller
         try {
             DB::beginTransaction();
 
+            // User pemilik venue (role: venue)
             $user = User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
@@ -140,15 +209,17 @@ class AdminVenueController extends Controller
                 'roles'    => 'venue',
             ]);
 
+            // Upload images ke folder FE absolut (images/venue)
             $filenames = [];
             if ($request->hasFile('images')) {
-                $files = array_slice($request->file('images'), 0, 3);
+                $files     = array_slice($request->file('images'), 0, 3);
                 $filenames = $this->uploadImages($files);
             }
 
             $mapSrc     = $this->extractGoogleMapsSrc($request->input('map_embed'));
             $facilities = $this->sanitizeFacilities($request->input('facilities'));
 
+            // Simpan venue dengan nama file (images)
             $venue = Venue::create([
                 'user_id'        => $user->id,
                 'name'           => $request->venue_name,
@@ -163,23 +234,37 @@ class AdminVenueController extends Controller
                 'facilities'     => $facilities,
             ]);
 
+            // Default price schedule
             PriceSchedule::create([
                 'venue_id'          => $venue->id,
                 'name'              => 'Reguler AllDay from Admin',
                 'price'             => 0,
                 'start_time'        => $request->operating_hour,
                 'end_time'          => $request->closing_hour,
-                'days'              => ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'],
+                'days'              => [
+                    'monday',
+                    'tuesday',
+                    'wednesday',
+                    'thursday',
+                    'friday',
+                    'saturday',
+                    'sunday',
+                ],
                 'tables_applicable' => [],
                 'is_active'         => true,
             ]);
 
             DB::commit();
+
             return redirect()->route('venue.index')->with('success', 'Venue berhasil ditambahkan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Gagal menambah venue', ['e' => $e]);
-            return redirect()->back()->with('error', 'Terjadi kesalahan: '.$e->getMessage())->withInput();
+            Log::error('Gagal menambah venue', ['e' => $e->getMessage()]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -190,10 +275,15 @@ class AdminVenueController extends Controller
 
     public function update(Request $request, Venue $venue)
     {
-        // NB: facilities & images dibuat "sometimes" agar opsional
         $request->validate([
             'name'            => 'required|string|max:255',
-            'email'           => ['required','string','email','max:255', Rule::unique('users')->ignore($venue->user_id)],
+            'email'           => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($venue->user_id),
+            ],
             'password'        => 'nullable|string|min:8',
 
             'venue_name'      => 'required|string|max:255',
@@ -211,6 +301,7 @@ class AdminVenueController extends Controller
             'facilities.*'    => 'sometimes|string|max:100',
         ]);
 
+        // Validasi jam buka < jam tutup
         $request->validate([
             'operating_hour' => function ($attribute, $value, $fail) use ($request) {
                 if (strtotime($value) >= strtotime($request->closing_hour)) {
@@ -222,7 +313,7 @@ class AdminVenueController extends Controller
         try {
             DB::beginTransaction();
 
-            // Update akun pemilik
+            // Update user pemilik
             $user = User::findOrFail($venue->user_id);
             $user->name  = $request->name;
             $user->email = $request->email;
@@ -231,29 +322,29 @@ class AdminVenueController extends Controller
             }
             $user->save();
 
-            // ===== IMAGES (opsional) =====
+            // Jika ada upload baru → hapus lama & simpan baru ke /images/venue
             if ($request->hasFile('images')) {
                 $oldFiles = is_array($venue->images) ? $venue->images : [];
-                if (!empty($oldFiles)) $this->deleteImages($oldFiles);
+                if (!empty($oldFiles)) {
+                    $this->deleteImages($oldFiles);
+                }
 
                 $files     = array_slice($request->file('images'), 0, 3);
                 $filenames = $this->uploadImages($files);
                 $venue->images = $filenames;
             }
-            // Tidak ada file → jangan sentuh kolom images
 
-            // ===== MAP EMBED =====
-            // Hanya diubah kalau field ada (filled boleh kosong untuk clear)
+            // Map embed (opsional)
             if ($request->exists('map_embed')) {
                 $venue->map_embed = $this->extractGoogleMapsSrc($request->input('map_embed'));
             }
 
-            // ===== FACILITIES (opsional) =====
+            // Facilities (opsional)
             if ($request->has('facilities')) {
                 $venue->facilities = $this->sanitizeFacilities($request->input('facilities'));
             }
 
-            // ===== Field lain =====
+            // Field lain
             $venue->name           = $request->venue_name;
             $venue->address        = $request->address;
             $venue->phone          = $request->phone;
@@ -262,7 +353,7 @@ class AdminVenueController extends Controller
             $venue->description    = $request->description;
             $venue->save();
 
-            // Sinkron jam PriceSchedule (opsional)
+            // Sinkron jam PriceSchedule (kalau ada)
             $priceSchedules = PriceSchedule::where('venue_id', $venue->id)->get();
             if ($priceSchedules->isNotEmpty()) {
                 $earliestStartTime = $priceSchedules->min('start_time');
@@ -277,11 +368,16 @@ class AdminVenueController extends Controller
             }
 
             DB::commit();
+
             return redirect()->route('venue.index')->with('success', 'Venue berhasil diperbarui!');
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Gagal update venue', ['e' => $e]);
-            return redirect()->back()->with('error', 'Terjadi kesalahan: '.$e->getMessage())->withInput();
+            Log::error('Gagal update venue', ['e' => $e->getMessage()]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -291,20 +387,26 @@ class AdminVenueController extends Controller
             DB::beginTransaction();
 
             $imageFilenames = is_array($venue->images) ? $venue->images : [];
-            $userId = $venue->user_id;
+            $userId         = $venue->user_id;
 
             $venue->delete();
             User::destroy($userId);
 
             DB::commit();
 
-            if (!empty($imageFilenames)) $this->deleteImages($imageFilenames);
+            // Hapus file fisik dari /images/venue
+            if (!empty($imageFilenames)) {
+                $this->deleteImages($imageFilenames);
+            }
 
             return redirect()->route('venue.index')->with('success', 'Venue berhasil dihapus!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Gagal hapus venue', ['e' => $e]);
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            Log::error('Gagal hapus venue', ['e' => $e->getMessage()]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
@@ -312,9 +414,10 @@ class AdminVenueController extends Controller
     {
         $venue = Venue::with([
             'orders' => function ($q) {
-                $q->where('order_type', 'venue')->orderBy('created_at', 'desc');
+                $q->where('order_type', 'venue')
+                  ->orderBy('created_at', 'desc');
             },
-            'orders.user'
+            'orders.user',
         ])->findOrFail($id);
 
         return view('dash.admin.venue.detail', compact('venue'));
@@ -323,35 +426,56 @@ class AdminVenueController extends Controller
     public function verifyPayment($orderId)
     {
         $order = Order::findOrFail($orderId);
+
         if ($order->payment_status !== 'processing') {
             return back()->with('error', 'Order ini tidak dalam status processing.');
         }
+
         $order->update(['payment_status' => 'paid']);
+
         return back()->with('success', 'Pembayaran berhasil diverifikasi!');
     }
 
-    public function export(): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function export()
     {
         $venues = Venue::with('user')
             ->when(request('search'), function ($query) {
                 $search = request('search');
+
                 $query->where('name', 'like', "%{$search}%")
                       ->orWhereHas('user', function ($q) use ($search) {
                           $q->where('name', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%");
                       });
-            })->get();
+            })
+            ->get();
 
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type'        => 'text/csv',
             'Content-Disposition' => 'attachment; filename="venues.csv"',
         ];
 
         $callback = function () use ($venues) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Venue Name','Owner Name','Owner Email','Address','Phone','Operating Hour','Closing Hour','Rating','Images','Facilities','Map Embed']);
+
+            fputcsv($handle, [
+                'Venue Name',
+                'Owner Name',
+                'Owner Email',
+                'Address',
+                'Phone',
+                'Operating Hour',
+                'Closing Hour',
+                'Rating',
+                'Images',
+                'Facilities',
+                'Map Embed',
+            ]);
+
             foreach ($venues as $v) {
-                $fac = is_array($v->facilities) ? implode('|', $v->facilities) : '';
+                $facilities = is_array($v->facilities) ? implode('|', $v->facilities) : '';
+                $images     = implode('|', (array) ($v->images ?? []));
+
                 fputcsv($handle, [
                     $v->name,
                     optional($v->user)->name,
@@ -360,12 +484,13 @@ class AdminVenueController extends Controller
                     $v->phone,
                     $v->operating_hour ? $v->operating_hour->format('H:i') : '',
                     $v->closing_hour   ? $v->closing_hour->format('H:i') : '',
-                    number_format((float)$v->rating, 1),
-                    implode('|', (array)($v->images ?? [])),
-                    $fac,
+                    number_format((float) $v->rating, 1),
+                    $images,
+                    $facilities,
                     $v->map_embed ?? '',
                 ]);
             }
+
             fclose($handle);
         };
 

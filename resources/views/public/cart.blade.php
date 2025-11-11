@@ -6,22 +6,19 @@
         position: fixed;
         top: 0;
         right: 0;
-        width: min(420px, 100vw);       /* desktop ~420px, mobile full width */
-        height: 100vh;                  /* penuh layar */
+        width: min(420px, 100vw);
+        height: 100vh;
         background-color:#1e1e1f;
-        overflow: hidden;               /* body yang scroll, bukan panel */
+        overflow: hidden;
         z-index: 50;
-        /* cegah body ikut scroll saat panel di-scroll */
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
         box-shadow: -8px 0 24px rgba(0,0,0,.35);
     }
 
-    /* KONTEN DI ATAS BACKGROUND */
     #cart .cart-header,
     #cart .cart-body { position: relative; z-index: 1; }
 
-    /* HEADER */
     #cart .cart-header{
         height: var(--cart-header-h);
         padding: 14px 20px;
@@ -30,12 +27,11 @@
         gap: 1rem;
         background:#1e1e1f;
         border-bottom: 1px solid rgba(255,255,255,.08);
-        position: sticky;   /* sticky agar selalu terlihat ketika isi scroll */
+        position: sticky;
         top: 0;
     }
     #cart .cart-title{ font-size:1.25rem; font-weight:800; line-height:1.25; }
 
-    /* BODY: selalu scroll (desktop & mobile) */
     #cart .cart-body{
         height: calc(100vh - var(--cart-header-h));
         overflow-y: auto;
@@ -44,7 +40,6 @@
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Section & item */
     #cart .cart-section-title { font-size:1.1rem; margin-bottom:.75rem; font-weight:800; }
     #cart .cart-item { gap:16px; }
     #cart .cart-img { width:80px; height:80px; border-radius:.75rem; object-fit:cover; flex-shrink:0; }
@@ -54,13 +49,15 @@
     #cart .cart-total-row { margin-bottom:.75rem; }
     #cart .checkout-btn { height:46px; border-radius:.6rem; font-weight:700; }
 
-    /* MOBILE: hanya tweak ukuran */
     @media (max-width: 640px){
         #cart{ width:100vw; max-width:100vw; }
         #cart .cart-img { width:64px; height:64px; border-radius:.5rem; }
         #cart .cart-name{
             font-size:.95rem;
-            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
         }
         #cart .cart-meta{ font-size:.75rem; }
         #cart .cart-price{ font-size:.875rem; }
@@ -68,9 +65,11 @@
     }
 </style>
 
-<div class="hidden" id="cart"> {{-- tetap pakai .hidden utk toggle buka/tutup --}}
+<div class="hidden" id="cart">
     <header class="cart-header">
-        <button aria-label="Back" class="text-gray-500 hover:text-gray-400 focus:outline-none" onclick="showCart()">
+        <button aria-label="Back"
+                class="text-gray-500 hover:text-gray-400 focus:outline-none"
+                onclick="showCart()">
             <i class="fas fa-arrow-left text-xl"></i>
         </button>
         <h2 class="text-white cart-title">Your Cart</h2>
@@ -81,79 +80,120 @@
             <h3 class="text-white cart-section-title">Items</h3>
 
             <ul class="space-y-4">
-                {{-- Product --}}
+                {{-- PRODUCT --}}
                 @forelse ($cartProducts as $cart)
                     @php
                         $raw = $cart['images'] ?? null;
                         $first = null;
+
                         if (is_string($raw)) {
                             $maybe = json_decode($raw, true);
-                            $first = (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) ? ($maybe[0] ?? null) : $raw;
-                        } elseif (is_array($raw)) { $first = $raw[0] ?? null; }
-                        if (is_string($first)) { $first = str_replace('\\','/',$first); }
+                            $first = (json_last_error() === JSON_ERROR_NONE && is_array($maybe))
+                                ? ($maybe[0] ?? null)
+                                : $raw;
+                        } elseif (is_array($raw)) {
+                            $first = $raw[0] ?? null;
+                        }
+
+                        if (is_string($first)) {
+                            $first = str_replace('\\','/',$first);
+                        }
+
                         $filename = $first ? basename($first) : null;
+
                         $imageUrl = $filename
-                            ? ('https://demo-xanders.ptbmn.id/images/products/' . $filename)
-                            : 'https://demo-xanders.ptbmn.id/images/products/default.png';
+                            ? 'https://xanderbilliard.site/images/products/' . $filename
+                            : 'https://xanderbilliard.site/images/products/default.png';
                     @endphp
+
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="product"
-                               value="product:{{ $cart['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
-                        <img alt="{{ $cart['name'] }}" class="cart-img" src="{{ $imageUrl }}"
+                               value="product:{{ $cart['cart_id'] }}"
+                               onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm"
+                               checked />
+                        <img alt="{{ $cart['name'] }}"
+                             class="cart-img"
+                             src="{{ $imageUrl }}"
                              onerror="this.onerror=null;this.src='{{ asset('images/placeholder/product.png') }}';" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $cart['name'] }}</p>
+
                             <input type="hidden" id="price-{{ $cart['cart_id'] }}" value="{{ $cart['price'] }}">
                             <input type="hidden" id="discount-{{ $cart['cart_id'] }}" value="{{ $cart['discount'] ?? 0 }}">
+
                             <div class="text-sm mt-1 cart-price">
                                 @if(isset($cart['discount']) && $cart['discount'] > 0)
-                                    <div class="text-gray-400 line-through">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
-                                    <div class="text-green-400">Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item</div>
+                                    <div class="text-gray-400 line-through">
+                                        Rp {{ number_format($cart['price'], 0, ',', '.') }} / item
+                                    </div>
+                                    <div class="text-green-400">
+                                        Rp {{ number_format($cart['price'] - ($cart['price'] * $cart['discount']), 0, ',', '.') }} / item
+                                    </div>
                                 @else
-                                    <div class="text-white">Rp {{ number_format($cart['price'], 0, ',', '.') }} / item</div>
+                                    <div class="text-white">
+                                        Rp {{ number_format($cart['price'], 0, ',', '.') }} / item
+                                    </div>
                                 @endif
                             </div>
-                            <p class="text-white text-xs mt-1 cart-meta">Quantity: {{ $cart['quantity'] ?? 0 }}</p>
+
+                            <p class="text-white text-xs mt-1 cart-meta">
+                                Quantity: {{ $cart['quantity'] ?? 0 }}
+                            </p>
                         </div>
+
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $cart['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $cart['name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
+                            <button type="submit"
+                                    aria-label="Delete {{ $cart['name'] }}"
+                                    class="text-gray-400 hover:text-red-500 focus:outline-none flex-shrink-0">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
                     </li>
                 @empty
                     @if(empty($cartSparrings) && empty($cartVenues) && empty($cartProducts))
-                        <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">Your cart is empty</li>
+                        <li class="text-center text-gray-500 py-4 min-w-xs cart-meta">
+                            Your cart is empty
+                        </li>
                     @endif
                 @endforelse
 
-                {{-- Venue (gambar dikirim dari controller/detail -> 'image', lalu dibangun ke FE base) --}}
+                {{-- VENUE --}}
                 @forelse ($cartVenues ?? [] as $venue)
                     @php
-                        $feVenueBase = 'https://demo-xanders.ptbmn.id/images/venue/';
+                        // Folder server:
+                        // /home/xanderbilliard.site/public_html/images/venue
+                        // URL publik:
+                        // {{ asset('images/venue/{filename}') }}
+                        $venueFsBase = '/home/xanderbilliard.site/public_html/images/venue';
+                        $feVenueBase = rtrim(asset('images/venue'), '/') . '/';
 
-                        // Prioritas: pakai $venue['image'] yang sudah dikirim controller/form.
+                        // Prioritas: image yang dikirim saat add-to-cart
                         $rawVenue = $venue['image'] ?? null;
 
-                        // Jika masih kosong, fallback ambil dari model (aman untuk item lama)
+                        // Fallback: ambil dari model Venue (untuk item lama)
                         if (!$rawVenue && !empty($venue['venue_id'])) {
                             $__v = \App\Models\Venue::find($venue['venue_id']);
                             if ($__v) {
                                 if (!empty($__v->images)) {
-                                    if (is_array($__v->images)) { $rawVenue = $__v->images[0] ?? null; }
-                                    elseif (is_string($__v->images)) {
+                                    if (is_array($__v->images)) {
+                                        $rawVenue = $__v->images[0] ?? null;
+                                    } elseif (is_string($__v->images)) {
                                         $maybe = json_decode($__v->images, true);
-                                        if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) { $rawVenue = $maybe[0] ?? null; }
+                                        if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                                            $rawVenue = $maybe[0] ?? null;
+                                        }
                                     }
                                 }
-                                if (!$rawVenue && !empty($__v->image)) { $rawVenue = $__v->image; }
+                                if (!$rawVenue && !empty($__v->image)) {
+                                    $rawVenue = $__v->image;
+                                }
                             }
                         }
 
-                        // Normalisasi -> ambil filename
+                        // Normalisasi → ambil hanya filename
                         $filenameVenue = null;
                         if (!empty($rawVenue)) {
                             if (filter_var($rawVenue, FILTER_VALIDATE_URL)) {
@@ -164,18 +204,30 @@
                             }
                         }
 
-                        // FE URL final (fallback ke placeholder lokal agar tidak 404)
-                        $venueImageUrl = $filenameVenue
-                            ? ($feVenueBase . $filenameVenue)
-                            : asset('images/placeholder/venue.png');
+                        // URL final: gunakan images/venue (khusus venue)
+                        if ($filenameVenue) {
+                            $fsPath = rtrim($venueFsBase, '/') . '/' . $filenameVenue;
+                            if (@file_exists($fsPath)) {
+                                $venueImageUrl = $feVenueBase . $filenameVenue;
+                            } else {
+                                $venueImageUrl = asset('images/placeholder/venue.png');
+                            }
+                        } else {
+                            $venueImageUrl = asset('images/placeholder/venue.png');
+                        }
                     @endphp
 
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="venue"
                                data-image="{{ $filenameVenue ?? '' }}"
-                               value="venue:{{ $venue['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked /> {{-- AUTO-CHECK VENUE --}}
-                        <img class="cart-img" src="{{ $venueImageUrl }}" alt="{{ $venue['name'] }}" />
+                               value="venue:{{ $venue['cart_id'] }}"
+                               onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm"
+                               checked />
+                        <img class="cart-img"
+                             src="{{ $venueImageUrl }}"
+                             alt="{{ $venue['name'] }}"
+                             onerror="this.onerror=null;this.src='{{ asset('images/placeholder/venue.png') }}';" />
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white cart-name">{{ $venue['name'] }}</p>
                             <p class="text-white text-xs mt-1 cart-meta">
@@ -183,14 +235,25 @@
                                 {{ \Carbon\Carbon::parse($venue['start'])->format('H:i') }} -
                                 {{ \Carbon\Carbon::parse($venue['end'])->format('H:i') }}
                             </p>
-                            <input type="hidden" id="price-venue-{{ $venue['cart_id'] }}" value="{{ $venue['price'] }}">
-                            <p class="text-white text-sm mt-1 cart-price">Rp. {{ number_format($venue['price'], 0, ',', '.') }}</p>
-                            <p class="text-white text-sm mt-1 cart-meta">Table {{ $venue['table'] }}</p>
+
+                            <input type="hidden"
+                                   id="price-venue-{{ $venue['cart_id'] }}"
+                                   value="{{ $venue['price'] }}">
+
+                            <p class="text-white text-sm mt-1 cart-price">
+                                Rp. {{ number_format($venue['price'], 0, ',', '.') }}
+                            </p>
+                            <p class="text-white text-sm mt-1 cart-meta">
+                                Table {{ $venue['table'] }}
+                            </p>
                         </div>
+
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $venue['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $venue['name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none">
+                            <button type="submit"
+                                    aria-label="Delete {{ $venue['name'] }}"
+                                    class="text-gray-400 hover:text-red-500 focus:outline-none">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
@@ -198,40 +261,60 @@
                 @empty
                 @endforelse
 
-                {{-- Sparring --}}
+                {{-- SPARRING --}}
                 @forelse ($cartSparrings ?? [] as $sparring)
                     @php
                         $rawAthlete = $sparring['athlete_image'] ?? null;
                         $filenameAthlete = null;
+
                         if (!empty($rawAthlete)) {
-                            if (filter_var($rawAthlete, FILTER_VALIDATE_URL)) { $filenameAthlete = basename(parse_url($rawAthlete, PHP_URL_PATH)); }
-                            else { $filenameAthlete = basename(str_replace('\\', '/', $rawAthlete)); }
+                            if (filter_var($rawAthlete, FILTER_VALIDATE_URL)) {
+                                $filenameAthlete = basename(parse_url($rawAthlete, PHP_URL_PATH));
+                            } else {
+                                $filenameAthlete = basename(str_replace('\\', '/', $rawAthlete));
+                            }
                         }
+
                         $athleteImageUrl = $filenameAthlete
-                            ? ('https://demo-xanders.ptbmn.id/images/athlete/' . $filenameAthlete)
-                            : 'https://demo-xanders.ptbmn.id/images/athlete/default.png';
+                            ? 'https://xanderbilliard.site/images/athlete/' . $filenameAthlete
+                            : 'https://xanderbilliard.site/images/athlete/default.png';
                     @endphp
 
                     <li class="flex items-center cart-item">
                         <input type="checkbox" name="selected_items[]" data-type="sparring"
-                               value="sparring:{{ $sparring['cart_id'] }}" onchange="updateCartTotal()"
-                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm" checked />
-                        <img alt="{{ $sparring['athlete_name'] }}" class="cart-img" src="{{ $athleteImageUrl }}"
+                               value="sparring:{{ $sparring['cart_id'] }}"
+                               onchange="updateCartTotal()"
+                               class="mr-2 w-5 h-5 border border-gray-600 rounded-sm"
+                               checked />
+                        <img alt="{{ $sparring['athlete_name'] }}"
+                             class="cart-img"
+                             src="{{ $athleteImageUrl }}"
                              onerror="this.onerror=null;this.src='{{ asset('images/placeholder/athlete.png') }}';" />
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-white cart-name">{{ $sparring['athlete_name'] }} (Sparring)</p>
+                            <p class="font-bold text-white cart-name">
+                                {{ $sparring['athlete_name'] }} (Sparring)
+                            </p>
                             <p class="text-white text-xs mt-1 cart-meta">
                                 {{ \Carbon\Carbon::parse($sparring['date'])->format('d M Y') }}
                                 {{ \Carbon\Carbon::parse($sparring['start'])->format('H:i') }} -
                                 {{ \Carbon\Carbon::parse($sparring['end'])->format('H:i') }}
                             </p>
-                            <input type="hidden" id="price-sparring-{{ $sparring['cart_id'] }}" value="{{ $sparring['price'] }}">
-                            <p class="text-white text-sm mt-1 cart-price">Rp. {{ number_format($sparring['price'], 0, ',', '.') }}</p>
+
+                            <input type="hidden"
+                                   id="price-sparring-{{ $sparring['cart_id'] }}"
+                                   value="{{ $sparring['price'] }}">
+
+                            <p class="text-white text-sm mt-1 cart-price">
+                                Rp. {{ number_format($sparring['price'], 0, ',', '.') }}
+                            </p>
                         </div>
+
                         <form action="{{ route('cart.delete') }}" method="POST" class="delete-form">
                             @csrf
                             <input type="hidden" name="id" value="{{ $sparring['cart_id'] }}">
-                            <button type="submit" aria-label="Delete {{ $sparring['athlete_name'] }}" class="text-gray-400 hover:text-red-500 focus:outline-none">
+                            <button type="submit"
+                                    aria-label="Delete {{ $sparring['athlete_name'] }}"
+                                    class="text-gray-400 hover:text-red-500 focus:outline-none">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                         </form>
@@ -259,18 +342,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Ukur tinggi header dinamis -> supaya calc(100vh - header) akurat
     (function syncCartHeaderHeight(){
         const cart = document.getElementById('cart');
         const header = cart?.querySelector('.cart-header');
         if (!cart || !header) return;
-        const h = header.getBoundingClientRect().height || 64;
-        cart.style.setProperty('--cart-header-h', h + 'px');
-        // update bila resize
-        window.addEventListener('resize', () => {
-            const nh = header.getBoundingClientRect().height || 64;
-            cart.style.setProperty('--cart-header-h', nh + 'px');
-        });
+
+        function apply() {
+            const h = header.getBoundingClientRect().height || 64;
+            cart.style.setProperty('--cart-header-h', h + 'px');
+        }
+
+        apply();
+        window.addEventListener('resize', apply);
     })();
 
     function updateCartTotal() {
@@ -296,13 +379,16 @@
                 discountInput = document.getElementById('discount-' + id);
             }
 
-            const qtyText = checkbox.closest('li').querySelector('.cart-meta')?.textContent || '';
+            const metaEl = checkbox.closest('li').querySelector('.cart-meta');
+            const qtyText = metaEl ? metaEl.textContent : '';
             const qtyMatch = qtyText.match(/Quantity:\s*(\d+)/i);
-            if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+            if (qtyMatch) {
+                qty = parseInt(qtyMatch[1], 10);
+            }
 
             if (priceInput) {
                 const price = parseFloat(priceInput.value) || 0;
-                const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+                const discount = discountInput ? (parseFloat(discountInput.value) || 0) : 0;
                 const finalPrice = price - (price * discount);
                 total += finalPrice * qty;
             }
@@ -312,39 +398,33 @@
             'Rp. ' + (total || 0).toLocaleString('id-ID');
     }
 
-    /* ==== EVENT DELEGATION + AUTO-CHECK VENUE (awal & item baru) ==== */
     (function autoCheckVenue(){
         const cartEl = document.getElementById('cart');
         if (!cartEl) return;
 
-        // 1) Delegasi event agar item dinamis tetap dihitung
         cartEl.addEventListener('change', function(e){
             if (e.target && e.target.matches('input[type="checkbox"]')) {
                 updateCartTotal();
             }
         });
 
-        // 2) Pastikan venue yang sudah ada -> auto checked
         cartEl.querySelectorAll('input[type="checkbox"][data-type="venue"]').forEach(cb => {
             cb.checked = true;
         });
 
-        // 3) Pantau penambahan item baru (MutationObserver) -> auto-check yang venue
         const obs = new MutationObserver((mutations) => {
             let needRecalc = false;
             mutations.forEach(m => {
                 m.addedNodes.forEach(node => {
                     if (!(node instanceof Element)) return;
 
-                    // node sendiri checkbox venue?
-                    const single = node.matches?.('input[type="checkbox"][data-type="venue"]') ? [node] : [];
-
-                    // cari checkbox venue di dalam node
+                    const single = node.matches?.('input[type="checkbox"][data-type="venue"]')
+                        ? [node] : [];
                     const nested = node.querySelectorAll?.('input[type="checkbox"][data-type="venue"]') || [];
 
                     [...single, ...nested].forEach(cb => {
                         if (!cb.checked) {
-                            cb.checked = true;   // <-- AUTO-CHECK saat ditambahkan
+                            cb.checked = true;
                             needRecalc = true;
                         }
                     });
@@ -354,16 +434,12 @@
         });
         obs.observe(cartEl, { childList: true, subtree: true });
 
-        // hitung awal
         updateCartTotal();
     })();
 
-    /** Saat submit ke checkout:
-     *  - Kita kirim selected_items[]
-     *  - PLUS: selected_images[type:id]=<filename> khusus venue (diambil dari data-image)
-     */
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {
         const form = this;
+
         form.querySelectorAll('input[name="selected_items[]"]').forEach(el => el.remove());
         form.querySelectorAll('input[name^="selected_images"]').forEach(el => el.remove());
 
@@ -386,6 +462,7 @@
 
         const types = new Set();
         checked.forEach(cb => types.add(cb.dataset.type || 'product'));
+
         if (types.size > 1) {
             e.preventDefault();
             Swal.fire({
@@ -405,20 +482,18 @@
             const type = cb.dataset.type || 'product';
             const id = cb.value.split(':')[1] || cb.value;
 
-            // selected_items[]
             const hidden = document.createElement('input');
             hidden.type = 'hidden';
             hidden.name = 'selected_items[]';
             hidden.value = `${type}:${id}`;
             form.appendChild(hidden);
 
-            // selected_images[type:id] = filename (khusus venue)
             if (type === 'venue') {
                 const filename = cb.dataset.image || '';
                 const hid2 = document.createElement('input');
                 hid2.type = 'hidden';
                 hid2.name = `selected_images[${type}:${id}]`;
-                hid2.value = filename; // bisa kosong (fallback di view)
+                hid2.value = filename;
                 form.appendChild(hid2);
             }
         });

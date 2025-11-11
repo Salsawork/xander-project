@@ -23,12 +23,12 @@
     /**
      * ====== CDN CONFIG & HELPERS ======
      * Semua gambar HARUS dari ../demo-xanders/images/{products|venue|athlete}/
-     * Gunakan XB_CDN di .env untuk override host (default: https://demo-xanders.ptbmn.id)
+     * Gunakan XB_CDN di .env untuk override host (default: https://xanderbilliard.site)
      */
 
     if (!function_exists('xb_cdn_bases')) {
         function xb_cdn_bases(): array {
-            $host = rtrim(config('app.xb_cdn', env('XB_CDN', 'https://demo-xanders.ptbmn.id')), '/');
+            $host = rtrim(config('app.xb_cdn', env('XB_CDN', 'https://xanderbilliard.site')), '/');
             return [
                 'products' => $host . '/images/products/',
                 'venue'    => $host . '/images/venue/',

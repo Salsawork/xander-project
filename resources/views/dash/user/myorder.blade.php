@@ -27,8 +27,8 @@
   use App\Models\Order;
 
   // === CDN base untuk products ===
-  // Set di .env: XB_CDN=https://demo-xanders.ptbmn.id
-  $cdnHost      = config('app.xb_cdn', env('XB_CDN', 'https://demo-xanders.ptbmn.id'));
+  // Set di .env: XB_CDN=https://xanderbilliard.site
+  $cdnHost      = config('app.xb_cdn', env('XB_CDN', 'https://xanderbilliard.site'));
   $prodCdnBase  = rtrim($cdnHost, '/') . '/images/products/';
 
   // Fallback file yang pasti ada di ../demo-xanders/images/products/
