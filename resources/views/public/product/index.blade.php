@@ -4,10 +4,26 @@
 @php
     use Illuminate\Support\Str;
 
-    // FE base folder absolut
-    $feBaseProducts = 'https://xanderbilliard.site/images/products/';
+    /**
+     * BASE PATH PRODUK (SERVER & URL)
+     *
+     * Lokasi fisik file upload:
+     *   /home/xanderbilliard.site/public_html/images/products/{filename}
+     *
+     * URL publik di FE:
+     *   asset('images/products/'.$filename)
+     *   → https://xanderbilliard.site/images/products/{filename}
+     *
+     * Catatan:
+     * - Di database simpan HANYA nama file (bukan full URL, bukan path lama).
+     * - Semua gambar di halaman ini akan diarahkan ke folder /images/products.
+     */
+    $feBaseProducts = rtrim(asset('images/products'), '/') . '/';
 
-    // Normalizer: apapun input (URL penuh/relative/nama file) -> absolut ke $feBaseProducts
+    /**
+     * Normalizer:
+     * Apapun input (URL penuh, path relatif, atau nama file) → URL absolut ke $feBaseProducts
+     */
     $normalizeToFeBase = function ($s) use ($feBaseProducts) {
         if (!is_string($s) || trim($s) === '') return null;
         $s = trim($s);
@@ -15,68 +31,98 @@
         // Jika sudah URL http(s)
         if (preg_match('#^https?://#i', $s)) {
             $parts = parse_url($s);
-            $base  = strtolower($parts['host'] ?? '');
+            $host  = strtolower($parts['host'] ?? '');
             $path  = $parts['path'] ?? '';
             $name  = basename($path);
 
-            if ($base === 'demo-xanders.ptbmn.id') {
-                return $name ? $feBaseProducts . $name : $s;
+            // Jika host kita sendiri → pakai filename-nya di base baru
+            if (in_array($host, ['xanderbilliard.site', 'www.xanderbilliard.site'], true)) {
+                return $name ? $feBaseProducts . $name : null;
             }
-            return $s; // CDN eksternal dll
+
+            // Kalau host lain (CDN/eksternal) → biarkan apa adanya
+            return $s;
         }
 
+        // Jika path sudah dimulai dengan /images/products/ → ambil nama file saja
         if (str_starts_with($s, '/images/products/')) {
-            return $feBaseProducts . basename($s);
+            $name = basename($s);
+            return $name ? $feBaseProducts . $name : null;
         }
 
+        // Selain itu anggap sebagai nama file/path lama → ambil basename
         $name = basename($s);
         if ($name !== '' && $name !== '/' && $name !== '.') {
             return $feBaseProducts . $name;
         }
+
         return null;
     };
 
-    // Kandidat nama file berdasar id/slug + data DB
+    /**
+     * Build daftar kandidat URL gambar untuk 1 produk:
+     * - Berdasar pola id & slug
+     * - Berdasar kolom images / first_image_url di DB
+     * - Ditutup dengan placeholder di folder /images/products
+     */
     $buildIdImageCandidates = function($product) use ($feBaseProducts, $normalizeToFeBase) {
         $id   = (string) ($product->id ?? '');
         $slug = Str::slug((string) ($product->name ?? ''));
-        $exts = ['jpeg','jpg','png','webp'];
+        $exts = ['jpeg','jpg','png','webp','avif'];
         $c    = [];
 
+        // Pola nama file umum: {id}-{slug}.* , {id}.*
         if ($id !== '') {
             if ($slug !== '') {
-                foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}-{$slug}.{$e}"; }
-                foreach ([1,2,3] as $ver) {
-                    foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}-{$slug}-{$ver}.{$e}"; }
+                foreach ($exts as $e) {
+                    $c[] = "{$feBaseProducts}{$id}-{$slug}.{$e}";
+                }
+                // versi tambahan {id}-{slug}-1.*, -2.*, -3.*
+                foreach ([1,2,3,4] as $ver) {
+                    foreach ($exts as $e) {
+                        $c[] = "{$feBaseProducts}{$id}-{$slug}-{$ver}.{$e}";
+                    }
                 }
             }
-            foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}.{$e}"; }
-            foreach ($exts as $e) { $c[] = "{$feBaseProducts}{$id}_1.{$e}"; }
-        }
-
-        // DB filenames/urls
-        if (!empty($product->first_image_url)) {
-            $norm = $normalizeToFeBase((string)$product->first_image_url);
-            if ($norm) $c[] = $norm;
-        }
-        if (!empty($product->images)) {
-            $arr = is_array($product->images) ? $product->images : json_decode($product->images, true);
-            if (is_array($arr) && !empty($arr)) {
-                $norm = $normalizeToFeBase((string)$arr[0]);
-                if ($norm) $c[] = $norm;
+            foreach ($exts as $e) {
+                $c[] = "{$feBaseProducts}{$id}.{$e}";
+                $c[] = "{$feBaseProducts}{$id}_1.{$e}";
             }
         }
 
-        // Placeholder di FE folder + eksternal
+        // Dari first_image_url (legacy)
+        if (!empty($product->first_image_url)) {
+            $norm = $normalizeToFeBase((string) $product->first_image_url);
+            if ($norm) $c[] = $norm;
+        }
+
+        // Dari kolom images (array/json/string)
+        if (!empty($product->images)) {
+            $arr = is_array($product->images)
+                ? $product->images
+                : (json_decode($product->images, true) ?: [$product->images]);
+
+            if (is_array($arr) && !empty($arr)) {
+                $first = $normalizeToFeBase((string) $arr[0]);
+                if ($first) $c[] = $first;
+            }
+        }
+
+        // Placeholder di folder baru
         $c[] = "{$feBaseProducts}placeholder.webp";
         $c[] = "{$feBaseProducts}placeholder.png";
+
+        // Fallback eksternal terakhir
         $c[] = 'https://placehold.co/600x800?text=No+Image';
 
-        // Unik
+        // Unik & bersih
         $uniq = [];
         foreach ($c as $x) {
-            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
+            if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) {
+                $uniq[] = $x;
+            }
         }
+
         return $uniq;
     };
 @endphp
@@ -84,55 +130,115 @@
 @push('styles')
 <style>
   :root { color-scheme: dark; }
-  html, body { height:100%; background:#0a0a0a; overscroll-behavior-y:none; }
+  html, body {
+    height:100%;
+    background:#0a0a0a;
+    overscroll-behavior-y:none;
+  }
   #app, main { background:#0a0a0a; }
-  body::before{content:"";position:fixed;inset:0;background:#0a0a0a;pointer-events:none;z-index:-1;}
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:#0a0a0a;
+    pointer-events:none;
+    z-index:-1;
+  }
 
   .max-h-0{max-height:0!important;}
   @media (min-width:1024px){ .lg-hidden{display:none!important;} }
-
   @media (max-width:1023px){
     .sm-hidden{display:none!important;}
-    .mobile-filter-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none;}
+    .mobile-filter-overlay{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.5);
+      z-index:40;display:none;
+    }
     .mobile-filter-overlay.active{display:block;}
-    .mobile-filter-sidebar{position:fixed;top:0;left:-100%;width:85%;max-width:340px;height:100%;background:#171717;z-index:50;transition:left .3s ease;overflow-y:auto;-webkit-overflow-scrolling:touch;border-right:1px solid rgba(255,255,255,.08);}    
+    .mobile-filter-sidebar{
+      position:fixed;top:0;left:-100%;
+      width:85%;max-width:340px;height:100%;
+      background:#171717;z-index:50;
+      transition:left .3s ease;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      border-right:1px solid rgba(255,255,255,.08);
+    }
     .mobile-filter-sidebar.open{left:0;}
   }
 
-  .pager{display:inline-flex;align-items:center;gap:10px;background:#1f2937;border:1px solid rgba(255,255,255,.06);border-radius:9999px;padding:6px 10px;box-shadow:0 8px 20px rgba(0,0,0,.35) inset,0 4px 14px rgba(0,0,0,.25);}  
-  .pager-label{min-width:90px;text-align:center;color:#e5e7eb;font-weight:600;letter-spacing:.2px;}  
-  .pager-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:9999px;line-height:0;text-decoration:none;border:1px solid rgba(255,255,255,.15);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .15s ease,opacity .15s ease;}  
-  .pager-btn:hover{transform:translateY(-1px);}  
-  .pager-prev{background:#e5e7eb;color:#0f172a;}  
-  .pager-next{background:#2563eb;color:#fff;}  
-  .pager-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(20%);}  
-  @media (max-width:640px){.pager{padding:4px 8px;gap:8px}.pager-btn{width:40px;height:40px}.pager-label{min-width:80px;font-size:.9rem}}
+  .pager{
+    display:inline-flex;align-items:center;gap:10px;
+    background:#1f2937;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:9999px;
+    padding:6px 10px;
+    box-shadow:0 8px 20px rgba(0,0,0,.35) inset,
+               0 4px 14px rgba(0,0,0,.25);
+  }
+  .pager-label{
+    min-width:90px;text-align:center;
+    color:#e5e7eb;font-weight:600;letter-spacing:.2px;
+  }
+  .pager-btn{
+    width:44px;height:44px;
+    display:grid;place-items:center;
+    border-radius:9999px;
+    border:1px solid rgba(255,255,255,.15);
+    line-height:0;text-decoration:none;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+    transition:transform .15s ease,opacity .15s ease;
+  }
+  .pager-btn:hover{transform:translateY(-1px);}
+  .pager-prev{background:#e5e7eb;color:#0f172a;}
+  .pager-next{background:#2563eb;color:#fff;}
+  .pager-btn[aria-disabled="true"]{
+    opacity:.45;pointer-events:none;filter:grayscale(20%);
+  }
+  @media (max-width:640px){
+    .pager{padding:4px 8px;gap:8px}
+    .pager-btn{width:40px;height:40px}
+    .pager-label{min-width:80px;font-size:.9rem}
+  }
 
   .disc-badge{
-    position:absolute; top:.5rem; left:.5rem;
-    background:#ef4444; color:#fff; font-weight:700;
-    font-size:.75rem; line-height:1; padding:.4rem .5rem; border-radius:.5rem;
+    position:absolute;top:.5rem;left:.5rem;
+    background:#ef4444;color:#fff;font-weight:700;
+    font-size:.75rem;line-height:1;
+    padding:.4rem .5rem;border-radius:.5rem;
     box-shadow:0 6px 14px rgba(0,0,0,.35);
     z-index:2;
   }
 
-  /* ===================== */
-  /*   IMAGE LOADING UI    */
-  /* ===================== */
-  .img-wrapper{ position:relative; background:#171717; overflow:hidden; }
-  .img-wrapper > img{ display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .28s ease; }
+  /* IMAGE LOADING UI */
+  .img-wrapper{
+    position:relative;
+    background:#171717;
+    overflow:hidden;
+  }
+  .img-wrapper > img{
+    display:block;
+    width:100%;height:100%;
+    object-fit:cover;
+    opacity:0;
+    transition:opacity .28s ease;
+  }
   .img-wrapper > img.is-loaded{ opacity:1; }
-
-  .img-loading{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+  .img-loading{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    background:#171717;z-index:1;
+  }
   .img-loading.is-hidden{ display:none; }
-
-  .spinner{ width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite; }
+  .spinner{
+    width:40px;height:40px;
+    border:3px solid rgba(255,255,255,.18);
+    border-top-color:#9ca3af;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
-  /* Optional camera glyph when desired */
-  .camera-icon{ width:48px; height:48px; color:rgba(255,255,255,.35); }
-
-  /* Reduce motion preference */
   @media (prefers-reduced-motion: reduce){
     .img-wrapper > img{ transition:none; }
     .spinner{ animation:none; }
@@ -144,23 +250,28 @@
 <div class="min-h-screen bg-neutral-900 text-white"
      style="background-image:url('{{ asset('images/bg/background_1.png') }}');background-size:cover;background-position:center;background-repeat:no-repeat;">
 
-  {{-- HERO --}}
-  <div class="mb-16 bg-cover bg-center p-24 sm-hidden" style="background-image:url('/images/bg/product_breadcrumb.png');">
+  {{-- HERO DESKTOP --}}
+  <div class="mb-16 bg-cover bg-center p-24 sm-hidden"
+       style="background-image:url('{{ asset('images/bg/product_breadcrumb.png') }}');">
     <p class="text-sm text-gray-400 mt-1">
       <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Product
     </p>
     <h2 class="text-4xl font-bold uppercase text-white">Explore All Products</h2>
   </div>
-  <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden" style="background-image:url('/images/bg/product_breadcrumb.png');">
+
+  {{-- HERO MOBILE --}}
+  <div class="mb-8 bg-cover bg-center p-6 sm:p-12 lg-hidden"
+       style="background-image:url('{{ asset('images/bg/product_breadcrumb.png') }}');">
     <p class="text-xs sm:text-sm text-gray-400 mt-1">
       <a href="{{ route('index') }}" class="text-gray-400 hover:underline">Home</a> / Product
     </p>
-    <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold uppercase text-white mt-2">Explore All Products</h2>
+    <h2 class="text-2xl sm:text-3xl font-bold uppercase text-white mt-2">Explore All Products</h2>
   </div>
 
-  {{-- Mobile Filter Button --}}
+  {{-- MOBILE FILTER TRIGGER --}}
   <div class="lg-hidden px-4 sm:px-6 mb-4">
-    <button id="mobileFilterBtn" class="w-full bg-transparent rounded border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400/20">
+    <button id="mobileFilterBtn"
+            class="w-full bg-transparent border border-gray-400 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-400/20">
       <i class="fas fa-filter"></i>
       Filter & Search
     </button>
@@ -176,11 +287,13 @@
           <button id="closeMobileFilter" class="text-2xl text-gray-400 hover:text-white">&times;</button>
         </div>
 
-        <form method="GET" action="{{ route('products.landing') }} " class="space-y-4">
+        <form method="GET" action="{{ route('products.landing') }}" class="space-y-4">
           {{-- SEARCH --}}
           <div>
-            <input type="text" name="search" placeholder="Search products, SKU or description" value="{{ request('search') }}"
-              class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            <input type="text" name="search"
+                   placeholder="Search products, SKU or description"
+                   value="{{ request('search') }}"
+                   class="w-full rounded border border-gray-400 bg-transparent px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
           </div>
 
           {{-- CATEGORY --}}
@@ -192,12 +305,16 @@
             <div class="toggleContent overflow-hidden max-h-96 transition-all duration-300">
               <div class="space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="category" value="" {{ request('category') ? '' : 'checked' }} class="accent-blue-600" />
+                  <input type="radio" name="category" value=""
+                         {{ request('category') ? '' : 'checked' }}
+                         class="accent-blue-600" />
                   <span class="text-sm">All Categories</span>
                 </label>
                 @foreach ($categories as $cat)
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="category" value="{{ $cat->id }}" {{ (string)request('category')===(string)$cat->id ? 'checked' : '' }} class="accent-blue-600" />
+                    <input type="radio" name="category" value="{{ $cat->id }}"
+                           {{ (string)request('category')===(string)$cat->id ? 'checked' : '' }}
+                           class="accent-blue-600" />
                     <span class="text-sm">{{ $cat->name }}</span>
                   </label>
                 @endforeach
@@ -214,12 +331,16 @@
             <div class="toggleContent overflow-hidden max-h-96 transition-all duration-300">
               <div class="space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="brand" value="" {{ request('brand') ? '' : 'checked' }} class="accent-blue-600" />
+                  <input type="radio" name="brand" value=""
+                         {{ request('brand') ? '' : 'checked' }}
+                         class="accent-blue-600" />
                   <span class="text-sm">All Brands</span>
                 </label>
                 @foreach ($brands as $brand)
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="brand" value="{{ $brand }}" {{ request('brand')===$brand ? 'checked' : '' }} class="accent-blue-600" />
+                    <input type="radio" name="brand" value="{{ $brand }}"
+                           {{ request('brand')===$brand ? 'checked' : '' }}
+                           class="accent-blue-600" />
                     <span class="text-sm">{{ $brand }}</span>
                   </label>
                 @endforeach
@@ -237,7 +358,7 @@
               <div class="flex gap-3">
                 @foreach ($conditions as $val => $label)
                   <button type="submit" name="condition" value="{{ $val }}"
-                    class="flex-1 rounded border border-gray-400 px-3 py-2 text-sm hover:bg-gray-600 {{ request('condition')===$val ? 'bg-gray-600' : '' }}">
+                          class="flex-1 rounded border border-gray-400 px-3 py-2 text-sm hover:bg-gray-600 {{ request('condition')===$val ? 'bg-gray-600' : '' }}">
                     {{ $label }}
                   </button>
                 @endforeach
@@ -252,10 +373,12 @@
               <span class="toggleBtn text-xl leading-none text-gray-300 cursor-pointer">–</span>
             </div>
             <div class="toggleContent w-full flex items-center gap-2">
-              <input type="text" id="price_min" name="price_min" placeholder="Min" value="{{ request('price_min') }}"
-                class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
-              <input type="text" id="price_max" name="price_max" placeholder="Max" value="{{ request('price_max') }}"
-                class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
+              <input type="text" id="price_min" name="price_min" placeholder="Min"
+                     value="{{ request('price_min') }}"
+                     class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
+              <input type="text" id="price_max" name="price_max" placeholder="Max"
+                     value="{{ request('price_max') }}"
+                     class="w-1/2 rounded border border-gray-400 px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500" />
             </div>
           </div>
 
@@ -268,15 +391,21 @@
             <div class="toggleContent overflow-hidden max-h-96 transition-all duration-300">
               <div class="space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="status" value="" {{ request('status') ? '' : 'checked' }} class="accent-blue-600" />
+                  <input type="radio" name="status" value=""
+                         {{ request('status') ? '' : 'checked' }}
+                         class="accent-blue-600" />
                   <span class="text-sm">Any</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="status" value="in-stock" {{ request('status')==='in-stock' ? 'checked' : '' }} class="accent-blue-600" />
+                  <input type="radio" name="status" value="in-stock"
+                         {{ request('status')==='in-stock' ? 'checked' : '' }}
+                         class="accent-blue-600" />
                   <span class="text-sm">In stock</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="status" value="out-of-stock" {{ request('status')==='out-of-stock' ? 'checked' : '' }} class="accent-blue-600" />
+                  <input type="radio" name="status" value="out-of-stock"
+                         {{ request('status')==='out-of-stock' ? 'checked' : '' }}
+                         class="accent-blue-600" />
                   <span class="text-sm">Out of stock</span>
                 </label>
               </div>
@@ -285,7 +414,8 @@
 
           {{-- ACTION BUTTONS --}}
           <div class="flex gap-2 pt-2 sticky bottom-0 bg-[#171717] py-3 border-t border-white/10 lg:static lg:bg-transparent lg:border-0">
-            <button type="submit" class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">
+            <button type="submit"
+                    class="flex-1 rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600">
               Apply
             </button>
             <a href="{{ route('products.landing') }}"
@@ -315,30 +445,30 @@
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         @forelse ($products as $product)
           @php
-            $slug  = Str::slug($product->name);
-            $praw  = (float) ($product->pricing ?? 0);
-            $dp    = $normDisc($product->discount ?? 0); // 0–100
-            $hasD  = $dp > 0;
-            $final = $finalPrice($praw, $dp);
-
+            $slug       = Str::slug($product->name);
+            $praw       = (float) ($product->pricing ?? 0);
+            $dp         = $normDisc($product->discount ?? 0);
+            $hasD       = $dp > 0;
+            $final      = $finalPrice($praw, $dp);
             $candidates = $buildIdImageCandidates($product);
-            $primarySrc = $candidates[0] ?? "{$feBaseProducts}placeholder.png";
+            $primarySrc = $candidates[0] ?? ($feBaseProducts . 'placeholder.png');
           @endphp
 
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="cursor-pointer">
             <div class="rounded-lg lg:rounded-xl bg-neutral-800 p-2 sm:p-3 shadow-md hover:shadow-lg transition-shadow h-full">
               <div class="relative aspect-[3/4] overflow-hidden rounded-md bg-neutral-700 mb-2 sm:mb-3 img-wrapper">
                 @if($hasD)
-                  <span class="disc-badge">-{{ rtrim(rtrim(number_format($dp, 2, ',', '.'), '0'), ',') }}%</span>
+                  <span class="disc-badge">
+                    -{{ rtrim(rtrim(number_format($dp, 2, ',', '.'), '0'), ',') }}%
+                  </span>
                 @endif
 
-                <!-- Loading overlay -->
-                <div class="img-loading" aria-hidden="true" role="progressbar" aria-label="Loading image">
+                <div class="img-loading" aria-hidden="true" role="progressbar">
                   <div class="spinner" aria-hidden="true"></div>
                 </div>
 
                 <img
-                  class="h-full w-full object-cover js-img-fallback"
+                  class="h-full w-full object-cover"
                   src="{{ $primarySrc }}"
                   data-src-candidates='@json($candidates)'
                   data-lazy-load="true"
@@ -349,7 +479,9 @@
               </div>
 
               <h4 class="text-xs sm:text-sm font-medium line-clamp-2">{{ $product->name }}</h4>
-              <p class="text-[11px] sm:text-xs text-gray-400 mt-0.5">{{ $product->brand }} • {{ ucfirst($product->condition) }}</p>
+              <p class="text-[11px] sm:text-xs text-gray-400 mt-0.5">
+                {{ $product->brand }} • {{ ucfirst($product->condition) }}
+              </p>
 
               @if($hasD)
                 <div class="mt-1">
@@ -374,21 +506,35 @@
         @endforelse
       </div>
 
+      {{-- SIMPLE PAGER (prev/next) --}}
       @php
         $current = $products->currentPage();
         $last    = $products->lastPage();
-        $prevUrl = $current > 1    ? $products->appends(request()->query())->url($current - 1) : null;
-        $nextUrl = $current < $last? $products->appends(request()->query())->url($current + 1) : null;
+        $prevUrl = $current > 1
+          ? $products->appends(request()->query())->url($current - 1)
+          : null;
+        $nextUrl = $current < $last
+          ? $products->appends(request()->query())->url($current + 1)
+          : null;
       @endphp
+
       <div class="flex justify-center mt-6">
         <nav class="pager" role="navigation" aria-label="Pagination">
           @if ($prevUrl)
             <a class="pager-btn pager-prev" href="{{ $prevUrl }}" aria-label="Previous page">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M15 19l-7-7 7-7"
+                      stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </a>
           @else
             <span class="pager-btn pager-prev" aria-disabled="true" aria-label="Previous page">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M15 19l-7-7 7-7"
+                      stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </span>
           @endif
 
@@ -396,11 +542,19 @@
 
           @if ($nextUrl)
             <a class="pager-btn pager-next" href="{{ $nextUrl }}" aria-label="Next page">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M9 5l7 7-7 7"
+                      stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </a>
           @else
             <span class="pager-btn pager-next" aria-disabled="true" aria-label="Next page">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M9 5l7 7-7 7"
+                      stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </span>
           @endif
         </nav>
@@ -416,8 +570,7 @@
     <button
       aria-label="Shopping cart with {{ $cartCount }} items"
       onclick="showCart?.()"
-      class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
-    >
+      class="fixed right-6 top-[60%] bg-[#2a2a2a] rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
       <i class="fas fa-shopping-cart text-white text-3xl"></i>
       @if ($cartCount > 0)
         <span class="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
@@ -427,58 +580,66 @@
     </button>
   @endif
 
-  {{-- gunakan includeIf agar tidak 500 bila partial belum ada --}}
   @includeIf('public.cart')
 </div>
+@endsection
 
+@push('scripts')
 <script>
+  // Format input harga min/max (IDR)
   function formatNumberInput(input) {
     let v = input.value.replace(/\D/g,"");
     input.value = v ? new Intl.NumberFormat("id-ID").format(v) : "";
   }
-  function unformatNumberInput(input){ return input.value.replace(/\./g,""); }
+  function unformatNumberInput(input){
+    return input.value.replace(/\./g,"");
+  }
 
-  // =====================
-  // IMAGE LOADER + FALLBACK CHAIN
-  // =====================
+  // Image loader + fallback chain dari data-src-candidates
   function initImageLoadingWithFallback(){
     document.querySelectorAll('.img-wrapper').forEach(wrapper => {
-      const img = wrapper.querySelector('img[data-lazy-load]');
+      const img    = wrapper.querySelector('img[data-lazy-load]');
       const loader = wrapper.querySelector('.img-loading');
-      if(!img) return;
+      if (!img) return;
 
-      // candidate list from data attribute
       let list = [];
-      try{ list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); }catch(e){ list = []; }
-      if(!Array.isArray(list) || list.length === 0){ list = [img.getAttribute('src')].filter(Boolean); }
+      try {
+        list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+      } catch(e) {
+        list = [];
+      }
+      if (!Array.isArray(list) || list.length === 0) {
+        const src = img.getAttribute('src');
+        if (src) list = [src];
+      }
 
       let idx = 0;
-      const hideLoader = () => loader && loader.classList.add('is-hidden');
-      const showLoader = () => loader && loader.classList.remove('is-hidden');
+
+      const hideLoader = () => { if (loader) loader.classList.add('is-hidden'); };
+      const showLoader = () => { if (loader) loader.classList.remove('is-hidden'); };
       const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
 
-      // if cached
-      if(img.complete && img.naturalWidth > 0){
+      if (img.complete && img.naturalWidth > 0) {
         markLoaded();
       } else {
         showLoader();
       }
 
-      // When image successfully loads
       img.addEventListener('load', () => {
-        // naturalWidth>0 ensures it's a real image rendered
-        if(img.naturalWidth > 0){ markLoaded(); }
+        if (img.naturalWidth > 0) {
+          markLoaded();
+        }
       }, { passive:true });
 
-      // On error, try next candidate
       img.addEventListener('error', () => {
-        if(idx < list.length - 1){
+        if (idx < list.length - 1) {
           idx++;
           showLoader();
           const nextSrc = list[idx];
-          if(nextSrc && img.src !== nextSrc){ img.src = nextSrc; }
+          if (nextSrc && img.src !== nextSrc) {
+            img.src = nextSrc;
+          }
         } else {
-          // No more candidates, stop spinner and reveal (will just show last src / broken icon avoided by placeholder list)
           markLoaded();
         }
       }, { passive:true });
@@ -488,44 +649,60 @@
   document.addEventListener("DOMContentLoaded", () => {
     const minI = document.getElementById("price_min");
     const maxI = document.getElementById("price_max");
-    if(minI?.value) minI.value = new Intl.NumberFormat("id-ID").format(minI.value);
-    if(maxI?.value) maxI.value = new Intl.NumberFormat("id-ID").format(maxI.value);
-    minI?.addEventListener("input", () => formatNumberInput(minI));
-    maxI?.addEventListener("input", () => formatNumberInput(maxI));
-    minI?.form?.addEventListener("submit", () => {
-      if(minI) minI.value = unformatNumberInput(minI);
-      if(maxI) maxI.value = unformatNumberInput(maxI);
-    });
 
-    document.querySelectorAll(".toggleBtn").forEach((btn) => {
+    if (minI && minI.value) minI.value = new Intl.NumberFormat("id-ID").format(minI.value);
+    if (maxI && maxI.value) maxI.value = new Intl.NumberFormat("id-ID").format(maxI.value);
+
+    minI && minI.addEventListener("input", () => formatNumberInput(minI));
+    maxI && maxI.addEventListener("input", () => formatNumberInput(maxI));
+
+    if (minI && minI.form) {
+      minI.form.addEventListener("submit", () => {
+        if (minI) minI.value = unformatNumberInput(minI);
+        if (maxI) maxI.value = unformatNumberInput(maxI);
+      });
+    }
+
+    // Toggle filter sections
+    document.querySelectorAll(".toggleBtn").forEach(btn => {
       const content = btn.parentElement.nextElementSibling;
       btn.addEventListener("click", () => {
-        if (content.classList.contains("max-h-0")) { content.classList.remove("max-h-0"); btn.textContent = "–"; }
-        else { content.classList.add("max-h-0"); btn.textContent = "+"; }
+        if (!content) return;
+        if (content.classList.contains("max-h-0")) {
+          content.classList.remove("max-h-0");
+          btn.textContent = "–";
+        } else {
+          content.classList.add("max-h-0");
+          btn.textContent = "+";
+        }
       });
     });
 
+    // Mobile filter open/close
     const mobileFilterBtn     = document.getElementById("mobileFilterBtn");
     const filterProduct       = document.getElementById("filterProduct");
     const mobileFilterOverlay = document.getElementById("mobileFilterOverlay");
     const closeMobileFilter   = document.getElementById("closeMobileFilter");
 
     function openMobileFilter() {
+      if (!filterProduct || !mobileFilterOverlay) return;
       filterProduct.classList.add("open");
       mobileFilterOverlay.classList.add("active");
       document.body.style.overflow = "hidden";
     }
     function closeMobileFilterFunc() {
+      if (!filterProduct || !mobileFilterOverlay) return;
       filterProduct.classList.remove("open");
       mobileFilterOverlay.classList.remove("active");
       document.body.style.overflow = "";
     }
-    mobileFilterBtn?.addEventListener("click", openMobileFilter);
-    closeMobileFilter?.addEventListener("click", closeMobileFilterFunc);
-    mobileFilterOverlay?.addEventListener("click", closeMobileFilterFunc);
 
-    // Init image loader + fallback chain
+    mobileFilterBtn && mobileFilterBtn.addEventListener("click", openMobileFilter);
+    closeMobileFilter && closeMobileFilter.addEventListener("click", closeMobileFilterFunc);
+    mobileFilterOverlay && mobileFilterOverlay.addEventListener("click", closeMobileFilterFunc);
+
+    // Init image loading
     initImageLoadingWithFallback();
   });
 </script>
-@endsection
+@endpush

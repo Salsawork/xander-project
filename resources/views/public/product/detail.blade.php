@@ -19,7 +19,7 @@
             $host = strtolower($parts['host'] ?? '');
             $path = $parts['path'] ?? '';
             $name = basename($path);
-            if ($host === 'demo-xanders.ptbmn.id') {
+            if ($host === 'xanderbilliard.site') {
                 return $name ? $feBaseProducts . $name : $s;
             }
             return $s; // CDN eksternal tetap dipakai apa adanya

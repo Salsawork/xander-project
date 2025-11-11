@@ -14,15 +14,57 @@
             -webkit-text-size-adjust:100%;
         }
         #antiBounceBg{
-            position:fixed; left:0; right:0; top:-120svh; bottom:-120svh; background:var(--page-bg);
-            z-index:-1; pointer-events:none;
+            position:fixed; left:0; right:0; top:-120svh; bottom:-120svh;
+            background:var(--page-bg); z-index:-1; pointer-events:none;
         }
-        .scroll-safe{ background-color:#171717; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
-        .btn{ display:inline-flex; align-items:center; gap:.5rem; padding:.55rem .9rem; border-radius:.55rem; font-weight:600; font-size:.9rem; transition:.15s ease; }
+        .scroll-safe{
+            background-color:#171717;
+            overscroll-behavior:contain;
+            -webkit-overflow-scrolling:touch;
+        }
+        .btn{
+            display:inline-flex; align-items:center; gap:.5rem;
+            padding:.55rem .9rem; border-radius:.55rem;
+            font-weight:600; font-size:.9rem; transition:.15s ease;
+        }
         .btn-green{ background:#16a34a; color:#fff; }
         .btn-green:hover{ background:#15803d; }
     </style>
 @endpush
+
+@php
+    /*
+     |--------------------------------------------------------------------------
+     | BUKTI PEMBAYARAN REGISTRASI EVENT
+     |--------------------------------------------------------------------------
+     | File fisik:
+     |   /home/xanderbilliard.site/public_html/images/payments/registrations/{filename}
+     |
+     | URL publik:
+     |   https://xanderbilliard.site/images/payments/registrations/{filename}
+     | Blade:
+     |   asset('images/payments/registrations/{filename}')
+     |--------------------------------------------------------------------------
+    */
+
+    $regProofBase = rtrim(asset('images/payments/registrations'), '/') . '/';
+
+    if (!function_exists('xb_reg_proof_url')) {
+        /**
+         * Normalisasi bukti_payment menjadi URL:
+         *   {base}/{basename(bukti_payment)}
+         * Mengabaikan path lain (storage/, dsb).
+         */
+        function xb_reg_proof_url($reg, string $base): ?string {
+            if (empty($reg->bukti_payment)) return null;
+
+            $name = basename(str_replace('\\','/', $reg->bukti_payment));
+            if ($name === '' || $name === '.' || $name === '..') return null;
+
+            return rtrim($base, '/') . '/' . $name;
+        }
+    }
+@endphp
 
 @section('content')
     <div id="antiBounceBg" aria-hidden="true"></div>
@@ -30,6 +72,7 @@
     <div class="flex flex-col min-h-screen bg-neutral-900 text-white font-sans">
         <div class="flex flex-1 min-h-0">
             @include('partials.sidebar')
+
             <main class="flex-1 overflow-y-auto min-w-0 mb-8 scroll-safe">
                 @include('partials.topbar')
 
@@ -40,11 +83,15 @@
 
                     {{-- Flash messages --}}
                     @if (session('success'))
-                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">{{ session('success') }}</div>
+                        <div class="mb-4 bg-green-500 text-white px-4 py-2 rounded text-sm">
+                            {{ session('success') }}
+                        </div>
                     @endif
 
                     @if (session('error'))
-                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">{{ session('error') }}</div>
+                        <div class="mb-4 bg-red-500 text-white px-4 py-2 rounded text-sm">
+                            {{ session('error') }}
+                        </div>
                     @endif
 
                     {{-- Search & Export --}}
@@ -70,7 +117,7 @@
                         </div>
                     </div>
 
-                    <!-- Desktop & Tablet Table View -->
+                    {{-- DESKTOP & TABLET TABLE VIEW --}}
                     <div class="hidden sm:block overflow-x-auto">
                         <table class="w-full text-left text-sm border border-gray-700 rounded-md overflow-hidden">
                             <thead class="bg-[#2c2c2c] text-gray-300">
@@ -87,21 +134,32 @@
                             <tbody class="divide-y divide-gray-700">
                                 @forelse ($players as $player)
                                     @forelse ($player->eventRegistrations as $reg)
+                                        @php
+                                            $proofUrl = xb_reg_proof_url($reg, $regProofBase);
+                                        @endphp
                                         <tr>
                                             <td class="px-4 py-3">{{ $player->name }}</td>
                                             <td class="px-4 py-3">{{ $player->email }}</td>
                                             <td class="px-4 py-3">
-                                                @if ($player->eventRegistrations->isNotEmpty())
-                                                    {{ $player->eventRegistrations->first()->event->name ?? '-' }}
+                                                @if ($reg->event && $reg->event->name)
+                                                    {{ $reg->event->name }}
                                                 @else
                                                     <span class="text-gray-400">-</span>
                                                 @endif
                                             </td>
-                                            <td class="px-4 py-3">Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}</td>
                                             <td class="px-4 py-3">
-                                                @if ($reg->bukti_payment)
-                                                    <a href="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" target="_blank">
-                                                        <img src="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" alt="bukti" width="60" class="rounded-md border border-gray-600">
+                                                Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                @if ($proofUrl)
+                                                    <a href="{{ $proofUrl }}" target="_blank">
+                                                        <img
+                                                            src="{{ $proofUrl }}"
+                                                            alt="Bukti pembayaran"
+                                                            width="60"
+                                                            class="rounded-md border border-gray-600 object-cover"
+                                                            onerror="this.onerror=null;this.style.display='none';"
+                                                        >
                                                     </a>
                                                 @else
                                                     <span class="text-gray-400 italic">Tidak ada</span>
@@ -119,7 +177,8 @@
                                                     <form action="{{ route('admin.users.verify', $player->id) }}" method="POST" class="inline">
                                                         @csrf
                                                         <input type="hidden" name="event_id" value="{{ $reg->event_id }}">
-                                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
+                                                        <button type="submit"
+                                                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
                                                             Verify
                                                         </button>
                                                     </form>
@@ -130,12 +189,14 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center text-gray-500 py-4">Tidak ada data pendaftaran.</td>
+                                            <td colspan="7" class="text-center text-gray-500 py-4">
+                                                Tidak ada data pendaftaran.
+                                            </td>
                                         </tr>
                                     @endforelse
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">
+                                        <td colspan="7" class="px-4 py-6 text-center text-gray-400">
                                             Belum ada player yang terdaftar.
                                         </td>
                                     </tr>
@@ -144,25 +205,45 @@
                         </table>
                     </div>
 
-                    <!-- Mobile Card View -->
+                    {{-- MOBILE CARD VIEW --}}
                     <div class="sm:hidden space-y-4">
                         @forelse ($players as $player)
                             @foreach ($player->eventRegistrations as $reg)
+                                @php
+                                    $proofUrl = xb_reg_proof_url($reg, $regProofBase);
+                                @endphp
                                 <div class="bg-[#2c2c2c] rounded-lg p-4 border border-gray-700">
                                     <div class="mb-3 pb-3 border-b border-gray-700">
-                                        <h3 class="font-semibold text-base mb-2">{{ $player->name }}</h3>
-                                        <p class="text-xs text-gray-400">{{ $player->email }}</p>
-                                        <p class="text-xs mt-2">
-                                            Total: Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}
+                                        <h3 class="font-semibold text-base mb-1">{{ $player->name }}</h3>
+                                        <p class="text-xs text-gray-400 mb-1">{{ $player->email }}</p>
+
+                                        <p class="text-xs text-gray-300">
+                                            Event:
+                                            @if ($reg->event && $reg->event->name)
+                                                <span class="font-semibold">{{ $reg->event->name }}</span>
+                                            @else
+                                                <span class="text-gray-400">-</span>
+                                            @endif
                                         </p>
+
+                                        <p class="text-xs mt-2">
+                                            Total:
+                                            <span class="font-semibold">
+                                                Rp{{ number_format($reg->total_payment ?? 0, 0, ',', '.') }}
+                                            </span>
+                                        </p>
+
                                         <p class="text-xs mt-2">
                                             Bukti:
-                                            @if ($reg->bukti_payment)
-                                                <a href="{{ asset('images/payments/registrations/' . $reg->bukti_payment) }}" target="_blank" class="text-blue-400 underline">Lihat</a>
+                                            @if ($proofUrl)
+                                                <a href="{{ $proofUrl }}" target="_blank" class="text-blue-400 underline">
+                                                    Lihat Bukti
+                                                </a>
                                             @else
                                                 <span class="text-gray-400 italic">Tidak ada</span>
                                             @endif
                                         </p>
+
                                         <p class="text-xs mt-2">
                                             Status:
                                             @if ($player->status_player == 1)
@@ -183,7 +264,9 @@
                                             </button>
                                         </form>
                                     @else
-                                        <div class="text-gray-400 text-center">✔ Terverifikasi</div>
+                                        <div class="text-gray-400 text-center">
+                                            ✔ Terverifikasi
+                                        </div>
                                     @endif
                                 </div>
                             @endforeach

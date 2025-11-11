@@ -27,10 +27,9 @@
 
   .hero-viewport{
     height: calc(95vh - var(--header-h, 0px));
-    min-height: 750px; /* desktop tetap */
+    min-height: 750px;
   }
 
-  /* ======== MOBILE TUNING: banner lebih kecil & rapi ======== */
   @media (max-width: 640px){
     .hero-viewport{
       height: min(calc(48vh - var(--header-h, 0px)), 420px);
@@ -57,24 +56,42 @@
   .swiper-pagination-bullet { background: #ffffff !important; opacity: .5; }
   .swiper-pagination-bullet-active { opacity: 1; }
 
-  /* =======================
-     IMAGE LOADING OVERLAY
-     ======================= */
-  .img-wrapper{ position: relative; background:#141414; width:100%; height:100%; overflow:hidden; }
+  .img-wrapper{
+    position: relative;
+    background:#141414;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
   .img-wrapper img{
-    width:100%; height:100%; object-fit:cover; display:block;
-    opacity:0; transition:opacity .28s ease;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    opacity:0;
+    transition:opacity .28s ease;
   }
   .img-wrapper img.loaded{ opacity:1; }
   .img-loading{
-    position:absolute; inset:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:10px;
-    background:#151515; color:#9ca3af; z-index:1;
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:#151515;
+    color:#9ca3af;
+    z-index:1;
   }
   .img-loading.hidden{ display:none; }
   .spinner{
-    width:42px; height:42px; border:3px solid rgba(130,130,130,.25);
-    border-top-color:#9ca3af; border-radius:50%; animation:spin .8s linear infinite;
+    width:42px;
+    height:42px;
+    border:3px solid rgba(130,130,130,.25);
+    border-top-color:#9ca3af;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .camera-icon{ width:38px; height:38px; opacity:.6; }
@@ -82,48 +99,71 @@
 @endpush
 
 @php
-  /**
-   * Build kandidat URL gambar news:
-   * 1) Jika absolute URL → pakai langsung
-   * 2) Jika relative:
-   *    - storage/... (tetap)
-   *    - uploads/... → storage/uploads/...
-   *    - string lain → storage/uploads/{string}
-   * 3) Fallback FE: images/community/community-1.png
-   * 4) Last resort: placehold.co
-   */
-  $newsImgCandidates = function (?string $raw) {
-      $raw = is_string($raw) ? trim($raw) : '';
-      // Bersihkan localhost dev base yang mungkin ikut tersimpan
-      $clean = str_replace([
-        'http://127.0.0.1:8000','https://127.0.0.1:8000',
-        'http://localhost:8000','https://localhost:8000','http://localhost','https://localhost'
-      ], '', $raw);
+    /**
+     * NEWS IMAGE RESOLVER
+     * ===================
+     * Folder server:
+     *   /home/xanderbilliard.site/public_html/images/community
+     *
+     * URL publik:
+     *   {{ asset('images/community/{filename}') }}
+     *
+     * Logika:
+     * - Ambil nama file dari field: image_url, image, banner, thumbnail, cover (berurutan).
+     * - Jika value adalah URL absolut → ambil basename path-nya.
+     * - Jika file tsb ada di /images/community → pakai asset('images/community/filename').
+     * - Jika tidak ada → fallback ke:
+     *      - community-1.png (jika ada)
+     *      - placeholder.png (jika ada)
+     *      - terakhir: asset('images/community/community-1.png')
+     */
 
-      $c = [];
-      if ($clean !== '') {
-          if (preg_match('~^https?://~i', $clean)) {
-              $c[] = $clean;
-          } else {
-              $path = ltrim($clean, '/');
-              if (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
-                  $c[] = asset($path);
-              } elseif (\Illuminate\Support\Str::startsWith($path, 'uploads/')) {
-                  $c[] = asset('storage/'.$path);
-              } else {
-                  $c[] = asset('storage/uploads/'.$path);
-              }
-          }
-      }
-      // Fallbacks FE-only
-      $c[] = asset('images/community/community-1.png');
-      // Last resort
-      $c[] = 'https://placehold.co/1200x800?text=No+Image';
-      // Unique
-      $uniq = [];
-      foreach ($c as $x) if (is_string($x) && $x !== '' && !in_array($x, $uniq, true)) $uniq[] = $x;
-      return $uniq;
-  };
+    $COMMUNITY_FS_BASE  = '/home/xanderbilliard.site/public_html/images/community';
+    $COMMUNITY_WEB_BASE = rtrim(asset('images/community'), '/') . '/';
+
+    $pickNewsFilename = function ($news): ?string {
+        $fields = ['image_url', 'image', 'banner', 'thumbnail', 'cover'];
+        foreach ($fields as $f) {
+            if (!empty($news->{$f})) {
+                $raw = $news->{$f};
+
+                if (filter_var($raw, FILTER_VALIDATE_URL)) {
+                    $path = parse_url($raw, PHP_URL_PATH) ?? '';
+                    $name = basename(str_replace('\\','/',$path));
+                } else {
+                    $name = basename(str_replace('\\','/',$raw));
+                }
+
+                if ($name && $name !== '.' && $name !== '/') {
+                    return $name;
+                }
+            }
+        }
+        return null;
+    };
+
+    $newsImg = function ($news, string $fallback = 'community-1.png')
+        use ($COMMUNITY_FS_BASE, $COMMUNITY_WEB_BASE, $pickNewsFilename): string {
+
+        $name = $pickNewsFilename($news);
+
+        if ($name) {
+            $fs = rtrim($COMMUNITY_FS_BASE, '/') . '/' . $name;
+            if (@file_exists($fs)) {
+                return $COMMUNITY_WEB_BASE . $name;
+            }
+        }
+
+        $fallbacks = array_filter([$fallback, 'placeholder.png']);
+        foreach ($fallbacks as $fb) {
+            $fs = rtrim($COMMUNITY_FS_BASE, '/') . '/' . $fb;
+            if (@file_exists($fs)) {
+                return $COMMUNITY_WEB_BASE . $fb;
+            }
+        }
+
+        return asset('images/community/community-1.png');
+    };
 @endphp
 
 @section('content')
@@ -147,13 +187,11 @@
         <div class="swiper-wrapper">
           @forelse($featuredNews as $news)
             @php
-              $candidates = $newsImgCandidates($news->image_url ?? '');
-              $primary    = $candidates[0] ?? asset('images/community/community-1.png');
+              $primary = $newsImg($news);
             @endphp
 
             <div class="swiper-slide">
               <div class="absolute inset-0">
-                <!-- Wrapper + Loader -->
                 <div class="img-wrapper absolute inset-0 z-10">
                   <div class="img-loading">
                     <div class="spinner" aria-hidden="true"></div>
@@ -161,22 +199,18 @@
                   </div>
                   <img
                     src="{{ $primary }}"
-                    data-src-candidates='@json($candidates)'
                     data-lazy-img
                     alt="{{ $news->title }}"
                     loading="eager"
                     decoding="async"
                   />
                 </div>
-                <!-- Black overlay di bawah loader -->
                 <div class="absolute inset-0 bg-black/45 z-0 pointer-events-none"></div>
               </div>
 
-              <!-- Anchor overlay -->
               <a href="{{ route('community.news.show', $news) }}"
                  class="absolute inset-0 z-20" aria-label="{{ $news->title }}"></a>
 
-              <!-- Text -->
               <div class="absolute inset-0 z-30 flex items-center">
                 <div class="mx-auto w-full max-w-7xl px-6 md:px-16">
                   <div class="max-w-3xl translate-y-6 md:translate-y-10">
@@ -200,10 +234,12 @@
                 <div class="mx-auto w-full max-w-7xl px-6 md:px-16">
                   <div class="max-w-3xl translate-y-6 md:translate-y-10">
                     <p class="mb-2 text-sm text-gray-300">{{ now()->format('d F Y') }}</p>
-                    <h1 class="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">Welcome to
-                      Xander Billiard Community</h1>
-                    <p class="mb-6 text-gray-200">Join our community of billiard enthusiasts and stay
-                      updated with the latest news and events.</p>
+                    <h1 class="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
+                      Welcome to Xander Billiard Community
+                    </h1>
+                    <p class="mb-6 text-gray-200">
+                      Join our community of billiard enthusiasts and stay updated with the latest news and events.
+                    </p>
                     <a href="{{ route('community.news.index') }}"
                        class="inline-block bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 transition">
                       Browse News
@@ -231,11 +267,10 @@
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         @forelse($popularNews as $news)
           @php
-            $shareUrl   = route('community.news.show', $news);
-            $candidates = $newsImgCandidates($news->image_url ?? '');
-            $primary    = $candidates[0] ?? asset('images/community/community-1.png');
+            $shareUrl = route('community.news.show', $news);
+            $primary  = $newsImg($news);
           @endphp
-          <!-- Card with Share bottom-right -->
+
           <a href="{{ $shareUrl }}"
              class="group relative overflow-hidden rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] flex flex-col hover:bg-[#303030] transition">
             <div class="h-48 overflow-hidden">
@@ -246,7 +281,6 @@
                 </div>
                 <img
                   src="{{ $primary }}"
-                  data-src-candidates='@json($candidates)'
                   data-lazy-img
                   alt="{{ $news->title }}"
                   loading="lazy"
@@ -260,7 +294,6 @@
               <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
             </div>
 
-            <!-- Share button (transparent, no black background) -->
             <button type="button"
                     class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
                     style="right:12px;bottom:12px;background:transparent"
@@ -342,7 +375,6 @@
     </script>
   </section>
 
-
   <!-- Latest News Section -->
   <section class="relative bg-cover bg-center bg-no-repeat py-12"
            style="background-image: url('{{ asset('images/bg/background_1.png') }}')">
@@ -355,10 +387,10 @@
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         @forelse($recentNews as $news)
           @php
-            $shareUrl   = route('community.news.show', $news);
-            $candidates = $newsImgCandidates($news->image_url ?? '');
-            $primary    = $candidates[0] ?? asset('images/community/community-1.png');
+            $shareUrl = route('community.news.show', $news);
+            $primary  = $newsImg($news);
           @endphp
+
           <a href="{{ $shareUrl }}"
              class="group relative flex gap-4 rounded-xl border border-[#3A3A3A] bg-[#2D2D2D] p-4 hover:bg-[#303030] transition">
             <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
@@ -369,7 +401,6 @@
                 </div>
                 <img
                   src="{{ $primary }}"
-                  data-src-candidates='@json($candidates)'
                   data-lazy-img
                   alt="{{ $news->title }}"
                   loading="lazy"
@@ -382,7 +413,6 @@
               <p class="text-sm text-gray-300">{{ $news->published_at->format('d F Y') }}</p>
             </div>
 
-            <!-- Share bottom-right (transparent) -->
             <button type="button"
                     class="absolute z-20 p-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/30 right-3 bottom-3"
                     style="right:12px;bottom:12px;background:transparent"
@@ -406,7 +436,6 @@
       </div>
     </div>
   </section>
-
 
   <!-- Chatroom Section -->
   <section
@@ -446,7 +475,6 @@
     </div>
   </section>
 
-
   <!-- Feedback Section -->
   <section class="relative isolate bg-cover bg-center bg-no-repeat py-12 md:py-16"
            style="background-image:url('{{ asset('images/bg/background_3.png') }}')">
@@ -468,7 +496,9 @@
 
         <div class="flex flex-col h-full">
           <header class="pb-6">
-            <h2 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white">We Value Your Opinion!</h2>
+            <h2 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white">
+              We Value Your Opinion!
+            </h2>
             <p class="mt-3 max-w-2xl text-lg text-white/80">
               Your thoughts matter to us! Share your opinions and help us improve to better serve the billiard community.
             </p>
@@ -534,7 +564,6 @@
   window.addEventListener('load', setHeaderHeightVar);
   window.addEventListener('resize', setHeaderHeightVar);
 
-  // SHARE HANDLER (Web Share API + fallback copy link)
   async function handleShare(btn){
     const url = btn.getAttribute('data-share-url');
     const title = btn.getAttribute('data-share-title') || document.title;
@@ -584,7 +613,6 @@
     setTimeout(() => { t.style.opacity = '0'; }, 1600);
   }
 
-  // ===== Unified image loader for all images with [data-lazy-img] =====
   function initLazyImage(img){
     if (!img) return;
     const wrap   = img.closest('.img-wrapper');
@@ -603,30 +631,20 @@
 
     const onLoad = () => {
       img.classList.add('loaded');
-      loader && loader.classList.add('hidden');
+      if (loader) loader.classList.add('hidden');
     };
     img.addEventListener('load', onLoad, { passive:true });
 
-    let list = [];
-    try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]') || []; } catch(e){ list = []; }
-    let i = 0;
-
     const onError = () => {
-      i++;
-      if (i < list.length) {
-        if (img.src !== list[i]) img.src = list[i];
-      } else {
-        showCameraFallback();
-      }
+      showCameraFallback();
     };
     img.addEventListener('error', onError, { passive:true });
 
-    // If already cached
     if (img.complete && img.naturalWidth > 0) onLoad();
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    const swiper = new Swiper('.featured-slider', {
+    new Swiper('.featured-slider', {
       loop: true,
       resistanceRatio: 0,
       autoplay: { delay: 5000, disableOnInteraction: false },
@@ -634,10 +652,8 @@
       navigation: { nextEl: '.slider-next', prevEl: '.slider-prev' },
     });
 
-    // Init all lazy images with spinner + fallback chain
     document.querySelectorAll('img[data-lazy-img]').forEach(initLazyImage);
 
-    // iOS overscroll guard
     (function(){
       const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
       if (!isIOS) return;

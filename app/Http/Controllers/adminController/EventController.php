@@ -4,10 +4,13 @@ namespace App\Http\Controllers\adminController;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
 use App\Models\Event;
 use App\Models\OrderEvent;
 use App\Models\EventRegistration;
 use App\Exports\EventExport;
+use App\Models\User;
+use App\Models\Bracket;
 
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\File;
@@ -15,6 +18,72 @@ use Illuminate\Support\Str;
 
 class EventController extends Controller
 {
+    /**
+     * Lokasi absolut folder gambar event (FE):
+     *   /home/xanderbilliard.site/public_html/images/event
+     *
+     * URL publik yang cocok:
+     *   https://xanderbilliard.site/images/event/{filename}
+     *
+     * Di Blade:
+     *   asset('images/event/'.$filename)
+     *
+     * Di DB:
+     *   hanya simpan nama file, BUKAN path lengkap.
+     */
+    private function getFeEventDir(): string
+    {
+        return '/home/xanderbilliard.site/public_html/images/event';
+    }
+
+    /**
+     * Upload 1 file gambar event ke folder FE.
+     * Return: filename saja.
+     */
+    private function uploadImage($file): string
+    {
+        $fePath = $this->getFeEventDir();
+
+        if (!File::exists($fePath)) {
+            File::makeDirectory($fePath, 0755, true);
+        }
+
+        if (!$file || !$file->isValid()) {
+            throw new \RuntimeException('File gambar event tidak valid.');
+        }
+
+        $ext      = strtolower($file->getClientOriginalExtension());
+        $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeBase = Str::slug($origName) ?: 'event';
+        $unique   = now()->format('YmdHis') . '-' . Str::random(6);
+
+        $filename = "{$unique}-{$safeBase}.{$ext}";
+
+        // Simpan langsung ke folder FE target
+        $file->move($fePath, $filename);
+
+        return $filename;
+    }
+
+    /**
+     * Hapus file gambar event berdasarkan nama file di DB
+     * dari folder:
+     *   /home/xanderbilliard.site/public_html/images/event
+     */
+    private function deleteImage(?string $filename): void
+    {
+        if (!$filename) {
+            return;
+        }
+
+        $fePath = $this->getFeEventDir();
+        $feFile = $fePath . DIRECTORY_SEPARATOR . $filename;
+
+        if (File::exists($feFile)) {
+            @unlink($feFile);
+        }
+    }
+
     /**
      * GET /dashboard/event
      * name: admin.event.index
@@ -73,13 +142,13 @@ class EventController extends Controller
             'divisions'           => 'nullable|string',
             'social_media_handle' => 'nullable|string|max:255',
             'status'              => 'nullable|string|in:Upcoming,Ongoing,Ended',
-            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp,avif,gif|max:4096',
         ]);
 
-        // Upload gambar (opsional) — menyimpan filename saja
+        // Upload gambar (opsional) → simpan hanya filename
         $filename = null;
         if ($request->hasFile('image_url')) {
-            $filename = $this->uploadFile($request->file('image_url'));
+            $filename = $this->uploadImage($request->file('image_url'));
         }
 
         Event::create([
@@ -100,7 +169,7 @@ class EventController extends Controller
             'divisions'           => $request->divisions,
             'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? 'Upcoming',
-            'image_url'           => $filename, // simpan filename
+            'image_url'           => $filename, // hanya nama file
         ]);
 
         return redirect()
@@ -138,9 +207,8 @@ class EventController extends Controller
             'start_date'          => 'required|date',
             'end_date'            => 'required|date|after_or_equal:start_date',
             'game_types'          => 'required|string',
-            'price_ticket'        => 'nullable|integer|min:0',
-            'stock'               => 'nullable|integer|min:0',
             'price_ticket'        => 'nullable|numeric|min:0',
+            'stock'               => 'nullable|integer|min:0',
             'total_prize_money'   => 'nullable|numeric|min:0',
             'champion_prize'      => 'nullable|numeric|min:0',
             'runner_up_prize'     => 'nullable|numeric|min:0',
@@ -150,17 +218,15 @@ class EventController extends Controller
             'divisions'           => 'nullable|string',
             'social_media_handle' => 'nullable|string|max:255',
             'status'              => 'nullable|string|in:Upcoming,Ongoing,Ended',
-            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'image_url'           => 'nullable|image|mimes:jpg,jpeg,png,webp,avif,gif|max:4096',
         ]);
 
         $filename = $event->image_url;
 
-        // Ganti gambar jika upload baru
+        // Jika ada upload baru → hapus lama & simpan baru ke /images/event
         if ($request->hasFile('image_url')) {
-            // hapus lama di CMS & FE
-            $this->deleteFile($event->image_url);
-            // upload baru
-            $filename = $this->uploadFile($request->file('image_url'));
+            $this->deleteImage($event->image_url);
+            $filename = $this->uploadImage($request->file('image_url'));
         }
 
         $event->update([
@@ -181,7 +247,7 @@ class EventController extends Controller
             'divisions'           => $request->divisions,
             'social_media_handle' => $request->social_media_handle,
             'status'              => $request->status ?? $event->status,
-            'image_url'           => $filename, // simpan filename
+            'image_url'           => $filename, // hanya nama file
         ]);
 
         return redirect()
@@ -201,8 +267,8 @@ class EventController extends Controller
             return back()->with('error', 'Tidak bisa menghapus event karena masih memiliki tiket.');
         }
 
-        // hapus file di CMS & FE
-        $this->deleteFile($event->image_url);
+        // hapus file di folder FE /images/event
+        $this->deleteImage($event->image_url);
 
         $event->delete();
 
@@ -217,56 +283,9 @@ class EventController extends Controller
     public function export(Request $request)
     {
         $filename = 'events_' . now()->format('Ymd_His') . '.xlsx';
-        $search = $request->get('search');
+        $search   = $request->get('search');
 
         return Excel::download(new EventExport($search), $filename);
-    }
-
-    /* ============================================================
-     | Helpers upload/delete seperti BannerController
-     | Target: CMS => public/demo-xanders/images/events
-     |         FE  => ../demo-xanders/images/events
-     * ============================================================*/
-
-    /**
-     * Upload file, return filename aman (tanpa path).
-     */
-    private function uploadFile($file): string
-    {
-        // Nama aman
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $safeName     = preg_replace('/[^a-zA-Z0-9-_]/', '', Str::slug($originalName));
-        $filename     = time() . '-' . $safeName . '.' . $file->getClientOriginalExtension();
-
-        // Path CMS & FE
-        $cmsPath = public_path('demo-xanders/images/events');
-        $fePath  = base_path('../demo-xanders/images/events');
-
-        // Buat folder jika belum ada
-        if (!File::exists($cmsPath)) File::makeDirectory($cmsPath, 0755, true);
-        if (!File::exists($fePath))  File::makeDirectory($fePath, 0755, true);
-
-        // Simpan di CMS
-        $file->move($cmsPath, $filename);
-
-        // Copy ke FE
-        @copy($cmsPath . DIRECTORY_SEPARATOR . $filename, $fePath . DIRECTORY_SEPARATOR . $filename);
-
-        return $filename;
-    }
-
-    /**
-     * Hapus file di CMS & FE bila ada.
-     */
-    private function deleteFile(?string $filename): void
-    {
-        if (!$filename) return;
-
-        $cms = public_path('demo-xanders/images/events/' . $filename);
-        $fe  = base_path('../demo-xanders/images/events/' . $filename);
-
-        if (File::exists($cms)) @File::delete($cms);
-        if (File::exists($fe))  @File::delete($fe);
     }
 
     /**
@@ -316,61 +335,59 @@ class EventController extends Controller
     // Detail untuk verify pemesanan tiket event user
     public function detail($id)
     {
-        $event = Event::findOrFail($id);
+        $event  = Event::findOrFail($id);
         $orders = OrderEvent::with(['user', 'event', 'ticket', 'bank'])
-        ->where('event_id', $id)
-        ->latest()
-        ->get();
-    
+            ->where('event_id', $id)
+            ->latest()
+            ->get();
+
         return view('dash.admin.event.detail', compact('event', 'orders'));
     }
-    
 
     public function verify(Request $request, $id)
     {
         $user = User::findOrFail($id);
-    
+
         if ($user->roles !== 'player') {
             return back()->with('error', 'User bukan player.');
         }
-    
+
         $eventId = $request->input('event_id');
-        $event = Event::findOrFail($eventId);
-    
+        $event   = Event::findOrFail($eventId);
+
         // Ambil data pendaftaran
         $registration = EventRegistration::where('user_id', $user->id)
             ->where('event_id', $eventId)
             ->first();
-    
+
         if (!$registration) {
             return back()->with('error', 'Data pendaftaran tidak ditemukan.');
         }
-    
+
         // Pastikan masih ada slot
         if ($event->player_slots <= 0) {
             return back()->with('error', 'Slot pemain sudah habis.');
         }
-    
-        // ✅ Kurangi langsung 1 di database, tanpa simpan ulang model lama
+
+        // Kurangi slot
         Event::where('id', $eventId)->decrement('player_slots', $registration->slot ?? 1);
-    
-        // Update status player dan registrasi
+
+        // Update status player & registrasi
         $user->update(['status_player' => 1]);
         $registration->update(['status' => 'approved']);
-    
+
         // Tambah ke bracket
         Bracket::create([
-            'event_id' => $eventId,
-            'player_name' => $user->name,
-            'round' => 1,
-            'position' => null,
+            'event_id'            => $eventId,
+            'player_name'         => $user->name,
+            'round'               => 1,
+            'position'            => null,
             'next_match_position' => null,
-            'is_winner' => false,
+            'is_winner'           => false,
         ]);
-    
+
         return back()->with('success', 'Player berhasil diverifikasi dan slot event berkurang.');
     }
-    
 
     public function reject($id)
     {

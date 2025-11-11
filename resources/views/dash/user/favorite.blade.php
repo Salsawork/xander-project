@@ -1,3 +1,4 @@
+{{-- resources/views/dash/user/favorite.blade.php --}}
 @extends('app')
 @section('title', 'User Dashboard - Favorite')
 
@@ -5,11 +6,9 @@
 <style>
   :root{ color-scheme: dark; --page-bg:#0a0a0a; }
 
-  /* Root gelap + tinggi penuh */
   :root, html, body{ background:var(--page-bg); }
   html, body{ height:100%; }
 
-  /* Matikan overscroll glow/bounce tembus body */
   html, body{
     overscroll-behavior-y: none;
     overscroll-behavior-x: none;
@@ -17,7 +16,6 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  /* Kanvas gelap fixed di belakang semua konten (extend atas/bawah) */
   #antiBounceBg{
     position: fixed;
     left:0; right:0;
@@ -27,14 +25,11 @@
     pointer-events:none;
   }
 
-  /* Pastikan wrapper layout gelap juga */
   #app, main{ background:var(--page-bg); }
 
-  /* Scroll containers: cegah chaining + wajib bg gelap */
   .scroll-root{ overscroll-behavior: contain; background:var(--page-bg); }
-  .scroll-inner{ overscroll-beavior: contain; background:var(--page-bg); }
+  .scroll-inner{ overscroll-behavior: contain; background:var(--page-bg); }
 
-  /* ====== Animations shared ====== */
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
   .float-animation{ animation: float 3s ease-in-out infinite; }
 
@@ -44,7 +39,6 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
   .pulse-slow{ animation: pulse 2s ease-in-out infinite; }
 
-  /* ====== Tambahan style untuk tampilan saat ADA data ====== */
   .fav-badge{
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
@@ -78,22 +72,33 @@
     background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.3) 50%, rgba(0,0,0,.8) 100%);
   }
 
-  /* ====== Loader gambar + fade-in ====== */
+  /* Loader gambar */
   .img-wrapper { position: relative; background: #171717; overflow: hidden; border-radius: .5rem; }
-  .img-wrapper > img { display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity .28s ease; }
+  .img-wrapper > img {
+    display:block; width:100%; height:100%;
+    object-fit:cover; opacity:0; transition: opacity .28s ease;
+  }
   .img-wrapper > img.is-loaded { opacity:1; }
-  .img-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#171717; z-index:1; }
+  .img-loading {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:#171717; z-index:1;
+  }
   .img-loading.is-hidden { display:none; }
-  .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.18); border-top-color:#9ca3af; border-radius:50%; animation: spin .8s linear infinite; }
+  .spinner {
+    width:40px; height:40px;
+    border:3px solid rgba(255,255,255,.18);
+    border-top-color:#9ca3af;
+    border-radius:50%;
+    animation: spin .8s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 @endpush
 
 @section('content')
-<!-- Anti white flash canvas -->
 <div id="antiBounceBg" aria-hidden="true"></div>
 
-<!-- Stabilkan unit tinggi viewport di mobile (toolbar naik/turun) -->
 <script>
   (function(){
     function setSVH(){
@@ -106,8 +111,47 @@
 </script>
 
 @php
-  // FE base ABSOLUTE untuk venue
-  $feBase = 'https://xanderbilliard.site/images/venue/';
+  use App\Models\Order;
+
+  /**
+   * FOTO VENUE
+   *
+   * Lokasi fisik:
+   *   /home/xanderbilliard.site/public_html/images/venue
+   *
+   * Ini adalah public path, sehingga URL-nya:
+   *   https://xanderbilliard.site/images/venue/{filename}
+   *
+   * Di Blade pakai:
+   *   asset('images/venue/{filename}')
+   */
+
+  $venueBaseUrl = rtrim(asset('images/venue'), '/') . '/';
+
+  // Fallback file yang diasumsikan ada di /public/images/venue
+  $venueFallbacks = ['venue-1.jpg', 'venue-2.jpg', 'venue-3.jpg', 'venue-4.jpg'];
+
+  $orders = Order::where('order_type','venue')
+    ->where('user_id', auth()->id())
+    ->with(['bookings.venue'])
+    ->when(request('status'), function ($query) {
+      $status = request('status');
+      if ($status === 'booked') {
+        $query->whereHas('bookings', fn($q) => $q->where('status','booked'));
+      } elseif ($status) {
+        $query->where('payment_status', $status);
+      }
+    })
+    ->orderByDesc('created_at')
+    ->get();
+
+  $orderCount      = Order::where('order_type','venue')->where('user_id',auth()->id())->count();
+  $pendingCount    = Order::where('order_type','venue')->where('user_id',auth()->id())->where('payment_status','pending')->count();
+  $processingCount = Order::where('order_type','venue')->where('user_id',auth()->id())->where('payment_status','processing')->count();
+  $paidCount       = Order::where('order_type','venue')->where('user_id',auth()->id())->where('payment_status','paid')->count();
+  $failedCount     = Order::where('order_type','venue')->where('user_id',auth()->id())->where('payment_status','failed')->count();
+  $refundedCount   = Order::where('order_type','venue')->where('user_id',auth()->id())->where('payment_status','refunded')->count();
+  $bookedCount     = Order::where('order_type','venue')->where('user_id',auth()->id())->whereHas('bookings', fn($q)=>$q->where('status','booked'))->count();
 @endphp
 
 <div class="min-h-screen bg-neutral-900 text-white scroll-root">
@@ -127,7 +171,7 @@
         @endif
 
         @if ($favorites->isEmpty())
-          {{-- ====== Empty State (tetap) ====== --}}
+          {{-- EMPTY STATE --}}
           <div class="rounded-xl bg-gradient-to-br from-[#1f1f1f] to-[#151515] border border-white/10 p-12 text-center fade-in">
             <div class="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 grid place-items-center float-animation">
               <div class="w-20 h-20 rounded-full bg-gradient-to-br from-red-500/30 to-pink-500/30 grid place-items-center">
@@ -140,7 +184,8 @@
               Kamu belum menambahkan venue apapun ke daftar favorite.
             </p>
             <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto">
-              Mulai jelajahi venue-venue menarik dan simpan yang kamu suka dengan menekan tombol <i class="fas fa-heart text-red-400"></i>
+              Mulai jelajahi venue menarik dan tekan ikon
+              <i class="fas fa-heart text-red-400"></i> untuk menyimpannya di sini.
             </p>
 
             <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -149,7 +194,6 @@
                 <i class="fas fa-search"></i>
                 <span>Jelajahi Venue</span>
               </a>
-              
               <a href="{{ route('dashboard') }}"
                  class="inline-flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 px-6 py-3 text-sm font-semibold border border-white/10 transition-all duration-200">
                 <i class="fas fa-home"></i>
@@ -164,31 +208,28 @@
                   <div class="w-8 h-8 rounded-full bg-blue-500/20 grid place-items-center mb-3">
                     <i class="fas fa-search text-blue-400 text-sm"></i>
                   </div>
-                  <p class="text-xs text-gray-400">Cari venue berdasarkan lokasi atau kategori yang kamu inginkan</p>
+                  <p class="text-xs text-gray-400">Cari venue berdasarkan lokasi atau kategori yang kamu inginkan.</p>
                 </div>
                 <div class="bg-white/5 rounded-lg p-4 border border-white/5">
                   <div class="w-8 h-8 rounded-full bg-red-500/20 grid place-items-center mb-3">
                     <i class="fas fa-heart text-red-400 text-sm"></i>
                   </div>
-                  <p class="text-xs text-gray-400">Tekan ikon hati untuk menambahkan venue ke favorite</p>
+                  <p class="text-xs text-gray-400">Tekan ikon hati untuk menambahkan venue ke favorite.</p>
                 </div>
                 <div class="bg-white/5 rounded-lg p-4 border border-white/5">
                   <div class="w-8 h-8 rounded-full bg-green-500/20 grid place-items-center mb-3">
                     <i class="fas fa-bookmark text-green-400 text-sm"></i>
                   </div>
-                  <p class="text-xs text-gray-400">Akses venue favorite kamu kapan saja dari halaman ini</p>
+                  <p class="text-xs text-gray-400">Akses semua venue favorite dari halaman ini kapan saja.</p>
                 </div>
               </div>
             </div>
           </div>
-
         @else
-          {{-- ====== ADA DATA: gambar utama FE /images/venue + fallback berantai aman ====== --}}
+          {{-- ADA DATA FAVORITE --}}
           <div id="favGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($favorites as $fav)
-              @php
-                $venue = $fav->venue ?? null;
-              @endphp
+              @php $venue = $fav->venue ?? null; @endphp
               @continue(!$venue)
 
               @php
@@ -198,44 +239,85 @@
                 $venuePrice  = $venue->price ?? null;
                 $venueRating = $venue->rating ?? null;
 
-                // prioritas pertama: image_url yang disimpan saat favorite (kalau ada)
                 $candidates = [];
+
+                /**
+                 * Helper: ambil basename dari berbagai bentuk path:
+                 * - /home/xanderbilliard.site/public_html/images/venue/foo.jpg
+                 * - /images/venue/foo.jpg
+                 * - images/venue/foo.jpg
+                 * - full URL (ambil path → basename)
+                 */
+                $extractFilename = function($raw) {
+                    if (!$raw) return null;
+                    $raw = trim($raw);
+
+                    // full URL
+                    if (filter_var($raw, FILTER_VALIDATE_URL)) {
+                        $path = parse_url($raw, PHP_URL_PATH) ?? '';
+                        return $path ? basename($path) : null;
+                    }
+
+                    // normalisasi slash lalu basename
+                    $raw = str_replace('\\','/',$raw);
+
+                    // jika mengandung /images/venue/ atau path absolut server → tetap pakai basename
+                    return basename($raw);
+                };
+
+                // 1) Dari $fav->image_url (jika ada)
                 if (!empty($fav->image_url)) {
-                  $candidates[] = (string) $fav->image_url;
+                    $name = $extractFilename($fav->image_url);
+                    if ($name && $name !== '.' && $name !== '/') {
+                        $candidates[] = $venueBaseUrl . $name;
+                    }
                 }
 
-                // prioritas kedua: FE base + basename dari $venue->image / $venue->images[0]
-                $rawImage = '';
+                // 2) Dari $venue->images atau $venue->image
+                $rawImage = null;
+
                 if (!empty($venue->images)) {
-                  $arr = is_array($venue->images) ? $venue->images : (is_string($venue->images) ? json_decode($venue->images, true) : []);
-                  if (is_array($arr) && !empty($arr)) $rawImage = (string) $arr[0];
-                }
-                if ($rawImage === '' && !empty($venue->image)) {
-                  $rawImage = (string) $venue->image;
-                }
-                if ($rawImage !== '') {
-                  $name = basename(parse_url($rawImage, PHP_URL_PATH) ?? $rawImage);
-                  if ($name && $name !== '/' && $name !== '.') {
-                    $candidates[] = $feBase . $name;
-                  }
+                    if (is_array($venue->images)) {
+                        $rawImage = $venue->images[0] ?? null;
+                    } elseif (is_string($venue->images)) {
+                        $maybe = json_decode($venue->images, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($maybe)) {
+                            $rawImage = $maybe[0] ?? null;
+                        } else {
+                            $rawImage = $venue->images;
+                        }
+                    }
                 }
 
-                // fallback: global placeholder (bukan di /images/venue/, supaya tidak 404)
-                $candidates[] = 'https://xanderbilliard.site/images/placeholder.webp';
-                $candidates[] = 'https://xanderbilliard.site/images/placeholder.png';
+                if (!$rawImage && !empty($venue->image)) {
+                    $rawImage = $venue->image;
+                }
+
+                if ($rawImage) {
+                    $name = $extractFilename($rawImage);
+                    if ($name && $name !== '.' && $name !== '/') {
+                        $candidates[] = $venueBaseUrl . $name;
+                    }
+                }
+
+                // 3) Fallback lokal di /images/venue
+                foreach ($venueFallbacks as $fb) {
+                    $candidates[] = $venueBaseUrl . $fb;
+                }
+
+                // 4) Fallback terakhir
                 $candidates[] = 'https://placehold.co/800x600?text=No+Image';
 
-                // unik & bersih
                 $candidates = array_values(array_unique(array_filter($candidates, fn($x) => is_string($x) && $x !== '')));
-
                 $primarySrc = $candidates[0] ?? 'https://placehold.co/800x600?text=No+Image';
               @endphp
 
               <div class="fav-card gradient-border rounded-2xl overflow-hidden bg-[#1f1f1f] border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-white/5 hover:-translate-y-1 fade-in group">
                 <div class="h-48 bg-black/20 relative overflow-hidden img-wrapper">
-                  <div class="img-loading" aria-hidden="true" role="progressbar"><div class="spinner"></div></div>
+                  <div class="img-loading" aria-hidden="true" role="progressbar">
+                    <div class="spinner"></div>
+                  </div>
 
-                  {{-- IMG dengan kandidat fallback berantai --}}
                   <img
                     src="{{ $primarySrc }}"
                     data-src-candidates='@json($candidates)'
@@ -309,39 +391,50 @@
 </div>
 
 <script>
-  // Fallback berantai untuk semua .js-fav-img
+  // Lazy + fallback berantai: semua kandidat sudah mengarah ke /images/venue
   function initFavImages(){
-    document.querySelectorAll('.js-fav-img').forEach((img) => {
+    document.querySelectorAll('.js-fav-img').forEach(function(img){
       const wrapper = img.closest('.img-wrapper');
       const loader  = wrapper ? wrapper.querySelector('.img-loading') : null;
 
       let list = [];
-      try { list = JSON.parse(img.getAttribute('data-src-candidates') || '[]'); } catch(e) { list = []; }
-      if (!Array.isArray(list) || list.length === 0) { list = [img.getAttribute('src')].filter(Boolean); }
+      try {
+        list = JSON.parse(img.getAttribute('data-src-candidates') || '[]');
+      } catch(e) {
+        list = [];
+      }
+      if (!Array.isArray(list) || list.length === 0) {
+        const initial = img.getAttribute('src');
+        if (initial) list = [initial];
+      }
 
       let idx = 0;
-      const showLoader = () => loader && loader.classList.remove('is-hidden');
-      const hideLoader = () => loader && loader.classList.add('is-hidden');
-      const markLoaded = () => { img.classList.add('is-loaded'); hideLoader(); };
 
-      if (img.complete && img.naturalWidth > 0) { markLoaded(); }
-      else { showLoader(); }
+      function showLoader(){ if (loader) loader.classList.remove('is-hidden'); }
+      function hideLoader(){ if (loader) loader.classList.add('is-hidden'); }
+      function markLoaded(){ img.classList.add('is-loaded'); hideLoader(); }
 
-      img.addEventListener('load', () => {
-        if (img.naturalWidth > 0) { markLoaded(); }
-      }, { passive: true });
+      if (img.complete && img.naturalWidth > 0) {
+        markLoaded();
+      } else {
+        showLoader();
+      }
 
-      img.addEventListener('error', () => {
+      img.addEventListener('load', function(){
+        if (img.naturalWidth > 0) markLoaded();
+      }, { passive:true });
+
+      img.addEventListener('error', function(){
         if (idx < list.length - 1) {
           idx++;
           showLoader();
           const nextSrc = list[idx];
-          if (nextSrc && img.src !== nextSrc) { img.src = nextSrc; }
+          if (nextSrc && img.src !== nextSrc) img.src = nextSrc;
         } else {
-          // Sudah tidak ada kandidat lain → sembunyikan loader agar tidak muter
+          // habis kandidat → matikan loader tapi biarkan fallback terakhir tampil (placehold.co)
           markLoaded();
         }
-      }, { passive: true });
+      }, { passive:true });
     });
   }
   document.addEventListener('DOMContentLoaded', initFavImages);
@@ -349,12 +442,11 @@
 
 <script>
   async function toggleFavorite(venueId, btnEl){
-    if(!venueId){ return; } // guard ekstra jika null
-    
-    // Disable button saat loading
+    if (!venueId || !btnEl) return;
+
     btnEl.disabled = true;
     btnEl.style.opacity = '0.6';
-    
+
     try {
       const res = await fetch(`{{ url('/venues') }}/${venueId}/favorite`, {
         method: 'POST',
@@ -363,6 +455,7 @@
           'Accept': 'application/json',
         },
       });
+
       if (!res.ok) {
         if (res.status === 401) {
           window.location.href = '{{ route('login') }}';
@@ -370,6 +463,7 @@
         }
         throw new Error('Request gagal');
       }
+
       const data = await res.json();
 
       if (data.action === 'removed') {
@@ -378,11 +472,11 @@
           card.style.transition = 'all 0.3s ease-out';
           card.style.opacity = '0';
           card.style.transform = 'scale(0.9)';
-          setTimeout(() => {
+          setTimeout(function(){
             card.remove();
             const grid = document.getElementById('favGrid');
             if (grid && grid.querySelectorAll('.fav-card').length === 0) {
-              window.location.reload(); // tampilkan empty state
+              window.location.reload();
             }
           }, 300);
         }
@@ -400,10 +494,11 @@
     }
   }
 
-  // Delay animasi per-card (optional)
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', function(){
     const cards = document.querySelectorAll('.fav-card');
-    cards.forEach((card, i) => { card.style.animationDelay = `${i * 0.06}s`; });
+    cards.forEach(function(card, i){
+      card.style.animationDelay = (i * 0.06) + 's';
+    });
   });
 </script>
 @endsection

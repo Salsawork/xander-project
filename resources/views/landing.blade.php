@@ -49,11 +49,8 @@
             z-index: 1;
         }
 
-        .img-loading.hidden {
-            display: none;
-        }
+        .img-loading.hidden { display: none; }
 
-        /* Loading Spinner */
         .spinner {
             width: 40px;
             height: 40px;
@@ -62,26 +59,12 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .camera-icon { width: 48px; height: 48px; color: rgba(130, 130, 130, 0.4); }
 
-        /* Camera Icon Fallback */
-        .camera-icon {
-            width: 48px;
-            height: 48px;
-            color: rgba(130, 130, 130, 0.4);
-        }
-
-        .img-wrapper img {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .img-wrapper img.loaded {
-            opacity: 1;
-        }
+        .img-wrapper img { opacity: 0; transition: opacity 0.3s ease; }
+        .img-wrapper img.loaded { opacity: 1; }
 
         /* ==== CARD PRODUK ==== */
         .tp-card-ui{
@@ -95,11 +78,7 @@
             cursor: pointer;
             transform-style: preserve-3d;
         }
-        .tp-card-ui .tp-imgwrap{
-            position: relative;
-            background: var(--card-bg);
-            isolation: isolate;
-        }
+        .tp-card-ui .tp-imgwrap{ position: relative; background: var(--card-bg); isolation: isolate; }
         .tp-card-ui .tp-imgwrap img{
             display:block;
             width:100%; height:100%;
@@ -138,7 +117,6 @@
         .tp-meta h3{ transition: color .2s ease; }
         .tp-card-ui:hover .tp-meta h3{ color:#f3f3f3; }
 
-        /* ==== CHIP FILTER BUTTON ==== */
         .chip-btn{
             border-radius: 9999px;
             border: 1px solid #616161;
@@ -149,31 +127,15 @@
             line-height: 1;
             transition: border-color .2s ease, color .2s ease, background-color .2s ease, transform .15s ease;
         }
-        .chip-btn:hover{
-            border-color: var(--hover-accent);
-            color: var(--hover-accent);
-            background: rgba(130,130,130,.08);
-        }
-        .chip-btn:focus-visible{
-            outline: none;
-            border-color: var(--hover-accent);
-            box-shadow: 0 0 0 3px rgba(130,130,130,.25);
-        }
+        .chip-btn:hover{ border-color: var(--hover-accent); color: var(--hover-accent); background: rgba(130,130,130,.08); }
+        .chip-btn:focus-visible{ outline: none; border-color: var(--hover-accent); box-shadow: 0 0 0 3px rgba(130,130,130,.25); }
         .chip-btn:active{ transform: translateY(1px); }
 
-        /* Services card */
         .svc-card{ border:1px solid rgba(255,255,255,.18); background:#161616; border-radius:16px; transition:.25s ease; }
         .svc-card:hover{ transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,.35); }
 
-        /* Event Image Loading */
-        .event-img-wrapper {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .event-img-wrapper .img-loading {
-            background: rgba(22, 22, 22, 0.95);
-        }
+        .event-img-wrapper { position: relative; overflow: hidden; }
+        .event-img-wrapper .img-loading { background: rgba(22, 22, 22, 0.95); }
     </style>
 @endpush
 
@@ -224,14 +186,11 @@
             updateNav();
         }
 
-        // Image Loading Handler
         function initImageLoading() {
             const images = document.querySelectorAll('img[data-lazy-load]');
-            
             images.forEach(img => {
                 const wrapper = img.closest('.img-wrapper, .event-img-wrapper');
                 const loader = wrapper?.querySelector('.img-loading');
-                
                 if (img.complete) {
                     img.classList.add('loaded');
                     if (loader) loader.classList.add('hidden');
@@ -240,7 +199,6 @@
                         this.classList.add('loaded');
                         if (loader) loader.classList.add('hidden');
                     });
-                    
                     img.addEventListener('error', function() {
                         this.classList.add('loaded');
                         if (loader) loader.classList.add('hidden');
@@ -352,14 +310,8 @@
           <article class="tp-card-ui group">
             <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
               <div class="relative w-full aspect-[3/4] tp-imgwrap img-wrapper">
-                <!-- Loading State -->
-                <div class="img-loading">
-                  <div class="spinner"></div>
-                </div>
-                
-                <img src="{{ $src }}" 
-                     alt="{{ $product->name }}"
-                     data-lazy-load
+                <div class="img-loading"><div class="spinner"></div></div>
+                <img src="{{ $src }}" alt="{{ $product->name }}" data-lazy-load
                      onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
                 <span class="shine"></span>
                 @if ($hasDisc)
@@ -408,14 +360,8 @@
         <article class="tp-card-ui group">
           <a href="{{ route('products.detail', ['id' => $product->id, 'slug' => $slug]) }}" class="block">
             <div class="relative aspect-[3/4] w-full tp-imgwrap img-wrapper">
-              <!-- Loading State -->
-              <div class="img-loading">
-                <div class="spinner"></div>
-              </div>
-              
-              <img src="{{ $src }}" 
-                   alt="{{ $product->name }}"
-                   data-lazy-load
+              <div class="img-loading"><div class="spinner"></div></div>
+              <img src="{{ $src }}" alt="{{ $product->name }}" data-lazy-load
                    onerror="this.onerror=null;this.src='{{ $defaultCdnImg }}'">
               <span class="shine"></span>
               @if ($hasDisc)
@@ -535,7 +481,7 @@
         </div>
     </section>
 
-   <!-- Latest News & Events -->
+   <!-- Latest News & Events (UPDATED: images from /home/xanderbilliard.site/public_html/images/event) -->
 <section class="relative bg-cover bg-center bg-no-repeat text-white vh-section px-6 md:px-16 py-12 md:py-16 bg-neutral-900"
          style="background-image: url('/images/bg/background_3.png')">
 
@@ -544,16 +490,101 @@
         use App\Models\Event;
         use Carbon\Carbon;
 
-        $EVENT_CDN = 'https://xanderbilliard.site/images/events/';
+        // Folder server:
+        //   /home/xanderbilliard.site/public_html/images/event
+        // URL publik:
+        //   {{ asset('images/event/{filename}') }}
 
-        $eventImg = function ($path) use ($EVENT_CDN) {
-            $filename = basename((string)$path);
-            if (!$filename || $filename === '/' || $filename === '.' ) {
-                return $EVENT_CDN . 'placeholder.png';
+        $EVENT_FS_BASE  = '/home/xanderbilliard.site/public_html/images/event';
+        $EVENT_WEB_BASE = rtrim(asset('images/event'), '/') . '/';
+
+        /**
+         * Ambil nama file gambar dari beberapa kemungkinan field.
+         */
+        $pickEventFilename = function ($event): ?string {
+            $fields = ['image_url','image','banner','thumbnail','cover'];
+            foreach ($fields as $f) {
+                if (!empty($event->{$f})) {
+                    $raw = $event->{$f};
+
+                    // Jika full URL
+                    if (filter_var($raw, FILTER_VALIDATE_URL)) {
+                        $path = parse_url($raw, PHP_URL_PATH) ?? '';
+                        $name = basename(str_replace('\\','/',$path));
+                    } else {
+                        // Jika path / nama file biasa
+                        $name = basename(str_replace('\\','/',$raw));
+                    }
+
+                    if ($name && $name !== '.' && $name !== '/') {
+                        return $name;
+                    }
+                }
             }
-            return $EVENT_CDN . $filename;
+            return null;
         };
 
+        /**
+         * Gambar hero (besar).
+         * Cek di /home/xanderbilliard.site/public_html/images/event/{filename}
+         * lalu tampilkan sebagai asset('images/event/{filename}')
+         */
+        $eventHeroImg = function ($event, string $fallback = 'placeholder-hero.png')
+            use ($EVENT_FS_BASE, $EVENT_WEB_BASE, $pickEventFilename): string {
+
+            $name = $pickEventFilename($event);
+
+            if ($name) {
+                $fs = rtrim($EVENT_FS_BASE, '/') . '/' . $name;
+                if (@file_exists($fs)) {
+                    return $EVENT_WEB_BASE . $name;
+                }
+            }
+
+            // fallback
+            foreach ([$fallback, 'placeholder.png'] as $fb) {
+                $fs = rtrim($EVENT_FS_BASE, '/') . '/' . $fb;
+                if (@file_exists($fs)) {
+                    return $EVENT_WEB_BASE . $fb;
+                }
+            }
+
+            return $EVENT_WEB_BASE . ($fallback ?: 'placeholder.png');
+        };
+
+        /**
+         * Gambar thumbnail (kecil).
+         */
+        $eventThumbImg = function ($event, string $fallback = 'placeholder-thumb.png')
+            use ($EVENT_FS_BASE, $EVENT_WEB_BASE, $pickEventFilename): string {
+
+            $name = $pickEventFilename($event);
+
+            if ($name) {
+                $fs = rtrim($EVENT_FS_BASE, '/') . '/' . $name;
+                if (@file_exists($fs)) {
+                    return $EVENT_WEB_BASE . $name;
+                }
+            }
+
+            // fallback
+            foreach ([$fallback, 'placeholder.png'] as $fb) {
+                $fs = rtrim($EVENT_FS_BASE, '/') . '/' . $fb;
+                if (@file_exists($fs)) {
+                    return $EVENT_WEB_BASE . $fb;
+                }
+            }
+
+            return $EVENT_WEB_BASE . ($fallback ?: 'placeholder.png');
+        };
+
+        $EVENT_HERO_FALLBACK  = 'placeholder-hero.png';
+        $EVENT_THUMB_FALLBACK = 'placeholder-thumb.png';
+
+        $heroFallbackUrl  = $EVENT_WEB_BASE . $EVENT_HERO_FALLBACK;
+        $thumbFallbackUrl = $EVENT_WEB_BASE . $EVENT_THUMB_FALLBACK;
+
+        // Ambil 5 event acak (atau bisa diganti latest() kalau mau terbaru)
         $latest   = Event::inRandomOrder()->take(5)->get();
         $featured = $latest->first();
         $side     = $latest->skip(1)->take(4);
@@ -594,16 +625,12 @@
             <!-- FEATURED CARD -->
             <article class="relative lg:col-span-2 rounded-xl overflow-hidden h-[420px] md:h-[520px] bg-neutral-800 group">
                 <div class="event-img-wrapper absolute inset-0">
-                    <!-- Loading State -->
-                    <div class="img-loading">
-                        <div class="spinner"></div>
-                    </div>
-                    
-                    <img src="{{ $eventImg($featured->image_url) }}" 
+                    <div class="img-loading"><div class="spinner"></div></div>
+                    <img src="{{ $eventHeroImg($featured, $EVENT_HERO_FALLBACK) }}"
                          alt="{{ $featured->name }}"
                          data-lazy-load
                          class="absolute inset-0 w-full h-full object-cover transition scale-100 group-hover:scale-105 duration-500"
-                         onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-hero.png') }}'"/>
+                         onerror="this.onerror=null;this.src='{{ $heroFallbackUrl }}'"/>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent"></div>
 
@@ -641,19 +668,17 @@
                     @forelse ($side as $e)
                         <article class="relative flex gap-4 items-start p-3 rounded-xl bg-neutral-800/50 hover:bg-neutral-800 transition group flex-shrink-0">
                             <div class="event-img-wrapper w-24 md:w-28 h-24 md:h-28 rounded-md bg-neutral-700 flex-shrink-0 relative overflow-hidden">
-                                <!-- Loading State -->
                                 <div class="img-loading">
                                     <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     </svg>
                                 </div>
-                                
-                                <img src="{{ $eventImg($e->image_url) }}" 
+                                <img src="{{ $eventThumbImg($e, $EVENT_THUMB_FALLBACK) }}"
                                      alt="{{ $e->name }}"
                                      data-lazy-load
                                      class="absolute inset-0 w-full h-full object-cover"
-                                     onerror="this.onerror=null;this.src='{{ asset('images/placeholder/event-thumb.png') }}'"/>
+                                     onerror="this.onerror=null;this.src='{{ $thumbFallbackUrl }}'"/>
                             </div>
                             <div class="flex flex-col justify-start flex-1 min-w-0">
                                 <h4 class="text-sm md:text-base font-semibold leading-snug group-hover:underline line-clamp-2">{{ $e->name }}</h4>
@@ -692,21 +717,10 @@
 </section>
 
 <style>
-    /* Custom scrollbar untuk aside */
-    .scrollbar-thin::-webkit-scrollbar {
-        width: 6px;
-    }
-    .scrollbar-thin::-webkit-scrollbar-track {
-        background: rgba(38, 38, 38, 0.5);
-        border-radius: 3px;
-    }
-    .scrollbar-thin::-webkit-scrollbar-thumb {
-        background: rgba(64, 64, 64, 0.8);
-        border-radius: 3px;
-    }
-    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background: rgba(82, 82, 82, 1);
-    }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: rgba(38, 38, 38, 0.5); border-radius: 3px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(64, 64, 64, 0.8); border-radius: 3px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(82, 82, 82, 1); }
 </style>
 
 </div>

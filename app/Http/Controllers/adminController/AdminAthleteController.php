@@ -6,18 +6,80 @@ use App\Http\Controllers\Controller;
 use App\Models\AthleteDetail;
 use App\Models\OrderSparring;
 use App\Models\User;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AthleteExport;
-use App\Models\Order;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class AdminAthleteController extends Controller
 {
+    /**
+     * Lokasi absolut folder gambar athlete (FE):
+     * /home/xanderbilliard.site/public_html/images/athlete
+     *
+     * URL publik:
+     * https://xanderbilliard.site/images/athlete/{filename}
+     *
+     * Di Blade:
+     *   asset('images/athlete/'.$filename)
+     */
+    private function getFeAthleteDir(): string
+    {
+        return '/home/xanderbilliard.site/public_html/images/athlete';
+    }
+
+    /**
+     * Upload 1 file foto athlete ke folder FE.
+     * Yang disimpan di DB: hanya nama file.
+     */
+    private function uploadAthleteImage($file): ?string
+    {
+        if (!$file || !$file->isValid()) {
+            return null;
+        }
+
+        $fePath = $this->getFeAthleteDir();
+
+        if (!File::exists($fePath)) {
+            File::makeDirectory($fePath, 0755, true);
+        }
+
+        $ext      = strtolower($file->getClientOriginalExtension());
+        $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeBase = Str::slug($origName) ?: 'athlete';
+        $unique   = now()->format('YmdHis') . '-' . Str::random(6);
+
+        $filename = "{$unique}-{$safeBase}.{$ext}";
+
+        // Simpan langsung ke folder FE
+        $file->move($fePath, $filename);
+
+        return $filename;
+    }
+
+    /**
+     * Hapus file foto athlete dari folder FE berdasarkan nama file di DB.
+     */
+    private function deleteAthleteImage(?string $filename): void
+    {
+        if (!$filename) {
+            return;
+        }
+
+        $fePath = $this->getFeAthleteDir();
+        $full   = $fePath . DIRECTORY_SEPARATOR . $filename;
+
+        if (File::exists($full)) {
+            @unlink($full);
+        }
+    }
+
     /**
      * Display a listing of the athletes.
      */
@@ -36,18 +98,18 @@ class AdminAthleteController extends Controller
             })
             ->get();
 
-            $orderSparrings = OrderSparring::select('athlete_id', 'admin_fee')->get();
+        $orderSparrings = OrderSparring::select('athlete_id', 'admin_fee')->get();
 
-            $feeByAthlete = $orderSparrings
-                ->groupBy('athlete_id')
-                ->map(function ($group) {
-                    return $group->sum('admin_fee');
-                });
-        
-            // Tambahkan total_admin_fee ke setiap athlete
-            foreach ($athletes as $athlete) {
-                $athlete->total_admin_fee = $feeByAthlete[$athlete->id] ?? 0;
-            }
+        $feeByAthlete = $orderSparrings
+            ->groupBy('athlete_id')
+            ->map(function ($group) {
+                return $group->sum('admin_fee');
+            });
+
+        foreach ($athletes as $athlete) {
+            $athlete->total_admin_fee = $feeByAthlete[$athlete->id] ?? 0;
+        }
+
         return view('dash.admin.athlete.index', compact('athletes'));
     }
 
@@ -61,61 +123,63 @@ class AdminAthleteController extends Controller
 
     /**
      * Store a newly created athlete in storage.
+     * Upload foto ke /home/xanderbilliard.site/public_html/images/athlete
+     * dan simpan hanya nama file di kolom image.
      */
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'handicap' => 'nullable|string|max:255',
-            'experience_years' => 'nullable|integer',
-            'specialty' => 'nullable|string|max:255',
-            'location' => 'nullable|string|max:255',
-            'bio' => 'nullable|string',
+            'name'              => 'required|string|max:255',
+            'email'             => 'required|string|email|max:255|unique:users',
+            'password'          => 'required|string|min:8',
+            'handicap'          => 'nullable|string|max:255',
+            'experience_years'  => 'nullable|integer',
+            'specialty'         => 'nullable|string|max:255',
+            'location'          => 'nullable|string|max:255',
+            'bio'               => 'nullable|string',
             'price_per_session' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image'             => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:4096',
         ]);
 
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Buat user baru dengan role athlete
+            // User baru dengan role athlete
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name'     => $request->name,
+                'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'roles' => 'athlete',
+                'roles'    => 'athlete',
             ]);
 
-            // Proses upload gambar jika ada
-            $imagePath = null;
+            // Upload foto (jika ada) → simpan filename
+            $filename = null;
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('athletes', 'public');
+                $filename = $this->uploadAthleteImage($request->file('image'));
             }
 
-            // Buat athlete detail baru terkait dengan user
             AthleteDetail::create([
-                'user_id' => $user->id,
-                'handicap' => $request->handicap,
-                'experience_years' => $request->experience_years,
-                'specialty' => $request->specialty,
-                'location' => $request->location,
-                'bio' => $request->bio,
+                'user_id'           => $user->id,
+                'handicap'          => $request->handicap,
+                'experience_years'  => $request->experience_years,
+                'specialty'         => $request->specialty,
+                'location'          => $request->location,
+                'bio'               => $request->bio,
                 'price_per_session' => $request->price_per_session ?? 0,
-                'image' => $imagePath,
+                'image'             => $filename, // hanya nama file
             ]);
 
-            // Commit transaksi
             DB::commit();
 
             return redirect()->route('athlete.index')->with('success', 'Athlete berhasil ditambahkan!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi error
             DB::rollBack();
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
+            Log::error('Gagal menambah athlete', ['e' => $e]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -124,15 +188,13 @@ class AdminAthleteController extends Controller
      */
     public function edit(AthleteDetail $athlete)
     {
-        // Load relasi user
         $athlete->load('user');
 
-        // Tambahkan log untuk debugging
         Log::info('Edit Athlete Data:', [
-            'athlete_id' => $athlete->id,
-            'user_id' => $athlete->user_id,
+            'athlete_id'   => $athlete->id,
+            'user_id'      => $athlete->user_id,
             'athlete_data' => $athlete->toArray(),
-            'user_data' => $athlete->user ? $athlete->user->toArray() : 'User not found'
+            'user_data'    => $athlete->user ? $athlete->user->toArray() : 'User not found',
         ]);
 
         return view('dash.admin.athlete.edit', compact('athlete'));
@@ -140,119 +202,118 @@ class AdminAthleteController extends Controller
 
     /**
      * Update the specified athlete in storage.
+     * Jika upload foto baru, hapus file lama dari /images/athlete lalu simpan yang baru.
      */
     public function update(Request $request, AthleteDetail $athlete)
     {
-        // Validasi input
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
+            'name'              => 'required|string|max:255',
+            'email'             => [
                 'required',
                 'string',
                 'email',
                 'max:255',
                 Rule::unique('users')->ignore($athlete->user_id),
             ],
-            'password' => 'nullable|string|min:8',
-            'handicap' => 'nullable|string|max:255',
-            'experience_years' => 'nullable|integer',
-            'specialty' => 'nullable|string|max:255',
-            'location' => 'nullable|string|max:255',
-            'bio' => 'nullable|string',
+            'password'          => 'nullable|string|min:8',
+            'handicap'          => 'nullable|string|max:255',
+            'experience_years'  => 'nullable|integer',
+            'specialty'         => 'nullable|string|max:255',
+            'location'          => 'nullable|string|max:255',
+            'bio'               => 'nullable|string',
             'price_per_session' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image'             => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:4096',
         ]);
 
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Update data user
-            $user = User::find($athlete->user_id);
-            $user->name = $request->name;
+            // Update user
+            $user = User::findOrFail($athlete->user_id);
+            $user->name  = $request->name;
             $user->email = $request->email;
 
-            // Update password jika diisi
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
 
             $user->save();
 
-            // Proses upload gambar jika ada
+            // Upload foto baru jika ada
             if ($request->hasFile('image')) {
-                // Hapus gambar lama jika ada
-                if ($athlete->image && Storage::disk('public')->exists($athlete->image)) {
-                    Storage::disk('public')->delete($athlete->image);
+                // Hapus foto lama jika ada
+                if (!empty($athlete->image)) {
+                    $this->deleteAthleteImage($athlete->image);
                 }
 
-                // Upload gambar baru
-                $imagePath = $request->file('image')->store('athletes', 'public');
-                $athlete->image = $imagePath;
+                $filename       = $this->uploadAthleteImage($request->file('image'));
+                $athlete->image = $filename;
             }
 
-            // Update athlete detail
-            $athlete->handicap = $request->handicap;
-            $athlete->experience_years = $request->experience_years;
-            $athlete->specialty = $request->specialty;
-            $athlete->location = $request->location;
-            $athlete->bio = $request->bio;
+            // Update detail athlete lain
+            $athlete->handicap          = $request->handicap;
+            $athlete->experience_years  = $request->experience_years;
+            $athlete->specialty         = $request->specialty;
+            $athlete->location          = $request->location;
+            $athlete->bio               = $request->bio;
             $athlete->price_per_session = $request->price_per_session ?? 0;
             $athlete->save();
 
-            // Commit transaksi
             DB::commit();
 
             return redirect()->route('athlete.index')->with('success', 'Data athlete berhasil diperbarui!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi error
             DB::rollBack();
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
+            Log::error('Gagal update athlete', ['e' => $e]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
     /**
      * Remove the specified athlete from storage.
+     * Sekaligus hapus file foto dari /images/athlete.
      */
     public function destroy(AthleteDetail $athlete)
     {
         try {
-            // Mulai transaksi database
             DB::beginTransaction();
 
-            // Hapus gambar jika ada
-            if ($athlete->image && Storage::disk('public')->exists($athlete->image)) {
-                Storage::disk('public')->delete($athlete->image);
+            // Hapus file foto fisik jika ada
+            if (!empty($athlete->image)) {
+                $this->deleteAthleteImage($athlete->image);
             }
 
-            // Nonaktifkan foreign key checks sementara
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
-            // Hapus user (akan otomatis menghapus athlete detail karena relasi cascade)
+            // Hapus user; relasi cascade akan menghapus AthleteDetail jika diset
             User::where('id', $athlete->user_id)->delete();
 
-            // Aktifkan kembali foreign key checks
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-            // Commit transaksi
             DB::commit();
 
             return redirect()->route('athlete.index')->with('success', 'Athlete berhasil dihapus!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi error
             DB::rollBack();
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            Log::error('Gagal hapus athlete', ['e' => $e]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
     public function export(Request $request)
     {
         $filename = 'athletes_' . now()->format('Ymd_His') . '.xlsx';
-        $search = $request->get('search');
+        $search   = $request->get('search');
 
         return Excel::download(new AthleteExport($search), $filename);
     }
-
 
     public function showOrders($id)
     {
@@ -274,59 +335,34 @@ class AdminAthleteController extends Controller
             ->orderBy('created_at', request('orderBy') === 'asc' ? 'asc' : 'desc')
             ->get();
 
-        return view('dash.admin.athlete.detail', compact(
-            'athlete',
-            'orders',
-        ));
+        return view('dash.admin.athlete.detail', compact('athlete', 'orders'));
     }
 
-    // public function verifyPayment(Request $request, $orderId)
-    // {
-    //     $order = Order::with('orderSparrings')->findOrFail($orderId);
-
-    //     // ubah status pembayaran jadi paid
-    //     $order->update(['payment_status' => 'paid']);
-
-    //     // hitung fee untuk setiap sparring di order ini
-    //     foreach ($order->orderSparrings as $sparring) {
-    //         $price = $sparring->price;
-
-    //         $adminFee = $price * 0.10;
-    //         $athleteEarning = $price - $adminFee;
-
-    //         $sparring->update([
-    //             'admin_fee' => $adminFee,
-    //             'athlete_earning' => $athleteEarning,
-    //         ]);
-    //     }
-
-    //     return back()->with('success', 'Payment verified and fees distributed!');
-    // }
     public function verifyPayment(Request $request, $orderId)
-{
-    $order = Order::with('orderSparrings')->findOrFail($orderId);
+    {
+        $order = Order::with('orderSparrings')->findOrFail($orderId);
 
-    // 1️⃣ Ubah status pembayaran jadi paid
-    $order->update(['payment_status' => 'paid']);
+        // Set status jadi paid
+        $order->update(['payment_status' => 'paid']);
 
-    $totalAdminFee = 0;
+        $totalAdminFee = 0;
 
-    // 2️⃣ Hitung fee untuk setiap sparring di order ini
-    foreach ($order->orderSparrings as $sparring) {
-        $price = $sparring->price;
-        $adminFee = $price * 0.10;
-        $athleteEarning = $price - $adminFee;
+        foreach ($order->orderSparrings as $sparring) {
+            $price          = $sparring->price;
+            $adminFee       = $price * 0.10;
+            $athleteEarning = $price - $adminFee;
 
-        $sparring->update([
-            'admin_fee' => $adminFee,
-            'athlete_earning' => $athleteEarning,
-        ]);
+            $sparring->update([
+                'admin_fee'       => $adminFee,
+                'athlete_earning' => $athleteEarning,
+            ]);
 
-        $totalAdminFee += $adminFee;
+            $totalAdminFee += $adminFee;
+        }
+
+        return back()->with(
+            'success',
+            'Payment verified. Total fee admin: Rp ' . number_format($totalAdminFee, 0, ',', '.')
+        );
     }
-
-    return back()->with('success', "Payment verified. Total fee admin: Rp " . number_format($totalAdminFee, 0, ',', '.'));
-}
-
-
 }
