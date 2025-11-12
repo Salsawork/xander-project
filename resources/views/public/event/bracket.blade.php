@@ -37,15 +37,44 @@
             background: #0a0a0a;
         }
 
-        /* Bracket Layout - Base */
+        /* ====================================
+           BRACKET CONTAINER - FLEXBOX LAYOUT
+           ==================================== */
         .bracket-container {
             display: flex;
-            gap: 80px;
+            flex-direction: column;
+            gap: 0;
             padding: 40px 20px;
             min-width: max-content;
+        }
+
+        /* Upper Bracket Wrapper */
+        .upper-bracket-wrapper {
+            display: flex;
+            gap: 80px;
             align-items: center;
         }
 
+        /* Lower Bracket Wrapper */
+        .lower-bracket-wrapper {
+            display: flex;
+            gap: 80px;
+            align-items: center;
+            margin-top: 100px;
+            padding-top: 40px;
+            position: relative;
+        }
+
+        /* Finals Wrapper */
+        .finals-wrapper {
+            display: flex;
+            gap: 80px;
+            align-items: center;
+        }
+
+        /* ====================================
+           BRACKET ROUND
+           ==================================== */
         .bracket-round {
             position: relative;
             display: flex;
@@ -66,7 +95,9 @@
             padding: 0.5rem 0;
         }
 
-        /* MATCH BOX */
+        /* ====================================
+           MATCH BOX
+           ==================================== */
         .bracket-match {
             position: relative;
             display: flex;
@@ -124,14 +155,16 @@
             flex: 1;
         }
 
-        /* Match spacing */
+        /* Match spacing wrapper */
         .matches-wrapper {
             display: flex;
             flex-direction: column;
             height: 100%;
         }
 
-        /* Single Elimination Spacing */
+        /* ====================================
+           SINGLE ELIMINATION SPACING
+           ==================================== */
         .bracket-round.single-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -152,7 +185,9 @@
             gap: calc(var(--match-height) * 15 + var(--base-gap) * 16);
         }
 
-        /* Double Elimination - Upper Bracket Spacing */
+        /* ====================================
+           DOUBLE ELIMINATION - UPPER BRACKET SPACING
+           ==================================== */
         .bracket-round.upper-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -173,42 +208,9 @@
             gap: calc(var(--match-height) * 15 + var(--base-gap) * 16);
         }
 
-        /* Lower Bracket Section */
-        .lower-bracket-section {
-            margin-top: 100px;
-            padding-top: 40px;
-            position: relative;
-        }
-
-        .lower-bracket-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.5) 20%, rgba(239, 68, 68, 0.5) 80%, transparent);
-        }
-
-        .lower-bracket-section::after {
-            content: 'LOWER BRACKET';
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #0a0a0a;
-            padding: 8px 24px;
-            border-radius: 20px;
-            border: 2px solid rgba(239, 68, 68, 0.5);
-            color: #fca5a5;
-            font-weight: 700;
-            font-size: 0.875rem;
-            letter-spacing: 2px;
-            white-space: nowrap;
-            z-index: 10;
-        }
-
-        /* Double Elimination - Lower Bracket Spacing (FIXED PATTERN) */
+        /* ====================================
+           DOUBLE ELIMINATION - LOWER BRACKET SPACING
+           ==================================== */
         .bracket-round.lower-round-1 .matches-wrapper,
         .bracket-round.lower-round-2 .matches-wrapper {
             gap: var(--base-gap);
@@ -224,7 +226,9 @@
             gap: calc(var(--match-height) * 3 + var(--base-gap) * 4);
         }
 
-        /* Grand Final Styling */
+        /* ====================================
+           GRAND FINAL STYLING
+           ==================================== */
         .grand-final-round {
             min-width: 300px;
         }
@@ -239,7 +243,9 @@
             background: rgba(30, 30, 30, 0.8);
         }
 
-        /* SVG Connector Container */
+        /* ====================================
+           SVG CONNECTORS
+           ==================================== */
         .bracket-connectors {
             position: absolute;
             top: 0;
@@ -276,7 +282,9 @@
             stroke-width: 3;
         }
 
-        /* Tournament Type Badge */
+        /* ====================================
+           TOURNAMENT TYPE BADGE
+           ==================================== */
         .tournament-type-badge {
             display: inline-flex;
             align-items: center;
@@ -300,11 +308,19 @@
             color: #fde68a;
         }
 
-        /* Responsive */
+        /* ====================================
+           RESPONSIVE
+           ==================================== */
         @media (max-width: 640px) {
-            .bracket-container {
+            .upper-bracket-wrapper,
+            .lower-bracket-wrapper,
+            .finals-wrapper {
                 gap: 60px;
-                padding: 20px 10px;
+            }
+
+            .lower-bracket-wrapper {
+                margin-top: 80px;
+                padding-top: 30px;
             }
 
             .bracket-round {
@@ -329,12 +345,7 @@
                 margin-bottom: 1.5rem;
             }
 
-            .lower-bracket-section {
-                margin-top: 80px;
-                padding-top: 30px;
-            }
-
-            .lower-bracket-section::after {
+            .lower-bracket-wrapper::after {
                 font-size: 0.75rem;
                 padding: 6px 16px;
             }
@@ -345,9 +356,10 @@
         }
 
         @media (min-width: 641px) and (max-width: 1024px) {
-            .bracket-container {
+            .upper-bracket-wrapper,
+            .lower-bracket-wrapper,
+            .finals-wrapper {
                 gap: 70px;
-                padding: 30px 15px;
             }
 
             .bracket-round {
@@ -398,13 +410,12 @@
             container.style.position = 'relative';
             container.appendChild(svg);
 
-            const rounds = container.querySelectorAll('.bracket-round');
             const isDoubleElimination = container.classList.contains('double-elimination');
 
             if (isDoubleElimination) {
-                drawDoubleEliminationConnectors(svg, rounds, container);
+                drawDoubleEliminationConnectors(svg, container);
             } else {
-                drawSingleEliminationConnectors(svg, rounds, container);
+                drawSingleEliminationConnectors(svg, container);
             }
 
             const viewBoxWidth = container.scrollWidth;
@@ -414,114 +425,75 @@
         }
 
         // Single Elimination Connectors
-        function drawSingleEliminationConnectors(svg, rounds, container) {
-            const upperRounds = Array.from(rounds).filter(r => r.classList.contains('single-round'));
+        function drawSingleEliminationConnectors(svg, container) {
+            const rounds = container.querySelectorAll('.bracket-round.single-round');
             
-            upperRounds.forEach((currentRound, roundIndex) => {
-                if (roundIndex === upperRounds.length - 1) return; // Skip last round
+            Array.from(rounds).forEach((currentRound, roundIndex) => {
+                if (roundIndex === rounds.length - 1) return;
 
-                const nextRound = upperRounds[roundIndex + 1];
+                const nextRound = rounds[roundIndex + 1];
+                if (!nextRound) return;
+
                 const currentMatches = currentRound.querySelectorAll('.bracket-match');
                 const nextMatches = nextRound.querySelectorAll('.bracket-match');
 
-                for (let i = 0; i < currentMatches.length; i += 2) {
-                    const match1 = currentMatches[i];
-                    const match2 = currentMatches[i + 1];
-                    if (!match1) continue;
-
-                    const containerRect = container.getBoundingClientRect();
-                    const match1Rect = match1.getBoundingClientRect();
-                    const match1CenterY = match1Rect.top - containerRect.top + (match1Rect.height / 2);
-                    const match1RightX = match1Rect.right - containerRect.left;
-
-                    let match2CenterY = match1CenterY;
-                    if (match2) {
-                        const match2Rect = match2.getBoundingClientRect();
-                        match2CenterY = match2Rect.top - containerRect.top + (match2Rect.height / 2);
-                    }
-
-                    const midY = (match1CenterY + match2CenterY) / 2;
-                    const nextMatchIndex = Math.floor(i / 2);
-                    const nextMatch = nextMatches[nextMatchIndex];
-
-                    if (nextMatch) {
-                        const nextRect = nextMatch.getBoundingClientRect();
-                        const nextCenterY = nextRect.top - containerRect.top + (nextRect.height / 2);
-                        const nextLeftX = nextRect.left - containerRect.left;
-
-                        const horizontalExtend = 30;
-                        const midX = match1RightX + horizontalExtend + ((nextLeftX - match1RightX - horizontalExtend) / 2);
-
-                        // Path for match 1
-                        const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                        const pathData1 = `M ${match1RightX} ${match1CenterY} L ${match1RightX + horizontalExtend} ${match1CenterY} L ${midX} ${match1CenterY} L ${midX} ${midY}`;
-                        path1.setAttribute('d', pathData1);
-                        path1.setAttribute('class', 'connector-path');
-                        svg.appendChild(path1);
-
-                        // Path for match 2
-                        if (match2) {
-                            const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                            const pathData2 = `M ${match1RightX} ${match2CenterY} L ${match1RightX + horizontalExtend} ${match2CenterY} L ${midX} ${match2CenterY} L ${midX} ${midY}`;
-                            path2.setAttribute('d', pathData2);
-                            path2.setAttribute('class', 'connector-path');
-                            svg.appendChild(path2);
-                        }
-
-                        // Path to next match
-                        const pathToNext = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                        const pathDataNext = `M ${midX} ${midY} L ${nextLeftX} ${midY} L ${nextLeftX} ${nextCenterY}`;
-                        pathToNext.setAttribute('d', pathDataNext);
-                        pathToNext.setAttribute('class', 'connector-path');
-                        svg.appendChild(pathToNext);
-                    }
-                }
+                drawBracketConnectors(svg, currentMatches, nextMatches, container, 'connector-path');
             });
         }
 
         // Double Elimination Connectors
-        function drawDoubleEliminationConnectors(svg, rounds, container) {
-            const upperRounds = Array.from(rounds).filter(r => r.classList.contains('upper-round'));
-            const lowerRounds = Array.from(rounds).filter(r => r.classList.contains('lower-round'));
-            const grandFinalRound = Array.from(rounds).find(r => r.classList.contains('grand-final-round'));
+        function drawDoubleEliminationConnectors(svg, container) {
+            // Draw Upper Bracket connectors
+            const upperWrapper = container.querySelector('.upper-bracket-wrapper');
+            if (upperWrapper) {
+                const upperRounds = Array.from(upperWrapper.querySelectorAll('.bracket-round'));
+                
+                upperRounds.forEach((currentRound, roundIndex) => {
+                    if (roundIndex === upperRounds.length - 1) return;
 
-            // Draw Upper Bracket connectors (except Upper Final)
-            upperRounds.forEach((currentRound, roundIndex) => {
-                if (roundIndex === upperRounds.length - 1) return; // Skip Upper Final
+                    const nextRound = upperRounds[roundIndex + 1];
+                    if (!nextRound) return;
 
-                const nextRound = upperRounds[roundIndex + 1];
-                if (!nextRound) return;
+                    const currentMatches = currentRound.querySelectorAll('.bracket-match');
+                    const nextMatches = nextRound.querySelectorAll('.bracket-match');
 
-                const currentMatches = currentRound.querySelectorAll('.bracket-match');
-                const nextMatches = nextRound.querySelectorAll('.bracket-match');
+                    drawBracketConnectors(svg, currentMatches, nextMatches, container, 'upper-bracket');
+                });
+            }
 
-                drawBracketConnectors(svg, currentMatches, nextMatches, container, 'upper-bracket');
-            });
+            // Draw Lower Bracket connectors
+            const lowerWrapper = container.querySelector('.lower-bracket-wrapper');
+            if (lowerWrapper) {
+                const lowerRounds = Array.from(lowerWrapper.querySelectorAll('.bracket-round'));
+                
+                lowerRounds.forEach((currentRound, roundIndex) => {
+                    if (roundIndex === lowerRounds.length - 1) return;
 
-            // Draw Lower Bracket connectors (except Lower Final)
-            lowerRounds.forEach((currentRound, roundIndex) => {
-                if (roundIndex === lowerRounds.length - 1) return; // Skip Lower Final
+                    const nextRound = lowerRounds[roundIndex + 1];
+                    if (!nextRound) return;
 
-                const nextRound = lowerRounds[roundIndex + 1];
-                if (!nextRound) return;
+                    const currentMatches = currentRound.querySelectorAll('.bracket-match');
+                    const nextMatches = nextRound.querySelectorAll('.bracket-match');
 
-                const currentMatches = currentRound.querySelectorAll('.bracket-match');
-                const nextMatches = nextRound.querySelectorAll('.bracket-match');
-
-                drawBracketConnectors(svg, currentMatches, nextMatches, container, 'lower-bracket');
-            });
+                    drawBracketConnectors(svg, currentMatches, nextMatches, container, 'lower-bracket');
+                });
+            }
 
             // Draw Grand Final connectors
-            if (grandFinalRound && upperRounds.length > 0 && lowerRounds.length > 0) {
-                const upperFinalRound = upperRounds[upperRounds.length - 1];
-                const lowerFinalRound = lowerRounds[lowerRounds.length - 1];
+            const finalsWrapper = container.querySelector('.finals-wrapper');
+            if (finalsWrapper && upperWrapper && lowerWrapper) {
+                const upperFinalRound = upperWrapper.querySelector('.bracket-round:last-child');
+                const lowerFinalRound = lowerWrapper.querySelector('.bracket-round:last-child');
+                const grandFinalRound = finalsWrapper.querySelector('.grand-final-round');
                 
-                const upperFinalMatch = upperFinalRound.querySelector('.bracket-match');
-                const lowerFinalMatch = lowerFinalRound.querySelector('.bracket-match');
-                const grandFinalMatch = grandFinalRound.querySelector('.bracket-match');
+                if (upperFinalRound && lowerFinalRound && grandFinalRound) {
+                    const upperFinalMatch = upperFinalRound.querySelector('.bracket-match');
+                    const lowerFinalMatch = lowerFinalRound.querySelector('.bracket-match');
+                    const grandFinalMatch = grandFinalRound.querySelector('.bracket-match');
 
-                if (upperFinalMatch && lowerFinalMatch && grandFinalMatch) {
-                    drawGrandFinalConnectors(svg, upperFinalMatch, lowerFinalMatch, grandFinalMatch, container);
+                    if (upperFinalMatch && lowerFinalMatch && grandFinalMatch) {
+                        drawGrandFinalConnectors(svg, upperFinalMatch, lowerFinalMatch, grandFinalMatch, container);
+                    }
                 }
             }
         }
@@ -632,10 +604,8 @@
         $maxRound = $brackets->max('round');
         $round1Count = $bracketsByRound->get(1, collect())->count();
         
-        // Determine tournament type
         $isDoubleElimination = ($event->finals_format === 'Double Elimination');
         
-        // Calculate structure for Double Elimination
         if ($isDoubleElimination && $round1Count > 0) {
             $numFighters = $round1Count;
             $numRounds = intval(log($numFighters, 2));
@@ -690,7 +660,7 @@
                     </span>
                 </div>
 
-                <!-- Scroll Hint for Mobile/Tablet -->
+                <!-- Scroll Hint -->
                 <div class="lg:hidden mb-4 text-center ml-2 sm:ml-6">
                     <span class="text-xs sm:text-sm text-gray-400 bg-neutral-800 px-3 py-1.5 rounded-full inline-flex items-center">
                         <i class="fas fa-arrows-h mr-2"></i>
@@ -701,63 +671,144 @@
                 <!-- Main Bracket -->
                 <div class="overflow-x-auto overflow-y-visible pb-8">
                     @if($isDoubleElimination)
-                        {{-- DOUBLE ELIMINATION LAYOUT --}}
+                        {{-- ====================================
+                            DOUBLE ELIMINATION LAYOUT
+                            ==================================== --}}
                         <div class="bracket-container double-elimination">
-                            {{-- ROUND 1 & UPPER BRACKET --}}
-                            @for ($round = 1; $round <= $upperBracketEnd; $round++)
-                                @php
-                                    $roundBrackets = $bracketsByRound->get($round, collect())->sortBy('position')->values();
-                                    if ($roundBrackets->isEmpty()) continue;
-                                    
-                                    $matches = $roundBrackets->chunk(2);
-                                    
-                                    // Determine round label for upper bracket
-                                    if ($round == 1) {
-                                        $roundLabel = 'Round 1';
-                                        $colorClass = 'text-blue-400';
-                                    } elseif ($round == $upperBracketEnd) {
-                                        $roundLabel = 'Upper Final';
-                                        $colorClass = 'text-purple-400';
-                                    } elseif ($round == $upperBracketEnd - 1) {
-                                        $roundLabel = 'Upper Semi';
-                                        $colorClass = 'text-blue-400';
-                                    } else {
-                                        $roundLabel = 'Upper R' . $round;
-                                        $colorClass = 'text-blue-400';
-                                    }
-                                @endphp
+                            
+                            {{-- UPPER BRACKET WRAPPER --}}
+                            <div class="upper-bracket-wrapper">
+                                @for ($round = 1; $round <= $upperBracketEnd; $round++)
+                                    @php
+                                        $roundBrackets = $bracketsByRound->get($round, collect())->sortBy('position')->values();
+                                        if ($roundBrackets->isEmpty()) continue;
+                                        
+                                        $matches = $roundBrackets->chunk(2);
+                                        
+                                        if ($round == 1) {
+                                            $roundLabel = 'Round 1';
+                                            $colorClass = 'text-blue-400';
+                                        } elseif ($round == $upperBracketEnd) {
+                                            $roundLabel = 'Upper Final';
+                                            $colorClass = 'text-purple-400';
+                                        } elseif ($round == $upperBracketEnd - 1) {
+                                            $roundLabel = 'Upper Semi';
+                                            $colorClass = 'text-blue-400';
+                                        } else {
+                                            $roundLabel = 'Upper R' . $round;
+                                            $colorClass = 'text-blue-400';
+                                        }
+                                    @endphp
 
-                                <div class="bracket-round upper-round upper-round-{{ $round }}">
-                                    <div class="round-title {{ $colorClass }}">
-                                        {{ $roundLabel }}
+                                    <div class="bracket-round upper-round upper-round-{{ $round }}">
+                                        <div class="round-title {{ $colorClass }}">
+                                            {{ $roundLabel }}
+                                        </div>
+
+                                        <div class="matches-wrapper">
+                                            @foreach ($matches as $matchIndex => $match)
+                                                <div class="bracket-match {{ count($match->where('is_winner', true)) > 0 ? 'has-winner' : '' }}">
+                                                    @foreach ($match as $bracket)
+                                                        <div class="bracket-player {{ $bracket->is_winner ? 'winner' : '' }} {{ $bracket->player_name === 'TBD' ? 'opacity-50' : '' }}">
+                                                            <div class="flex items-center justify-between w-full">
+                                                                <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
+                                                                    {{ $bracket->player_name }}
+                                                                </p>
+
+                                                                @if ($bracket->is_winner && $bracket->player_name !== 'TBD')
+                                                                    <div class="ml-2 flex-shrink-0">
+                                                                        <i class="fas fa-check text-green-500 text-sm"></i>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endfor
+                            </div>
+
+                              {{-- FINALS WRAPPER (Grand Final + Champion) --}}
+                            <div class="finals-wrapper overflow-x-auto justify-end w-full">
+                                {{-- GRAND FINAL --}}
+                                <div class="bracket-round grand-final-round flex min-w-max">
+                                    <div class="round-title text-yellow-400">
+                                        <i class="fas fa-trophy mr-2"></i>Grand Final
                                     </div>
 
-                                    <div class="matches-wrapper">
-                                        @foreach ($matches as $matchIndex => $match)
-                                            <div class="bracket-match {{ count($match->where('is_winner', true)) > 0 ? 'has-winner' : '' }}">
-                                                @foreach ($match as $bracket)
+                                    <div class="matches-wrapper w-full overflow-x-auto">
+                                        @php
+                                            $grandFinalBrackets = $bracketsByRound->get($grandFinalRound, collect())->sortBy('position')->values();
+                                            $champion = $grandFinalBrackets->where('is_winner', true)->first();
+                                        @endphp
+
+                                        @if ($grandFinalBrackets->count() >= 2)
+                                            <div class="bracket-match grand-final-match {{ $champion ? 'has-winner' : '' }}">
+                                                @foreach ($grandFinalBrackets->take(2) as $bracket)
                                                     <div class="bracket-player {{ $bracket->is_winner ? 'winner' : '' }} {{ $bracket->player_name === 'TBD' ? 'opacity-50' : '' }}">
                                                         <div class="flex items-center justify-between w-full">
-                                                            <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
-                                                                {{ $bracket->player_name }}
-                                                            </p>
+                                                            <div class="flex-1">
+                                                                <div class="text-xs text-gray-400 mb-1">
+                                                                    {{ $loop->first ? 'Upper Winner' : 'Lower Winner' }}
+                                                                </div>
+                                                                <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
+                                                                    {{ $bracket->player_name }}
+                                                                </p>
+                                                            </div>
 
                                                             @if ($bracket->is_winner && $bracket->player_name !== 'TBD')
                                                                 <div class="ml-2 flex-shrink-0">
-                                                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                                                    <i class="fas fa-trophy text-yellow-400 text-sm"></i>
                                                                 </div>
                                                             @endif
                                                         </div>
                                                     </div>
                                                 @endforeach
                                             </div>
-                                        @endforeach
+                                        @else
+                                            <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
+                                                <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
+                                                <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
-                            @endfor
 
-                            {{-- LOWER BRACKET SECTION --}}
-                            <div class="lower-bracket-section">
+                                {{-- CHAMPION SECTION --}}
+                                <div class="bracket-round overflow-x-auto" style="min-width: 280px;">
+                                    <div class="round-title text-yellow-400">
+                                        <i class="fas fa-crown mr-2"></i>Champion
+                                    </div>
+
+                                    <div class="matches-wrapper">
+                                        @if ($champion && $champion->player_name !== 'TBD')
+                                            <div class="relative">
+                                                <div class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl"></div>
+                                                <div class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                                                    <div class="text-center">
+                                                        <i class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
+                                                        <p class="text-lg sm:text-xl font-bold text-white mb-2">{{ $champion->player_name }}</p>
+                                                        <p class="text-xs sm:text-sm text-yellow-100">Tournament Winner</p>
+                                                    </div>
+                                                    <div class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
+                                                    <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
+                                                <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
+                                                <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
+                                                <p class="text-xs text-gray-600 mt-2">Winner will be announced after final match</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- LOWER BRACKET WRAPPER --}}
+                            <div class="lower-bracket-wrapper">
                                 @for ($round = $lowerBracketStart; $round < $grandFinalRound; $round++)
                                     @php
                                         $roundBrackets = $bracketsByRound->get($round, collect())->sortBy('position')->values();
@@ -766,12 +817,9 @@
                                         $matches = $roundBrackets->chunk(2);
                                         $matchCount = $matches->count();
                                         
-                                        // Calculate lower bracket round index (0-based from start)
                                         $lbIndex = $round - $lowerBracketStart;
-                                        $totalLowerRounds = $grandFinalRound - $lowerBracketStart;
                                         
-                                        // Determine spacing class based on SOP pattern
-                                        // Pattern: tight -> tight -> wider -> wider -> widest -> widest
+                                        // Determine spacing class
                                         if ($matchCount >= 4) {
                                             $spacingClass = 'lower-round-' . min($lbIndex + 1, 2);
                                         } elseif ($matchCount == 2) {
@@ -823,167 +871,98 @@
                                 @endfor
                             </div>
 
-                            {{-- GRAND FINAL --}}
-                            <div class="bracket-round grand-final-round" style="min-width: 280px;">
-                                <div class="round-title text-yellow-400">
-                                    <i class="fas fa-trophy mr-2"></i>Grand Final
-                                </div>
-
-                                <div class="matches-wrapper">
+                          
+                        </div>
+                    @else
+                        {{-- ====================================
+                            SINGLE ELIMINATION LAYOUT
+                            ==================================== --}}
+                        <div class="bracket-container single-elimination">
+                            <div class="upper-bracket-wrapper">
+                                @for ($round = 1; $round <= $maxRound; $round++)
                                     @php
-                                        $grandFinalBrackets = $bracketsByRound->get($grandFinalRound, collect())->sortBy('position')->values();
-                                        $champion = $grandFinalBrackets->where('is_winner', true)->first();
+                                        $roundBrackets = $bracketsByRound->get($round, collect())->sortBy('position')->values();
+                                        $roundCount = $roundBrackets->count();
+                                        if ($roundCount == 0) continue;
+
+                                        $matches = $roundBrackets->chunk(2);
+                                        
+                                        if ($round == $maxRound) {
+                                            $roundLabel = 'Final';
+                                            $colorClass = 'text-orange-400';
+                                        } elseif ($round == $maxRound - 1) {
+                                            $roundLabel = 'Semifinal';
+                                            $colorClass = 'text-purple-400';
+                                        } elseif ($round == $maxRound - 2 && $maxRound > 3) {
+                                            $roundLabel = 'Quarterfinal';
+                                            $colorClass = 'text-blue-400';
+                                        } else {
+                                            $roundLabel = 'Round ' . $round;
+                                            $colorClass = 'text-blue-400';
+                                        }
                                     @endphp
 
-                                    @if ($grandFinalBrackets->count() >= 2)
-                                        <div class="bracket-match grand-final-match {{ $champion ? 'has-winner' : '' }}">
-                                            @foreach ($grandFinalBrackets->take(2) as $bracket)
-                                                <div class="bracket-player {{ $bracket->is_winner ? 'winner' : '' }} {{ $bracket->player_name === 'TBD' ? 'opacity-50' : '' }}">
-                                                    <div class="flex items-center justify-between w-full">
-                                                        <div class="flex-1">
-                                                            <div class="text-xs text-gray-400 mb-1">
-                                                                {{ $loop->first ? 'Upper Winner' : 'Lower Winner' }}
-                                                            </div>
-                                                            <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
-                                                                {{ $bracket->player_name }}
-                                                            </p>
-                                                        </div>
+                                    <div class="bracket-round single-round single-round-{{ $round }}">
+                                        <div class="round-title {{ $colorClass }}">
+                                            {{ $roundLabel }}
+                                        </div>
 
-                                                        @if ($bracket->is_winner && $bracket->player_name !== 'TBD')
-                                                            <div class="ml-2 flex-shrink-0">
-                                                                <i class="fas fa-trophy text-yellow-400 text-sm"></i>
+                                        <div class="matches-wrapper">
+                                            @foreach ($matches as $matchIndex => $match)
+                                                <div class="bracket-match {{ count($match->where('is_winner', true)) > 0 ? 'has-winner' : '' }}">
+                                                    @foreach ($match as $bracket)
+                                                        <div class="bracket-player {{ $bracket->is_winner ? 'winner' : '' }} {{ $bracket->player_name === 'TBD' ? 'opacity-50' : '' }}">
+                                                            <div class="flex items-center justify-between w-full">
+                                                                <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
+                                                                    {{ $bracket->player_name }}
+                                                                </p>
+
+                                                                @if ($bracket->is_winner && $bracket->player_name !== 'TBD')
+                                                                    <div class="ml-2 flex-shrink-0">
+                                                                        <i class="fas fa-check text-green-500 text-sm"></i>
+                                                                    </div>
+                                                                @endif
                                                             </div>
-                                                        @endif
-                                                    </div>
+                                                        </div>
+                                                    @endforeach
                                                 </div>
                                             @endforeach
                                         </div>
-                                    @else
-                                        <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
-                                            <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
-                                            <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
+                                    </div>
+                                @endfor
 
-                            {{-- CHAMPION SECTION --}}
-                            <div class="bracket-round" style="min-width: 280px;">
-                                <div class="round-title text-yellow-400">
-                                    <i class="fas fa-crown mr-2"></i>Champion
-                                </div>
-
-                                <div class="matches-wrapper">
-                                    @if ($champion && $champion->player_name !== 'TBD')
-                                        <div class="relative">
-                                            <div class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl"></div>
-                                            <div class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                                                <div class="text-center">
-                                                    <i class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
-                                                    <p class="text-lg sm:text-xl font-bold text-white mb-2">{{ $champion->player_name }}</p>
-                                                    <p class="text-xs sm:text-sm text-yellow-100">Tournament Winner</p>
-                                                </div>
-                                                <div class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
-                                                <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
-                                            <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
-                                            <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
-                                            <p class="text-xs text-gray-600 mt-2">Winner will be announced after final match</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        {{-- SINGLE ELIMINATION LAYOUT --}}
-                        <div class="bracket-container single-elimination">
-                            @for ($round = 1; $round <= $maxRound; $round++)
-                                @php
-                                    $roundBrackets = $bracketsByRound->get($round, collect())->sortBy('position')->values();
-                                    $roundCount = $roundBrackets->count();
-                                    if ($roundCount == 0) continue;
-
-                                    $matches = $roundBrackets->chunk(2);
-                                    
-                                    // Determine round label
-                                    if ($round == $maxRound) {
-                                        $roundLabel = 'Final';
-                                        $colorClass = 'text-orange-400';
-                                    } elseif ($round == $maxRound - 1) {
-                                        $roundLabel = 'Semifinal';
-                                        $colorClass = 'text-purple-400';
-                                    } elseif ($round == $maxRound - 2 && $maxRound > 3) {
-                                        $roundLabel = 'Quarterfinal';
-                                        $colorClass = 'text-blue-400';
-                                    } else {
-                                        $roundLabel = 'Round ' . $round;
-                                        $colorClass = 'text-blue-400';
-                                    }
-                                @endphp
-
-                                <div class="bracket-round single-round single-round-{{ $round }}">
-                                    <div class="round-title {{ $colorClass }}">
-                                        {{ $roundLabel }}
+                                {{-- CHAMPION SECTION (Single Elimination) --}}
+                                <div class="bracket-round" style="min-width: 280px;">
+                                    <div class="round-title text-yellow-400">
+                                        <i class="fas fa-trophy mr-2"></i>Champion
                                     </div>
 
                                     <div class="matches-wrapper">
-                                        @foreach ($matches as $matchIndex => $match)
-                                            <div class="bracket-match {{ count($match->where('is_winner', true)) > 0 ? 'has-winner' : '' }}">
-                                                @foreach ($match as $bracket)
-                                                    <div class="bracket-player {{ $bracket->is_winner ? 'winner' : '' }} {{ $bracket->player_name === 'TBD' ? 'opacity-50' : '' }}">
-                                                        <div class="flex items-center justify-between w-full">
-                                                            <p class="text-sm font-medium {{ $bracket->is_winner ? 'text-white font-bold' : 'text-gray-300' }} {{ $bracket->player_name === 'TBD' ? 'text-gray-600 italic' : '' }} truncate pr-2">
-                                                                {{ $bracket->player_name }}
-                                                            </p>
+                                        @php
+                                            $champion = $brackets->where('round', $maxRound)->where('is_winner', true)->first();
+                                        @endphp
 
-                                                            @if ($bracket->is_winner && $bracket->player_name !== 'TBD')
-                                                                <div class="ml-2 flex-shrink-0">
-                                                                    <i class="fas fa-check text-green-500 text-sm"></i>
-                                                                </div>
-                                                            @endif
-                                                        </div>
+                                        @if ($champion && $champion->player_name !== 'TBD')
+                                            <div class="relative">
+                                                <div class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl"></div>
+                                                <div class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                                                    <div class="text-center">
+                                                        <i class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
+                                                        <p class="text-lg sm:text-xl font-bold text-white mb-2">{{ $champion->player_name }}</p>
+                                                        <p class="text-xs sm:text-sm text-yellow-100">Tournament Winner</p>
                                                     </div>
-                                                @endforeach
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endfor
-
-                            {{-- CHAMPION SECTION --}}
-                            <div class="bracket-round" style="min-width: 280px;">
-                                <div class="round-title text-yellow-400">
-                                    <i class="fas fa-trophy mr-2"></i>Champion
-                                </div>
-
-                                <div class="matches-wrapper">
-                                    @php
-                                        $champion = $brackets->where('round', $maxRound)->where('is_winner', true)->first();
-                                    @endphp
-
-                                    @if ($champion && $champion->player_name !== 'TBD')
-                                        <div class="relative">
-                                            <div class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl"></div>
-                                            <div class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                                                <div class="text-center">
-                                                    <i class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
-                                                    <p class="text-lg sm:text-xl font-bold text-white mb-2">{{ $champion->player_name }}</p>
-                                                    <p class="text-xs sm:text-sm text-yellow-100">Tournament Winner</p>
+                                                    <div class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
+                                                    <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
                                                 </div>
-                                                <div class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
-                                                <div class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50"></div>
                                             </div>
-                                        </div>
-                                    @else
-                                        <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
-                                            <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
-                                            <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
-                                            <p class="text-xs text-gray-600 mt-2">Winner will be announced after final match</p>
-                                        </div>
-                                    @endif
+                                        @else
+                                            <div class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
+                                                <i class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
+                                                <p class="text-sm sm:text-base text-gray-400 font-medium">To Be Determined</p>
+                                                <p class="text-xs text-gray-600 mt-2">Winner will be announced after final match</p>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1068,7 +1047,6 @@
                                     $winnersInRound = $roundBrackets->where('is_winner', true)->count();
                                     $matchesInRound = $roundBrackets->count() / 2;
                                     
-                                    // Determine round label
                                     if ($isDoubleElimination) {
                                         if ($round == 1) {
                                             $label = 'Round 1';
