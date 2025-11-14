@@ -1,8 +1,8 @@
 {{-- NOTE: Tree Type options updated to reflect Double Elimination --}}
 {{-- MODIFIED: Playoff option now labeled as "Double Elimination" --}}
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="col-span-1">
+{{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {{-- <div class="col-span-1">
         <label for="hasPreliminary" class="block text-sm font-medium text-gray-700">Preliminary</label>
         <input name="hasPreliminary" type="hidden" value="0">
         <select
@@ -12,9 +12,9 @@
             <option value="0" {{ $hasPreliminary == 0 ? 'selected' : '' }}>NO</option>
             <option value="1" {{ $hasPreliminary == 1 ? 'selected' : '' }}>YES</option>
         </select>
-    </div>
+    </div> --}}
 
-    <div class="col-span-1">
+    {{-- <div class="col-span-1">
         <label for="preliminaryGroupSize"
             class="block text-sm font-medium text-gray-700">{{ trans('laravel-tournaments::core.preliminaryGroupSize') }}</label>
         <select
@@ -24,7 +24,21 @@
             <option value="4" @if ($setting->preliminaryGroupSize == 4) selected @endif>4</option>
             <option value="5" @if ($setting->preliminaryGroupSize == 5) selected @endif>5</option>
         </select>
-    </div>
+    </div> --}}
+
+{{-- </div> --}}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+    {{-- <div class="col-span-1">
+        <label for="isTeam" class="block text-sm font-medium text-gray-700">Team?</label>
+        <select
+            class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
+            id="isTeam" name="isTeam">
+            <option value="0" {{ $isTeam == 0 ? 'selected' : '' }}>NO</option>
+            <option value="1" {{ $isTeam == 1 ? 'selected' : '' }}>YES</option>
+        </select>
+    </div> --}}
+
 
     <div class="col-span-1">
         <label for="numFighters" class="block text-sm font-medium text-gray-700">Fighter Qty</label>
@@ -32,8 +46,7 @@
             class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
             id="numFighters" name="numFighters">
             @for ($i = 2; $i <= 256; $i++)
-                <option value="{{ $i }}" 
-                    @if ($numFighters == $i) selected @endif
+                <option value="{{ $i }}" @if ($numFighters == $i) selected @endif
                     @if ($i > 128) class="text-yellow-400" @endif>
                     {{ $i }}
                     @if (in_array($i, [4, 8, 16, 32, 64, 128, 256]))
@@ -43,21 +56,9 @@
             @endfor
         </select>
         <p class="mt-1 text-xs text-gray-400">
-            <i class="fas fa-info-circle"></i> 
+            <i class="fas fa-info-circle"></i>
             Full brackets (4,8,16,32,64,128,256) will have most balanced matches
         </p>
-    </div>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-    <div class="col-span-1">
-        <label for="isTeam" class="block text-sm font-medium text-gray-700">Team?</label>
-        <select
-            class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
-            id="isTeam" name="isTeam">
-            <option value="0" {{ $isTeam == 0 ? 'selected' : '' }}>NO</option>
-            <option value="1" {{ $isTeam == 1 ? 'selected' : '' }}>YES</option>
-        </select>
     </div>
 
     <div class="col-span-1">
@@ -106,13 +107,12 @@
             class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
             id="event_id" name="event_id" required>
             <option value="">-- Pilih Event --</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" 
-                    @if(isset($tournament) && $tournament->event_id == $event->id) selected 
-                    @elseif(old('event_id') == $event->id) selected 
-                    @endif>
+            @foreach ($events as $event)
+                <option value="{{ $event->id }}"
+                    @if (isset($tournament) && $tournament->event_id == $event->id) selected 
+                    @elseif(old('event_id') == $event->id) selected @endif>
                     {{ $event->name }} - {{ \Carbon\Carbon::parse($event->start_date)->format('d M Y') }}
-                    @if(isset($tournament) && $tournament->event_id == $event->id)
+                    @if (isset($tournament) && $tournament->event_id == $event->id)
                         (Current)
                     @endif
                 </option>
@@ -131,8 +131,11 @@
         <div class="text-sm text-gray-300 space-y-2">
             <p class="font-semibold text-blue-300">Tournament Format Guide:</p>
             <div class="space-y-1 pl-4">
-                <p><span class="font-medium text-yellow-300">🏆 Double Elimination:</span> Players who lose get a second chance by dropping to the Lower Bracket. Only after losing twice are they eliminated. Final match: Upper Bracket winner vs Lower Bracket winner.</p>
-                <p><span class="font-medium text-red-300">⚔️ Single Elimination:</span> Traditional knockout format. Lose once and you're out. Faster but less forgiving.</p>
+                <p><span class="font-medium text-yellow-300">🏆 Double Elimination:</span> Players who lose get a second
+                    chance by dropping to the Lower Bracket. Only after losing twice are they eliminated. Final match:
+                    Upper Bracket winner vs Lower Bracket winner.</p>
+                <p><span class="font-medium text-red-300">⚔️ Single Elimination:</span> Traditional knockout format.
+                    Lose once and you're out. Faster but less forgiving.</p>
             </div>
         </div>
     </div>

@@ -2,7 +2,7 @@
 {{-- MODIFIED: Playoff option now labeled as "Double Elimination" --}}
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="col-span-1">
+    {{-- <div class="col-span-1">
         <label for="hasPreliminary" class="block text-sm font-medium text-gray-700">Preliminary</label>
         <input name="hasPreliminary" type="hidden" value="0">
         <select
@@ -12,9 +12,9 @@
             <option value="0" {{ $hasPreliminary == 0 ? 'selected' : '' }}>NO</option>
             <option value="1" {{ $hasPreliminary == 1 ? 'selected' : '' }}>YES</option>
         </select>
-    </div>
+    </div> --}}
 
-    <div class="col-span-1">
+    {{-- <div class="col-span-1">
         <label for="preliminaryGroupSize"
             class="block text-sm font-medium text-gray-700">{{ trans('laravel-tournaments::core.preliminaryGroupSize') }}</label>
         <select
@@ -24,7 +24,7 @@
             <option value="4" @if ($setting->preliminaryGroupSize == 4) selected @endif>4</option>
             <option value="5" @if ($setting->preliminaryGroupSize == 5) selected @endif>5</option>
         </select>
-    </div>
+    </div> --}}
 
     <div class="col-span-1">
         <label for="numFighters" class="block text-sm font-medium text-gray-700">Fighter Qty</label>
@@ -50,7 +50,7 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-    <div class="col-span-1">
+    {{-- <div class="col-span-1">
         <label for="isTeam" class="block text-sm font-medium text-gray-700">Team?</label>
         <select
             class="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#999] focus:border-[#999]"
@@ -58,7 +58,7 @@
             <option value="0" {{ $isTeam == 0 ? 'selected' : '' }}>NO</option>
             <option value="1" {{ $isTeam == 1 ? 'selected' : '' }}>YES</option>
         </select>
-    </div>
+    </div> --}}
 
     <div class="col-span-1">
         <label for="treeType" class="block text-sm font-medium text-gray-700">
