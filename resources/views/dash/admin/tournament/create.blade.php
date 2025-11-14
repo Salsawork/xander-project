@@ -105,8 +105,8 @@
                             <h2 class="text-lg font-semibold mb-4">Tournament Settings</h2>
 
                             <!-- Row 1: Preliminary, Group Size, Fighter Qty -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
+                            {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {{-- <div>
                                     <label for="hasPreliminary" class="block text-sm font-medium text-gray-300 mb-1">
                                         Preliminary
                                     </label>
@@ -117,9 +117,9 @@
                                         <option value="1" {{ old('hasPreliminary') == 1 ? 'selected' : '' }}>YES
                                         </option>
                                     </select>
-                                </div>
+                                </div> --}}
 
-                                <div>
+                                {{-- <div>
                                     <label for="preliminaryGroupSize" class="block text-sm font-medium text-gray-300 mb-1">
                                         Preliminary Group Size
                                     </label>
@@ -132,9 +132,25 @@
                                         <option value="5" {{ old('preliminaryGroupSize') == 5 ? 'selected' : '' }}>5
                                         </option>
                                     </select>
-                                </div>
+                                </div> --}}
 
-                                <div>
+                              
+                            {{-- </div>  --}}
+
+                            <!-- Row 2: Team, Tree Type, Fighting Areas -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {{-- <div>
+                                    <label for="isTeam" class="block text-sm font-medium text-gray-300 mb-1">
+                                        Team?
+                                    </label>
+                                    <select name="isTeam" id="isTeam"
+                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="0" {{ old('isTeam', 0) == 0 ? 'selected' : '' }}>NO</option>
+                                        <option value="1" {{ old('isTeam') == 1 ? 'selected' : '' }}>YES</option>
+                                    </select>
+                                </div> --}}
+
+                                  <div>
                                     <label for="numFighters" class="block text-sm font-medium text-gray-300 mb-1">
                                         Fighter Quantity <span class="text-red-500">*</span>
                                     </label>
@@ -146,20 +162,6 @@
                                                 {{ $i }}
                                             </option>
                                         @endfor
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Row 2: Team, Tree Type, Fighting Areas -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
-                                    <label for="isTeam" class="block text-sm font-medium text-gray-300 mb-1">
-                                        Team?
-                                    </label>
-                                    <select name="isTeam" id="isTeam"
-                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="0" {{ old('isTeam', 0) == 0 ? 'selected' : '' }}>NO</option>
-                                        <option value="1" {{ old('isTeam') == 1 ? 'selected' : '' }}>YES</option>
                                     </select>
                                 </div>
 

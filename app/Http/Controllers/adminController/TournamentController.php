@@ -46,10 +46,7 @@ class TournamentController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'hasPreliminary' => 'required',
-            'preliminaryGroupSize' => 'required',
             'numFighters' => 'required|integer|min:2|max:64',
-            'isTeam' => 'required',
             'treeType' => 'required',
             'fightingAreas' => 'required',
             'event_id' => 'required|exists:events,id',
@@ -142,10 +139,7 @@ class TournamentController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'hasPreliminary' => 'required',
-            'preliminaryGroupSize' => 'required',
             'numFighters' => 'required',
-            'isTeam' => 'required',
             'treeType' => 'required',
             'fightingAreas' => 'required',
             'event_id' => 'required|exists:events,id',
