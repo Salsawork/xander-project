@@ -38,7 +38,14 @@ class TournamentController extends Controller
 
     public function create()
     {
-        $events = Event::orderBy('start_date', 'desc')->get();
+        // ✅ Ambil semua event_id yang sudah memiliki tournament
+        $usedEventIds = Tournament::whereNotNull('event_id')->pluck('event_id')->toArray();
+        
+        // ✅ Hanya tampilkan event yang belum digunakan oleh tournament manapun
+        $events = Event::whereNotIn('id', $usedEventIds)
+            ->orderBy('start_date', 'desc')
+            ->get();
+            
         return view('dash.admin.tournament.create', compact('events'));
     }
 
@@ -51,6 +58,15 @@ class TournamentController extends Controller
             'fightingAreas' => 'required',
             'event_id' => 'required|exists:events,id',
         ]);
+
+        // ✅ Validasi tambahan: pastikan event belum digunakan oleh tournament lain
+        $existingTournament = Tournament::where('event_id', $data['event_id'])->first();
+            
+        if ($existingTournament) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['event_id' => 'Event ini sudah memiliki tournament. Silakan pilih event lain.']);
+        }
 
         $validationError = $this->validateBracketSize((int) $data['numFighters']);
         if ($validationError) {
@@ -80,15 +96,13 @@ class TournamentController extends Controller
                 'category_id' => 1,
             ]);
 
-            // 3. Update Event - HANYA update tournament_id dan finals_format
+            // 3. Update Event finals_format
             $event = Event::find($data['event_id']);
             if ($event) {
                 $finalsFormat = $data['treeType'] == 1 ? 'Single Elimination' : 'Double Elimination';
 
                 $event->update([
-                    'tournament_id' => $tournament->id,
                     'finals_format' => $finalsFormat,
-                    // JANGAN update 'name' di sini!
                 ]);
             }
 
@@ -130,7 +144,16 @@ class TournamentController extends Controller
             'championships.category'
         );
 
-        $events = Event::orderBy('start_date', 'desc')->get();
+        // ✅ Ambil event_id yang sudah digunakan oleh tournament lain (exclude current tournament)
+        $usedEventIds = Tournament::whereNotNull('event_id')
+            ->where('id', '!=', $tournament->id)
+            ->pluck('event_id')
+            ->toArray();
+
+        // ✅ Tampilkan event yang belum dipakai oleh tournament lain
+        $events = Event::whereNotIn('id', $usedEventIds)
+            ->orderBy('start_date', 'desc')
+            ->get();
 
         return view('dash.admin.tournament.edit', compact('tournament', 'events'));
     }
@@ -144,6 +167,17 @@ class TournamentController extends Controller
             'fightingAreas' => 'required',
             'event_id' => 'required|exists:events,id',
         ]);
+
+        // ✅ Validasi: pastikan event yang dipilih belum digunakan oleh tournament lain
+        $existingTournament = Tournament::where('event_id', $data['event_id'])
+            ->where('id', '!=', $tournament->id)
+            ->first();
+            
+        if ($existingTournament) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['event_id' => 'Event ini sudah memiliki tournament lain. Silakan pilih event lain.']);
+        }
 
         $validationError = $this->validateBracketSize((int) $data['numFighters']);
         if ($validationError) {
@@ -172,15 +206,13 @@ class TournamentController extends Controller
             $generation = $championship->chooseGenerationStrategy();
             $generation->run();
 
-            // 4. Update Event - HANYA finals_format dan tournament_id
+            // 4. Update Event finals_format
             $event = Event::find($data['event_id']);
             if ($event) {
                 $finalsFormat = $request->treeType == 1 ? 'Single Elimination' : 'Double Elimination';
 
                 $event->update([
-                    'tournament_id' => $tournament->id,
                     'finals_format' => $finalsFormat,
-                    // JANGAN update 'name' di sini!
                 ]);
 
                 $this->generateBracketsFromChampionship($event, $championship);

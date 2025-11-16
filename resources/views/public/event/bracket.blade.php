@@ -42,8 +42,8 @@
         }
 
         /* ====================================
-       BRACKET CONTAINER - FLEXBOX LAYOUT
-       ==================================== */
+           BRACKET CONTAINER - FLEXBOX LAYOUT
+           ==================================== */
         .bracket-container {
             display: flex;
             flex-direction: column;
@@ -75,9 +75,10 @@
             width: 100%;
             max-width: 100%;
             position: relative;
-            overflow-x: visible;
+            overflow-x: auto;
             overflow-y: visible;
             margin-top: -60px;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* Finals Wrapper - Force content to extend beyond viewport */
@@ -103,28 +104,31 @@
         }
 
         /* Champion Wrapper Container - Scrollable */
-        .champion-wrapper-container {
+      .champion-wrapper-container {
             width: 100%;
             max-width: 100%;
-            overflow-x: visible;
+            overflow-x: auto;
             overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
         }
 
+     
         .champion-wrapper-inner {
             display: flex;
             min-width: max-content;
         }
 
         /* Spacer for single elimination champion */
-        .champion-spacer {
+    
+         .champion-spacer {
             min-width: 100vw;
             width: 100vw;
             flex-shrink: 0;
         }
 
         /* ====================================
-       BRACKET ROUND
-       ==================================== */
+           BRACKET ROUND
+           ==================================== */
         .bracket-round {
             position: relative;
             display: flex;
@@ -148,8 +152,8 @@
         }
 
         /* ====================================
-       MATCH BOX
-       ==================================== */
+           MATCH BOX
+           ==================================== */
         .bracket-match {
             position: relative;
             display: flex;
@@ -216,8 +220,8 @@
         }
 
         /* ====================================
-       SINGLE ELIMINATION SPACING
-       ==================================== */
+           SINGLE ELIMINATION SPACING
+           ==================================== */
         .bracket-round.single-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -239,8 +243,8 @@
         }
 
         /* ====================================
-       DOUBLE ELIMINATION - UPPER BRACKET SPACING
-       ==================================== */
+           DOUBLE ELIMINATION - UPPER BRACKET SPACING
+           ==================================== */
         .bracket-round.upper-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -262,8 +266,8 @@
         }
 
         /* ====================================
-       DOUBLE ELIMINATION - LOWER BRACKET SPACING
-       ==================================== */
+           DOUBLE ELIMINATION - LOWER BRACKET SPACING
+           ==================================== */
         .bracket-round.lower-round-1 .matches-wrapper,
         .bracket-round.lower-round-2 .matches-wrapper {
             gap: var(--base-gap);
@@ -280,8 +284,8 @@
         }
 
         /* ====================================
-       GRAND FINAL STYLING
-       ==================================== */
+           GRAND FINAL STYLING
+           ==================================== */
         .grand-final-round {
             min-width: 300px;
         }
@@ -297,8 +301,8 @@
         }
 
         /* ====================================
-       SVG CONNECTORS
-       ==================================== */
+           SVG CONNECTORS
+           ==================================== */
         .bracket-connectors {
             position: absolute;
             top: 0;
@@ -336,8 +340,8 @@
         }
 
         /* ====================================
-       TOURNAMENT TYPE BADGE
-       ==================================== */
+           TOURNAMENT TYPE BADGE
+           ==================================== */
         .tournament-type-badge {
             display: inline-flex;
             align-items: center;
@@ -362,8 +366,8 @@
         }
 
         /* ====================================
-       CUSTOM SCROLLBAR
-       ==================================== */
+           CUSTOM SCROLLBAR
+           ==================================== */
         .finals-wrapper-container::-webkit-scrollbar,
         .champion-wrapper-container::-webkit-scrollbar,
         .overflow-x-auto::-webkit-scrollbar {
@@ -391,8 +395,8 @@
         }
 
         /* ====================================
-       RESPONSIVE - ENHANCED
-       ==================================== */
+           RESPONSIVE - ENHANCED
+           ==================================== */
         @media (max-width: 640px) {
             :root {
                 --match-height: 70px;
@@ -410,16 +414,16 @@
             }
 
             .finals-spacer {
-                min-width: 70vw;
+                min-width: 50vw;
             }
 
             .finals-extra-column {
-                min-width: 150px;
-                width: 150px;
+                min-width: 120px;
+                width: 120px;
             }
 
             .champion-spacer {
-                min-width: 70vw;
+                min-width: 500vw;
             }
 
             .lower-bracket-wrapper {
@@ -757,11 +761,13 @@
         /* Touch device optimizations */
         @media (hover: none) and (pointer: coarse) {
             .bracket-player {
-                min-height: 40px; /* Larger touch target */
+                min-height: 40px;
+                /* Larger touch target */
             }
 
             .bracket-match {
-                margin-bottom: 2px; /* Extra spacing for touch */
+                margin-bottom: 2px;
+                /* Extra spacing for touch */
             }
 
             /* Disable hover effects on touch devices */
@@ -775,7 +781,8 @@
         }
 
         /* High DPI screens */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
             .connector-path {
                 stroke-width: 2.5px;
             }
@@ -972,7 +979,6 @@
                     path1.setAttribute('class', `connector-path ${className}`);
                     svg.appendChild(path1);
 
-                    // Path for match 2
                     if (match2) {
                         const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                         const pathData2 =
@@ -982,7 +988,6 @@
                         svg.appendChild(path2);
                     }
 
-                    // Path to next match
                     const pathToNext = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     const pathDataNext = `M ${midX} ${midY} L ${nextLeftX} ${midY} L ${nextLeftX} ${nextCenterY}`;
                     pathToNext.setAttribute('d', pathDataNext);
