@@ -42,8 +42,8 @@
         }
 
         /* ====================================
-       BRACKET CONTAINER - FLEXBOX LAYOUT
-       ==================================== */
+           BRACKET CONTAINER - FLEXBOX LAYOUT
+           ==================================== */
         .bracket-container {
             display: flex;
             flex-direction: column;
@@ -70,14 +70,15 @@
             position: relative;
         }
 
-        /* Finals Wrapper Container - Scrollable */
+        /* Finals Wrapper Container - Scrollable (Double Elimination Only) */
         .finals-wrapper-container {
             width: 100%;
             max-width: 100%;
             position: relative;
-            overflow-x: visible;
+            overflow-x: auto;
             overflow-y: visible;
             margin-top: -60px;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* Finals Wrapper - Force content to extend beyond viewport */
@@ -88,43 +89,32 @@
             min-width: max-content;
         }
 
-        /* Spacer to force Grand Final & Champion off-screen */
+        /* Spacer to force Grand Final & Champion off-screen (Double Elimination Only) */
         .finals-spacer {
             min-width: 100vw;
             width: 100vw;
             flex-shrink: 0;
         }
 
-        /* TAMBAHAN: Extra column sebelum Grand Final */
+        /* Extra column sebelum Grand Final (Double Elimination Only) */
         .finals-extra-column {
             min-width: 300px;
             width: 300px;
             flex-shrink: 0;
         }
 
-        /* Champion Wrapper Container - Scrollable */
-        .champion-wrapper-container {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: visible;
-            overflow-y: visible;
-        }
-
-        .champion-wrapper-inner {
+        /* Single Elimination - Final & Champion bersebelahan (NO SCROLLING) */
+        .single-finals-champion-wrapper {
             display: flex;
-            min-width: max-content;
-        }
-
-        /* Spacer for single elimination champion */
-        .champion-spacer {
-            min-width: 100vw;
-            width: 100vw;
-            flex-shrink: 0;
+            gap: 80px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0;
         }
 
         /* ====================================
-       BRACKET ROUND
-       ==================================== */
+           BRACKET ROUND
+           ==================================== */
         .bracket-round {
             position: relative;
             display: flex;
@@ -148,8 +138,8 @@
         }
 
         /* ====================================
-       MATCH BOX
-       ==================================== */
+           MATCH BOX
+           ==================================== */
         .bracket-match {
             position: relative;
             display: flex;
@@ -216,8 +206,8 @@
         }
 
         /* ====================================
-       SINGLE ELIMINATION SPACING
-       ==================================== */
+           SINGLE ELIMINATION SPACING
+           ==================================== */
         .bracket-round.single-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -239,8 +229,8 @@
         }
 
         /* ====================================
-       DOUBLE ELIMINATION - UPPER BRACKET SPACING
-       ==================================== */
+           DOUBLE ELIMINATION - UPPER BRACKET SPACING
+           ==================================== */
         .bracket-round.upper-round-1 .matches-wrapper {
             gap: var(--base-gap);
         }
@@ -262,8 +252,8 @@
         }
 
         /* ====================================
-       DOUBLE ELIMINATION - LOWER BRACKET SPACING
-       ==================================== */
+           DOUBLE ELIMINATION - LOWER BRACKET SPACING
+           ==================================== */
         .bracket-round.lower-round-1 .matches-wrapper,
         .bracket-round.lower-round-2 .matches-wrapper {
             gap: var(--base-gap);
@@ -280,8 +270,8 @@
         }
 
         /* ====================================
-       GRAND FINAL STYLING
-       ==================================== */
+           GRAND FINAL STYLING
+           ==================================== */
         .grand-final-round {
             min-width: 300px;
         }
@@ -297,8 +287,8 @@
         }
 
         /* ====================================
-       SVG CONNECTORS
-       ==================================== */
+           SVG CONNECTORS
+           ==================================== */
         .bracket-connectors {
             position: absolute;
             top: 0;
@@ -336,8 +326,8 @@
         }
 
         /* ====================================
-       TOURNAMENT TYPE BADGE
-       ==================================== */
+           TOURNAMENT TYPE BADGE
+           ==================================== */
         .tournament-type-badge {
             display: inline-flex;
             align-items: center;
@@ -362,37 +352,33 @@
         }
 
         /* ====================================
-       CUSTOM SCROLLBAR
-       ==================================== */
+           CUSTOM SCROLLBAR (Double Elimination Only)
+           ==================================== */
         .finals-wrapper-container::-webkit-scrollbar,
-        .champion-wrapper-container::-webkit-scrollbar,
         .overflow-x-auto::-webkit-scrollbar {
             height: 8px;
         }
 
         .finals-wrapper-container::-webkit-scrollbar-track,
-        .champion-wrapper-container::-webkit-scrollbar-track,
         .overflow-x-auto::-webkit-scrollbar-track {
             background: #1a1a1a;
             border-radius: 4px;
         }
 
         .finals-wrapper-container::-webkit-scrollbar-thumb,
-        .champion-wrapper-container::-webkit-scrollbar-thumb,
         .overflow-x-auto::-webkit-scrollbar-thumb {
             background: #404855;
             border-radius: 4px;
         }
 
         .finals-wrapper-container::-webkit-scrollbar-thumb:hover,
-        .champion-wrapper-container::-webkit-scrollbar-thumb:hover,
         .overflow-x-auto::-webkit-scrollbar-thumb:hover {
             background: #4b5563;
         }
 
         /* ====================================
-       RESPONSIVE - ENHANCED
-       ==================================== */
+           RESPONSIVE - ENHANCED
+           ==================================== */
         @media (max-width: 640px) {
             :root {
                 --match-height: 70px;
@@ -405,21 +391,18 @@
 
             .upper-bracket-wrapper,
             .lower-bracket-wrapper,
-            .finals-wrapper {
+            .finals-wrapper,
+            .single-finals-champion-wrapper {
                 gap: 50px;
             }
 
             .finals-spacer {
-                min-width: 70vw;
+                min-width: 50vw;
             }
 
             .finals-extra-column {
-                min-width: 150px;
-                width: 150px;
-            }
-
-            .champion-spacer {
-                min-width: 70vw;
+                min-width: 120px;
+                width: 120px;
             }
 
             .lower-bracket-wrapper {
@@ -471,12 +454,10 @@
                 stroke-width: 2px;
             }
 
-            /* Mobile specific adjustments */
             .bracket-player .text-xs {
                 font-size: 0.65rem;
             }
 
-            /* Tighter spacing for mobile */
             .bracket-round.single-round-1 .matches-wrapper,
             .bracket-round.upper-round-1 .matches-wrapper,
             .bracket-round.lower-round-1 .matches-wrapper,
@@ -521,7 +502,8 @@
 
             .upper-bracket-wrapper,
             .lower-bracket-wrapper,
-            .finals-wrapper {
+            .finals-wrapper,
+            .single-finals-champion-wrapper {
                 gap: 65px;
             }
 
@@ -532,10 +514,6 @@
             .finals-extra-column {
                 min-width: 220px;
                 width: 220px;
-            }
-
-            .champion-spacer {
-                min-width: 85vw;
             }
 
             .lower-bracket-wrapper {
@@ -577,7 +555,6 @@
                 stroke-width: 2.5px;
             }
 
-            /* Tablet specific spacing */
             .bracket-round.single-round-1 .matches-wrapper,
             .bracket-round.upper-round-1 .matches-wrapper,
             .bracket-round.lower-round-1 .matches-wrapper,
@@ -615,10 +592,10 @@
                 padding: 40px 20px;
             }
 
-            /* Desktop optimal spacing */
             .upper-bracket-wrapper,
             .lower-bracket-wrapper,
-            .finals-wrapper {
+            .finals-wrapper,
+            .single-finals-champion-wrapper {
                 gap: 80px;
             }
 
@@ -632,7 +609,6 @@
             }
         }
 
-        /* Landscape orientation adjustments */
         @media (max-width: 1024px) and (orientation: landscape) {
             .bracket-container {
                 padding: 20px 15px;
@@ -657,7 +633,6 @@
             }
         }
 
-        /* Extra small devices (phones in portrait) */
         @media (max-width: 375px) {
             :root {
                 --match-height: 65px;
@@ -688,7 +663,8 @@
 
             .upper-bracket-wrapper,
             .lower-bracket-wrapper,
-            .finals-wrapper {
+            .finals-wrapper,
+            .single-finals-champion-wrapper {
                 gap: 40px;
             }
 
@@ -702,7 +678,6 @@
             }
         }
 
-        /* Large desktop screens */
         @media (min-width: 1440px) {
             .bracket-container {
                 padding: 50px 30px;
@@ -732,7 +707,8 @@
 
             .upper-bracket-wrapper,
             .lower-bracket-wrapper,
-            .finals-wrapper {
+            .finals-wrapper,
+            .single-finals-champion-wrapper {
                 gap: 100px;
             }
 
@@ -754,17 +730,15 @@
             }
         }
 
-        /* Touch device optimizations */
         @media (hover: none) and (pointer: coarse) {
             .bracket-player {
-                min-height: 40px; /* Larger touch target */
+                min-height: 40px;
             }
 
             .bracket-match {
-                margin-bottom: 2px; /* Extra spacing for touch */
+                margin-bottom: 2px;
             }
 
-            /* Disable hover effects on touch devices */
             .bracket-player:hover {
                 background: #0f0f0f;
             }
@@ -774,8 +748,8 @@
             }
         }
 
-        /* High DPI screens */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
             .connector-path {
                 stroke-width: 2.5px;
             }
@@ -789,7 +763,6 @@
             }
         }
 
-        /* Print styles */
         @media print {
             .bracket-container {
                 padding: 20px;
@@ -797,7 +770,6 @@
             }
 
             .finals-wrapper-container,
-            .champion-wrapper-container,
             .overflow-x-auto {
                 overflow: visible !important;
             }
@@ -810,7 +782,6 @@
                 stroke-width: 1px;
             }
 
-            /* Hide scroll hints on print */
             .lg\:hidden.mb-4.text-center {
                 display: none !important;
             }
@@ -827,7 +798,6 @@
             window.addEventListener('resize', setSVH);
         })();
 
-        // Draw bracket connectors
         function drawConnectors() {
             const container = document.querySelector('.bracket-container');
             if (!container) return;
@@ -860,7 +830,6 @@
             svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         }
 
-        // Single Elimination Connectors
         function drawSingleEliminationConnectors(svg, container) {
             const rounds = container.querySelectorAll('.bracket-round.single-round');
 
@@ -877,9 +846,7 @@
             });
         }
 
-        // Double Elimination Connectors
         function drawDoubleEliminationConnectors(svg, container) {
-            // Draw Upper Bracket connectors
             const upperWrapper = container.querySelector('.upper-bracket-wrapper');
             if (upperWrapper) {
                 const upperRounds = Array.from(upperWrapper.querySelectorAll('.bracket-round'));
@@ -897,7 +864,6 @@
                 });
             }
 
-            // Draw Lower Bracket connectors
             const lowerWrapper = container.querySelector('.lower-bracket-wrapper');
             if (lowerWrapper) {
                 const lowerRounds = Array.from(lowerWrapper.querySelectorAll('.bracket-round'));
@@ -915,7 +881,6 @@
                 });
             }
 
-            // Draw Grand Final connectors - DENGAN EXTRA COLUMN
             const finalsWrapper = container.querySelector('.finals-wrapper');
             if (finalsWrapper && upperWrapper && lowerWrapper) {
                 const upperFinalRound = upperWrapper.querySelector('.bracket-round:last-child');
@@ -934,7 +899,6 @@
             }
         }
 
-        // Helper: Draw connectors between brackets
         function drawBracketConnectors(svg, currentMatches, nextMatches, container, className) {
             for (let i = 0; i < currentMatches.length; i += 2) {
                 const match1 = currentMatches[i];
@@ -964,7 +928,6 @@
                     const horizontalExtend = 30;
                     const midX = match1RightX + horizontalExtend + ((nextLeftX - match1RightX - horizontalExtend) / 2);
 
-                    // Path for match 1
                     const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     const pathData1 =
                         `M ${match1RightX} ${match1CenterY} L ${match1RightX + horizontalExtend} ${match1CenterY} L ${midX} ${match1CenterY} L ${midX} ${midY}`;
@@ -972,7 +935,6 @@
                     path1.setAttribute('class', `connector-path ${className}`);
                     svg.appendChild(path1);
 
-                    // Path for match 2
                     if (match2) {
                         const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                         const pathData2 =
@@ -982,7 +944,6 @@
                         svg.appendChild(path2);
                     }
 
-                    // Path to next match
                     const pathToNext = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     const pathDataNext = `M ${midX} ${midY} L ${nextLeftX} ${midY} L ${nextLeftX} ${nextCenterY}`;
                     pathToNext.setAttribute('d', pathDataNext);
@@ -992,7 +953,6 @@
             }
         }
 
-        // Helper: Draw Grand Final connectors - STRAIGHT & SIMPLE
         function drawGrandFinalConnectors(svg, upperMatch, lowerMatch, grandMatch, container) {
             const containerRect = container.getBoundingClientRect();
 
@@ -1008,10 +968,8 @@
             const grandCenterY = grandRect.top - containerRect.top + (grandRect.height / 2);
             const grandLeftX = grandRect.left - containerRect.left;
 
-            // Titik pertemuan di tengah (aligned dengan Grand Final Y position)
             const meetingX = Math.max(upperRightX, lowerRightX) + 40;
 
-            // UPPER PATH - Langsung horizontal ke kiri Grand Final
             const upperPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             const upperPathData = `M ${upperRightX} ${upperCenterY} 
                                   L ${meetingX} ${upperCenterY} 
@@ -1021,7 +979,6 @@
             upperPath.setAttribute('class', 'connector-path grand-final');
             svg.appendChild(upperPath);
 
-            // LOWER PATH - Langsung horizontal ke titik pertemuan
             const lowerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             const lowerPathData = `M ${lowerRightX} ${lowerCenterY} 
                                   L ${meetingX} ${lowerCenterY} 
@@ -1031,7 +988,6 @@
             svg.appendChild(lowerPath);
         }
 
-        // Redraw on various events
         function scheduleRedraw() {
             setTimeout(drawConnectors, 100);
             setTimeout(drawConnectors, 300);
@@ -1184,7 +1140,7 @@
                                 @endfor
                             </div>
 
-                            {{-- FINALS WRAPPER - DENGAN EXTRA COLUMN --}}
+                            {{-- FINALS WRAPPER - DENGAN EXTRA COLUMN (SCROLLABLE) --}}
                             <div class="finals-wrapper-container overflow-x-auto overflow-y-visible ml-4 sm:ml-6">
                                 <div class="finals-wrapper">
                                     {{-- Spacer awal --}}
@@ -1364,7 +1320,7 @@
                             </div>
                         </div>
                     @else
-                        {{-- SINGLE ELIMINATION LAYOUT --}}
+                        {{-- SINGLE ELIMINATION LAYOUT - FINAL & CHAMPION BERSEBELAHAN --}}
                         <div class="bracket-container single-elimination">
                             <div class="upper-bracket-wrapper">
                                 @for ($round = 1; $round <= $maxRound; $round++)
@@ -1427,60 +1383,54 @@
                                     </div>
                                 @endfor
 
-                                {{-- CHAMPION SECTION (Single Elimination) - SCROLLABLE --}}
-                                <div class="champion-wrapper-container overflow-x-auto overflow-y-visible pb-4">
-                                    <div class="champion-wrapper-inner">
-                                        <div class="champion-spacer"></div>
+                                {{-- CHAMPION SECTION (Single Elimination) - BERSEBELAHAN DENGAN FINAL (NO SCROLLING) --}}
+                                <div class="bracket-round" style="min-width: 320px;">
+                                    <div class="round-title text-yellow-400">
+                                        <i class="fas fa-crown mr-2"></i>Champion
+                                    </div>
 
-                                        <div class="bracket-round" style="min-width: 320px;">
-                                            <div class="round-title text-yellow-400">
-                                                <i class="fas fa-trophy mr-2"></i>Champion
-                                            </div>
+                                    <div class="matches-wrapper">
+                                        @php
+                                            $champion = $brackets
+                                                ->where('round', $maxRound)
+                                                ->where('is_winner', true)
+                                                ->first();
+                                        @endphp
 
-                                            <div class="matches-wrapper">
-                                                @php
-                                                    $champion = $brackets
-                                                        ->where('round', $maxRound)
-                                                        ->where('is_winner', true)
-                                                        ->first();
-                                                @endphp
-
-                                                @if ($champion && $champion->player_name !== 'TBD')
-                                                    <div class="relative">
-                                                        <div
-                                                            class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl">
-                                                        </div>
-                                                        <div
-                                                            class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                                                            <div class="text-center">
-                                                                <i
-                                                                    class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
-                                                                <p class="text-lg sm:text-xl font-bold text-white mb-2">
-                                                                    {{ $champion->player_name }}</p>
-                                                                <p class="text-xs sm:text-sm text-yellow-100">Tournament
-                                                                    Winner</p>
-                                                            </div>
-                                                            <div
-                                                                class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50">
-                                                            </div>
-                                                            <div
-                                                                class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <div
-                                                        class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
+                                        @if ($champion && $champion->player_name !== 'TBD')
+                                            <div class="relative">
+                                                <div
+                                                    class="absolute inset-0 bg-gradient-radial from-yellow-500/20 to-transparent blur-xl">
+                                                </div>
+                                                <div
+                                                    class="relative bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-600 rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                                                    <div class="text-center">
                                                         <i
-                                                            class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
-                                                        <p class="text-sm sm:text-base text-gray-400 font-medium">To Be
-                                                            Determined</p>
-                                                        <p class="text-xs text-gray-600 mt-2">Winner will be announced
-                                                            after final match</p>
+                                                            class="fas fa-crown text-3xl sm:text-4xl text-yellow-200 mb-3 sm:mb-4"></i>
+                                                        <p class="text-lg sm:text-xl font-bold text-white mb-2">
+                                                            {{ $champion->player_name }}</p>
+                                                        <p class="text-xs sm:text-sm text-yellow-100">Tournament
+                                                            Winner</p>
                                                     </div>
-                                                @endif
+                                                    <div
+                                                        class="absolute -top-3 -left-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50">
+                                                    </div>
+                                                    <div
+                                                        class="absolute -bottom-3 -right-3 w-6 h-6 bg-yellow-300 rounded-full opacity-50">
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        @else
+                                            <div
+                                                class="bg-neutral-800 rounded-xl px-4 sm:px-6 py-6 sm:py-8 text-center">
+                                                <i
+                                                    class="fas fa-hourglass-half text-2xl sm:text-3xl text-gray-500 mb-3"></i>
+                                                <p class="text-sm sm:text-base text-gray-400 font-medium">To Be
+                                                    Determined</p>
+                                                <p class="text-xs text-gray-600 mt-2">Winner will be announced
+                                                    after final match</p>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
