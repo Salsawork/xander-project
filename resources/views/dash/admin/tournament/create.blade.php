@@ -44,7 +44,7 @@
         .min-h-dvh { min-height: 100dvh; }
     </style>
 
-    {{-- Fallback SVH untuk Safari lama (hindari “lompat” saat address bar show/hide) --}}
+    {{-- Fallback SVH untuk Safari lama (hindari "lompat" saat address bar show/hide) --}}
     <script>
         (function(){
             function setSVH(){
@@ -88,6 +88,11 @@
                         class="space-y-6">
                         @csrf
 
+                        {{-- ✅ CRITICAL: Hidden inputs untuk FORCE NO PRELIMINARY --}}
+                        <input type="hidden" name="hasPreliminary" value="0">
+                        <input type="hidden" name="preliminaryGroupSize" value="3">
+                        <input type="hidden" name="isTeam" value="0">
+
                         <!-- Tournament Name -->
                         <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-6">
                             <div>
@@ -104,53 +109,9 @@
                         <div class="bg-[#262626] rounded-lg p-4 sm:p-6 space-y-6">
                             <h2 class="text-lg font-semibold mb-4">Tournament Settings</h2>
 
-                            <!-- Row 1: Preliminary, Group Size, Fighter Qty -->
-                            {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {{-- <div>
-                                    <label for="hasPreliminary" class="block text-sm font-medium text-gray-300 mb-1">
-                                        Preliminary
-                                    </label>
-                                    <select name="hasPreliminary" id="hasPreliminary"
-                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="0" {{ old('hasPreliminary', 0) == 0 ? 'selected' : '' }}>NO
-                                        </option>
-                                        <option value="1" {{ old('hasPreliminary') == 1 ? 'selected' : '' }}>YES
-                                        </option>
-                                    </select>
-                                </div> --}}
-
-                                {{-- <div>
-                                    <label for="preliminaryGroupSize" class="block text-sm font-medium text-gray-300 mb-1">
-                                        Preliminary Group Size
-                                    </label>
-                                    <select name="preliminaryGroupSize" id="preliminaryGroupSize"
-                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="3" {{ old('preliminaryGroupSize', 3) == 3 ? 'selected' : '' }}>3
-                                        </option>
-                                        <option value="4" {{ old('preliminaryGroupSize') == 4 ? 'selected' : '' }}>4
-                                        </option>
-                                        <option value="5" {{ old('preliminaryGroupSize') == 5 ? 'selected' : '' }}>5
-                                        </option>
-                                    </select>
-                                </div> --}}
-
-                              
-                            {{-- </div>  --}}
-
-                            <!-- Row 2: Team, Tree Type, Fighting Areas -->
+                            <!-- Main Settings Grid -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {{-- <div>
-                                    <label for="isTeam" class="block text-sm font-medium text-gray-300 mb-1">
-                                        Team?
-                                    </label>
-                                    <select name="isTeam" id="isTeam"
-                                        class="w-full rounded-md border border-gray-600 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="0" {{ old('isTeam', 0) == 0 ? 'selected' : '' }}>NO</option>
-                                        <option value="1" {{ old('isTeam') == 1 ? 'selected' : '' }}>YES</option>
-                                    </select>
-                                </div> --}}
-
-                                  <div>
+                                <div>
                                     <label for="numFighters" class="block text-sm font-medium text-gray-300 mb-1">
                                         Fighter Quantity <span class="text-red-500">*</span>
                                     </label>
@@ -193,7 +154,7 @@
                                 </div>
                             </div>
 
-                            <!-- Row 3: Event Selection -->
+                            <!-- Event Selection -->
                             <div class="grid grid-cols-1 gap-6">
                                 <div>
                                     <label for="event_id" class="block text-sm font-medium text-gray-300 mb-1">
