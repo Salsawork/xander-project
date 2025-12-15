@@ -206,4 +206,46 @@
             </main>
         </div>
     </div>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const numFightersSelect = document.getElementById('numFighters');
+    const eventSelect = document.getElementById('event_id');
+    const form = document.querySelector('form');
+    
+    // Store registered counts per event (pass from backend)
+    const eventParticipants = @json($events->pluck('participants_count', 'id'));
+    
+    function validateBracketSize() {
+        const numFighters = parseInt(numFightersSelect.value);
+        const eventId = eventSelect.value;
+        
+        if (eventId && eventParticipants[eventId]) {
+            const registeredCount = eventParticipants[eventId];
+            
+            if (registeredCount > numFighters) {
+                alert(`Peringatan: ${registeredCount} peserta terdaftar, tetapi bracket hanya untuk ${numFighters} orang. Silakan pilih bracket size yang lebih besar.`);
+                return false;
+            }
+            
+            if (registeredCount < (numFighters / 2)) {
+                if (!confirm(`Bracket size (${numFighters}) jauh lebih besar dari peserta terdaftar (${registeredCount}). Lanjutkan?`)) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    form.addEventListener('submit', function(e) {
+        if (!validateBracketSize()) {
+            e.preventDefault();
+        }
+    });
+    
+    // Real-time warning
+    numFightersSelect.addEventListener('change', validateBracketSize);
+    eventSelect.addEventListener('change', validateBracketSize);
+});
+</script>
 @endsection

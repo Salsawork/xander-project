@@ -7,11 +7,19 @@
 
     <style>
         /* Mode gelap bawaan browser */
-        :root { color-scheme: dark; }
+        :root {
+            color-scheme: dark;
+        }
 
         /* Pastikan root gelap & tidak chain overscroll ke viewport */
-        :root, html, body { background:#0a0a0a; }
-        html, body {
+        :root,
+        html,
+        body {
+            background: #0a0a0a;
+        }
+
+        html,
+        body {
             height: 100%;
             overscroll-behavior-y: none;
             overscroll-behavior-x: none;
@@ -20,9 +28,10 @@
         }
 
         /* Kanvas gelap besar di belakang segalanya (hilangkan putih saat bounce) */
-        #antiBounceBg{
+        #antiBounceBg {
             position: fixed;
-            left: 0; right: 0;
+            left: 0;
+            right: 0;
             top: -120svh;
             bottom: -120svh;
             background: #0a0a0a;
@@ -31,28 +40,37 @@
         }
 
         /* Pastikan wrapper gelap */
-        #app, main, .page-root { background:#0a0a0a; }
+        #app,
+        main,
+        .page-root {
+            background: #0a0a0a;
+        }
 
         /* Kontainer scroll utama: hentikan rubber-band di dalam container */
-        #noBounceScroll{
+        #noBounceScroll {
             overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch; /* tetap smooth di iOS */
-            background:#0a0a0a;
+            -webkit-overflow-scrolling: touch;
+            /* tetap smooth di iOS */
+            background: #0a0a0a;
         }
 
         /* Stabilkan tinggi viewport di mobile */
-        .min-h-dvh { min-height: 100dvh; }
+        .min-h-dvh {
+            min-height: 100dvh;
+        }
     </style>
 
     {{-- Fallback SVH untuk Safari lama (hindari “lompat” saat address bar show/hide) --}}
     <script>
-        (function(){
-            function setSVH(){
+        (function() {
+            function setSVH() {
                 const svh = window.innerHeight * 0.01;
                 document.documentElement.style.setProperty('--svh', svh + 'px');
             }
             setSVH();
-            window.addEventListener('resize', setSVH, { passive:true });
+            window.addEventListener('resize', setSVH, {
+                passive: true
+            });
         })();
     </script>
 
@@ -205,7 +223,8 @@
                                                 placeholder="Masukkan nama tournament"
                                                 value="{{ old('name', $tournament->name) }}" required
                                                 class="w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-gray-300 placeholder-gray-500 transition focus:outline-none focus:ring-1 focus:ring-[#1e90ff] focus:border-[#1e90ff]">
-                                            <p class="text-xs text-gray-500 mt-1">Nama yang akan ditampilkan di seluruh sistem</p>
+                                            <p class="text-xs text-gray-500 mt-1">Nama yang akan ditampilkan di seluruh
+                                                sistem</p>
                                         </div>
                                     </div>
                                 </div>
@@ -261,7 +280,8 @@
                                     @if (isset($tournament->event_id))
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">Event:</span>
-                                            <span class="font-medium truncate ml-2">{{ $tournament->event->name ?? 'N/A' }}</span>
+                                            <span
+                                                class="font-medium truncate ml-2">{{ $tournament->event->name ?? 'N/A' }}</span>
                                         </div>
                                     @endif
                                     <div class="flex justify-between">
@@ -361,7 +381,8 @@
                                 <i class="fas fa-layer-group text-4xl text-gray-600"></i>
                             </div>
                             <p class="text-gray-400 text-lg">Generate tree terlebih dahulu</p>
-                            <p class="text-gray-500 text-sm mt-2">Klik tombol "Generate Tree" untuk membuat bracket tournament</p>
+                            <p class="text-gray-500 text-sm mt-2">Klik tombol "Generate Tree" untuk membuat bracket
+                                tournament</p>
                         </div>
                     @endif
                 </div>
@@ -375,14 +396,31 @@
             border-bottom-color: #1e90ff;
             color: white;
         }
-        .tab-button:not(.active) { border-bottom-color: transparent; }
-        .tab-button:not(.active):hover { border-bottom-color: #4b5563; }
+
+        .tab-button:not(.active) {
+            border-bottom-color: transparent;
+        }
+
+        .tab-button:not(.active):hover {
+            border-bottom-color: #4b5563;
+        }
 
         /* Smooth tab switching */
-        #treeContent, #fightsContent { animation: fadeIn 0.3s ease-out; }
+        #treeContent,
+        #fightsContent {
+            animation: fadeIn 0.3s ease-out;
+        }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Bracket responsive styles */
@@ -394,21 +432,41 @@
             border-radius: 0.5rem;
             overflow: hidden;
         }
-        .table-bordered th, .table-bordered td {
+
+        .table-bordered th,
+        .table-bordered td {
             border: 1px solid #444;
             padding: 0.75rem;
             text-align: center;
             color: #ccc;
             font-size: 0.875rem;
         }
-        .table-bordered th { background: #1c1c1c; font-weight: 600; color: #999; }
-        .table-bordered tr:hover { background: #333; transition: background 0.2s ease; }
+
+        .table-bordered th {
+            background: #1c1c1c;
+            font-weight: 600;
+            color: #999;
+        }
+
+        .table-bordered tr:hover {
+            background: #333;
+            transition: background 0.2s ease;
+        }
 
         /* Mobile responsif */
         @media (max-width: 768px) {
-            .table-bordered { font-size: 0.75rem; }
-            .table-bordered th, .table-bordered td { padding: 0.5rem; }
-            .p-10 { padding: 0.5rem !important; }
+            .table-bordered {
+                font-size: 0.75rem;
+            }
+
+            .table-bordered th,
+            .table-bordered td {
+                padding: 0.5rem;
+            }
+
+            .p-10 {
+                padding: 0.5rem !important;
+            }
         }
     </style>
 
@@ -440,5 +498,50 @@
                 treeContent.classList.add('hidden');
             }
         }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const numFightersSelect = document.getElementById('numFighters');
+            const eventSelect = document.getElementById('event_id');
+            const form = document.querySelector('form');
+
+            // Store registered counts per event (pass from backend)
+            const eventParticipants = @json($events->pluck('participants_count', 'id'));
+
+            function validateBracketSize() {
+                const numFighters = parseInt(numFightersSelect.value);
+                const eventId = eventSelect.value;
+
+                if (eventId && eventParticipants[eventId]) {
+                    const registeredCount = eventParticipants[eventId];
+
+                    if (registeredCount > numFighters) {
+                        alert(
+                            `Peringatan: ${registeredCount} peserta terdaftar, tetapi bracket hanya untuk ${numFighters} orang. Silakan pilih bracket size yang lebih besar.`);
+                        return false;
+                    }
+
+                    if (registeredCount < (numFighters / 2)) {
+                        if (!confirm(
+                                `Bracket size (${numFighters}) jauh lebih besar dari peserta terdaftar (${registeredCount}). Lanjutkan?`
+                                )) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            form.addEventListener('submit', function(e) {
+                if (!validateBracketSize()) {
+                    e.preventDefault();
+                }
+            });
+
+            // Real-time warning
+            numFightersSelect.addEventListener('change', validateBracketSize);
+            eventSelect.addEventListener('change', validateBracketSize);
+        });
     </script>
 @endsection
